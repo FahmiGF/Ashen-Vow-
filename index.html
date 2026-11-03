@@ -48,9 +48,18 @@
                   <div id="flasks" class="flasks"></div>
                   <span id="relic-badge" class="relic-badge">✦ BULU BARA</span>
                 </div>
+                <div class="gear-row">
+                  <span id="weapon-badge" class="weapon-badge">PEDANG</span>
+                  <span id="ammo-badge" class="ammo-badge">SHURIKEN 0</span>
+                </div>
               </div>
             </div>
             <div class="hud-right">
+              <div class="ash-badge" title="Abu — mata uang Warung Abu">
+                <span>✦</span>
+                <strong id="ash-count">0</strong>
+                <em>ABU</em>
+              </div>
               <button id="sound-btn" class="sound-btn" type="button" title="Suara (M)" aria-label="Suara">♪</button>
               <div class="room-plate">
                 <span id="room-sub" class="room-sub">THE ASHEN GATE</span>
@@ -183,6 +192,28 @@
           </div>
         </section>
 
+        <!-- ══ SHOP ══ -->
+        <section id="shop-screen" class="screen hidden">
+          <div class="screen-inner shop-inner">
+            <p class="eyebrow">PEDAGANG ABU · DI AMBANG PERTEMPURAN</p>
+            <h2 class="screen-title">WARUNG ABU</h2>
+            <p class="screen-sub">
+              “Bayar dengan abu, bawa pulang nyawa.” — Barang dagangan hanya untuk perjalanan ini.
+            </p>
+            <div class="shop-wallet">
+              <span>ABU TERSEDIA</span>
+              <strong><i>✦</i> <b id="shop-ash">0</b></strong>
+            </div>
+            <div id="shop-items" class="shop-items"></div>
+            <div class="screen-links">
+              <button id="btn-shop-close" class="btn btn-primary btn-compact" type="button">
+                <span>KEMBALI KE PERTEMPURAN</span>
+              </button>
+            </div>
+            <p class="micro">Tekan <kbd>F</kbd> atau <kbd>ESC</kbd> untuk menutup warung.</p>
+          </div>
+        </section>
+
         <!-- ══ BLESSING ══ -->
         <section id="blessing-screen" class="screen hidden">
           <div class="screen-inner">
@@ -202,6 +233,7 @@
             <p class="screen-sub">Pedang tetap di tanganmu.</p>
             <button id="btn-resume" class="btn btn-primary" type="button"><span>LANJUTKAN</span></button>
             <div class="screen-links">
+              <button id="btn-shop" class="link-btn" type="button">WARUNG ABU</button>
               <button id="btn-pause-levels" class="link-btn" type="button">PILIH LEVEL</button>
               <button id="btn-pause-menu" class="link-btn" type="button">MENU UTAMA</button>
             </div>
@@ -267,6 +299,8 @@
           <div class="touch-side">
             <button class="tbtn small" data-action="heal" type="button" aria-label="Minum flask">✚</button>
             <button class="tbtn small" data-action="dash" type="button" aria-label="Dash">»</button>
+            <button class="tbtn small" data-action="swap" type="button" aria-label="Ganti senjata">⇄</button>
+            <button class="tbtn small" data-action="consume" type="button" aria-label="Lempar shuriken">✦</button>
             <button class="tbtn" data-action="jump" type="button" aria-label="Lompat">▲</button>
             <button class="tbtn attack" data-action="attack" type="button" aria-label="Serang">⚔</button>
           </div>

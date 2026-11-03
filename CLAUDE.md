@@ -18,6 +18,8 @@ Non-negotiable v0.0.5 requirements:
 5. Credits must contain: **“Made by SealiusHQ with a lot of support from Contributors”**.
 6. Progress persists across reloads.
 7. Combat must be real and testable, not a mock.
+8. Every boss room keeps a **Warung Abu checkpoint** at its entrance.
+9. Weapons, ammunition, and consumables are bought with run-scoped **ash**; keep `SHOP_ITEMS` and `WEAPONS` data-driven.
 
 ## 2. Stack and constraints
 
@@ -37,13 +39,13 @@ Do **not** add a framework, bundler, or asset pipeline unless the product scope 
 
 | File | Responsibility |
 | --- | --- |
-| `index.html` | Canvas shell, HUD, main menu, level select, credits, Sneak Peek UI, overlays |
-| `styles.css` | Medieval theme, responsive layout, portrait menu fix, touch controls |
-| `src/core.js` | Pure simulation: player, enemies, bosses, projectiles, gates, blessings, events |
+| `index.html` | Canvas shell, HUD, main menu, level select, credits, Sneak Peek UI, Warung Abu, overlays |
+| `styles.css` | Medieval theme, responsive layout, portrait menu fix, touch controls, shop cards |
+| `src/core.js` | Pure simulation: player, enemies, bosses, weapons, projectiles, ash, shop, checkpoints, gates, blessings, events |
 | `src/render.js` | Canvas renderer; supports `render(game, { spectate, cameraX })` |
 | `src/audio.js` | Procedural SFX and mute toggle |
-| `src/main.js` | Menus, progress, spectate camera, fixed-step loop, input, HUD, debug hooks |
-| `tests/core.test.js` | 22 deterministic Node tests |
+| `src/main.js` | Menus, progress, spectate camera, fixed-step loop, input, HUD, shop UI, debug hooks |
+| `tests/core.test.js` | 36 deterministic Node tests |
 | `server.js` | Static server on port 4300 |
 | `docs/` | Committed screenshots |
 
@@ -59,6 +61,9 @@ Do **not** add a framework, bundler, or asset pipeline unless the product scope 
   - `bossPhase { name }` — phase II transition.
   - `bossSpawn`, `bossTelegraph`, `bossSlash`, `bossSlam`, `bossDie`.
   - `relic`, `respawn`, `blessingOpen`, `blessingChosen`, `victory`, `roomEnter`.
+  - `checkpoint { room, name }`, `checkpointRespawn { room }` — boss-room checkpoints.
+  - `ashGain { amount, total }`, `shopBuy { id, name, cost }` — currency and shop.
+  - `weaponSwitch`, `arrowShot`, `shurikenThrow`, `noAmmo` — weapons and consumables.
 - Never let core code touch `window`, `document`, canvas, or audio.
 
 ## 5. Content model
@@ -98,12 +103,60 @@ There is no phase III. Tests assert a third phase is impossible.
 
 **Bug fixed during v0.0.5 verification:** Wyrm `dive` was clamped to `FLOOR_Y - b.h - 20`, so it never reached its rise threshold and looped in `dive` forever. Clamp is now `FLOOR_Y - b.h`. Do not reintroduce a floor offset above the dive landing threshold.
 
+### Weapons and consumables
+
+`WEAPONS` is exported from `src/core.js`. The player starts with `sword`; purchased weapons are appended to `player.weapons`.
+
+| Weapon | Attack profile | Notes |
+| --- | --- | --- |
+| `sword` | 3-hit combo, windup `0.045`, range `60–76`, damage `12–24` | Default; combo index tracked in `comboIndex`. |
+| `pike` | `PIKE_ATTACK`, windup `0.24`, active `0.15`, range `118`, damage `29` | Slow but long reach; `name: 'pierce'`. |
+| `bow` | `BOW_ATTACK`, windup `0.26`, damage `22` | Spawns a player-owned `arrow` projectile; consumes `player.arrows`. Refuses to fire at 0 ammo and emits `noAmmo`. |
+
+`player.attack` carries `{ weapon, def, t, hitIds, landed }`; `currentAttackDef()`, `startAttack()`, `updatePlayerAttack()`, and `playerHitbox()` are all weapon-aware. `X` calls `cycleWeapon()`; touch has a `swap` button.
+
+`Shuriken` is a consumable stack (`player.shurikens`). `C` calls `throwConsumable()`, spawning a `shuriken` projectile and setting `consumeCooldown`. Player-owned projectiles damage enemies/bosses in `updateProjectiles()`.
+
+### Ash and Warung Abu
+
+`game.ash` is run-scoped currency. Rewards: crawler `8`, sentinel `15`, Warden `60`, Wyrm `90`. Each kill emits `ashGain`.
+
+`SHOP_ITEMS` (exported) drives both the shop UI and `game.buyShopItem(id)`:
+
+| Item | Cost | Type | Effect |
+| --- | --- | --- | --- |
+| Pike Penjaga | 35 | weapon | Adds `pike`, equips it. |
+| Busur Abu | 55 | weapon | Adds `bow`, equips it, grants 8 arrows. |
+| Shuriken ×3 | 14 | consumable | Adds 3 shuriken. |
+| Anak Panah ×6 | 12 | ammo | Requires `bow`; adds 6 arrows. |
+| Isi Ulang Flask | 10 | flask | Restores all flask charges. |
+
+`canShop()` requires a checkpoint in the current room and proximity (`<110 px` horizontally, `<150 px` vertically) to `room.merchant`. Shop is opened with `F` or the pause button. Purchases are run-scoped; ash is not persisted across full runs. Starting a run directly from Level Select grants a stipend of 45 ash (room 2) or 90 ash (room 3) so the shop is usable without replaying earlier rooms.
+
+### Checkpoints
+
+Rooms 2 and 3 define `checkpoint` and `merchant` at the entrance. `loadRoom()` sets `checkpoint` / `checkpointRoom` and emits `checkpoint`. `retryRun()` in `src/main.js` calls `game.respawnAtCheckpoint()` when available:
+
+- reloads the boss room and respawns the boss,
+- restores HP and flasks,
+- preserves `ash`, `player.weapons`, `arrows`, `shurikens`, and `blessings`,
+- emits `checkpointRespawn`.
+
+### Enemy pursuit AI
+
+`updateEnemies()` uses `moveEnemy()` + `integrateEnemy()` for crawler and sentinel movement:
+
+- `moveEnemy()` accelerates toward the player, jumps when the player is above, and leaps gaps when needed.
+- `integrateEnemy()` applies gravity, platform landing, world clamp, pit recovery (`homeX`), and horizontal `vx`.
+- `enemyGroundAhead()` probes ahead of the enemy's feet to detect platform edges.
+- Patrol bounds apply only while the player is out of aggro range; in combat enemies may leave their original patrol box.
+
 ## 6. UI / navigation behaviour
 
 `src/main.js` state:
 
 - `menuView`: `title | levels | credits | none`
-- `started`, `paused`, `spectating`
+- `started`, `paused`, `spectating`, `shopOpen`
 - `spectateGame` is a separate `AshenGame` instance, never the live run.
 
 Rules:
@@ -118,6 +171,9 @@ Rules:
   - `spectate: true` skips `drawPlayer`, shake, low-HP vignette, and gate chevrons.
 - Spectate input: `←/→` or `A/D` pan; `Esc` / `Backspace` / `Q` returns to level select.
 - Pause/death/victory screens link back to Level Select and Main Menu.
+- Shop is a full-screen overlay (`#shop-screen`); while `shopOpen`, the simulation pauses, HUD/touch are hidden, and `Esc`/`F` closes it.
+- Shop is available only when `game.checkpointRoom === game.roomIndex`; proximity to the merchant is required for `F`, while the pause button passes `force = true`.
+- Death retry uses checkpoint respawn when possible, preserving run inventory; otherwise it restarts the current room.
 - Portrait phones: `.screen` overlays become fixed full-viewport scroll layers so menus are not clipped by the 16:9 game frame.
 
 ## 7. Verification
@@ -128,7 +184,7 @@ Rules:
 npm test
 ```
 
-Current result: **22/22 passing**. Coverage includes:
+Current result: **36/36 passing**. Coverage includes:
 
 - gravity, floor landing, movement and world bounds;
 - single jump vs double jump after relic;
@@ -139,6 +195,13 @@ Current result: **22/22 passing**. Coverage includes:
 - relic pickup;
 - pit damage and respawn;
 - Sentinel lunge cycle;
+- **crawler pursuit closes distance; crawler jumps toward a raised player**;
+- **hitting a pursuing enemy does not clamp it back to patrol bounds**;
+- **boss-room checkpoints and checkpoint respawn preserving ash/gear/blessings**;
+- **ash rewards from enemies and bosses**;
+- **Warung Abu purchases, ammo gating, duplicate-purchase rejection, proximity**;
+- **Pike reach/windup, Bow ammo consumption/projectile damage, Shuriken throw**;
+- **weapon cycling via the swap input**;
 - Warden phase II transition and phase-II shockwaves;
 - Warden defeat → 3 blessings → gate opens;
 - ember blessing damage multiplier;
@@ -169,8 +232,11 @@ Verified through Chrome DevTools Protocol:
 - Sneak Peek hides the player and HUD and shows boss hint;
 - credits hero text and cells correct;
 - clearing a gate updates `unlocked` and `localStorage`, survives reload;
+- Warung Abu opens in room 2, shows 5 cards, and DOM purchases update ash/HUD/weapons;
+- checkpoint death → `retry()` restores HP/flasks/boss while keeping ash and gear;
+- pursuit AI closes distance and jumps; swap input cycles weapons; empty bow emits `noAmmo`;
 - no console exceptions;
-- desktop and 390×844 mobile layouts have zero horizontal overflow.
+- desktop and 390×844 mobile layouts have zero horizontal overflow, including the shop grid.
 
 > `requestAnimationFrame` is throttled when the Chrome page is backgrounded. Call `Page.bringToFront` in CDP before asserting anything that depends on the game loop.
 
@@ -178,20 +244,23 @@ Verified through Chrome DevTools Protocol:
 
 `window.__ashen` exists for smoke tests:
 
-- Getters: `game`, `renderer`, `started`, `paused`, `spectating`, `menuView`, `progress`.
+- Getters: `game`, `renderer`, `started`, `paused`, `spectating`, `menuView`, `progress`, `shopOpen`.
 - Navigation: `start`, `restart`, `retry`, `showMenu`, `showLevels`, `showCredits`, `enterRoom`, `clearProgress`.
 - Spectate: `startSpectate`, `stopSpectate`.
 - Simulation: `step`, `tap`, `damageBoss`, `chooseBlessing`, `togglePause`.
-- Inspect: `snap()` returns state, room, HP, relics, boss phase/state, gate, view flags, progress.
+- Shop/economy: `openShop`, `closeShop`, `buyShopItem`, `respawnAtCheckpoint`, `giveAsh`.
+- Inspect: `snap()` returns state, room, HP, relics, ash, weapon/ammo, checkpoint room, boss phase/state, gate, view flags, progress.
 
 ## 9. Known limitations / next roadmap
 
 - No save-slot UI; single browser profile progress only.
+- Ash is run-scoped and is not persisted with level progress; weapons are re-earned each run.
 - Sneak Peek has no touch pan control; camera auto-drifts.
 - No new game plus, no difficulty selection, no controller mapping screen.
 - Audio is procedural only; no music track.
 - Art is procedural; no sprite/tileset pipeline.
 - Boss phase II is tuned by constants inside `src/core.js`; extract to data if more bosses are added.
+- Enemy AI is platform-aware but not a full navmesh; complex multi-level layouts may still need hand-tuned jumps.
 
 ## 10. Working agreements for future changes
 
@@ -203,3 +272,5 @@ Verified through Chrome DevTools Protocol:
 6. Preserve the exact credits wording.
 7. Verify on desktop and portrait mobile; run `npm test` before committing.
 8. Update `README.md` and this file when behaviour or content changes.
+9. Checkpoint retry must never erase ash, owned weapons, ammo, shuriken, or blessings.
+10. New purchasable items must be added to `SHOP_ITEMS` and validated in `buyShopItem()` with a Node test.

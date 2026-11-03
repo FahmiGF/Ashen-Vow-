@@ -61,6 +61,7 @@ export class Renderer {
     ctx.save();
     ctx.translate(-targetCam + sx, sy);
     this.drawGate(ctx, game, t);
+    this.drawCheckpoint(ctx, game, t);
     this.drawRelic(ctx, game, t);
     this.drawPlatforms(ctx, room, pal, t);
     this.drawProjectiles(ctx, game, t);
@@ -350,6 +351,97 @@ export class Renderer {
     }
   }
 
+  drawCheckpoint(ctx, game, t) {
+    const c = game.checkpoint;
+    if (!c) return;
+    const cx = c.x + c.w / 2;
+    const base = c.y + c.h;
+    const pulse = 0.55 + Math.sin(t * 2.4) * 0.2;
+
+    const glow = ctx.createRadialGradient(cx, base - 30, 3, cx, base - 30, 86);
+    glow.addColorStop(0, `rgba(255,196,110,${0.4 * pulse})`);
+    glow.addColorStop(0.5, 'rgba(220,130,60,0.12)');
+    glow.addColorStop(1, 'rgba(220,130,60,0)');
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(cx, base - 30, 86, 0, Math.PI * 2);
+    ctx.fill();
+
+    // stone shrine
+    ctx.fillStyle = '#2b241d';
+    ctx.beginPath();
+    ctx.moveTo(cx - 20, base);
+    ctx.lineTo(cx - 14, base - 52);
+    ctx.lineTo(cx - 7, base - 60);
+    ctx.lineTo(cx + 7, base - 60);
+    ctx.lineTo(cx + 14, base - 52);
+    ctx.lineTo(cx + 20, base);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(201,162,92,0.5)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // ember bowl
+    ctx.fillStyle = '#4b3524';
+    ctx.beginPath();
+    ctx.ellipse(cx, base - 58, 15, 6, 0, 0, Math.PI * 2);
+    ctx.fill();
+    const flame = ctx.createLinearGradient(cx, base - 82, cx, base - 56);
+    flame.addColorStop(0, `rgba(255,238,180,${0.9 * pulse})`);
+    flame.addColorStop(0.55, 'rgba(255,146,60,0.8)');
+    flame.addColorStop(1, 'rgba(180,60,20,0.15)');
+    ctx.fillStyle = flame;
+    ctx.beginPath();
+    ctx.moveTo(cx - 8, base - 58);
+    ctx.quadraticCurveTo(cx - 9, base - 74, cx + Math.sin(t * 5) * 3, base - 84);
+    ctx.quadraticCurveTo(cx + 10, base - 70, cx + 8, base - 58);
+    ctx.closePath();
+    ctx.fill();
+
+    const m = game.room.merchant;
+    if (m) {
+      const mx = m.x + m.w / 2;
+      const my = m.y + m.h;
+      // merchant shadow
+      ctx.fillStyle = 'rgba(0,0,0,0.35)';
+      ctx.beginPath();
+      ctx.ellipse(mx, my + 2, 20, 5, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // cloak
+      ctx.fillStyle = '#3e3a2c';
+      ctx.beginPath();
+      ctx.moveTo(mx - 16, my);
+      ctx.lineTo(mx - 11, my - 46);
+      ctx.quadraticCurveTo(mx, my - 62, mx + 11, my - 46);
+      ctx.lineTo(mx + 16, my);
+      ctx.closePath();
+      ctx.fill();
+      // hood
+      ctx.fillStyle = '#24211a';
+      ctx.beginPath();
+      ctx.ellipse(mx, my - 52, 11, 13, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // eyes
+      ctx.fillStyle = '#ffbe76';
+      ctx.fillRect(mx - 5, my - 53, 3, 2);
+      ctx.fillRect(mx + 2, my - 53, 3, 2);
+      // lantern
+      const lx = mx + 21;
+      const ly = my - 30 + Math.sin(t * 2) * 2;
+      ctx.strokeStyle = '#6b5840';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(mx + 14, my - 48);
+      ctx.lineTo(lx, ly - 10);
+      ctx.stroke();
+      ctx.fillStyle = `rgba(255,190,100,${0.4 + pulse * 0.4})`;
+      ctx.beginPath();
+      ctx.arc(lx, ly, 7, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
   drawRelic(ctx, game, t) {
     const relic = game.room.relic;
     if (!relic || game.player.relic) return;
@@ -408,6 +500,50 @@ export class Renderer {
         ctx.arc(pr.x, pr.y, pr.r * 0.5, 0, Math.PI * 2);
         ctx.fillStyle = '#fff8e2';
         ctx.fill();
+      } else if (pr.type === 'arrow') {
+        ctx.save();
+        ctx.translate(pr.x, pr.y);
+        ctx.scale(pr.vx < 0 ? -1 : 1, 1);
+        ctx.strokeStyle = '#d9c9a2';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(-16, 0);
+        ctx.lineTo(10, 0);
+        ctx.stroke();
+        ctx.fillStyle = '#e8dcc0';
+        ctx.beginPath();
+        ctx.moveTo(15, 0);
+        ctx.lineTo(8, -4);
+        ctx.lineTo(8, 4);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = '#9a7440';
+        ctx.beginPath();
+        ctx.moveTo(-16, 0);
+        ctx.lineTo(-20, -4);
+        ctx.moveTo(-16, 0);
+        ctx.lineTo(-20, 4);
+        ctx.stroke();
+        ctx.restore();
+      } else if (pr.type === 'shuriken') {
+        ctx.save();
+        ctx.translate(pr.x, pr.y);
+        ctx.rotate(t * 18 * (pr.vx < 0 ? -1 : 1));
+        ctx.fillStyle = '#cfd6dd';
+        for (let i = 0; i < 4; i++) {
+          ctx.rotate(Math.PI / 2);
+          ctx.beginPath();
+          ctx.moveTo(0, -2);
+          ctx.lineTo(9, 0);
+          ctx.lineTo(0, 2);
+          ctx.closePath();
+          ctx.fill();
+        }
+        ctx.fillStyle = '#8f6d3c';
+        ctx.beginPath();
+        ctx.arc(0, 0, 2.2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
       } else if (pr.type === 'shockwave') {
         const y = pr.y;
         ctx.save();
@@ -561,13 +697,15 @@ export class Renderer {
     ctx.lineWidth = 1.5;
     ctx.stroke();
 
-    // sword + swing arc
+    // weapon + swing arc
     const atk = p.attack;
+    const weapon = p.weapon || 'sword';
+    const def = atk ? atk.def || ATTACKS[atk.combo] || ATTACKS[0] : ATTACKS[0];
     let angle = -0.15 + Math.sin(t * 2.2) * 0.03;
-    let swordLen = 46;
+    let weaponLen = weapon === 'pike' ? 104 : weapon === 'bow' ? 30 : 46;
     if (atk) {
-      const def = ATTACKS[atk.combo];
-      swordLen = atk.combo === 2 ? 56 : 46;
+      if (weapon === 'pike') weaponLen = 112;
+      else if (weapon === 'sword') weaponLen = atk.combo === 2 ? 56 : 46;
       const total = def.windup + def.active + def.recover;
       if (atk.t < def.windup) {
         angle = lerp(-0.2, -2.1, atk.t / def.windup);
@@ -575,18 +713,27 @@ export class Renderer {
         const a = (atk.t - def.windup) / def.active;
         angle = lerp(-2.1, 1.25, a * (0.55 + a * 0.45));
       } else {
-        const a = (atk.t - def.windup - def.active) / def.recover;
+        const a = (atk.t - def.windup - def.active) / Math.max(0.001, def.recover);
         angle = lerp(1.25, -0.15, a);
       }
-      if (atk.t >= def.windup && atk.t < def.windup + def.active + 0.08) {
+      if (
+        weapon !== 'bow' &&
+        atk.t >= def.windup &&
+        atk.t < def.windup + def.active + 0.08
+      ) {
         ctx.save();
-        const arc = ctx.createRadialGradient(6, -26, 12, 6, -26, swordLen + 26);
+        const arc = ctx.createRadialGradient(6, -26, 12, 6, -26, weaponLen + 26);
         arc.addColorStop(0, 'rgba(255,230,180,0)');
-        arc.addColorStop(0.7, atk.combo === 2 ? 'rgba(255,150,70,0.38)' : 'rgba(230,220,200,0.28)');
+        arc.addColorStop(
+          0.7,
+          def.name === 'heavy' || def.name === 'pierce'
+            ? 'rgba(255,150,70,0.38)'
+            : 'rgba(230,220,200,0.28)',
+        );
         arc.addColorStop(1, 'rgba(255,220,160,0)');
         ctx.fillStyle = arc;
         ctx.beginPath();
-        ctx.arc(6, -26, swordLen + 26, -2.2, angle + 0.3);
+        ctx.arc(6, -26, weaponLen + 26, -2.2, angle + 0.3);
         ctx.lineTo(6, -26);
         ctx.closePath();
         ctx.fill();
@@ -594,29 +741,84 @@ export class Renderer {
       }
     }
 
-    ctx.save();
-    ctx.translate(9, -28 + bob);
-    ctx.rotate(angle);
-    // blade
-    const blade = ctx.createLinearGradient(0, 0, swordLen, 0);
-    blade.addColorStop(0, '#8e9aa4');
-    blade.addColorStop(0.6, '#e6edf2');
-    blade.addColorStop(1, '#ffffff');
-    ctx.fillStyle = blade;
-    ctx.beginPath();
-    ctx.moveTo(0, -3);
-    ctx.lineTo(swordLen - 8, -3);
-    ctx.lineTo(swordLen, 0);
-    ctx.lineTo(swordLen - 8, 3);
-    ctx.lineTo(0, 3);
-    ctx.closePath();
-    ctx.fill();
-    // guard + hilt
-    ctx.fillStyle = '#b78b3e';
-    ctx.fillRect(-2, -7, 4, 14);
-    ctx.fillStyle = '#4b3427';
-    ctx.fillRect(-10, -2.5, 9, 5);
-    ctx.restore();
+    if (weapon === 'bow') {
+      ctx.save();
+      ctx.translate(9, -28 + bob);
+      ctx.rotate(atk ? angle * 0.18 - 0.1 : angle);
+      ctx.strokeStyle = '#9b7640';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(0, 0, 25, -1.15, 1.15);
+      ctx.stroke();
+      ctx.strokeStyle = '#d9c9a2';
+      ctx.lineWidth = 1;
+      const draw = atk && atk.t < def.windup ? 5 + (atk.t / def.windup) * 8 : 4;
+      ctx.beginPath();
+      ctx.moveTo(11, -23);
+      ctx.lineTo(11 - draw, 0);
+      ctx.lineTo(11, 23);
+      ctx.stroke();
+      if (atk && !atk.shot) {
+        ctx.strokeStyle = '#e8dcc0';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(11 - draw, 0);
+        ctx.lineTo(38, 0);
+        ctx.stroke();
+        ctx.fillStyle = '#e8dcc0';
+        ctx.beginPath();
+        ctx.moveTo(44, 0);
+        ctx.lineTo(36, -3.5);
+        ctx.lineTo(36, 3.5);
+        ctx.closePath();
+        ctx.fill();
+      }
+      ctx.restore();
+    } else {
+      ctx.save();
+      ctx.translate(9, -28 + bob);
+      ctx.rotate(angle);
+      if (weapon === 'pike') {
+        ctx.fillStyle = '#5a432a';
+        ctx.fillRect(-12, -2.5, weaponLen - 14, 5);
+        ctx.fillStyle = '#b78b3e';
+        ctx.fillRect(weaponLen - 26, -5, 4, 10);
+        const blade = ctx.createLinearGradient(weaponLen - 20, 0, weaponLen + 20, 0);
+        blade.addColorStop(0, '#cfd8df');
+        blade.addColorStop(0.7, '#f2f6f8');
+        blade.addColorStop(1, '#ffffff');
+        ctx.fillStyle = blade;
+        ctx.beginPath();
+        ctx.moveTo(weaponLen - 22, -4);
+        ctx.lineTo(weaponLen + 16, -1.5);
+        ctx.lineTo(weaponLen + 26, 0);
+        ctx.lineTo(weaponLen + 16, 1.5);
+        ctx.lineTo(weaponLen - 22, 4);
+        ctx.closePath();
+        ctx.fill();
+      } else {
+        // blade
+        const blade = ctx.createLinearGradient(0, 0, weaponLen, 0);
+        blade.addColorStop(0, '#8e9aa4');
+        blade.addColorStop(0.6, '#e6edf2');
+        blade.addColorStop(1, '#ffffff');
+        ctx.fillStyle = blade;
+        ctx.beginPath();
+        ctx.moveTo(0, -3);
+        ctx.lineTo(weaponLen - 8, -3);
+        ctx.lineTo(weaponLen, 0);
+        ctx.lineTo(weaponLen - 8, 3);
+        ctx.lineTo(0, 3);
+        ctx.closePath();
+        ctx.fill();
+        // guard + hilt
+        ctx.fillStyle = '#b78b3e';
+        ctx.fillRect(-2, -7, 4, 14);
+        ctx.fillStyle = '#4b3427';
+        ctx.fillRect(-10, -2.5, 9, 5);
+      }
+      ctx.restore();
+    }
 
     ctx.restore();
   }

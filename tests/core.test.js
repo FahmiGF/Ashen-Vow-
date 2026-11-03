@@ -347,3 +347,262 @@ test('player death sets the dead state and stops world simulation', () => {
   stepN(g, 0.5);
   assert.equal(p.x, x, 'dead state should freeze the player');
 });
+
+// ── v0.0.5: pursuit AI, checkpoints, ash, weapons, shop ───────────────────
+
+test('crawlers pursue the player instead of patrolling inside their bounds', () => {
+  const g = fresh();
+  const p = g.player;
+  const e = g.enemies[0];
+  p.invuln = 999;
+  p.x = 260;
+  p.y = FLOOR_Y - p.h;
+  p.onGround = true;
+  e.x = 620;
+  e.y = FLOOR_Y - e.h;
+  e.patrolDir = 1;
+  const startX = e.x;
+  stepN(g, 0.9);
+  assert.equal(e.state, 'chase');
+  assert.ok(e.x < startX - 40, `crawler should close the distance, moved ${startX - e.x}`);
+  assert.ok(e.facing < 0, 'crawler should face the player');
+});
+
+test('crawlers jump toward a player standing on a higher platform', () => {
+  const g = fresh();
+  const p = g.player;
+  const e = g.enemies[0];
+  p.invuln = 999;
+  p.x = 330;
+  p.y = 378 - p.h;
+  p.onGround = true;
+  e.x = 250;
+  e.y = FLOOR_Y - e.h;
+  e.onGround = true;
+  let minY = e.y;
+  for (let i = 0; i < 60; i++) {
+    g.update(DT, {});
+    minY = Math.min(minY, e.y);
+  }
+  assert.ok(minY < FLOOR_Y - e.h - 20, 'crawler should leave the floor to reach the player');
+});
+
+test('hitting a pursuing enemy does not snap it back to its patrol bounds', () => {
+  const g = fresh();
+  const e = g.enemies[0];
+  e.x = 900;
+  e.state = 'chase';
+  g.hurtEnemy(e, { dmg: 1, knock: 0, name: 'test' }, 1);
+  assert.equal(e.x, 900, 'pursuit position must not be clamped to minX/maxX');
+});
+
+test('boss rooms activate a checkpoint beside Warung Abu', () => {
+  const g = fresh();
+  g.enterRoom(2);
+  assert.equal(g.checkpointRoom, 2);
+  assert.ok(g.checkpoint, 'room 2 should expose a checkpoint');
+  assert.ok(g.room.merchant, 'room 2 should expose a merchant');
+  assert.ok(g.canShop(), 'player spawns within reach of the merchant');
+
+  g.enterRoom(3);
+  assert.equal(g.checkpointRoom, 3);
+  assert.ok(g.checkpoint);
+});
+
+test('checkpoint respawn restores health and flasks but keeps ash, gear, and blessings', () => {
+  const g = fresh();
+  g.enterRoom(2);
+  const p = g.player;
+  g.ash = 120;
+  p.weapons.push('pike', 'bow');
+  p.weapon = 'pike';
+  p.arrows = 7;
+  p.shurikens = 4;
+  p.hp = 1;
+  p.flasks = 0;
+  p.invuln = 0;
+  g.blessings.push('ember');
+  g.damagePlayer(999, p.x + 60);
+  assert.equal(g.state, 'dead');
+
+  assert.equal(g.respawnAtCheckpoint(), true);
+  assert.equal(g.state, 'playing');
+  assert.equal(g.roomIndex, 2);
+  assert.equal(p.hp, p.maxHp);
+  assert.equal(p.flasks, p.maxFlasks);
+  assert.equal(g.ash, 120, 'ash must survive a checkpoint respawn');
+  assert.deepEqual(p.weapons, ['sword', 'pike', 'bow']);
+  assert.equal(p.weapon, 'pike');
+  assert.equal(p.arrows, 7);
+  assert.equal(p.shurikens, 4);
+  assert.deepEqual(g.blessings, ['ember']);
+  assert.ok(g.boss && g.boss.kind === 'warden', 'boss should respawn for the retry');
+  assert.equal(g.bossDefeated[2], false);
+});
+
+test('enemy and boss kills award spendable ash', () => {
+  const g = fresh();
+  g.enterRoom(1);
+  const crawler = g.enemies.find((e) => e.type === 'crawler');
+  const ash0 = g.ash;
+  g.hurtEnemy(crawler, { dmg: 999, knock: 0, name: 'test' }, 1);
+  assert.equal(g.ash, ash0 + 8);
+  assert.ok(g.events.some((e) => e.type === 'ashGain'));
+
+  const g2 = fresh();
+  g2.enterRoom(2);
+  g2.player.invuln = 999;
+  g2.damageBoss(9999);
+  stepN(g2, 2.6);
+  assert.ok(g2.ash >= 60, `boss should award at least 60 ash, got ${g2.ash}`);
+});
+
+test('Warung Abu sells weapons, ammo, shuriken, and flask refills', () => {
+  const g = fresh();
+  g.enterRoom(2);
+  const p = g.player;
+  g.ash = 200;
+
+  let res = g.buyShopItem('pike');
+  assert.equal(res.ok, true);
+  assert.equal(g.ash, 165);
+  assert.ok(p.weapons.includes('pike'));
+  assert.equal(p.weapon, 'pike');
+
+  res = g.buyShopItem('pike');
+  assert.equal(res.ok, false, 'duplicate weapon purchase must fail');
+
+  res = g.buyShopItem('bow');
+  assert.equal(res.ok, true);
+  assert.equal(g.ash, 110);
+  assert.equal(p.arrows, 8, 'bow purchase includes a quiver');
+
+  res = g.buyShopItem('arrows');
+  assert.equal(res.ok, true);
+  assert.equal(p.arrows, 14);
+
+  res = g.buyShopItem('shuriken');
+  assert.equal(res.ok, true);
+  assert.equal(p.shurikens, 3);
+
+  p.flasks = 1;
+  res = g.buyShopItem('flask');
+  assert.equal(res.ok, true);
+  assert.equal(p.flasks, p.maxFlasks);
+
+  g.ash = 0;
+  res = g.buyShopItem('shuriken');
+  assert.equal(res.ok, false);
+  assert.match(res.reason, /tidak cukup/i);
+});
+
+test('ammo cannot be bought before owning the bow', () => {
+  const g = fresh();
+  g.enterRoom(2);
+  g.ash = 100;
+  const res = g.buyShopItem('arrows');
+  assert.equal(res.ok, false);
+  assert.match(res.reason, /Busur/i);
+  assert.equal(g.ash, 100, 'failed purchase must not spend ash');
+});
+
+test('pike has longer reach and a slower wind-up than the sword', () => {
+  const g = fresh();
+  const p = g.player;
+  const e = g.enemies[0];
+  p.invuln = 999;
+  p.weapons = ['sword', 'pike'];
+  p.weapon = 'pike';
+  p.x = e.x - 100;
+  p.y = FLOOR_Y - p.h;
+  p.onGround = true;
+  p.facing = 1;
+  e.speed = 0;
+  const hp0 = e.hp;
+  g.update(DT, { attack: true });
+  assert.equal(p.attack.weapon, 'pike');
+  assert.equal(p.attack.def.name, 'pierce');
+  assert.ok(p.attack.def.windup > 0.2, 'pike should be slow');
+  stepN(g, 0.55);
+  assert.ok(e.hp <= hp0 - 29 || e.dead, `pike should hit from range, hp ${e.hp}`);
+});
+
+test('bow fires arrows, spends ammo, and damages enemies at range', () => {
+  const g = fresh();
+  const p = g.player;
+  const e = g.enemies[0];
+  p.invuln = 999;
+  p.weapons = ['sword', 'bow'];
+  p.weapon = 'bow';
+  p.arrows = 2;
+  p.x = e.x - 240;
+  p.y = FLOOR_Y - p.h;
+  p.onGround = true;
+  p.facing = 1;
+  e.speed = 0;
+  const hp0 = e.hp;
+  g.update(DT, { attack: true });
+  assert.equal(p.attack.weapon, 'bow');
+  stepN(g, 0.6);
+  assert.equal(p.arrows, 1, 'firing an arrow should consume exactly one');
+  assert.ok(g.projectiles.some((pr) => pr.type === 'arrow') || e.hp < hp0, 'arrow should exist or have hit');
+  stepN(g, 0.6);
+  assert.ok(e.hp < hp0 || e.dead, 'arrow should damage the crawler');
+});
+
+test('bow refuses to fire with no arrows', () => {
+  const g = fresh();
+  const p = g.player;
+  p.weapons = ['sword', 'bow'];
+  p.weapon = 'bow';
+  p.arrows = 0;
+  g.update(DT, { attack: true });
+  assert.equal(p.attack, null);
+  assert.equal(p.arrows, 0);
+  assert.ok(g.events.some((ev) => ev.type === 'noAmmo' && ev.kind === 'arrow'));
+});
+
+test('shuriken consumable can be thrown and damages enemies', () => {
+  const g = fresh();
+  const p = g.player;
+  const e = g.enemies[0];
+  p.invuln = 999;
+  p.shurikens = 2;
+  p.x = e.x - 160;
+  p.y = FLOOR_Y - p.h;
+  p.onGround = true;
+  p.facing = 1;
+  e.speed = 0;
+  const hp0 = e.hp;
+  g.update(DT, { consume: true });
+  assert.equal(p.shurikens, 1);
+  assert.ok(g.projectiles.some((pr) => pr.type === 'shuriken'));
+  stepN(g, 0.4);
+  assert.ok(e.hp < hp0 || e.dead, 'shuriken should register damage');
+});
+
+test('weapon swap cycles through owned weapons', () => {
+  const g = fresh();
+  const p = g.player;
+  p.weapons = ['sword', 'pike', 'bow'];
+  p.weapon = 'sword';
+  g.update(DT, { swap: true });
+  assert.equal(p.weapon, 'pike');
+  g.update(DT, {});
+  g.update(DT, { swap: true });
+  assert.equal(p.weapon, 'bow');
+  g.update(DT, {});
+  g.update(DT, { swap: true });
+  assert.equal(p.weapon, 'sword');
+});
+
+test('merchant interaction is proximity based', () => {
+  const g = fresh();
+  g.enterRoom(2);
+  const p = g.player;
+  assert.equal(g.canShop(), true);
+  p.x = 760;
+  assert.equal(g.canShop(), false);
+  p.x = g.room.merchant.x;
+  assert.equal(g.canShop(), true);
+});

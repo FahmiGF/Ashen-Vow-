@@ -19,6 +19,72 @@ const BLESSINGS = [
   { id: 'wind', name: 'Vow of Wind', desc: 'Cooldown dash -35%, i-frame dash lebih lama.' },
 ];
 
+export const WEAPONS = {
+  sword: { id: 'sword', name: 'Pedang Sumpah', short: 'PEDANG' },
+  pike: { id: 'pike', name: 'Pike Penjaga', short: 'PIKE' },
+  bow: { id: 'bow', name: 'Busur Abu', short: 'BUSUR' },
+};
+
+const PIKE_ATTACK = {
+  windup: 0.24,
+  active: 0.15,
+  recover: 0.34,
+  range: 118,
+  height: 48,
+  dmg: 29,
+  knock: 260,
+  name: 'pierce',
+};
+
+const BOW_ATTACK = {
+  windup: 0.26,
+  active: 0.08,
+  recover: 0.34,
+  range: 0,
+  height: 0,
+  dmg: 22,
+  knock: 120,
+  name: 'arrow',
+};
+
+export const SHOP_ITEMS = [
+  {
+    id: 'pike',
+    name: 'Pike Penjaga',
+    desc: 'Senjata jarak jauh. Jangkauan 118, ayunan lambat, damage besar.',
+    cost: 35,
+    type: 'weapon',
+  },
+  {
+    id: 'bow',
+    name: 'Busur Abu',
+    desc: 'Senjata jarak jauh. Menembak anak panah; amunisi terbatas.',
+    cost: 55,
+    type: 'weapon',
+  },
+  {
+    id: 'shuriken',
+    name: 'Shuriken ×3',
+    desc: 'Konsumabel. Tekan C untuk melempar. Damage ringan, cepat.',
+    cost: 14,
+    type: 'consumable',
+  },
+  {
+    id: 'arrows',
+    name: 'Anak Panah ×6',
+    desc: 'Amunisi Busur Abu. Hanya bisa dibeli setelah memiliki busur.',
+    cost: 12,
+    type: 'ammo',
+  },
+  {
+    id: 'flask',
+    name: 'Isi Ulang Flask',
+    desc: 'Mengembalikan semua charge flask.',
+    cost: 10,
+    type: 'flask',
+  },
+];
+
 export const ROOMS = [
   {
     id: 0,
@@ -69,7 +135,9 @@ export const ROOMS = [
     name: 'Singgasana Bara',
     subtitle: 'Throne of Cinders',
     accent: '#e0913c',
-    spawn: { x: 96, y: FLOOR_Y - 46 },
+    spawn: { x: 250, y: FLOOR_Y - 46 },
+    checkpoint: { x: 88, y: FLOOR_Y - 78, w: 38, h: 78, name: 'Warung Abu' },
+    merchant: { x: 168, y: FLOOR_Y - 96, w: 46, h: 96 },
     platforms: [
       { x: 0, y: 470, w: 1400, h: 70 },
       { x: 120, y: 352, w: 190, h: 18 },
@@ -87,7 +155,9 @@ export const ROOMS = [
     name: 'Sarang Wyrm',
     subtitle: "Wyrm's Roost",
     accent: '#cf5a45',
-    spawn: { x: 150, y: FLOOR_Y - 46 },
+    spawn: { x: 240, y: FLOOR_Y - 46 },
+    checkpoint: { x: 70, y: FLOOR_Y - 78, w: 38, h: 78, name: 'Warung Abu' },
+    merchant: { x: 150, y: FLOOR_Y - 96, w: 46, h: 96 },
     platforms: [
       { x: 0, y: 470, w: 430, h: 70 },
       { x: 970, y: 470, w: 430, h: 70 },
@@ -148,7 +218,10 @@ export class AshenGame {
     this.hitstop = 0;
     this.shake = 0;
     this.kills = 0;
+    this.ash = 0;
     this.bossDefeated = {};
+    this.checkpoint = null;
+    this.checkpointRoom = null;
     this.awaitingBlessing = false;
     this.blessingChoices = null;
     this.blessings = [];
@@ -190,6 +263,11 @@ export class AshenGame {
       damageMult: 1,
       hitFlash: 0,
       pitGrace: false,
+      weapon: 'sword',
+      weapons: ['sword'],
+      arrows: 0,
+      shurikens: 0,
+      consumeCooldown: 0,
     };
 
     this.loadRoom(0, true);
@@ -204,6 +282,8 @@ export class AshenGame {
     this.projectiles = [];
     this.enemies = [];
     this.boss = null;
+    this.checkpoint = room.checkpoint ? { ...room.checkpoint, active: true } : null;
+    this.checkpointRoom = room.checkpoint ? index : null;
     this.blessingChoices = null;
     this.awaitingBlessing = false;
     this.bossIntro = room.boss ? 1.0 : 0;
@@ -219,6 +299,7 @@ export class AshenGame {
     p.dashTimer = 0;
     p.dashCooldown = 0;
     p.healing = 0;
+    p.consumeCooldown = 0;
     p.invuln = Math.max(p.invuln, 0.35);
     p.pitGrace = false;
     this.shake = 0;
@@ -229,6 +310,9 @@ export class AshenGame {
       this.spawnBoss(room.boss);
     }
     this.emit({ type: 'roomEnter', room: index, name: room.name, subtitle: room.subtitle });
+    if (this.checkpoint) {
+      this.emit({ type: 'checkpoint', room: index, name: this.checkpoint.name });
+    }
   }
 
   enterRoom(index) {
@@ -254,6 +338,9 @@ export class AshenGame {
       maxX: def.maxX,
       patrolDir: -1,
       attackLanded: false,
+      onGround: true,
+      jumpCooldown: 0,
+      homeX: def.x,
     };
     let e;
     if (def.type === 'crawler') {
@@ -412,6 +499,7 @@ export class AshenGame {
     if (p.dashCooldown > 0) p.dashCooldown -= dt;
     if (p.jumpBuffer > 0) p.jumpBuffer -= dt;
     if (p.coyote > 0) p.coyote -= dt;
+    if (p.consumeCooldown > 0) p.consumeCooldown -= dt;
 
     if (p.healing > 0) {
       p.healing -= dt;
@@ -462,6 +550,18 @@ export class AshenGame {
     }
 
     if (p.attack) this.updatePlayerAttack(dt);
+
+    // weapon swap + consumables
+    if (pressed('swap') && !p.attack && p.dashTimer <= 0) this.cycleWeapon();
+    if (
+      pressed('consume') &&
+      p.consumeCooldown <= 0 &&
+      !p.attack &&
+      p.dashTimer <= 0 &&
+      p.healing <= 0
+    ) {
+      this.throwConsumable();
+    }
 
     // horizontal movement
     const moving = (input.left ? -1 : 0) + (input.right ? 1 : 0);
@@ -544,25 +644,64 @@ export class AshenGame {
     }
   }
 
+  currentAttackDef() {
+    const p = this.player;
+    if (p.weapon === 'pike') return PIKE_ATTACK;
+    if (p.weapon === 'bow') return BOW_ATTACK;
+    return ATTACKS[p.attack ? p.attack.combo : 0];
+  }
+
   startAttack() {
     const p = this.player;
+    if (p.weapon === 'bow') {
+      if (p.arrows <= 0) {
+        this.emit({ type: 'noAmmo', kind: 'arrow' });
+        return false;
+      }
+      p.attack = { weapon: 'bow', def: BOW_ATTACK, t: 0, shot: false, hitIds: [], landed: false };
+      this.emit({ type: 'bowDraw' });
+      return true;
+    }
+    if (p.weapon === 'pike') {
+      p.attack = { weapon: 'pike', def: PIKE_ATTACK, t: 0, hitIds: [], landed: false };
+      p.x += p.facing * 2;
+      this.emit({ type: 'swing', combo: 0, weapon: 'pike' });
+      return true;
+    }
     const idx = p.comboTimer > 0 ? (p.comboIndex + 1) % 3 : 0;
     p.comboIndex = idx;
-    p.attack = { t: 0, combo: idx, hitIds: [], landed: false };
+    p.attack = { weapon: 'sword', def: ATTACKS[idx], t: 0, combo: idx, hitIds: [], landed: false };
     p.x += p.facing * 3;
     this.emit({ type: 'swing', combo: idx });
     if (idx === 2) this.shake = Math.max(this.shake, 0.16);
+    return true;
   }
 
   updatePlayerAttack(dt) {
     const p = this.player;
     const a = p.attack;
-    const def = ATTACKS[a.combo];
+    const def = a.def || this.currentAttackDef();
     a.t += dt;
     if (a.t >= def.windup + def.active + def.recover) {
       p.attack = null;
-      p.comboTimer = 0.5;
-      p.attackCooldown = 0.06;
+      p.comboTimer = a.weapon === 'sword' ? 0.5 : 0;
+      p.attackCooldown = a.weapon === 'sword' ? 0.06 : 0.12;
+      return;
+    }
+    if (a.weapon === 'bow') {
+      if (!a.shot && a.t >= def.windup) {
+        a.shot = true;
+        p.arrows -= 1;
+        this.spawnPlayerProjectile('arrow', {
+          x: p.x + p.w / 2 + p.facing * 18,
+          y: p.y + p.h * 0.44,
+          vx: p.facing * 640,
+          vy: 0,
+          r: 5,
+          dmg: def.dmg,
+          life: 1.3,
+        });
+      }
       return;
     }
     if (a.t >= def.windup && a.t < def.windup + def.active) {
@@ -579,7 +718,7 @@ export class AshenGame {
       if (b && !b.dying && !a.hitIds.includes('boss') && rectHitsRect(hb, b)) {
         a.hitIds.push('boss');
         a.landed = true;
-        this.hurtBoss(def.dmg * p.damageMult, def.knock, p.facing, a.combo === 2);
+        this.hurtBoss(def.dmg * p.damageMult, def.knock, p.facing, def.name !== 'slash');
       }
       // cut down fireballs
       for (const pr of this.projectiles) {
@@ -597,7 +736,7 @@ export class AshenGame {
 
   playerHitbox() {
     const p = this.player;
-    const def = ATTACKS[p.attack ? p.attack.combo : 0];
+    const def = p.attack?.def || this.currentAttackDef();
     const w = def.range;
     const h = def.height;
     const y = p.y + p.h / 2 - h / 2 + 4;
@@ -609,11 +748,125 @@ export class AshenGame {
     };
   }
 
+  spawnPlayerProjectile(type, opts) {
+    const r = opts.r ?? 5;
+    const pr = {
+      id: `p_${type}_${this.time.toFixed(4)}_${this.projectiles.length}`,
+      owner: 'player',
+      type,
+      x: 0,
+      y: 0,
+      vx: 0,
+      vy: 0,
+      r,
+      dmg: 10,
+      life: 1.2,
+      warmup: 0,
+      ...opts,
+      w: (opts.r ?? r) * 2,
+      h: (opts.r ?? r) * 2,
+    };
+    this.projectiles.push(pr);
+    this.emit({ type: type === 'arrow' ? 'arrowShot' : 'shurikenThrow', x: pr.x, y: pr.y });
+    return pr;
+  }
+
+  cycleWeapon() {
+    const p = this.player;
+    if (!p.weapons || p.weapons.length < 2) {
+      this.emit({ type: 'weaponSwitch', weapon: p.weapon, name: WEAPONS[p.weapon]?.short || p.weapon });
+      return;
+    }
+    const i = p.weapons.indexOf(p.weapon);
+    p.weapon = p.weapons[(i + 1) % p.weapons.length];
+    p.attack = null;
+    this.emit({ type: 'weaponSwitch', weapon: p.weapon, name: WEAPONS[p.weapon]?.short || p.weapon });
+  }
+
+  throwConsumable() {
+    const p = this.player;
+    if (p.shurikens <= 0) {
+      this.emit({ type: 'noAmmo', kind: 'shuriken' });
+      return false;
+    }
+    p.shurikens -= 1;
+    p.consumeCooldown = 0.28;
+    this.spawnPlayerProjectile('shuriken', {
+      x: p.x + p.w / 2 + p.facing * 16,
+      y: p.y + p.h * 0.42,
+      vx: p.facing * 620,
+      vy: -35,
+      r: 7,
+      dmg: 12,
+      life: 1.1,
+    });
+    return true;
+  }
+
+  canShop() {
+    if (!this.checkpoint || this.checkpointRoom !== this.roomIndex) return false;
+    const m = this.room.merchant;
+    if (!m) return false;
+    const p = this.player;
+    const pcx = p.x + p.w / 2;
+    const mcx = m.x + m.w / 2;
+    return Math.abs(pcx - mcx) < 110 && Math.abs(p.y + p.h - (m.y + m.h)) < 150;
+  }
+
+  buyShopItem(id) {
+    const item = SHOP_ITEMS.find((x) => x.id === id);
+    if (!item) return { ok: false, reason: 'Barang tidak ditemukan.' };
+    const p = this.player;
+    if (this.ash < item.cost) return { ok: false, reason: 'Abu tidak cukup.' };
+    if (item.type === 'weapon' && p.weapons.includes(item.id)) {
+      return { ok: false, reason: 'Sudah dimiliki.' };
+    }
+    if (item.type === 'ammo' && !p.weapons.includes('bow')) {
+      return { ok: false, reason: 'Butuh Busur Abu dulu.' };
+    }
+    if (item.type === 'flask' && p.flasks >= p.maxFlasks) {
+      return { ok: false, reason: 'Flask sudah penuh.' };
+    }
+
+    this.ash -= item.cost;
+    if (item.type === 'weapon') {
+      p.weapons.push(item.id);
+      p.weapon = item.id;
+      if (item.id === 'bow') p.arrows += 8;
+    } else if (item.id === 'shuriken') {
+      p.shurikens += 3;
+    } else if (item.id === 'arrows') {
+      p.arrows += 6;
+    } else if (item.type === 'flask') {
+      p.flasks = p.maxFlasks;
+    }
+    this.emit({ type: 'shopBuy', id: item.id, name: item.name, cost: item.cost });
+    return { ok: true, item };
+  }
+
+  respawnAtCheckpoint() {
+    if (this.checkpointRoom == null) return false;
+    const room = this.checkpointRoom;
+    const p = this.player;
+    this.state = 'playing';
+    this.deathTimer = 0;
+    this.bossDefeated[room] = false;
+    this.projectiles = [];
+    this.hitstop = 0;
+    this.shake = 0;
+    this.loadRoom(room);
+    p.hp = p.maxHp;
+    p.flasks = p.maxFlasks;
+    p.invuln = 1.2;
+    this.emit({ type: 'checkpointRespawn', room });
+    return true;
+  }
+
   hurtEnemy(e, def, dir) {
     const p = this.player;
     e.hp -= def.dmg * p.damageMult;
     e.hitFlash = 0.12;
-    e.x = clamp(e.x + dir * def.knock * 0.12, e.minX - 50, e.maxX + 50);
+    e.x = clamp(e.x + dir * def.knock * 0.12, 20, WORLD_W - e.w - 20);
     e.state = 'hurt';
     e.timer = 0.16;
     this.hitstop = Math.max(this.hitstop, 0.035);
@@ -623,8 +876,11 @@ export class AshenGame {
     if (e.hp <= 0) {
       e.dead = true;
       this.kills += 1;
+      const reward = e.type === 'sentinel' ? 15 : 8;
+      this.ash += reward;
       this.burst(e.x + e.w / 2, e.y + e.h / 2, 16, '#c96a3a', 220);
       this.emit({ type: 'enemyDown' });
+      this.emit({ type: 'ashGain', amount: reward, total: this.ash });
     }
   }
 
@@ -688,6 +944,66 @@ export class AshenGame {
   }
 
   // ── enemies ──────────────────────────────────────────────────────────────
+  enemyGroundAhead(e, dir) {
+    const foot = e.y + e.h;
+    const probeX = e.x + e.w / 2 + dir * (e.w / 2 + 20);
+    for (const pl of this.room.platforms) {
+      if (probeX < pl.x || probeX > pl.x + pl.w) continue;
+      if (Math.abs(pl.y - foot) < 16) return true;
+    }
+    return false;
+  }
+
+  integrateEnemy(e, dt) {
+    e.x += e.vx * dt;
+    e.x = clamp(e.x, 20, WORLD_W - e.w - 20);
+    const prevBottom = e.y + e.h;
+    e.vy += GRAVITY * dt;
+    e.y += e.vy * dt;
+    e.onGround = false;
+    for (const plat of this.room.platforms) {
+      if (e.x + e.w <= plat.x || e.x >= plat.x + plat.w) continue;
+      if (e.vy >= 0 && prevBottom <= plat.y + 4 && e.y + e.h >= plat.y) {
+        e.y = plat.y - e.h;
+        e.vy = 0;
+        e.onGround = true;
+      }
+    }
+    if (e.y > 650) {
+      e.x = clamp(e.homeX ?? e.minX ?? 80, 20, WORLD_W - e.w - 20);
+      e.y = FLOOR_Y - e.h;
+      e.vx = 0;
+      e.vy = 0;
+      e.onGround = true;
+    }
+  }
+
+  moveEnemy(e, dt, dir, speed, allowJump = true) {
+    const p = this.player;
+    e.facing = dir || e.facing;
+    const targetVx = dir * speed;
+    const accel = 1500 * dt;
+    e.vx += clamp(targetVx - e.vx, -accel, accel);
+
+    if (allowJump && e.onGround && e.jumpCooldown <= 0) {
+      const pcx = p.x + p.w / 2;
+      const ecx = e.x + e.w / 2;
+      const pFoot = p.y + p.h;
+      const eFoot = e.y + e.h;
+      const playerAbove = pFoot < eFoot - 28 && Math.abs(pcx - ecx) < 300;
+      const gapAhead = dir !== 0 && !this.enemyGroundAhead(e, dir);
+      const shouldCrossGap =
+        gapAhead && (pFoot < eFoot - 6 || Math.abs(pcx - ecx) > e.w + 70);
+      if (playerAbove || shouldCrossGap) {
+        if (shouldCrossGap && dir !== 0) e.vx = dir * 300;
+        e.vy = -720;
+        e.onGround = false;
+        e.jumpCooldown = 0.62;
+      }
+    }
+    this.integrateEnemy(e, dt);
+  }
+
   updateEnemies(dt) {
     const p = this.player;
     for (const e of this.enemies) {
@@ -695,39 +1011,37 @@ export class AshenGame {
       if (e.hitFlash > 0) e.hitFlash -= dt;
       if (e.timer > 0) e.timer -= dt;
       if (e.cooldown > 0) e.cooldown -= dt;
+      if (e.jumpCooldown > 0) e.jumpCooldown -= dt;
       const pcx = p.x + p.w / 2;
       const ecx = e.x + e.w / 2;
       const distX = pcx - ecx;
-      const near = Math.abs(distX) < 260 && Math.abs(p.y + p.h - (e.y + e.h)) < 110;
+      const dy = p.y + p.h - (e.y + e.h);
+      const aggroRange = e.type === 'sentinel' ? 720 : 540;
+      const aggro = Math.abs(distX) < aggroRange && Math.abs(dy) < 300;
+
+      if (e.state === 'hurt') {
+        e.vx = 0;
+        this.integrateEnemy(e, dt);
+        if (e.timer <= 0) e.state = 'patrol';
+        continue;
+      }
 
       if (e.type === 'crawler') {
-        if (e.state === 'hurt') {
-          e.vx = 0;
-          if (e.timer <= 0) e.state = 'patrol';
-        } else if (near) {
-          e.patrolDir = sign(distX) || e.patrolDir;
-          e.vx = e.patrolDir * e.speed * 1.35;
+        if (aggro) {
           e.state = 'chase';
+          const dir = Math.abs(distX) > 10 ? sign(distX) : 0;
+          this.moveEnemy(e, dt, dir, e.speed * 1.35, true);
         } else {
-          e.vx = e.patrolDir * e.speed;
           e.state = 'patrol';
-        }
-        e.facing = e.vx < 0 ? -1 : 1;
-        e.x += e.vx * dt;
-        if (e.x < e.minX) {
-          e.x = e.minX;
-          e.patrolDir = 1;
-        }
-        if (e.x + e.w > e.maxX) {
-          e.x = e.maxX - e.w;
-          e.patrolDir = -1;
+          if (e.x <= e.minX) e.patrolDir = 1;
+          if (e.x + e.w >= e.maxX) e.patrolDir = -1;
+          this.moveEnemy(e, dt, e.patrolDir, e.speed, false);
+          e.x = clamp(e.x, e.minX, Math.max(e.minX, e.maxX - e.w));
         }
       } else if (e.type === 'sentinel') {
-        if (e.state === 'hurt') {
+        if (e.state === 'windup') {
           e.vx = 0;
-          if (e.timer <= 0) e.state = 'patrol';
-        } else if (e.state === 'windup') {
-          e.vx = 0;
+          this.integrateEnemy(e, dt);
           if (e.timer <= 0) {
             e.state = 'lunge';
             e.timer = 0.3;
@@ -735,7 +1049,8 @@ export class AshenGame {
             this.emit({ type: 'enemyLunge' });
           }
         } else if (e.state === 'lunge') {
-          e.x += e.vx * dt;
+          e.vx = e.facing * 430;
+          this.integrateEnemy(e, dt);
           if (e.timer <= 0) {
             e.state = 'recover';
             e.timer = 0.55;
@@ -743,30 +1058,30 @@ export class AshenGame {
           }
         } else if (e.state === 'recover') {
           e.vx = 0;
+          this.integrateEnemy(e, dt);
           if (e.timer <= 0) {
             e.state = 'patrol';
             e.cooldown = 1.0;
           }
-        } else {
-          if (near && e.cooldown <= 0) {
+        } else if (aggro) {
+          if (e.cooldown <= 0 && Math.abs(distX) < 150 && Math.abs(dy) < 90) {
             e.facing = sign(distX) || e.facing;
             e.state = 'windup';
             e.timer = 0.48;
             e.vx = 0;
             this.emit({ type: 'enemyTelegraph' });
-          } else if (near) {
-            e.facing = sign(distX) || e.facing;
-            e.vx = e.facing * e.speed * 0.7;
           } else {
-            e.vx = e.patrolDir * e.speed * 0.6;
-            e.facing = e.vx < 0 ? -1 : 1;
-            if (e.x < e.minX) e.patrolDir = 1;
-            if (e.x + e.w > e.maxX) e.patrolDir = -1;
+            e.state = 'chase';
+            const dir = Math.abs(distX) > 12 ? sign(distX) : 0;
+            this.moveEnemy(e, dt, dir, e.speed, true);
           }
-          e.x += e.vx * dt;
+        } else {
+          e.state = 'patrol';
+          if (e.x <= e.minX) e.patrolDir = 1;
+          if (e.x + e.w >= e.maxX) e.patrolDir = -1;
+          this.moveEnemy(e, dt, e.patrolDir, e.speed * 0.6, false);
+          e.x = clamp(e.x, e.minX, Math.max(e.minX, e.maxX - e.w));
         }
-        e.x = clamp(e.x, e.minX, Math.max(e.minX, e.maxX - e.w));
-        e.y = FLOOR_Y - e.h;
       }
     }
   }
@@ -1102,6 +1417,9 @@ export class AshenGame {
       this.deathTimer = 0;
       this.emit({ type: 'victory' });
     }
+    const reward = b.kind === 'wyrm' ? 90 : 60;
+    this.ash += reward;
+    this.emit({ type: 'ashGain', amount: reward, total: this.ash });
     this.emit({ type: 'bossDown', room, kind: b.kind, name: b.name });
     this.shake = 0.9;
   }
@@ -1164,6 +1482,23 @@ export class AshenGame {
       if (pr.x < -80 || pr.x > WORLD_W + 80 || (pr.life <= 0)) {
         pr.dead = true;
         continue;
+      }
+      if (pr.owner === 'player' && pr.life > 0) {
+        const box = { x: pr.x - pr.r, y: pr.y - pr.r, w: pr.r * 2, h: pr.r * 2 };
+        for (const e of this.enemies) {
+          if (e.dead || pr.dead) continue;
+          if (rectHitsRect(box, e)) {
+            pr.dead = true;
+            this.hurtEnemy(e, { dmg: pr.dmg, knock: 110, name: pr.type }, sign(pr.vx));
+            this.burst(pr.x, pr.y, 7, '#d8c08a', 130);
+          }
+        }
+        const b = this.boss;
+        if (!pr.dead && b && !b.dying && rectHitsRect(box, b)) {
+          pr.dead = true;
+          this.hurtBoss(pr.dmg * p.damageMult, 90, sign(pr.vx), false);
+          this.burst(pr.x, pr.y, 8, '#d8c08a', 140);
+        }
       }
       if (pr.owner === 'boss' && pr.life > 0) {
         const box = pr.type === 'pillar' || pr.type === 'shockwave'

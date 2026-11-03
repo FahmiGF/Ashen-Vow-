@@ -287,6 +287,73 @@ body::before {
   text-shadow: 0 0 8px rgba(255, 200, 120, 0.7);
 }
 
+.gear-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.weapon-badge,
+.ammo-badge {
+  font-family: var(--font-display);
+  font-size: clamp(7px, 0.72vw, 9px);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border: 1px solid rgba(201, 162, 92, 0.28);
+  color: #c8b183;
+  background: rgba(20, 14, 9, 0.55);
+  white-space: nowrap;
+}
+
+.weapon-badge[data-weapon='pike'] {
+  color: #cfd8df;
+  border-color: rgba(180, 200, 215, 0.45);
+}
+
+.weapon-badge[data-weapon='bow'] {
+  color: #e3c58f;
+  border-color: rgba(220, 175, 105, 0.5);
+}
+
+.ammo-badge.empty {
+  color: #a45a4a;
+  border-color: rgba(190, 80, 60, 0.4);
+}
+
+.ash-badge {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 9px 5px;
+  border: 1px solid rgba(201, 162, 92, 0.35);
+  background: linear-gradient(180deg, rgba(34, 23, 13, 0.85), rgba(12, 8, 5, 0.8));
+  clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px);
+  white-space: nowrap;
+}
+
+.ash-badge span {
+  color: #ffb95e;
+  font-size: clamp(9px, 0.9vw, 11px);
+  text-shadow: 0 0 8px rgba(255, 160, 70, 0.7);
+}
+
+.ash-badge strong {
+  font-family: var(--font-display);
+  font-size: clamp(11px, 1.1vw, 14px);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: #f1dfbc;
+}
+
+.ash-badge em {
+  font-style: normal;
+  font-size: clamp(6px, 0.58vw, 7.5px);
+  letter-spacing: 0.2em;
+  color: #a0875f;
+}
+
 .hud-right {
   display: flex;
   align-items: flex-start;
@@ -1466,10 +1533,155 @@ kbd {
   color: #867258;
 }
 
+/* ── Warung Abu ────────────────────────────────────────────────── */
+.shop-inner {
+  width: min(1020px, 96%);
+}
+
+.shop-wallet {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  margin: 4px auto 16px;
+  padding: 7px 16px;
+  border: 1px solid rgba(201, 162, 92, 0.4);
+  background: linear-gradient(180deg, rgba(40, 26, 13, 0.75), rgba(12, 8, 5, 0.8));
+  font-size: clamp(7px, 0.7vw, 8.5px);
+  letter-spacing: 0.24em;
+  color: #9f8a68;
+}
+
+.shop-wallet strong {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  font-family: var(--font-display);
+  font-size: clamp(14px, 1.5vw, 19px);
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  color: #f3ddb4;
+}
+
+.shop-wallet strong i {
+  font-style: normal;
+  color: #ffb95e;
+  text-shadow: 0 0 12px rgba(255, 160, 70, 0.6);
+}
+
+.shop-wallet strong b {
+  font-weight: 600;
+}
+
+.shop-items {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: clamp(8px, 1vw, 13px);
+  margin: 6px 0 4px;
+}
+
+.shop-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  gap: 5px;
+  padding: 14px 13px 13px;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(208, 122, 53, 0.14), transparent 60%),
+    linear-gradient(180deg, rgba(26, 19, 12, 0.96), rgba(9, 7, 5, 0.99));
+  border: 1px solid rgba(201, 162, 92, 0.28);
+  clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
+  transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+}
+
+.shop-card:hover {
+  border-color: rgba(230, 175, 100, 0.6);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.5);
+}
+
+.shop-card.owned {
+  border-color: rgba(140, 170, 130, 0.4);
+}
+
+.shop-card.disabled {
+  filter: saturate(0.55);
+}
+
+.shop-icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  font-size: 19px;
+  color: #f0c483;
+  border: 1px solid rgba(201, 162, 92, 0.32);
+  background: rgba(0, 0, 0, 0.35);
+  text-shadow: 0 0 14px rgba(255, 170, 80, 0.5);
+}
+
+.shop-type {
+  font-size: clamp(6px, 0.58vw, 7.5px);
+  letter-spacing: 0.24em;
+  color: #8e7a5c;
+}
+
+.shop-name {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(10px, 0.95vw, 12.5px);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: #ecd9b7;
+}
+
+.shop-desc {
+  margin: 0;
+  flex: 1;
+  font-family: var(--font-body);
+  font-size: clamp(9px, 0.82vw, 11.5px);
+  line-height: 1.35;
+  color: #a4916f;
+}
+
+.shop-note {
+  margin: 0;
+  font-size: clamp(7px, 0.64vw, 8.5px);
+  letter-spacing: 0.08em;
+  color: #b98c5e;
+}
+
+.shop-card.poor .shop-note {
+  color: #b9604e;
+}
+
+.shop-buy {
+  width: 100%;
+  margin-top: 5px;
+  padding: 8px 6px 7px;
+  font-size: clamp(7px, 0.68vw, 8.5px);
+  letter-spacing: 0.12em;
+}
+
+.shop-buy:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  transform: none;
+  box-shadow: none;
+}
+
 /* ── responsive ────────────────────────────────────────────────── */
 @media (max-width: 1000px) {
   .level-cards {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    max-width: 760px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .shop-items {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     max-width: 760px;
     margin-left: auto;
     margin-right: auto;
@@ -1544,6 +1756,31 @@ kbd {
     padding: 10px 6px;
   }
 
+  .touch {
+    padding: 8px;
+  }
+
+  .touch-side {
+    gap: 6px;
+  }
+
+  .tbtn {
+    width: clamp(36px, 8vw, 46px);
+    height: clamp(36px, 8vw, 46px);
+    font-size: clamp(14px, 2vw, 18px);
+  }
+
+  .tbtn.small {
+    width: clamp(30px, 6.4vw, 38px);
+    height: clamp(30px, 6.4vw, 38px);
+    font-size: clamp(11px, 1.6vw, 14px);
+  }
+
+  .tbtn.attack {
+    width: clamp(48px, 9.6vw, 58px);
+    height: clamp(48px, 9.6vw, 58px);
+  }
+
   .blessing-cards {
     grid-template-columns: 1fr;
     max-width: 420px;
@@ -1574,6 +1811,37 @@ kbd {
   .level-cards {
     grid-template-columns: 1fr;
     max-width: 460px;
+  }
+
+  .shop-items {
+    grid-template-columns: 1fr 1fr;
+    max-width: 460px;
+  }
+
+  .shop-card {
+    padding: 10px 10px 9px;
+  }
+
+  .shop-desc {
+    font-size: 10px;
+  }
+
+  .ash-badge {
+    padding: 4px 6px;
+  }
+
+  .ash-badge em {
+    display: none;
+  }
+
+  .gear-row {
+    gap: 4px;
+  }
+
+  .weapon-badge,
+  .ammo-badge {
+    padding: 1px 4px;
+    letter-spacing: 0.1em;
   }
 
   .level-art {

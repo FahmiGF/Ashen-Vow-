@@ -1,5 +1,5 @@
 // Ashen Vow v0.0.5 — browser shell: menus, level select, spectate, fixed-step loop.
-import { AshenGame, ROOMS, WORLD_W, VIEW_W } from './core.js';
+import { AshenGame, ROOMS, WORLD_W, VIEW_W, WEAPONS, SHOP_ITEMS } from './core.js';
 import { Renderer } from './render.js';
 import { SoundKit } from './audio.js';
 
@@ -17,6 +17,7 @@ let started = false;
 let paused = false;
 let menuView = 'title'; // title | levels | credits | none
 let spectating = false;
+let shopOpen = false;
 let spectateGame = null;
 let spectateRoom = 0;
 let peekOffset = 0;
@@ -120,6 +121,12 @@ function updateMenuProgress() {
 }
 
 // ── navigation ───────────────────────────────────────────────────────────
+function provisionStartAsh(index) {
+  // Level-select runs skip earlier rooms, so grant a small ash stipend for the shop.
+  const stipend = index >= 3 ? 90 : index === 2 ? 45 : 0;
+  if (stipend > 0) game.ash = Math.max(game.ash, stipend);
+}
+
 function startRun(index = 0) {
   audio.init();
   attempts = 1;
@@ -127,10 +134,12 @@ function startRun(index = 0) {
   if (index > 0) {
     game.enterRoom(index);
     if (index >= 2) game.player.relic = true;
+    provisionStartAsh(index);
   }
   game.events.length = 0;
   started = true;
   paused = false;
+  shopOpen = false;
   spectating = false;
   spectateGame = null;
   menuView = 'none';
@@ -145,15 +154,20 @@ function startRun(index = 0) {
 
 function retryRun() {
   attempts += 1;
-  const index = game.roomIndex;
-  game.reset();
-  if (index > 0) {
-    game.enterRoom(index);
-    if (index >= 2) game.player.relic = true;
+  const usedCheckpoint = game.respawnAtCheckpoint();
+  if (!usedCheckpoint) {
+    const index = game.roomIndex;
+    game.reset();
+    if (index > 0) {
+      game.enterRoom(index);
+      if (index >= 2) game.player.relic = true;
+      provisionStartAsh(index);
+    }
   }
   game.events.length = 0;
   started = true;
   paused = false;
+  shopOpen = false;
   spectating = false;
   spectateGame = null;
   menuView = 'none';
@@ -162,6 +176,9 @@ function retryRun() {
   lastTime = performance.now();
   clearHeldKeys();
   showBanner(game.room.name, game.room.subtitle);
+  if (usedCheckpoint) {
+    showToast('Bangkit di Warung Abu — abu, senjata, dan berkah tersimpan.', 2400);
+  }
   syncScreens();
   updateHud();
 }
@@ -169,6 +186,7 @@ function retryRun() {
 function showMenu() {
   started = false;
   paused = false;
+  shopOpen = false;
   spectating = false;
   spectateGame = null;
   menuView = 'title';
@@ -182,6 +200,7 @@ function showMenu() {
 function showLevels() {
   started = false;
   paused = false;
+  shopOpen = false;
   spectating = false;
   spectateGame = null;
   menuView = 'levels';
@@ -211,6 +230,7 @@ function startSpectate(index) {
   spectating = true;
   started = false;
   paused = false;
+  shopOpen = false;
   menuView = 'none';
   peekOffset = 0;
   peekDir = 0;
@@ -304,7 +324,7 @@ function clearHeldKeys() {
 }
 
 function togglePause(force) {
-  if (!started || spectating || menuView !== 'none') return;
+  if (!started || spectating || menuView !== 'none' || shopOpen) return;
   if (game.state !== 'playing') return;
   paused = typeof force === 'boolean' ? force : !paused;
   if (paused) clearHeldKeys();
@@ -336,6 +356,8 @@ const KEY_ACTIONS = {
   ShiftRight: 'dash',
   KeyE: 'heal',
   KeyQ: 'heal',
+  KeyX: 'swap',
+  KeyC: 'consume',
 };
 
 window.addEventListener('keydown', (e) => {
@@ -371,6 +393,11 @@ window.addEventListener('keydown', (e) => {
     return;
   }
 
+  if (shopOpen) {
+    if (e.code === 'Escape' || e.code === 'KeyF' || e.code === 'Backspace') closeShop();
+    return;
+  }
+
   if (e.code === 'Escape') {
     if (game.state === 'blessing') return;
     if (paused) togglePause(false);
@@ -379,6 +406,11 @@ window.addEventListener('keydown', (e) => {
   }
 
   if (paused) return;
+
+  if (e.code === 'KeyF' && game.state === 'playing') {
+    openShop();
+    return;
+  }
 
   if (game.state === 'blessing') {
     if (e.code === 'Digit1' || e.code === 'Numpad1') chooseBlessing(0);
@@ -436,7 +468,7 @@ document.querySelectorAll('.tbtn').forEach((btn) => {
 
 function inputSnapshot() {
   const input = {};
-  for (const action of ['left', 'right', 'jump', 'attack', 'dash', 'heal']) {
+  for (const action of ['left', 'right', 'jump', 'attack', 'dash', 'heal', 'swap', 'consume']) {
     input[action] = !!(keys[action] || touchInput[action]);
   }
   return input;
@@ -453,6 +485,8 @@ $('btn-peek-back').addEventListener('click', stopSpectate);
 $('btn-retry').addEventListener('click', retryRun);
 $('btn-again').addEventListener('click', () => startRun(0));
 $('btn-resume').addEventListener('click', () => togglePause(false));
+$('btn-shop').addEventListener('click', () => openShop(true));
+$('btn-shop-close').addEventListener('click', closeShop);
 $('btn-pause-levels').addEventListener('click', showLevels);
 $('btn-pause-menu').addEventListener('click', showMenu);
 $('btn-death-levels').addEventListener('click', showLevels);
@@ -497,8 +531,109 @@ function chooseBlessing(index) {
   }
 }
 
-function formatTime(seconds) {
-  const s = Math.max(0, Math.floor(seconds));
+const SHOP_ICONS = {
+  pike: '⟋',
+  bow: '➶',
+  shuriken: '✦',
+  arrows: '➳',
+  flask: '✚',
+};
+
+const SHOP_TYPE_LABEL = {
+  weapon: 'SENJATA',
+  consumable: 'KONSUMABEL',
+  ammo: 'AMUNISI',
+  flask: 'BEKAL',
+};
+
+function shopItemState(item) {
+  const p = game.player;
+  if (item.type === 'weapon' && p.weapons.includes(item.id)) {
+    return { disabled: true, label: 'DIMILIKI', note: 'Tekan X untuk berganti senjata.', owned: true };
+  }
+  if (item.type === 'ammo' && !p.weapons.includes('bow')) {
+    return { disabled: true, label: 'BUTUH BUSUR', note: 'Beli Busur Abu terlebih dahulu.' };
+  }
+  if (item.type === 'flask' && p.flasks >= p.maxFlasks) {
+    return { disabled: true, label: 'FLASK PENUH', note: 'Bekalmu masih penuh.' };
+  }
+  if (game.ash < item.cost) {
+    return { disabled: true, label: `✦ ${item.cost}`, note: 'Abu tidak cukup.', poor: true };
+  }
+  return { disabled: false, label: `BELI · ✦ ${item.cost}`, note: '' };
+}
+
+function buildShop() {
+  const wrap = $('shop-items');
+  if (!wrap) return;
+  $('shop-ash').textContent = game.ash;
+  wrap.innerHTML = SHOP_ITEMS.map((item) => {
+    const state = shopItemState(item);
+    const cls = [
+      'shop-card',
+      state.owned ? 'owned' : '',
+      state.disabled ? 'disabled' : '',
+      state.poor ? 'poor' : '',
+    ]
+      .filter(Boolean)
+      .join(' ');
+    return `
+      <article class="${cls}" data-item="${item.id}">
+        <span class="shop-icon" aria-hidden="true">${SHOP_ICONS[item.id] || '✦'}</span>
+        <span class="shop-type">${SHOP_TYPE_LABEL[item.type] || 'BARANG'}</span>
+        <h3 class="shop-name">${item.name}</h3>
+        <p class="shop-desc">${item.desc}</p>
+        ${state.note ? `<p class="shop-note">${state.note}</p>` : ''}
+        <button class="btn ${state.disabled ? 'btn-ghost' : 'btn-primary'} btn-small shop-buy" type="button"
+          data-buy="${item.id}" ${state.disabled ? 'disabled' : ''}>${state.label}</button>
+      </article>
+    `;
+  }).join('');
+  wrap.querySelectorAll('[data-buy]').forEach((btn) => {
+    btn.addEventListener('click', () => buyShopItem(btn.dataset.buy));
+  });
+}
+
+function openShop(force = false) {
+  if (!started || spectating || menuView !== 'none' || game.state !== 'playing') return false;
+  if (!game.checkpoint || game.checkpointRoom !== game.roomIndex) {
+    showToast('Warung Abu hanya ada di ruang menjelang bos.', 2200);
+    return false;
+  }
+  if (!force && !game.canShop()) {
+    showToast('Dekati Warung Abu, lalu tekan F.', 2200);
+    return false;
+  }
+  paused = false;
+  shopOpen = true;
+  clearHeldKeys();
+  buildShop();
+  syncScreens();
+  return true;
+}
+
+function closeShop() {
+  if (!shopOpen) return;
+  shopOpen = false;
+  clearHeldKeys();
+  lastTime = performance.now();
+  accumulator = 0;
+  syncScreens();
+  updateHud();
+}
+
+function buyShopItem(id) {
+  if (!shopOpen) return;
+  const result = game.buyShopItem(id);
+  if (!result.ok) {
+    showToast(result.reason, 1800);
+    return;
+  }
+  buildShop();
+  updateHud();
+}
+
+function formatTime(seconds) {  const s = Math.max(0, Math.floor(seconds));
   const m = Math.floor(s / 60);
   return `${String(m).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 }
@@ -563,16 +698,17 @@ function syncScreens() {
   $('credits-screen').classList.toggle('hidden', menuView !== 'credits');
   $('spectate-ui').classList.toggle('hidden', !spectating);
 
-  $('pause-screen').classList.toggle('hidden', !(inRun && paused && s === 'playing'));
-  $('blessing-screen').classList.toggle('hidden', !(inRun && !paused && s === 'blessing'));
+  $('pause-screen').classList.toggle('hidden', !(inRun && paused && !shopOpen && s === 'playing'));
+  $('shop-screen').classList.toggle('hidden', !(inRun && shopOpen));
+  $('blessing-screen').classList.toggle('hidden', !(inRun && !paused && !shopOpen && s === 'blessing'));
   $('dead-screen').classList.toggle('hidden', !(inRun && s === 'dead'));
   $('victory-screen').classList.toggle('hidden', !(inRun && s === 'victory'));
 
-  const hudVisible = inRun && !paused && (s === 'playing' || s === 'blessing');
+  const hudVisible = inRun && !paused && !shopOpen && (s === 'playing' || s === 'blessing');
   $('hud').classList.toggle('hidden', !hudVisible);
   $('touch').classList.toggle(
     'hidden',
-    !(touchEnabled && inRun && !paused && s === 'playing'),
+    !(touchEnabled && inRun && !paused && !shopOpen && s === 'playing'),
   );
 
   if (inRun && !inMenu && s !== lastGameState) {
@@ -612,6 +748,19 @@ function updateHud() {
   $('room-name').textContent = hud.roomName;
   $('room-sub').textContent = (game.room.subtitle || '').toUpperCase();
 
+  const p = game.player;
+  $('ash-count').textContent = game.ash;
+  const weapon = WEAPONS[p.weapon] || WEAPONS.sword;
+  $('weapon-badge').textContent = weapon.short;
+  $('weapon-badge').dataset.weapon = p.weapon;
+  if (p.weapon === 'bow') {
+    $('ammo-badge').textContent = `PANAH ${p.arrows}`;
+    $('ammo-badge').classList.toggle('empty', p.arrows <= 0);
+  } else {
+    $('ammo-badge').textContent = `SHURIKEN ${p.shurikens}`;
+    $('ammo-badge').classList.toggle('empty', p.shurikens <= 0);
+  }
+
   const boss = hud.boss;
   $('boss-wrap').classList.toggle('hidden', !boss);
   if (boss) {
@@ -629,6 +778,7 @@ function updateHud() {
     if (gate && !gate.open && game.isNearGate()) hint = gate.reason;
     else if (hud.boss && game.boss && game.boss.intro > 0) hint = `${hud.boss.name} — ${hud.boss.title}`;
     else hint = hud.hint || '';
+    if (game.canShop()) hint = 'Tekan F — Warung Abu';
   }
   $('hint').textContent = hint;
 }
@@ -651,6 +801,18 @@ function drainEvents() {
     else if (ev.type === 'bossPhase') showToast(`FASE II — ${ev.name} bangkit`, 2200);
     else if (ev.type === 'respawn') showToast('Kau terlempar dari jurang');
     else if (ev.type === 'blessingChosen') showToast(`Berkah: ${ev.name}`, 1600);
+    else if (ev.type === 'checkpoint') showToast(`Checkpoint aktif — ${ev.name}`, 2000);
+    else if (ev.type === 'checkpointRespawn') showToast('Bangkit di checkpoint — abu dan senjata tersimpan.', 2200);
+    else if (ev.type === 'ashGain') showToast(`✦ +${ev.amount} ABU · total ${ev.total}`, 1300);
+    else if (ev.type === 'shopBuy') showToast(`Dibeli: ${ev.name}`, 1700);
+    else if (ev.type === 'noAmmo') {
+      showToast(
+        ev.kind === 'arrow'
+          ? 'Anak panah habis — beli di Warung Abu.'
+          : 'Shuriken habis — beli di Warung Abu.',
+        2100,
+      );
+    } else if (ev.type === 'weaponSwitch') showToast(`Senjata: ${ev.name}`, 1200);
   }
 }
 
@@ -663,7 +825,7 @@ function frame(now) {
     if (peekDir !== 0) peekOffset = clamp(peekOffset + peekDir * 330 * raw, -WORLD_W, WORLD_W);
     renderer.render(spectateGame, { spectate: true, cameraX: spectateCamera() });
   } else {
-    if (started && !paused && menuView === 'none') {
+    if (started && !paused && !shopOpen && menuView === 'none') {
       accumulator += raw;
       let steps = 0;
       while (accumulator >= FIXED && steps < 10) {
@@ -710,6 +872,9 @@ window.__ashen = {
   get menuView() {
     return menuView;
   },
+  get shopOpen() {
+    return shopOpen;
+  },
   get progress() {
     return progress;
   },
@@ -721,9 +886,26 @@ window.__ashen = {
   showCredits,
   startSpectate,
   stopSpectate,
+  openShop,
+  closeShop,
+  buyShopItem,
+  respawnAtCheckpoint() {
+    const ok = game.respawnAtCheckpoint();
+    if (ok) {
+      lastGameState = 'playing';
+      syncScreens();
+      updateHud();
+    }
+    return ok;
+  },
+  giveAsh(n) {
+    game.ash += n;
+    updateHud();
+  },
   enterRoom(index) {
     started = true;
     paused = false;
+    shopOpen = false;
     spectating = false;
     menuView = 'none';
     game.enterRoom(index);
@@ -768,6 +950,12 @@ window.__ashen = {
       flasks: game.player.flasks,
       relic: game.player.relic,
       kills: game.kills,
+      ash: game.ash,
+      weapon: game.player.weapon,
+      weapons: [...game.player.weapons],
+      arrows: game.player.arrows,
+      shurikens: game.player.shurikens,
+      checkpointRoom: game.checkpointRoom,
       blessings: [...game.blessings],
       enemies: game.enemies.length,
       projectiles: game.projectiles.length,
