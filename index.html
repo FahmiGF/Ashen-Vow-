@@ -80,7 +80,7 @@
           <div id="toast" class="toast"></div>
         </div>
 
-        <!-- ══ TITLE ══ -->
+        <!-- ══ MAIN MENU ══ -->
         <section id="title-screen" class="screen title-screen">
           <div class="screen-inner title-inner">
             <p class="eyebrow">SEBUAH SUMPAH DI ANTARA ABU · v0.0.5</p>
@@ -91,26 +91,95 @@
               <br />Angkat pedangmu, ambil relik, dan jatuhkan mahkota bara.
             </p>
 
-            <div class="feature-chips">
-              <span>4 Ruang</span>
-              <span>2 Boss</span>
-              <span>Relik Double Jump</span>
-              <span>Combat Real-time</span>
+            <nav class="main-menu" aria-label="Menu utama">
+              <button id="btn-start" class="btn btn-primary menu-btn" type="button">
+                <span>MULAI PERJALANAN</span>
+                <em>Run baru dari Gerbang Abu</em>
+              </button>
+              <button id="btn-levels" class="btn btn-ghost menu-btn" type="button">
+                <span>PILIH LEVEL</span>
+                <em>4 ruang · 2 boss · progres tersimpan</em>
+              </button>
+              <button id="btn-credits" class="btn btn-ghost menu-btn" type="button">
+                <span>CREDITS</span>
+                <em>SealiusHQ &amp; Contributors</em>
+              </button>
+            </nav>
+
+            <div class="menu-progress">
+              <span id="menu-progress">LEVEL TERBUKA 1 / 4</span>
+              <i>✦</i>
+              <span>Progres tersimpan otomatis</span>
             </div>
 
-            <div class="controls-grid">
-              <div><kbd>A</kbd><kbd>D</kbd><em>bergerak</em></div>
-              <div><kbd>SPACE</kbd><em>lompat · 2× dengan relik</em></div>
-              <div><kbd>J</kbd><em>serang · kombo 3 hit</em></div>
-              <div><kbd>K</kbd><em>dash · i-frame</em></div>
-              <div><kbd>E</kbd><em>minum flask</em></div>
-              <div><kbd>ESC</kbd><em>jeda</em></div>
+            <p class="menu-controls">
+              <kbd>A</kbd><kbd>D</kbd> gerak · <kbd>SPACE</kbd> lompat · <kbd>J</kbd> serang ·
+              <kbd>K</kbd> dash · <kbd>E</kbd> flask · <kbd>ESC</kbd> jeda
+            </p>
+
+            <p class="signature">
+              Made by <strong>SealiusHQ</strong> — with a lot of support from
+              <strong>Contributors</strong>
+            </p>
+          </div>
+        </section>
+
+        <!-- ══ LEVEL SELECT ══ -->
+        <section id="levels-screen" class="screen hidden">
+          <div class="screen-inner levels-inner">
+            <p class="eyebrow">ARSIP SUMPAH · PROGRES TERSIMPAN</p>
+            <h2 class="screen-title">PILIH LEVEL</h2>
+            <p class="screen-sub">
+              Selesaikan sebuah ruang untuk membuka ruang berikutnya. Level terkunci tetap bisa
+              diintip lewat <em>Sneak Peek</em> — hanya menonton, tanpa combat.
+            </p>
+            <div id="level-cards" class="level-cards"></div>
+            <div class="screen-links">
+              <button id="btn-levels-back" class="link-btn" type="button">← KEMBALI KE MENU</button>
+            </div>
+            <p class="micro">Semua progres disimpan di browser ini.</p>
+          </div>
+        </section>
+
+        <!-- ══ CREDITS ══ -->
+        <section id="credits-screen" class="screen hidden">
+          <div class="screen-inner credits-inner">
+            <p class="eyebrow">SUMPAH INI TIDAK DIBUAT SENDIRIAN</p>
+            <h2 class="screen-title">CREDITS</h2>
+
+            <div class="credit-hero">
+              <span>MADE BY</span>
+              <strong>SealiusHQ</strong>
+              <p>with a lot of support from <b>Contributors</b></p>
             </div>
 
-            <button id="btn-start" class="btn btn-primary" type="button">
-              <span>MULAI SUMPAH</span>
-            </button>
-            <p class="micro">Gunakan keyboard — atau tombol sentuh di perangkat mobile.</p>
+            <div class="credits-grid">
+              <div class="credit-cell">
+                <span>GAME DESIGN &amp; CODE</span>
+                <strong>SealiusHQ</strong>
+              </div>
+              <div class="credit-cell">
+                <span>SUPPORT, FEEDBACK &amp; PLAYTESTING</span>
+                <strong>Contributors</strong>
+              </div>
+              <div class="credit-cell">
+                <span>ENGINE</span>
+                <strong>HTML5 Canvas · Vanilla JS</strong>
+              </div>
+              <div class="credit-cell">
+                <span>VISUAL &amp; AUDIO</span>
+                <strong>Procedural Systems</strong>
+              </div>
+              <div class="credit-cell wide">
+                <span>SPECIAL THANKS</span>
+                <strong>Every soul who playtested the vow</strong>
+              </div>
+            </div>
+
+            <p class="credit-version">ASHEN VOW · v0.0.5 · 2 BOSS · 4 RUANG</p>
+            <div class="screen-links">
+              <button id="btn-credits-back" class="link-btn" type="button">← KEMBALI KE MENU</button>
+            </div>
           </div>
         </section>
 
@@ -132,6 +201,10 @@
             <h2 class="screen-title">JEDA</h2>
             <p class="screen-sub">Pedang tetap di tanganmu.</p>
             <button id="btn-resume" class="btn btn-primary" type="button"><span>LANJUTKAN</span></button>
+            <div class="screen-links">
+              <button id="btn-pause-levels" class="link-btn" type="button">PILIH LEVEL</button>
+              <button id="btn-pause-menu" class="link-btn" type="button">MENU UTAMA</button>
+            </div>
             <p class="micro">Tekan <kbd>ESC</kbd> untuk kembali · <kbd>M</kbd> untuk suara</p>
           </div>
         </section>
@@ -144,6 +217,10 @@
             <p id="death-sub" class="screen-sub">Sumpah belum tuntas. Bangkit dan coba lagi.</p>
             <div id="death-stats" class="stats"></div>
             <button id="btn-retry" class="btn btn-primary" type="button"><span>BANGKIT KEMBALI</span></button>
+            <div class="screen-links">
+              <button id="btn-death-levels" class="link-btn" type="button">PILIH LEVEL</button>
+              <button id="btn-death-menu" class="link-btn" type="button">MENU UTAMA</button>
+            </div>
             <p class="micro">R untuk mencoba ulang</p>
           </div>
         </section>
@@ -157,9 +234,29 @@
             <div id="victory-stats" class="stats"></div>
             <p id="victory-blessings" class="victory-blessings"></p>
             <button id="btn-again" class="btn btn-primary" type="button"><span>MULAI LAGI</span></button>
+            <div class="screen-links">
+              <button id="btn-victory-levels" class="link-btn" type="button">PILIH LEVEL</button>
+              <button id="btn-victory-menu" class="link-btn" type="button">MENU UTAMA</button>
+            </div>
             <p class="micro">Terima kasih telah memainkan Ashen Vow v0.0.5</p>
           </div>
         </section>
+
+        <!-- ══ SNEAK PEEK / SPECTATE ══ -->
+        <div id="spectate-ui" class="spectate-ui hidden" aria-live="polite">
+          <div class="peek-top">
+            <span class="peek-badge">✦ SNEAK PEEK · SPECTATE</span>
+            <div class="peek-meta">
+              <strong id="peek-name">Gerbang Abu</strong>
+              <span id="peek-sub">THE ASHEN GATE</span>
+            </div>
+            <button id="btn-peek-back" class="btn btn-ghost btn-compact" type="button">KEMBALI</button>
+          </div>
+          <div class="peek-bottom">
+            <span id="peek-hint">Mode menonton — tidak ada combat.</span>
+            <span class="peek-keys">← → geser kamera · ESC kembali</span>
+          </div>
+        </div>
 
         <!-- ══ TOUCH ══ -->
         <div id="touch" class="touch hidden" aria-hidden="true">

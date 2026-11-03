@@ -37,19 +37,22 @@ export class Renderer {
     this.canvas.height = Math.round(VIEW_H * dpr);
   }
 
-  render(game) {
+  render(game, opts = {}) {
     const ctx = this.ctx;
     const dpr = this.dpr;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, VIEW_W, VIEW_H);
     ctx.imageSmoothingEnabled = true;
 
+    const spectate = !!opts.spectate;
     const t = game.time;
     const room = ROOMS[game.roomIndex];
     const pal = PALETTES[game.roomIndex];
     const p = game.player;
-    const targetCam = clamp(p.x + p.w / 2 - VIEW_W / 2, 0, WORLD_W - VIEW_W);
-    const shakeAmt = game.shake;
+    const followCam = clamp(p.x + p.w / 2 - VIEW_W / 2, 0, WORLD_W - VIEW_W);
+    const targetCam =
+      opts.cameraX === undefined ? followCam : clamp(opts.cameraX, 0, WORLD_W - VIEW_W);
+    const shakeAmt = spectate ? 0 : game.shake;
     const sx = shakeAmt > 0 ? (Math.random() - 0.5) * shakeAmt * 20 : 0;
     const sy = shakeAmt > 0 ? (Math.random() - 0.5) * shakeAmt * 12 : 0;
 
@@ -63,11 +66,11 @@ export class Renderer {
     this.drawProjectiles(ctx, game, t);
     this.drawEnemies(ctx, game, t);
     this.drawBoss(ctx, game, t);
-    this.drawPlayer(ctx, game, t);
+    if (!spectate) this.drawPlayer(ctx, game, t);
     this.drawFx(ctx, game);
     ctx.restore();
 
-    this.drawForeground(ctx, game, pal, t, targetCam);
+    this.drawForeground(ctx, game, pal, t, targetCam, spectate);
   }
 
   // ── background ───────────────────────────────────────────────────────────
@@ -1108,7 +1111,7 @@ export class Renderer {
     ctx.globalAlpha = 1;
   }
 
-  drawForeground(ctx, game, pal, t, camX) {
+  drawForeground(ctx, game, pal, t, camX, spectate = false) {
     // vignette
     const v = ctx.createRadialGradient(VIEW_W / 2, VIEW_H / 2, 220, VIEW_W / 2, VIEW_H / 2, 620);
     v.addColorStop(0, 'rgba(0,0,0,0)');
@@ -1125,7 +1128,7 @@ export class Renderer {
 
     // damage vignette when low hp
     const p = game.player;
-    if (p.hp / p.maxHp < 0.34 && game.state === 'playing') {
+    if (!spectate && p.hp / p.maxHp < 0.34 && game.state === 'playing') {
       const pulse = 0.12 + 0.1 * Math.sin(t * 5);
       const d = ctx.createRadialGradient(VIEW_W / 2, VIEW_H / 2, 180, VIEW_W / 2, VIEW_H / 2, 600);
       d.addColorStop(0, 'rgba(120,10,10,0)');
@@ -1136,7 +1139,7 @@ export class Renderer {
 
     // gate direction chevrons when far from gate and open
     const gate = game.gate;
-    if (gate && gate.open) {
+    if (!spectate && gate && gate.open) {
       const gateScreen = gate.x - camX;
       if (gateScreen > VIEW_W - 40) {
         ctx.globalAlpha = 0.5 + 0.3 * Math.sin(t * 4);

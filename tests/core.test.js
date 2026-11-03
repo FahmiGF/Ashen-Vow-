@@ -212,6 +212,19 @@ test('warden boss spawns, transitions to phase 2 at half health', () => {
   assert.ok(g.events.some((e) => e.type === 'bossPhase'));
 });
 
+test('warden phase II raises extra shockwaves and speeds up', () => {
+  const g = fresh();
+  g.enterRoom(2);
+  assert.equal(g.boss.phase, 1);
+  g.damageBoss(200);
+  assert.equal(g.boss.phase, 2);
+  const shock = g.projectiles.filter((p) => p.type === 'shockwave');
+  assert.equal(shock.length, 2, 'phase II transition should spawn two shockwaves');
+  for (const p of shock) {
+    assert.ok(Math.abs(p.vx) === 430, `phase II shockwave speed should be 430, got ${p.vx}`);
+  }
+});
+
 test('defeating the warden opens blessing choice and unlocks the gate', () => {
   const g = fresh();
   g.enterRoom(2);
@@ -270,6 +283,46 @@ test('wyrm dives and creates fireballs over time', () => {
   assert.ok(g.fx.length >= 0);
   // The boss must have executed at least one attack state.
   assert.ok(g.boss.pattern > 0);
+});
+
+test('wyrm transitions to phase II at half health and unlocks pillars', () => {
+  const g = fresh();
+  g.enterRoom(3);
+  g.player.invuln = 999;
+  assert.ok(g.boss && g.boss.kind === 'wyrm');
+  assert.equal(g.boss.phase, 1);
+  g.damageBoss(g.boss.maxHp * 0.5 + 1);
+  assert.equal(g.boss.phase, 2);
+  assert.ok(g.events.some((e) => e.type === 'bossPhase'));
+
+  // Run long enough for the phase II-only pillar pattern to appear.
+  let sawPillars = false;
+  for (let i = 0; i < 2000 && !sawPillars; i++) {
+    g.update(DT, {});
+    if (g.boss.state === 'pillarWind' || g.boss.state === 'pillars') sawPillars = true;
+    if (g.events.some((e) => e.type === 'pillars')) sawPillars = true;
+  }
+  assert.ok(sawPillars, 'phase II wyrm should eventually use the pillar attack');
+});
+
+test('both bosses expose exactly two phases', () => {
+  const g = fresh();
+  g.enterRoom(2);
+  assert.equal(g.boss.kind, 'warden');
+  assert.equal(g.boss.phase, 1);
+  g.damageBoss(g.boss.maxHp * 0.5 + 1);
+  assert.equal(g.boss.phase, 2);
+  // Taking more damage must never advance to a third phase.
+  g.damageBoss(10);
+  assert.equal(g.boss.phase, 2);
+
+  g.enterRoom(3);
+  assert.equal(g.boss.kind, 'wyrm');
+  assert.equal(g.boss.phase, 1);
+  g.damageBoss(g.boss.maxHp * 0.5 + 1);
+  assert.equal(g.boss.phase, 2);
+  g.damageBoss(10);
+  assert.equal(g.boss.phase, 2);
 });
 
 test('defeating the wyrm wins the run', () => {

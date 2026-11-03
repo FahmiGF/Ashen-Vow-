@@ -1040,7 +1040,7 @@ export class AshenGame {
         b.state = 'hover';
     }
     b.x = clamp(b.x, 20, WORLD_W - b.w - 20);
-    b.y = clamp(b.y, 50, FLOOR_Y - b.h - 20);
+    b.y = clamp(b.y, 50, FLOOR_Y - b.h);
   }
 
   spawnFireball(b, tx, ty) {
@@ -1102,6 +1102,7 @@ export class AshenGame {
       this.deathTimer = 0;
       this.emit({ type: 'victory' });
     }
+    this.emit({ type: 'bossDown', room, kind: b.kind, name: b.name });
     this.shake = 0.9;
   }
 
@@ -1215,7 +1216,7 @@ export class AshenGame {
     if (p.x + p.w > g.x + 6 && p.x < g.x + g.w + 20) {
       const next = this.roomIndex + 1;
       if (next < ROOMS.length) {
-        this.emit({ type: 'gatePass' });
+        this.emit({ type: 'gatePass', from: this.roomIndex, to: next });
         this.loadRoom(next);
       }
     }

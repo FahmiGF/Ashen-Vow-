@@ -1,10 +1,12 @@
-// Ashen Vow v0.0.5 — browser shell: fixed-timestep loop, input, HUD, overlays.
-import { AshenGame, ROOMS, VIEW_W } from './core.js';
+// Ashen Vow v0.0.5 — browser shell: menus, level select, spectate, fixed-step loop.
+import { AshenGame, ROOMS, WORLD_W, VIEW_W } from './core.js';
 import { Renderer } from './render.js';
 import { SoundKit } from './audio.js';
 
 const $ = (id) => document.getElementById(id);
 const FIXED = 1 / 120;
+const PROGRESS_KEY = 'ashen-vow-progress-v1';
+const clamp = (v, lo, hi) => (v < lo ? lo : v > hi ? hi : v);
 
 const canvas = $('game');
 const renderer = new Renderer(canvas);
@@ -13,6 +15,12 @@ const game = new AshenGame();
 
 let started = false;
 let paused = false;
+let menuView = 'title'; // title | levels | credits | none
+let spectating = false;
+let spectateGame = null;
+let spectateRoom = 0;
+let peekOffset = 0;
+let peekDir = 0;
 let attempts = 0;
 let lastGameState = game.state;
 let bannerTimer = 0;
@@ -32,37 +40,275 @@ const BLESSING_NAMES = {
   wind: 'Vow of Wind',
 };
 
-// ── bootstrap ────────────────────────────────────────────────────────────
-function startRun() {
+const LEVEL_META = [
+  {
+    glyph: '✠',
+    chapter: 'CHAPTER I',
+    desc: 'Gerbang retak tempat abu pertama bangkit. Bersihkan jalan dan buka segel.',
+    tags: ['2 MUSUH', 'GERBANG'],
+  },
+  {
+    glyph: '✦',
+    chapter: 'CHAPTER II',
+    desc: 'Balai sunyi dengan jurang dalam. Relik Bulu Bara menanti di ujung.',
+    tags: ['RELIK', 'JURANG', 'SENTINEL'],
+  },
+  {
+    glyph: '⚔',
+    chapter: 'CHAPTER III',
+    desc: 'Sir Mordrake menjaga singgasana. Setengah darahnya membuka fase kedua.',
+    tags: ['2 FASE'],
+  },
+  {
+    glyph: '⛧',
+    chapter: 'CHAPTER IV',
+    desc: 'Vhael terbangun di sarang abu. Langit runtuh, api turun, sumpah berakhir.',
+    tags: ['2 FASE', 'PILAR API'],
+  },
+];
+
+// ── progress ─────────────────────────────────────────────────────────────
+function defaultProgress() {
+  return { unlocked: 1, cleared: ROOMS.map(() => false) };
+}
+
+function loadProgress() {
+  try {
+    const raw = localStorage.getItem(PROGRESS_KEY);
+    if (!raw) return defaultProgress();
+    const parsed = JSON.parse(raw);
+    const cleared = ROOMS.map((_, i) => !!parsed.cleared?.[i]);
+    const unlocked = clamp(Number(parsed.unlocked) || 1, 1, ROOMS.length);
+    return { unlocked, cleared };
+  } catch {
+    return defaultProgress();
+  }
+}
+
+function saveProgress() {
+  try {
+    localStorage.setItem(PROGRESS_KEY, JSON.stringify(progress));
+  } catch {
+    /* storage unavailable — keep in memory */
+  }
+}
+
+let progress = loadProgress();
+
+function markCleared(index) {
+  if (!Number.isInteger(index) || index < 0 || index >= ROOMS.length) return;
+  let changed = false;
+  if (!progress.cleared[index]) {
+    progress.cleared[index] = true;
+    changed = true;
+  }
+  const nextUnlocked = Math.min(ROOMS.length, index + 2);
+  if (nextUnlocked > progress.unlocked) {
+    progress.unlocked = nextUnlocked;
+    changed = true;
+  }
+  if (changed) {
+    saveProgress();
+    updateMenuProgress();
+    if (menuView === 'levels') buildLevelCards();
+  }
+}
+
+function updateMenuProgress() {
+  const clearedCount = progress.cleared.filter(Boolean).length;
+  $('menu-progress').textContent = `LEVEL TERBUKA ${progress.unlocked} / ${ROOMS.length} · ${clearedCount} TUNTAS`;
+}
+
+// ── navigation ───────────────────────────────────────────────────────────
+function startRun(index = 0) {
   audio.init();
-  attempts += 1;
+  attempts = 1;
   game.reset();
+  if (index > 0) {
+    game.enterRoom(index);
+    if (index >= 2) game.player.relic = true;
+  }
+  game.events.length = 0;
   started = true;
   paused = false;
+  spectating = false;
+  spectateGame = null;
+  menuView = 'none';
   lastGameState = 'playing';
   accumulator = 0;
   lastTime = performance.now();
+  clearHeldKeys();
   showBanner(game.room.name, game.room.subtitle);
   syncScreens();
   updateHud();
 }
 
 function retryRun() {
-  startRun();
+  attempts += 1;
+  const index = game.roomIndex;
+  game.reset();
+  if (index > 0) {
+    game.enterRoom(index);
+    if (index >= 2) game.player.relic = true;
+  }
+  game.events.length = 0;
+  started = true;
+  paused = false;
+  spectating = false;
+  spectateGame = null;
+  menuView = 'none';
+  lastGameState = 'playing';
+  accumulator = 0;
+  lastTime = performance.now();
+  clearHeldKeys();
+  showBanner(game.room.name, game.room.subtitle);
+  syncScreens();
+  updateHud();
 }
 
-function togglePause(force) {
-  if (!started) return;
-  if (game.state !== 'playing') return;
-  paused = typeof force === 'boolean' ? force : !paused;
-  if (paused) clearHeldKeys();
+function showMenu() {
+  started = false;
+  paused = false;
+  spectating = false;
+  spectateGame = null;
+  menuView = 'title';
+  game.reset();
+  game.events.length = 0;
+  clearHeldKeys();
+  updateMenuProgress();
   syncScreens();
 }
 
+function showLevels() {
+  started = false;
+  paused = false;
+  spectating = false;
+  spectateGame = null;
+  menuView = 'levels';
+  clearHeldKeys();
+  updateMenuProgress();
+  buildLevelCards();
+  syncScreens();
+}
+
+function showCredits() {
+  menuView = 'credits';
+  syncScreens();
+}
+
+function startSpectate(index) {
+  audio.init();
+  spectateRoom = clamp(index, 0, ROOMS.length - 1);
+  const peek = new AshenGame();
+  peek.enterRoom(spectateRoom);
+  if (peek.boss) {
+    peek.boss.intro = 0;
+    peek.boss.state = peek.boss.kind === 'wyrm' ? 'hover' : 'chase';
+    peek.boss.cooldown = 999;
+    peek.boss.hp = peek.boss.maxHp;
+  }
+  spectateGame = peek;
+  spectating = true;
+  started = false;
+  paused = false;
+  menuView = 'none';
+  peekOffset = 0;
+  peekDir = 0;
+  const room = ROOMS[spectateRoom];
+  $('peek-name').textContent = room.name;
+  $('peek-sub').textContent = (room.subtitle || '').toUpperCase();
+  let hint = 'Mode menonton — tidak ada combat. Kamu hanya melihat ruang ini.';
+  if (peek.boss) hint = `Boss: ${peek.boss.name} — ${peek.boss.title} · 2 fase`;
+  else if (room.relic) hint = `Relik: ${room.relic.name} · jurang di tengah balai`;
+  $('peek-hint').textContent = hint;
+  clearHeldKeys();
+  syncScreens();
+}
+
+function stopSpectate() {
+  spectating = false;
+  spectateGame = null;
+  peekDir = 0;
+  menuView = 'levels';
+  buildLevelCards();
+  syncScreens();
+}
+
+function spectateCamera() {
+  if (!spectateGame) return 0;
+  const max = WORLD_W - VIEW_W;
+  const t = spectateGame.time;
+  let base;
+  if (spectateGame.boss) {
+    base = spectateGame.boss.x + spectateGame.boss.w / 2 - VIEW_W / 2 + Math.sin(t * 0.22) * 46;
+  } else {
+    base = max * (0.5 + 0.5 * Math.sin(t * 0.12 - Math.PI / 2));
+  }
+  return clamp(base + peekOffset, 0, max);
+}
+
+// ── level select cards ───────────────────────────────────────────────────
+function buildLevelCards() {
+  const wrap = $('level-cards');
+  wrap.innerHTML = '';
+  ROOMS.forEach((room, i) => {
+    const locked = i >= progress.unlocked;
+    const cleared = !!progress.cleared[i];
+    const meta = LEVEL_META[i];
+    const card = document.createElement('article');
+    card.className = `level-card${locked ? ' locked' : ''}${cleared ? ' cleared' : ''}`;
+    card.style.setProperty('--accent', room.accent);
+    const bossTag = room.boss ? '<span class="boss">BOSS · 2 FASE</span>' : '';
+    const tags = meta.tags
+      .filter((t) => !t.includes('2 FASE'))
+      .map((t) => `<span>${t}</span>`)
+      .join('');
+    const badge = cleared
+      ? '<span class="level-badge done">TUNTAS</span>'
+      : locked
+        ? '<span class="level-badge lock">TERKUNCI</span>'
+        : '<span class="level-badge">TERBUKA</span>';
+    card.innerHTML = `
+      <div class="level-art">
+        <span class="level-chapter">${meta.chapter}</span>
+        ${badge}
+        <span class="level-glyph" aria-hidden="true">${meta.glyph}</span>
+      </div>
+      <div class="level-body">
+        <h3>${room.name}</h3>
+        <span class="level-sub">${room.subtitle}</span>
+        <p class="level-desc">${meta.desc}</p>
+        <div class="level-tags">${tags}${bossTag}</div>
+        <div class="level-actions">
+          ${
+            locked
+              ? ''
+              : '<button class="btn btn-primary btn-small play-btn" type="button">MAINKAN</button>'
+          }
+          <button class="btn btn-ghost btn-small peek-btn" type="button">SNEAK PEEK</button>
+        </div>
+      </div>
+    `;
+    const playBtn = card.querySelector('.play-btn');
+    if (playBtn) playBtn.addEventListener('click', () => startRun(i));
+    card.querySelector('.peek-btn').addEventListener('click', () => startSpectate(i));
+    wrap.appendChild(card);
+  });
+}
+
+// ── pause, mute, helpers ─────────────────────────────────────────────────
 function clearHeldKeys() {
   for (const k of Object.keys(keys)) keys[k] = false;
   for (const k of Object.keys(touchInput)) touchInput[k] = false;
   document.querySelectorAll('.tbtn.on').forEach((b) => b.classList.remove('on'));
+}
+
+function togglePause(force) {
+  if (!started || spectating || menuView !== 'none') return;
+  if (game.state !== 'playing') return;
+  paused = typeof force === 'boolean' ? force : !paused;
+  if (paused) clearHeldKeys();
+  syncScreens();
 }
 
 function toggleMute() {
@@ -102,12 +348,31 @@ window.addEventListener('keydown', (e) => {
     return;
   }
 
-  if (!started) {
-    if (e.code === 'Enter' || e.code === 'Space' || e.code === 'KeyJ') startRun();
+  // spectate controls
+  if (spectating) {
+    if (e.code === 'Escape' || e.code === 'Backspace' || e.code === 'KeyQ') {
+      stopSpectate();
+      return;
+    }
+    if (e.code === 'ArrowLeft' || e.code === 'KeyA') peekDir = -1;
+    if (e.code === 'ArrowRight' || e.code === 'KeyD') peekDir = 1;
+    return;
+  }
+
+  if (menuView === 'levels' || menuView === 'credits') {
+    if (e.code === 'Escape' || e.code === 'Backspace') showMenu();
+    return;
+  }
+
+  if (menuView === 'title' || !started) {
+    if (e.code === 'Enter' || e.code === 'Space' || e.code === 'KeyJ') startRun(0);
+    else if (e.code === 'KeyL') showLevels();
+    else if (e.code === 'KeyC') showCredits();
     return;
   }
 
   if (e.code === 'Escape') {
+    if (game.state === 'blessing') return;
     if (paused) togglePause(false);
     else togglePause(true);
     return;
@@ -122,11 +387,9 @@ window.addEventListener('keydown', (e) => {
     return;
   }
 
-  if (e.code === 'KeyR' || (e.code === 'Enter' && game.state !== 'playing')) {
-    if (game.state === 'dead' || game.state === 'victory') {
-      retryRun();
-      return;
-    }
+  if (e.code === 'KeyR' && (game.state === 'dead' || game.state === 'victory')) {
+    retryRun();
+    return;
   }
 
   const action = KEY_ACTIONS[e.code];
@@ -136,11 +399,16 @@ window.addEventListener('keydown', (e) => {
 });
 
 window.addEventListener('keyup', (e) => {
+  if (spectating && (e.code === 'ArrowLeft' || e.code === 'KeyA' || e.code === 'ArrowRight' || e.code === 'KeyD')) {
+    peekDir = 0;
+    return;
+  }
   const action = KEY_ACTIONS[e.code];
   if (action) keys[action] = false;
 });
 
 window.addEventListener('blur', () => {
+  peekDir = 0;
   clearHeldKeys();
 });
 
@@ -149,7 +417,7 @@ document.querySelectorAll('.tbtn').forEach((btn) => {
   const action = btn.dataset.action;
   const press = (e) => {
     e.preventDefault();
-    if (!started || paused || game.state !== 'playing') return;
+    if (!started || paused || spectating || menuView !== 'none' || game.state !== 'playing') return;
     audio.init();
     touchInput[action] = true;
     btn.classList.add('on');
@@ -175,13 +443,24 @@ function inputSnapshot() {
 }
 
 // ── UI wiring ────────────────────────────────────────────────────────────
-$('btn-start').addEventListener('click', startRun);
+$('btn-start').addEventListener('click', () => startRun(0));
+$('btn-levels').addEventListener('click', showLevels);
+$('btn-credits').addEventListener('click', showCredits);
+$('btn-levels-back').addEventListener('click', showMenu);
+$('btn-credits-back').addEventListener('click', showMenu);
+$('btn-peek-back').addEventListener('click', stopSpectate);
+
 $('btn-retry').addEventListener('click', retryRun);
-$('btn-again').addEventListener('click', retryRun);
+$('btn-again').addEventListener('click', () => startRun(0));
 $('btn-resume').addEventListener('click', () => togglePause(false));
+$('btn-pause-levels').addEventListener('click', showLevels);
+$('btn-pause-menu').addEventListener('click', showMenu);
+$('btn-death-levels').addEventListener('click', showLevels);
+$('btn-death-menu').addEventListener('click', showMenu);
+$('btn-victory-levels').addEventListener('click', showLevels);
+$('btn-victory-menu').addEventListener('click', showMenu);
 $('sound-btn').addEventListener('click', toggleMute);
 
-// resume audio on any gesture (mobile Safari)
 window.addEventListener(
   'pointerdown',
   () => {
@@ -276,32 +555,40 @@ function showToast(text, ms = 1900) {
 
 function syncScreens() {
   const s = game.state;
-  $('title-screen').classList.toggle('hidden', started);
-  $('pause-screen').classList.toggle('hidden', !(started && paused));
-  $('blessing-screen').classList.toggle('hidden', !(started && !paused && s === 'blessing'));
-  $('dead-screen').classList.toggle('hidden', !(started && s === 'dead'));
-  $('victory-screen').classList.toggle('hidden', !(started && s === 'victory'));
+  const inMenu = menuView !== 'none';
+  const inRun = started && !spectating && menuView === 'none';
 
-  const hudVisible = started && !paused && (s === 'playing' || s === 'blessing');
+  $('title-screen').classList.toggle('hidden', menuView !== 'title');
+  $('levels-screen').classList.toggle('hidden', menuView !== 'levels');
+  $('credits-screen').classList.toggle('hidden', menuView !== 'credits');
+  $('spectate-ui').classList.toggle('hidden', !spectating);
+
+  $('pause-screen').classList.toggle('hidden', !(inRun && paused && s === 'playing'));
+  $('blessing-screen').classList.toggle('hidden', !(inRun && !paused && s === 'blessing'));
+  $('dead-screen').classList.toggle('hidden', !(inRun && s === 'dead'));
+  $('victory-screen').classList.toggle('hidden', !(inRun && s === 'victory'));
+
+  const hudVisible = inRun && !paused && (s === 'playing' || s === 'blessing');
   $('hud').classList.toggle('hidden', !hudVisible);
   $('touch').classList.toggle(
     'hidden',
-    !(touchEnabled && started && !paused && s === 'playing'),
+    !(touchEnabled && inRun && !paused && s === 'playing'),
   );
 
-  if (s !== lastGameState) {
+  if (inRun && !inMenu && s !== lastGameState) {
     if (s === 'blessing') buildBlessings();
     if (s === 'dead') fillDeathStats();
     if (s === 'victory') fillVictoryStats();
     lastGameState = s;
   }
+  if (!inRun) lastGameState = s;
 }
 
 let flaskCache = -1;
 let relicCache = null;
 
 function updateHud() {
-  if (!started) return;
+  if (!started || menuView !== 'none' || spectating) return;
   const hud = game.hud;
   const pct = Math.max(0, Math.min(1, hud.hp / hud.maxHp)) * 100;
   $('hp-fill').style.width = `${pct}%`;
@@ -351,7 +638,12 @@ function drainEvents() {
   if (!game.events.length) return;
   const events = game.events.splice(0, game.events.length);
   for (const ev of events) {
-    if (started && !paused) audio.play(ev);
+    const activeRun = started && !spectating && menuView === 'none';
+    if (activeRun && !paused) audio.play(ev);
+    if (activeRun) {
+      if (ev.type === 'gatePass') markCleared(ev.from);
+      else if (ev.type === 'bossDown') markCleared(ev.room);
+    }
     if (!started) continue;
     if (ev.type === 'roomEnter') showBanner(ev.name, ev.subtitle);
     else if (ev.type === 'bossSpawn') showToast(`⚔ ${ev.name} — ${ev.title}`, 2400);
@@ -366,23 +658,29 @@ function frame(now) {
   const raw = Math.min(0.1, (now - lastTime) / 1000);
   lastTime = now;
 
-  if (started && !paused) {
-    accumulator += raw;
-    let steps = 0;
-    while (accumulator >= FIXED && steps < 10) {
-      game.update(FIXED, inputSnapshot());
-      accumulator -= FIXED;
-      steps += 1;
-      if (game.state !== 'playing') {
-        accumulator = 0;
-        break;
-      }
-    }
+  if (spectating && spectateGame) {
+    spectateGame.time += Math.min(raw, 0.05);
+    if (peekDir !== 0) peekOffset = clamp(peekOffset + peekDir * 330 * raw, -WORLD_W, WORLD_W);
+    renderer.render(spectateGame, { spectate: true, cameraX: spectateCamera() });
   } else {
-    accumulator = 0;
+    if (started && !paused && menuView === 'none') {
+      accumulator += raw;
+      let steps = 0;
+      while (accumulator >= FIXED && steps < 10) {
+        game.update(FIXED, inputSnapshot());
+        accumulator -= FIXED;
+        steps += 1;
+        if (game.state !== 'playing') {
+          accumulator = 0;
+          break;
+        }
+      }
+    } else {
+      accumulator = 0;
+    }
+    renderer.render(game);
   }
 
-  renderer.render(game);
   drainEvents();
   syncScreens();
   updateHud();
@@ -406,11 +704,28 @@ window.__ashen = {
   get paused() {
     return paused;
   },
+  get spectating() {
+    return spectating;
+  },
+  get menuView() {
+    return menuView;
+  },
+  get progress() {
+    return progress;
+  },
   start: startRun,
   restart: startRun,
   retry: retryRun,
+  showMenu,
+  showLevels,
+  showCredits,
+  startSpectate,
+  stopSpectate,
   enterRoom(index) {
-    if (!started) startRun();
+    started = true;
+    paused = false;
+    spectating = false;
+    menuView = 'none';
     game.enterRoom(index);
     lastGameState = 'playing';
     syncScreens();
@@ -421,6 +736,12 @@ window.__ashen = {
   },
   damageBoss(n) {
     game.damageBoss(n);
+  },
+  clearProgress() {
+    progress = defaultProgress();
+    saveProgress();
+    updateMenuProgress();
+    buildLevelCards();
   },
   togglePause,
   step(seconds = 0.1, input = {}) {
@@ -462,12 +783,25 @@ window.__ashen = {
           }
         : null,
       gate: game.gate ? { open: game.gate.open, reason: game.gate.reason } : null,
-      view: { w: VIEW_W, started, paused },
+      view: {
+        w: VIEW_W,
+        started,
+        paused,
+        spectating,
+        menuView,
+        startedRun: started,
+      },
+      progress: {
+        unlocked: progress.unlocked,
+        cleared: [...progress.cleared],
+      },
     };
   },
 };
 
 // kick off
+updateMenuProgress();
+buildLevelCards();
 renderer.render(game);
 syncScreens();
 updateHud();
