@@ -6,6 +6,17 @@ Ashen Vow adalah game web tanpa build step: HTML5 Canvas + ES Modules murni. Sel
 
 ![Menu utama Ashen Vow](docs/menu.png)
 
+## Trailer sinematik
+
+[![Tonton trailer Ashen Vow](trailer/thumbnail.png)](trailer/ashen-vow-trailer.mp4)
+
+Trailer resmi berdurasi **2 menit** (1280×720, 30 fps) beserta thumbnail tersedia di folder [`trailer/`](trailer/):
+
+- [`trailer/ashen-vow-trailer.mp4`](trailer/ashen-vow-trailer.mp4) — 120 detik, H.264 + AAC.
+- [`trailer/thumbnail.png`](trailer/thumbnail.png) — key art 1280×720.
+
+Seluruh footage diambil langsung dari build game ini (bukan mockup): pertarungan Gerbang Abu, traversal Balai Sumpah, duel **Sir Mordrake**, **Warung Abu**, dan pertarungan **Vhael**. Lihat [`trailer/README.md`](trailer/README.md) untuk rincian produksi.
+
 ## Cara menjalankan
 
 ```bash

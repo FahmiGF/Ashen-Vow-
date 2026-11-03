@@ -2,3 +2,12 @@ node_modules/
 *.log
 .DS_Store
 shots/
+
+trailer/frames/
+trailer/poster/
+trailer/preview/
+trailer/stills/
+trailer/cards/
+trailer/fonts/
+trailer/*.jpg
+trailer/score.wav
