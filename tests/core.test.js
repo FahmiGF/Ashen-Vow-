@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { AshenGame, FLOOR_Y, ROOMS, ATTACKS } from '../src/core.js';
+import { AshenGame, FLOOR_Y, ROOMS, ATTACKS, BOSS_INFO, CODEX } from '../src/core.js';
 
 const DT = 1 / 120;
 
@@ -35,7 +35,7 @@ test('starts in room 0 with full health and two enemies', () => {
   assert.equal(g.player.hp, 100);
   assert.equal(g.player.maxHp, 100);
   assert.equal(g.enemies.length, 2);
-  assert.equal(ROOMS.length, 4);
+  assert.equal(ROOMS.length, 8);
 });
 
 test('gravity and one-way platforms land the player on the floor', () => {
@@ -325,15 +325,22 @@ test('both bosses expose exactly two phases', () => {
   assert.equal(g.boss.phase, 2);
 });
 
-test('defeating the wyrm wins the run', () => {
+test('defeating the wyrm grants a blessing and opens the road to chapter V', () => {
   const g = fresh();
   g.enterRoom(3);
   g.player.invuln = 999;
   g.damageBoss(9999);
   stepN(g, 2.6);
-  assert.equal(g.state, 'victory');
+  assert.equal(g.state, 'blessing');
   assert.equal(g.bossDefeated[3], true);
-  assert.ok(g.events.some((e) => e.type === 'victory'));
+  assert.ok(g.events.some((e) => e.type === 'bossDown' && e.kind === 'wyrm'));
+  g.chooseBlessing(0);
+  assert.equal(g.gate.open, true);
+  g.player.x = 1350;
+  g.player.y = FLOOR_Y - g.player.h;
+  stepN(g, 0.3);
+  assert.equal(g.roomIndex, 4);
+  assert.equal(g.room.name, 'Jembatan Tulang');
 });
 
 test('player death sets the dead state and stops world simulation', () => {
@@ -605,4 +612,137 @@ test('merchant interaction is proximity based', () => {
   assert.equal(g.canShop(), false);
   p.x = g.room.merchant.x;
   assert.equal(g.canShop(), true);
+});
+
+// -- v0.0.6: expanded rooms, bosses, dialogue, codex -------------------------
+
+test('every boss exposes intro, phase, and defeat dialogue', () => {
+  for (const kind of Object.keys(BOSS_INFO)) {
+    const info = BOSS_INFO[kind];
+    assert.ok(info.dialogue?.intro?.length, `${kind} needs intro dialogue`);
+    assert.ok(info.dialogue?.phase2?.length, `${kind} needs phase II dialogue`);
+    assert.ok(info.dialogue?.defeat?.length, `${kind} needs defeat dialogue`);
+  }
+  assert.ok(BOSS_INFO.oathbreaker.dialogue.phase3.length, 'final boss needs phase III dialogue');
+});
+
+test('boss spawn emits intro dialogue and phase transitions emit phase dialogue', () => {
+  const g = fresh();
+  g.enterRoom(2);
+  assert.ok(g.events.some((e) => e.type === 'bossDialogue' && e.phase === 'intro' && e.kind === 'warden'));
+  g.damageBoss(200);
+  assert.ok(g.events.some((e) => e.type === 'bossDialogue' && e.phase === 'phase2' && e.kind === 'warden'));
+});
+
+test('the expanded campaign has eight rooms and four bosses', () => {
+  assert.equal(ROOMS.length, 8);
+  const bossRooms = ROOMS.filter((room) => room.boss);
+  assert.equal(bossRooms.length, 4);
+  assert.deepEqual(bossRooms.map((room) => room.boss), ['warden', 'wyrm', 'choir', 'oathbreaker']);
+  assert.equal(BOSS_INFO.oathbreaker.maxPhases, 3);
+});
+
+test('chapter V introduces wraith and brute enemies', () => {
+  const g = fresh();
+  g.enterRoom(4);
+  const wraith = g.enemies.find((e) => e.type === 'wraith');
+  const brute = g.enemies.find((e) => e.type === 'brute');
+  assert.ok(wraith, 'wraith should spawn');
+  assert.ok(brute, 'brute should spawn');
+  assert.equal(wraith.flying, true);
+  assert.ok(brute.maxHp > 100);
+});
+
+test('wraiths hover and cast wisps while brutes slam the floor', () => {
+  const g = fresh();
+  g.enterRoom(4);
+  g.player.invuln = 999;
+  const wraith = g.enemies.find((e) => e.type === 'wraith');
+  const brute = g.enemies.find((e) => e.type === 'brute');
+  g.player.x = wraith.x + 220;
+  g.player.y = FLOOR_Y - g.player.h;
+  let sawWisp = false;
+  let sawSlam = false;
+  for (let i = 0; i < 900 && !sawWisp; i++) {
+    g.update(DT, {});
+    if (g.events.some((e) => e.type === 'fireball')) sawWisp = true;
+    if (g.projectiles.some((p) => p.type === 'wisp')) sawWisp = true;
+    if (wraith.state === 'castWind' || wraith.state === 'cast') sawWisp = true;
+    g.events.length = 0;
+  }
+  // Move the player beside the brute so it commits to its slam.
+  g.player.x = brute.x - 110;
+  g.player.y = FLOOR_Y - g.player.h;
+  for (let i = 0; i < 1200 && !sawSlam; i++) {
+    g.update(DT, {});
+    if (g.events.some((e) => e.type === 'bossSlam')) sawSlam = true;
+    if (brute.state === 'slam' || brute.state === 'slamWind') sawSlam = true;
+    g.events.length = 0;
+  }
+  assert.ok(sawWisp, 'wraith should cast a wisp');
+  assert.ok(sawSlam, 'brute should attempt a floor slam');
+});
+
+test('the Hollow Choir uses notes and beams, and unlocks its gate after defeat', () => {
+  const g = fresh();
+  g.enterRoom(5);
+  assert.equal(g.boss.kind, 'choir');
+  assert.equal(g.boss.maxPhases, 2);
+  g.player.invuln = 999;
+  let sawAttack = false;
+  for (let i = 0; i < 900 && !sawAttack; i++) {
+    g.update(DT, {});
+    if (g.projectiles.some((p) => p.type === 'note' || p.type === 'beam')) sawAttack = true;
+    if (g.events.some((e) => e.type === 'note' || e.type === 'pillars')) sawAttack = true;
+  }
+  assert.ok(sawAttack, 'choir should attack with notes or beams');
+  g.damageBoss(9999);
+  stepN(g, 2.6);
+  assert.equal(g.state, 'blessing');
+  g.chooseBlessing(0);
+  assert.equal(g.gate.open, true);
+});
+
+test('the Oathbreaker advances through three phases and wins the run', () => {
+  const g = fresh();
+  g.enterRoom(7);
+  assert.equal(g.boss.kind, 'oathbreaker');
+  assert.equal(g.boss.maxPhases, 3);
+  g.player.invuln = 999;
+  g.damageBoss(g.boss.maxHp * 0.4);
+  assert.equal(g.boss.phase, 2);
+  assert.ok(g.events.some((e) => e.type === 'bossDialogue' && e.phase === 'phase2'));
+  stepN(g, 0.5);
+  g.damageBoss(g.boss.maxHp * 0.3);
+  assert.equal(g.boss.phase, 3);
+  assert.ok(g.events.some((e) => e.type === 'bossDialogue' && e.phase === 'phase3'));
+  stepN(g, 0.5);
+  g.damageBoss(9999);
+  stepN(g, 2.6);
+  assert.equal(g.state, 'victory');
+  assert.equal(g.bossDefeated[7], true);
+  assert.ok(g.events.some((e) => e.type === 'bossDialogue' && e.phase === 'defeat'));
+  assert.ok(g.events.some((e) => e.type === 'victory'));
+});
+
+test('the codex catalogues enemies, weapons, bosses, and items', () => {
+  assert.equal(CODEX.enemies.length, 4);
+  assert.equal(CODEX.weapons.length, 3);
+  assert.equal(CODEX.bosses.length, 4);
+  assert.ok(CODEX.items.length >= 7);
+  for (const entry of Object.values(CODEX).flat()) {
+    assert.ok(entry.name, 'codex entry needs a name');
+    assert.ok(entry.desc, 'codex entry needs a description');
+    assert.ok(entry.meta?.length, 'codex entry needs metadata');
+  }
+});
+
+test('boss gates reference the current room instead of a hardcoded room', () => {
+  const g = fresh();
+  g.enterRoom(5);
+  assert.equal(g.gate.open, false);
+  assert.match(g.gate.reason, /Choir/);
+  g.bossDefeated[5] = true;
+  g.awaitingBlessing = false;
+  assert.equal(g.gate.open, true);
 });

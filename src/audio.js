@@ -198,6 +198,17 @@ export class SoundKit {
         this.tone({ freq: 70, to: 110, type: 'sawtooth', dur: 0.7, gain: 0.16 });
         this.noise({ dur: 0.6, gain: 0.12, freq: 400, sweepTo: 2200, type: 'bandpass' });
         break;
+      case 'bossDialogue':
+        this.tone({ freq: 98, to: 74, type: 'sine', dur: 0.9, gain: 0.07 });
+        this.tone({ freq: 147, to: 110, type: 'triangle', dur: 0.8, gain: 0.035, delay: 0.08 });
+        break;
+      case 'note':
+        this.tone({ freq: 660, to: 880, type: 'sine', dur: 0.22, gain: 0.045 });
+        break;
+      case 'beam':
+        this.tone({ freq: 55, to: 120, type: 'sawtooth', dur: 0.55, gain: 0.1 });
+        this.noise({ dur: 0.5, gain: 0.07, freq: 500, sweepTo: 2600, type: 'bandpass' });
+        break;
       case 'bossDie':
         this.tone({ freq: 140, to: 40, type: 'sawtooth', dur: 1.8, gain: 0.18 });
         this.noise({ dur: 1.6, gain: 0.14, freq: 1200, sweepTo: 90, type: 'lowpass' });

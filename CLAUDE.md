@@ -1,6 +1,6 @@
 # Ashen Vow — Claude Master Plan
 
-> Compressed handoff for continuing **Ashen Vow v0.0.5**.
+> Compressed handoff for continuing **Ashen Vow v0.0.6**.
 > Status: **playable, browser-verified, pushed to GitHub**.
 > Repo: `https://github.com/FahmiGF/Ashen-Vow-` · branch `main` · push account `isshinAshinaSeal`.
 
@@ -9,17 +9,20 @@
 **Ashen Vow** is a 2D medieval metroidvania / roguelike-lite played in the browser.
 The UI is Indonesian; the tone is dark-fantasy ash and oath imagery.
 
-Non-negotiable v0.0.5 requirements:
+Non-negotiable v0.0.6 requirements:
 
 1. Boot into a **startup menu**, never directly into gameplay.
-2. Exactly **2 bosses**, and **every boss has exactly 2 phases**.
-3. **Level Select** shows all 4 rooms; unfinished rooms are **locked**.
-4. Locked rooms expose **Sneak Peek**: spectate-only, no player, no HUD.
-5. Credits must contain: **“Made by SealiusHQ with a lot of support from Contributors”**.
-6. Progress persists across reloads.
-7. Combat must be real and testable, not a mock.
-8. Every boss room keeps a **Warung Abu checkpoint** at its entrance.
-9. Weapons, ammunition, and consumables are bought with run-scoped **ash**; keep `SHOP_ITEMS` and `WEAPONS` data-driven.
+2. **8 rooms and 4 bosses**; every boss has at least 2 phases and The Oathbreaker has 3.
+3. Every boss speaks at fight start, at each phase, and on defeat.
+4. **Level Select** shows all 8 rooms; unfinished rooms are **locked**.
+5. Locked rooms expose **Sneak Peek**: spectate-only, no player, no HUD.
+6. The **map** (`M`) opens from the menu, pause screen, or mid-stage.
+7. The **codex** (`I`) indexes enemies, weapons, bosses, and items/consumables.
+8. Credits must contain: **“Made by SealiusHQ with a lot of support from Contributors”**.
+9. Progress persists across reloads.
+10. Combat must be real and testable, not a mock.
+11. Every boss room keeps a **Warung Abu checkpoint** at its entrance.
+12. Weapons, ammunition, and consumables are bought with run-scoped **ash**; keep `SHOP_ITEMS`, `WEAPONS`, `BOSS_INFO`, `ENEMY_INFO`, and `CODEX` data-driven.
 
 ## 2. Stack and constraints
 
@@ -39,13 +42,13 @@ Do **not** add a framework, bundler, or asset pipeline unless the product scope 
 
 | File | Responsibility |
 | --- | --- |
-| `index.html` | Canvas shell, HUD, main menu, level select, credits, Sneak Peek UI, Warung Abu, overlays |
-| `styles.css` | Medieval theme, responsive layout, portrait menu fix, touch controls, shop cards |
-| `src/core.js` | Pure simulation: player, enemies, bosses, weapons, projectiles, ash, shop, checkpoints, gates, blessings, events |
-| `src/render.js` | Canvas renderer; supports `render(game, { spectate, cameraX })` |
+| `index.html` | Canvas shell, HUD, main menu, level select, credits, map, codex, boss dialogue, Sneak Peek UI, Warung Abu, overlays |
+| `styles.css` | Medieval theme, responsive layout, portrait menu fix, touch controls, shop/map/codex/dialogue cards |
+| `src/core.js` | Pure simulation: player, enemies, bosses, dialogue, codex, weapons, projectiles, ash, shop, checkpoints, gates, blessings, events |
+| `src/render.js` | Canvas renderer; supports `render(game, { spectate, cameraX })` and all four bosses |
 | `src/audio.js` | Procedural SFX and mute toggle |
-| `src/main.js` | Menus, progress, spectate camera, fixed-step loop, input, HUD, shop UI, debug hooks |
-| `tests/core.test.js` | 36 deterministic Node tests |
+| `src/main.js` | Menus, progress, spectate camera, fixed-step loop, input, HUD, shop/map/codex/dialogue UI, debug hooks |
+| `tests/core.test.js` | 45 deterministic Node tests |
 | `server.js` | Static server on port 4300 |
 | `docs/` | Committed screenshots |
 
@@ -58,8 +61,9 @@ Do **not** add a framework, bundler, or asset pipeline unless the product scope 
 - Relevant event types:
   - `gatePass { from, to }` — room cleared and next room entered.
   - `bossDown { room, kind, name }` — boss defeated; used for progress.
-  - `bossPhase { name }` — phase II transition.
-  - `bossSpawn`, `bossTelegraph`, `bossSlash`, `bossSlam`, `bossDie`.
+  - `bossPhase { name, phase }` — boss phase transition.
+  - `bossDialogue { kind, phase, name, title, lines }` — boss speech for `intro`, `phase2`, `phase3`, `defeat`.
+  - `bossSpawn`, `bossTelegraph`, `bossSlash`, `bossSlam`, `bossDie`, `note`, `beam`.
   - `relic`, `respawn`, `blessingOpen`, `blessingChosen`, `victory`, `roomEnter`.
   - `checkpoint { room, name }`, `checkpointRespawn { room }` — boss-room checkpoints.
   - `ashGain { amount, total }`, `shopBuy { id, name, cost }` — currency and shop.
@@ -75,33 +79,57 @@ Do **not** add a framework, bundler, or asset pipeline unless the product scope 
 | 0 | Gerbang Abu | The Ashen Gate | Clear 2 enemies | — |
 | 1 | Balai Sumpah | Hall of Oaths | Relic required; pit hazard; Sentinels | — |
 | 2 | Singgasana Bara | Throne of Cinders | Boss gate | Sir Mordrake (Warden) |
-| 3 | Sarang Wyrm | Wyrm's Roost | No gate; victory room | Vhael (Wyrm) |
+| 3 | Sarang Wyrm | Wyrm's Roost | Boss gate | Vhael (Wyrm) |
+| 4 | Jembatan Tulang | The Bone Bridge | Clear wraith + brute | — |
+| 5 | Katedral Sunyi | The Silent Cathedral | Boss gate | The Hollow Choir |
+| 6 | Menara Lonceng | The Bell Tower | Clear sentinel + wraith + brute | — |
+| 7 | Puncak Sumpah | Summit of the Vow | Final boss, no gate | The Oathbreaker |
 
-Clearing room `i` marks `cleared[i] = true` and sets `unlocked = min(4, i + 2)`.
+Clearing room `i` marks `cleared[i] = true` and sets `unlocked = min(8, i + 2)`.
 Progress shape:
 
 ```js
-{ unlocked: 1, cleared: [false, false, false, false] }
+{ unlocked: 1, cleared: [false, false, false, false, false, false, false, false] }
 ```
 
 Stored in `localStorage` key **`ashen-vow-progress-v1`**.
 
-### Bosses — both have exactly 2 phases
+### Bosses — four bosses, up to three phases
 
-| Boss | Kind | HP | Phase I | Phase II trigger | Phase II changes |
-| --- | --- | --- | --- | --- | --- |
-| **Sir Mordrake, The Fallen Warden** | `warden` | 340 | Chase, telegraphed slash, ground slam with shockwaves | `hp <= 50%` | Faster chase (`78 → 118`), faster slash windup (`0.46 → 0.32 s`), higher slash damage (`19 → 26`), shorter cooldowns, **slash also spawns shockwaves**, transition spawns 2 shockwaves at speed `430` |
-| **Vhael, The Ashen Wyrm** | `wyrm` | 480 | Hover, 3-fireball volley, dive attack | `hp <= 50%` | 5-fireball volley, faster fireballs (`280 → 340`) and more damage (`14 → 18`), attack pattern gains **fire pillars** (`['volley','dive','pillars','volley']`) |
+| Boss | Kind | HP | Phases | Notes |
+| --- | --- | --- | --- | --- |
+| **Sir Mordrake, The Fallen Warden** | `warden` | 340 | 2 | Chase, telegraphed slash, ground slam with shockwaves. Phase II is faster and adds shockwaves. |
+| **Vhael, The Ashen Wyrm** | `wyrm` | 480 | 2 | Hover, fireball volley, dive. Phase II adds **fire pillars**. |
+| **The Hollow Choir** | `choir` | 560 | 2 | Flying spectral choir; spiral **note** projectiles and vertical **beam**; phase II adds echo patterns. |
+| **The Oathbreaker** | `oathbreaker` | 720 | 3 | Final boss; slash, dash, volley, nova. Phase III unlocks the full pattern set; defeat ends the run. |
 
-Phase transition code lives in `hurtBoss()`:
+Generic phase transition code lives in `hurtBoss()`:
 
 ```js
-if (b.phase === 1 && b.hp <= b.maxHp * 0.5) { b.phase = 2; ... }
+while (b.phase < b.maxPhases && b.hp <= b.maxHp * (b.phaseThresholds[b.phase - 1] ?? 0.5)) {
+  b.phase += 1;
+  ...
+  this.emitBossDialogue(b, `phase${b.phase}`);
+  this.onBossPhase(b);
+}
 ```
 
-There is no phase III. Tests assert a third phase is impossible.
+`BOSS_INFO[kind].phaseThresholds` defines the HP fraction for each next phase. `BOSS_INFO[kind].dialogue` holds `intro`, `phase2`, `phase3`, and `defeat` lines. Spawning a boss emits `bossDialogue` for `intro`; `finishBoss()` emits `defeat` before granting the blessing or victory.
+
+Non-final bosses grant a blessing and open the next gate. `oathbreaker` has `reward: 'victory'`.
 
 **Bug fixed during v0.0.5 verification:** Wyrm `dive` was clamped to `FLOOR_Y - b.h - 20`, so it never reached its rise threshold and looped in `dive` forever. Clamp is now `FLOOR_Y - b.h`. Do not reintroduce a floor offset above the dive landing threshold.
+
+### Enemies
+
+`ENEMY_INFO` drives base stats and the codex:
+
+| Enemy | HP | Damage | Behaviour |
+| --- | --- | --- | --- |
+| Crawler | 34 | 8 | Fast ground chase. |
+| Sentinel | 64 | 14 | Telegraphed lunge. |
+| Hollow Wraith | 48 | 10 | Hovering; keeps distance; fires `wisp` projectiles. |
+| Cinder Brute | 120 | 18 | Slow; telegraphed floor slam spawns shockwaves. |
 
 ### Weapons and consumables
 
@@ -119,7 +147,7 @@ There is no phase III. Tests assert a third phase is impossible.
 
 ### Ash and Warung Abu
 
-`game.ash` is run-scoped currency. Rewards: crawler `8`, sentinel `15`, Warden `60`, Wyrm `90`. Each kill emits `ashGain`.
+`game.ash` is run-scoped currency. Rewards: crawler `8`, sentinel `15`, wraith `16`, brute `22`, Warden `60`, Wyrm `90`, Choir `110`, Oathbreaker `160`. Each kill emits `ashGain`.
 
 `SHOP_ITEMS` (exported) drives both the shop UI and `game.buyShopItem(id)`:
 
@@ -131,11 +159,11 @@ There is no phase III. Tests assert a third phase is impossible.
 | Anak Panah ×6 | 12 | ammo | Requires `bow`; adds 6 arrows. |
 | Isi Ulang Flask | 10 | flask | Restores all flask charges. |
 
-`canShop()` requires a checkpoint in the current room and proximity (`<110 px` horizontally, `<150 px` vertically) to `room.merchant`. Shop is opened with `F` or the pause button. Purchases are run-scoped; ash is not persisted across full runs. Starting a run directly from Level Select grants a stipend of 45 ash (room 2) or 90 ash (room 3) so the shop is usable without replaying earlier rooms.
+`canShop()` requires a checkpoint in the current room and proximity (`<110 px` horizontally, `<150 px` vertically) to `room.merchant`. Shop is opened with `F` or the pause button. Purchases are run-scoped; ash is not persisted across full runs. Starting a run directly from Level Select grants a scaled stipend (rooms 2–8: 45, 90, 120, 155, 190, 240) so the shop is usable without replaying earlier rooms.
 
 ### Checkpoints
 
-Rooms 2 and 3 define `checkpoint` and `merchant` at the entrance. `loadRoom()` sets `checkpoint` / `checkpointRoom` and emits `checkpoint`. `retryRun()` in `src/main.js` calls `game.respawnAtCheckpoint()` when available:
+Boss rooms 2, 3, 5, and 7 define `checkpoint` and `merchant` at the entrance. `loadRoom()` sets `checkpoint` / `checkpointRoom` and emits `checkpoint`. `retryRun()` in `src/main.js` calls `game.respawnAtCheckpoint()` when available:
 
 - reloads the boss room and respawns the boss,
 - restores HP and flasks,
@@ -157,13 +185,14 @@ Rooms 2 and 3 define `checkpoint` and `merchant` at the entrance. `loadRoom()` s
 
 - `menuView`: `title | levels | credits | none`
 - `started`, `paused`, `spectating`, `shopOpen`
+- `mapOpen`, `codexOpen`, `codexTab`, `dialogueOpen`, `dialogueLines`, `dialogueIndex`, `dialogueMeta`
 - `spectateGame` is a separate `AshenGame` instance, never the live run.
 
 Rules:
 
 - Boot: `menuView = 'title'`, `started = false`, HUD hidden.
 - `MULAI PERJALANAN` → `startRun(0)`.
-- `PILIH LEVEL` → cards for all rooms.
+- `PILIH LEVEL` → cards for all 8 rooms.
 - Locked card: **no `MAINKAN` button**, only `SNEAK PEEK`.
 - Unlocked card: `MAINKAN` + `SNEAK PEEK`.
 - `SNEAK PEEK` → `startSpectate(index)`, hides HUD/title, shows `#spectate-ui`.
@@ -173,6 +202,9 @@ Rules:
 - Pause/death/victory screens link back to Level Select and Main Menu.
 - Shop is a full-screen overlay (`#shop-screen`); while `shopOpen`, the simulation pauses, HUD/touch are hidden, and `Esc`/`F` closes it.
 - Shop is available only when `game.checkpointRoom === game.roomIndex`; proximity to the merchant is required for `F`, while the pause button passes `force = true`.
+- `M` opens/closes `#map-screen` from the title, pause, or mid-run; `I` opens `#codex-screen`. Both swap with each other (`btn-map-codex`, `btn-codex-map`).
+- While `mapOpen`, `codexOpen`, or `dialogueOpen`, the fixed-step loop does not advance and HUD/touch are hidden.
+- `bossDialogue` events call `queueDialogue()`; `Space`/`Enter`/`Esc` or the **LANJUT** button advances lines. Closing the last line resets `lastTime`/`accumulator`.
 - Death retry uses checkpoint respawn when possible, preserving run inventory; otherwise it restarts the current room.
 - Portrait phones: `.screen` overlays become fixed full-viewport scroll layers so menus are not clipped by the 16:9 game frame.
 
@@ -184,7 +216,7 @@ Rules:
 npm test
 ```
 
-Current result: **36/36 passing**. Coverage includes:
+Current result: **45/45 passing**. Coverage includes:
 
 - gravity, floor landing, movement and world bounds;
 - single jump vs double jump after relic;
@@ -202,17 +234,23 @@ Current result: **36/36 passing**. Coverage includes:
 - **Warung Abu purchases, ammo gating, duplicate-purchase rejection, proximity**;
 - **Pike reach/windup, Bow ammo consumption/projectile damage, Shuriken throw**;
 - **weapon cycling via the swap input**;
-- Warden phase II transition and phase-II shockwaves;
+- Warden phase transition and phase-II shockwaves;
 - Warden defeat → 3 blessings → gate opens;
 - ember blessing damage multiplier;
 - Wyrm projectiles damaging the player;
 - Wyrm dive/rise cycle and fireballs;
-- **Wyrm phase II transition and pillar attack**;
-- **both bosses capped at exactly 2 phases**;
-- Wyrm defeat → victory;
+- **Wyrm phase transition and pillar attack**;
+- **Wyrm defeat grants a blessing and unlocks chapter V**;
+- **8 rooms and 4 bosses (`warden`, `wyrm`, `choir`, `oathbreaker`)**;
+- **every boss has intro/phase/defeat dialogue; Oathbreaker adds phase III**;
+- **wraith hover/wisp and brute slam/shockwave behaviour**;
+- **Hollow Choir notes/beams and gate unlock**;
+- **Oathbreaker three-phase transition and final victory**;
+- **codex entries for enemies, weapons, bosses, and items**;
+- **boss gates resolve against the current room, not a hardcoded index**;
 - death freezes the simulation.
 
-New tests added for v0.0.5 menus are browser-level, not Node-level.
+New tests added for v0.0.5/v0.0.6 menus, map, codex, and dialogue are browser-level, not all Node-level.
 
 ### Browser smoke tests
 
@@ -223,20 +261,15 @@ npm start
 chrome --remote-debugging-port=9333 --user-data-dir=<temp> http://127.0.0.1:4300/
 ```
 
-Verified through Chrome DevTools Protocol:
+Verified through Chrome DevTools Protocol (v0.0.6):
 
-- startup menu visible, HUD hidden, three menu actions present;
-- signature text exactly: `Made by SealiusHQ — with a lot of support from Contributors`;
-- Level Select shows 4 cards; only room 0 playable, other 3 locked;
-- locked cards have no play button and do have Sneak Peek;
-- Sneak Peek hides the player and HUD and shows boss hint;
-- credits hero text and cells correct;
-- clearing a gate updates `unlocked` and `localStorage`, survives reload;
-- Warung Abu opens in room 2, shows 5 cards, and DOM purchases update ash/HUD/weapons;
-- checkpoint death → `retry()` restores HP/flasks/boss while keeping ash and gear;
-- pursuit AI closes distance and jumps; swap input cycles weapons; empty bow emits `noAmmo`;
-- no console exceptions;
-- desktop and 390×844 mobile layouts have zero horizontal overflow, including the shop grid.
+- startup menu visible, HUD hidden, five menu actions present;
+- map opens from the title, renders 8 rooms, marks the current room, and opens with `M` mid-stage;
+- codex has 4 tabs and correct entry counts (4 enemies, 3 weapons, 4 bosses, 8 items);
+- boss intro dialogue opens, `Space` advances, phase dialogue shows FASE II, HUD label updates;
+- rooms 5/6/8 and the Oathbreaker's phase II/III run without exceptions;
+- mobile 390×844 map and codex have zero horizontal overflow;
+- no page exceptions and no console errors.
 
 > `requestAnimationFrame` is throttled when the Chrome page is backgrounded. Call `Page.bringToFront` in CDP before asserting anything that depends on the game loop.
 
@@ -244,8 +277,9 @@ Verified through Chrome DevTools Protocol:
 
 `window.__ashen` exists for smoke tests:
 
-- Getters: `game`, `renderer`, `started`, `paused`, `spectating`, `menuView`, `progress`, `shopOpen`.
+- Getters: `game`, `renderer`, `started`, `paused`, `spectating`, `menuView`, `progress`, `shopOpen`, `mapOpen`, `codexOpen`, `dialogueOpen`.
 - Navigation: `start`, `restart`, `retry`, `showMenu`, `showLevels`, `showCredits`, `enterRoom`, `clearProgress`.
+- Overlays: `openMap`, `closeMap`, `toggleMap`, `openCodex`, `closeCodex`, `advanceDialogue`.
 - Spectate: `startSpectate`, `stopSpectate`.
 - Simulation: `step`, `tap`, `damageBoss`, `chooseBlessing`, `togglePause`.
 - Shop/economy: `openShop`, `closeShop`, `buyShopItem`, `respawnAtCheckpoint`, `giveAsh`.
@@ -259,18 +293,20 @@ Verified through Chrome DevTools Protocol:
 - No new game plus, no difficulty selection, no controller mapping screen.
 - Audio is procedural only; no music track.
 - Art is procedural; no sprite/tileset pipeline.
-- Boss phase II is tuned by constants inside `src/core.js`; extract to data if more bosses are added.
+- Boss tuning lives in constants inside `src/core.js`; the data tables (`BOSS_INFO`, `ENEMY_INFO`, `CODEX`) are the extension point.
 - Enemy AI is platform-aware but not a full navmesh; complex multi-level layouts may still need hand-tuned jumps.
+- Codex screens are informational; no unlock tracking or per-entry discovery gating yet.
 
 ## 10. Working agreements for future changes
 
 1. Keep `src/core.js` pure and deterministic; add a Node test for every mechanic change.
-2. Keep exactly 2 bosses for v0.0.5; new bosses require a version bump.
-3. Never bypass phase II when touching boss damage or death logic.
+2. Content counts live in data: adding a room or boss must update `ROOMS`, `BOSS_INFO`, `ENEMY_INFO`/`CODEX`, `LEVEL_META`, and the tests together.
+3. Never bypass the phase-transition loop when touching boss damage or death logic; `phaseThresholds` must stay sorted from highest to lowest.
 4. Keep menu-first boot; never auto-start gameplay on load.
 5. Locked levels must remain viewable only through Sneak Peek, never playable.
 6. Preserve the exact credits wording.
 7. Verify on desktop and portrait mobile; run `npm test` before committing.
 8. Update `README.md` and this file when behaviour or content changes.
 9. Checkpoint retry must never erase ash, owned weapons, ammo, shuriken, or blessings.
-10. New purchasable items must be added to `SHOP_ITEMS` and validated in `buyShopItem()` with a Node test.
+10. New purchasable items must be added to `SHOP_ITEMS` (and `CODEX.items`) and validated in `buyShopItem()` with a Node test.
+11. Every boss must ship with `intro`, one `phaseN` entry per extra phase, and `defeat` dialogue; `emitBossDialogue()` handles the rest.

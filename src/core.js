@@ -1,4 +1,4 @@
-// Ashen Vow v0.0.5 — deterministic 2D combat simulation.
+// Ashen Vow v0.0.6 — deterministic 2D combat simulation.
 // Pure logic: no DOM, no canvas, no audio. Runs identically in Node and the browser.
 
 export const VIEW_W = 960;
@@ -23,6 +23,61 @@ export const WEAPONS = {
   sword: { id: 'sword', name: 'Pedang Sumpah', short: 'PEDANG' },
   pike: { id: 'pike', name: 'Pike Penjaga', short: 'PIKE' },
   bow: { id: 'bow', name: 'Busur Abu', short: 'BUSUR' },
+};
+
+export const ENEMY_INFO = {
+  crawler: {
+    name: 'Crawler',
+    title: 'Perayap Abu',
+    hp: 34,
+    dmg: 8,
+    speed: 78,
+    w: 46,
+    h: 30,
+    reward: 8,
+    danger: 'RENDAH',
+    desc: 'Sisa tubuh yang merangkak keluar dari retakan bara. Cepat mendekat, mudah dipatahkan.',
+    where: 'Gerbang Abu · Balai Sumpah',
+  },
+  sentinel: {
+    name: 'Sentinel',
+    title: 'Penjaga Berkarat',
+    hp: 64,
+    dmg: 14,
+    speed: 88,
+    w: 44,
+    h: 54,
+    reward: 15,
+    danger: 'SEDANG',
+    desc: 'Penjaga tua yang masih menuruti perintah terakhir. Menandai sasaran sebelum menerjang.',
+    where: 'Balai Sumpah · Menara Lonceng',
+  },
+  wraith: {
+    name: 'Hollow Wraith',
+    title: 'Arwah Tanpa Nama',
+    hp: 48,
+    dmg: 10,
+    speed: 66,
+    w: 40,
+    h: 60,
+    reward: 16,
+    danger: 'SEDANG',
+    desc: 'Arwah yang melayang di atas jurang. Menjaga jarak dan melepas serpihan nyala dari kejauhan.',
+    where: 'Jembatan Tulang · Menara Lonceng',
+  },
+  brute: {
+    name: 'Cinder Brute',
+    title: 'Raksasa Bara',
+    hp: 120,
+    dmg: 18,
+    speed: 64,
+    w: 64,
+    h: 64,
+    reward: 22,
+    danger: 'TINGGI',
+    desc: 'Gumpalan bara yang dipaksa berdiri. Ayunannya lambat, tetapi setiap hentakan membelah lantai.',
+    where: 'Jembatan Tulang · Menara Lonceng',
+  },
 };
 
 const PIKE_ATTACK = {
@@ -168,8 +223,103 @@ export const ROOMS = [
     enemies: [],
     relic: null,
     boss: 'wyrm',
-    gate: null,
+    gate: { x: 1362, y: 286, w: 34, h: 184, requires: 'boss' },
     hint: 'Vhael, Wyrm Abu, bangkit dari dasar jurang.',
+  },
+  {
+    id: 4,
+    name: 'Jembatan Tulang',
+    subtitle: 'The Bone Bridge',
+    accent: '#9b7550',
+    spawn: { x: 80, y: FLOOR_Y - 46 },
+    checkpoint: { x: 64, y: FLOOR_Y - 78, w: 38, h: 78, name: 'Warung Abu' },
+    merchant: { x: 144, y: FLOOR_Y - 96, w: 46, h: 96 },
+    platforms: [
+      { x: 0, y: 470, w: 420, h: 70 },
+      { x: 980, y: 470, w: 420, h: 70 },
+      { x: 450, y: 406, w: 130, h: 18 },
+      { x: 830, y: 406, w: 130, h: 18 },
+      { x: 590, y: 330, w: 180, h: 18 },
+      { x: 760, y: 250, w: 170, h: 18 },
+    ],
+    enemies: [
+      { type: 'wraith', x: 620, minX: 440, maxX: 940 },
+      { type: 'brute', x: 1140, minX: 1000, maxX: 1320 },
+    ],
+    relic: null,
+    boss: null,
+    gate: { x: 1362, y: 286, w: 34, h: 184, requires: 'clear' },
+    hint: 'Seberangi jembatan. Wraith menembak dari kejauhan, Brute menghancurkan lantai.',
+  },
+  {
+    id: 5,
+    name: 'Katedral Sunyi',
+    subtitle: 'The Silent Cathedral',
+    accent: '#8d84b8',
+    spawn: { x: 250, y: FLOOR_Y - 46 },
+    checkpoint: { x: 88, y: FLOOR_Y - 78, w: 38, h: 78, name: 'Warung Abu' },
+    merchant: { x: 168, y: FLOOR_Y - 96, w: 46, h: 96 },
+    platforms: [
+      { x: 0, y: 470, w: 1400, h: 70 },
+      { x: 170, y: 356, w: 190, h: 18 },
+      { x: 600, y: 320, w: 210, h: 18 },
+      { x: 1060, y: 356, w: 190, h: 18 },
+      { x: 390, y: 250, w: 150, h: 18 },
+      { x: 880, y: 250, w: 150, h: 18 },
+    ],
+    enemies: [],
+    relic: null,
+    boss: 'choir',
+    gate: { x: 1362, y: 286, w: 34, h: 184, requires: 'boss' },
+    hint: 'The Hollow Choir menyanyikan sumpah yang tidak pernah ada.',
+  },
+  {
+    id: 6,
+    name: 'Menara Lonceng',
+    subtitle: 'The Bell Tower',
+    accent: '#c9a25c',
+    spawn: { x: 80, y: FLOOR_Y - 46 },
+    checkpoint: { x: 64, y: FLOOR_Y - 78, w: 38, h: 78, name: 'Warung Abu' },
+    merchant: { x: 144, y: FLOOR_Y - 96, w: 46, h: 96 },
+    platforms: [
+      { x: 0, y: 470, w: 1400, h: 70 },
+      { x: 150, y: 380, w: 180, h: 18 },
+      { x: 390, y: 304, w: 180, h: 18 },
+      { x: 650, y: 356, w: 180, h: 18 },
+      { x: 900, y: 286, w: 180, h: 18 },
+      { x: 1160, y: 366, w: 170, h: 18 },
+    ],
+    enemies: [
+      { type: 'sentinel', x: 540, minX: 430, maxX: 760 },
+      { type: 'wraith', x: 1010, minX: 860, maxX: 1180 },
+      { type: 'brute', x: 1260, minX: 1120, maxX: 1340 },
+    ],
+    relic: null,
+    boss: null,
+    gate: { x: 1362, y: 286, w: 34, h: 184, requires: 'clear' },
+    hint: 'Panjat menara. Lonceng terakhir berbunyi untuk setiap langkahmu.',
+  },
+  {
+    id: 7,
+    name: 'Puncak Sumpah',
+    subtitle: 'Summit of the Vow',
+    accent: '#e2b46c',
+    spawn: { x: 250, y: FLOOR_Y - 46 },
+    checkpoint: { x: 88, y: FLOOR_Y - 78, w: 38, h: 78, name: 'Warung Abu' },
+    merchant: { x: 168, y: FLOOR_Y - 96, w: 46, h: 96 },
+    platforms: [
+      { x: 0, y: 470, w: 1400, h: 70 },
+      { x: 100, y: 344, w: 180, h: 18 },
+      { x: 1120, y: 344, w: 180, h: 18 },
+      { x: 560, y: 300, w: 280, h: 18 },
+      { x: 330, y: 230, w: 160, h: 18 },
+      { x: 910, y: 230, w: 160, h: 18 },
+    ],
+    enemies: [],
+    relic: null,
+    boss: 'oathbreaker',
+    gate: null,
+    hint: 'The Oathbreaker menanti di atas semua sumpah yang pernah kau ucapkan.',
   },
 ];
 
@@ -181,6 +331,23 @@ const BOSS_INFO = {
     w: 88,
     h: 112,
     contact: 12,
+    ashReward: 60,
+    reward: 'blessing',
+    spawn: { x: 760, y: FLOOR_Y - 112 },
+    dialogue: {
+      intro: [
+        { speaker: 'Sir Mordrake', text: 'Kau membawa pedang ke singgasana yang sudah mati.' },
+        { speaker: 'The Oathbound', text: 'Aku membawa sumpah. Itu cukup.' },
+        { speaker: 'Sir Mordrake', text: 'Maka biarkan bara menilai sumpahmu.' },
+      ],
+      phase2: [
+        { speaker: 'Sir Mordrake', text: 'Tidak... aku belum boleh jatuh. Bangkit, abu!' },
+      ],
+      defeat: [
+        { speaker: 'Sir Mordrake', text: 'Akhirnya... rantai ini... putus juga.' },
+        { speaker: 'The Oathbound', text: 'Tidurlah, Penjaga. Sumpahmu telah lunas.' },
+      ],
+    },
   },
   wyrm: {
     name: 'Vhael',
@@ -189,7 +356,189 @@ const BOSS_INFO = {
     w: 118,
     h: 74,
     contact: 13,
+    ashReward: 90,
+    reward: 'blessing',
+    flying: true,
+    spawn: { x: 700, y: 150 },
+    dialogue: {
+      intro: [
+        { speaker: 'Vhael', text: 'Daging dan sumpah... bau yang sama.' },
+        { speaker: 'The Oathbound', text: 'Turun dari sarangmu, cacing.' },
+        { speaker: 'Vhael', text: 'Aku akan menguburmu di api yang sama.' },
+      ],
+      phase2: [
+        { speaker: 'Vhael', text: 'Abu tidak mati. Ia hanya menunggu.' },
+      ],
+      defeat: [
+        { speaker: 'Vhael', text: 'Lagi... aku akan bangkit... lagi...' },
+        { speaker: 'The Oathbound', text: 'Tidak kali ini.' },
+      ],
+    },
   },
+  choir: {
+    name: 'The Hollow Choir',
+    title: 'Koor Tanpa Suara',
+    maxHp: 560,
+    w: 104,
+    h: 118,
+    contact: 14,
+    ashReward: 110,
+    reward: 'blessing',
+    flying: true,
+    spawn: { x: 700, y: 170 },
+    dialogue: {
+      intro: [
+        { speaker: 'The Hollow Choir', text: 'Satu suara hilang. Satu suara tersisa.' },
+        { speaker: 'The Oathbound', text: 'Kau bukan dewa. Kau hanya gema.' },
+        { speaker: 'The Hollow Choir', text: 'Gema pun bisa memecahkan batu.' },
+      ],
+      phase2: [
+        { speaker: 'The Hollow Choir', text: 'Dengarkan... sumpahmu bernyanyi untuk kami.' },
+      ],
+      defeat: [
+        { speaker: 'The Hollow Choir', text: 'Sunyi... akhirnya... sunyi...' },
+        { speaker: 'The Oathbound', text: 'Nyanyimu berakhir di sini.' },
+      ],
+    },
+  },
+  oathbreaker: {
+    name: 'The Oathbreaker',
+    title: 'Pemutus Sumpah',
+    maxHp: 720,
+    w: 96,
+    h: 126,
+    contact: 16,
+    ashReward: 160,
+    reward: 'victory',
+    maxPhases: 3,
+    phaseThresholds: [0.64, 0.3],
+    spawn: { x: 760, y: FLOOR_Y - 126 },
+    dialogue: {
+      intro: [
+        { speaker: 'The Oathbreaker', text: 'Kau datang membawa sumpah yang kau curi.' },
+        { speaker: 'The Oathbound', text: 'Aku datang membawanya kembali.' },
+        { speaker: 'The Oathbreaker', text: 'Maka aku akan mematahkannya di depan matamu.' },
+      ],
+      phase2: [
+        { speaker: 'The Oathbreaker', text: 'Setengah jalan. Setengah nyawa. Masih berani?' },
+        { speaker: 'The Oathbound', text: 'Sumpahku tidak butuh izinmu.' },
+      ],
+      phase3: [
+        { speaker: 'The Oathbreaker', text: 'Lihat! Inilah yang tersisa dari para pahlawan.' },
+        { speaker: 'The Oathbound', text: 'Aku tidak akan menjadi salah satunya.' },
+      ],
+      defeat: [
+        { speaker: 'The Oathbreaker', text: 'Kau... mematahkan... sumpahku...' },
+        { speaker: 'The Oathbound', text: 'Tidak. Aku menepatinya.' },
+      ],
+    },
+  },
+};
+
+export const CODEX = {
+  enemies: Object.values(ENEMY_INFO).map((enemy, i) => ({
+    id: `enemy-${i}`,
+    name: enemy.name,
+    subtitle: enemy.title,
+    glyph: ['◈', '⛨', '◌', '⬢'][i] || '◈',
+    danger: enemy.danger,
+    desc: enemy.desc,
+    meta: [
+      ['HP', String(enemy.hp)],
+      ['DAMAGE', String(enemy.dmg)],
+      ['ABU', String(enemy.reward)],
+    ],
+    where: enemy.where,
+  })),
+  weapons: [
+    {
+      id: 'sword',
+      name: 'Pedang Sumpah',
+      subtitle: 'Senjata awal · combo tiga ayunan',
+      glyph: '†',
+      danger: 'SEIMBANG',
+      desc: 'Pedang yang diwariskan bersama sumpah. Tiga ayunan cepat; ayunan ketiga menghantam lebih keras.',
+      meta: [['DAMAGE', '12 · 14 · 24'], ['JANGKAUAN', '60'], ['KECEPATAN', 'CEPAT']],
+      where: 'Dimiliki sejak awal',
+    },
+    {
+      id: 'pike',
+      name: 'Pike Penjaga',
+      subtitle: 'Senjata jarak menengah',
+      glyph: '⟋',
+      danger: 'BERAT',
+      desc: 'Tombak panjang milik penjaga gerbang. Ayunannya lambat, tetapi tusukan lurus menembus jarak aman.',
+      meta: [['DAMAGE', '29'], ['JANGKAUAN', '118'], ['KECEPATAN', 'LAMBAT']],
+      where: 'Warung Abu · 35 abu',
+    },
+    {
+      id: 'bow',
+      name: 'Busur Abu',
+      subtitle: 'Senjata jarak jauh · amunisi terbatas',
+      glyph: '➶',
+      danger: 'RINGAN',
+      desc: 'Busur yang dibuat dari tulang dan serat abu. Menembak anak panah lurus; amunisi harus dibeli.',
+      meta: [['DAMAGE', '22'], ['JANGKAUAN', 'JAUH'], ['AMUNISI', 'PANAH']],
+      where: 'Warung Abu · 55 abu',
+    },
+  ],
+  bosses: Object.entries(BOSS_INFO).map(([kind, boss]) => ({
+    id: kind,
+    name: boss.name,
+    subtitle: boss.title,
+    glyph: { warden: '♜', wyrm: 'ϟ', choir: '♱', oathbreaker: '✠' }[kind] || '♜',
+    danger: `${boss.maxPhases || 2} FASE`,
+    desc: boss.dialogue?.intro?.[0]?.text || '',
+    meta: [
+      ['HP', String(boss.maxHp)],
+      ['FASE', String(boss.maxPhases || 2)],
+      ['ABU', String(boss.ashReward)],
+    ],
+    where: ROOMS.find((room) => room.boss === kind)?.name || 'Tidak diketahui',
+    dialogue: boss.dialogue,
+  })),
+  items: [
+    ...SHOP_ITEMS.map((item) => ({
+      id: item.id,
+      name: item.name,
+      subtitle: { weapon: 'Senjata', consumable: 'Konsumabel', ammo: 'Amunisi', flask: 'Bekal' }[item.type] || 'Barang',
+      glyph: { pike: '⟋', bow: '➶', shuriken: '✦', arrows: '➳', flask: '✚' }[item.id] || '✦',
+      danger: `✦ ${item.cost}`,
+      desc: item.desc,
+      meta: [['TIPE', item.type.toUpperCase()], ['HARGA', `${item.cost} ABU`], ['SUMBER', 'WARUNG ABU']],
+      where: 'Warung Abu',
+    })),
+    {
+      id: 'ember-feather',
+      name: 'Bulu Bara',
+      subtitle: 'Relik · lompat ganda',
+      glyph: '✦',
+      danger: 'RELIK',
+      desc: 'Bulu yang tidak pernah menjadi abu. Membuka lompatan kedua dan memperkuat ikatan dengan Warung Abu.',
+      meta: [['TIPE', 'RELIK'], ['EFEK', 'LOMPAT GANDA'], ['LOKASI', 'BALAI SUMPAH']],
+      where: 'Balai Sumpah',
+    },
+    {
+      id: 'ash',
+      name: 'Abu',
+      subtitle: 'Mata uang perjalanan',
+      glyph: '◌',
+      danger: 'MATA UANG',
+      desc: 'Sisa dari setiap penjaga yang gugur. Ditukar di Warung Abu untuk senjata, amunisi, dan nyawa tambahan.',
+      meta: [['TIPE', 'MATA UANG'], ['SUMBER', 'MUSUH & BOSS'], ['GUNA', 'WARUNG ABU']],
+      where: 'Seluruh perjalanan',
+    },
+    {
+      id: 'blessing',
+      name: 'Berkah Sumpah',
+      subtitle: 'Peningkatan permanen dalam satu run',
+      glyph: '✧',
+      danger: 'BERKAH',
+      desc: 'Hadiah dari penjaga yang gugur. Pilih satu dari tiga janji: besi, bara, atau angin.',
+      meta: [['TIPE', 'BERKAH'], ['PILIHAN', '3'], ['DURASI', 'SATU RUN']],
+      where: 'Setelah setiap boss',
+    },
+  ],
 };
 
 const clamp = (v, lo, hi) => (v < lo ? lo : v > hi ? hi : v);
@@ -342,24 +691,31 @@ export class AshenGame {
       jumpCooldown: 0,
       homeX: def.x,
     };
-    let e;
-    if (def.type === 'crawler') {
-      e = { ...base, w: 46, h: 30, hp: 34, maxHp: 34, dmg: 8, speed: 78 };
-    } else {
-      e = { ...base, w: 44, h: 54, hp: 64, maxHp: 64, dmg: 14, speed: 88 };
-    }
-    e.y = FLOOR_Y - e.h;
+    const info = ENEMY_INFO[def.type] || ENEMY_INFO.crawler;
+    const e = {
+      ...base,
+      w: info.w,
+      h: info.h,
+      hp: info.hp,
+      maxHp: info.hp,
+      dmg: info.dmg,
+      speed: info.speed,
+      flying: def.type === 'wraith',
+      castCooldown: 0.8,
+    };
+    e.y = e.flying ? FLOOR_Y - 148 : FLOOR_Y - e.h;
     this.enemies.push(e);
   }
 
   spawnBoss(kind) {
     const info = BOSS_INFO[kind];
+    const spawn = info.spawn || { x: 760, y: FLOOR_Y - info.h };
     const b = {
       kind,
       name: info.name,
       title: info.title,
-      x: kind === 'warden' ? 760 : 700,
-      y: kind === 'warden' ? FLOOR_Y - info.h : 150,
+      x: spawn.x,
+      y: spawn.y,
       w: info.w,
       h: info.h,
       vx: 0,
@@ -369,6 +725,9 @@ export class AshenGame {
       contact: info.contact,
       facing: -1,
       phase: 1,
+      maxPhases: info.maxPhases || 2,
+      phaseThresholds: info.phaseThresholds || [0.5],
+      flying: !!info.flying,
       state: 'idle',
       timer: 0,
       cooldown: 1.2,
@@ -386,7 +745,22 @@ export class AshenGame {
     };
     this.boss = b;
     this.emit({ type: 'bossSpawn', name: info.name, title: info.title, kind });
+    this.emitBossDialogue(b, 'intro');
     this.shake = 0.5;
+  }
+
+  emitBossDialogue(b, phaseKey) {
+    const info = BOSS_INFO[b.kind];
+    const lines = info?.dialogue?.[phaseKey];
+    if (!lines || !lines.length) return;
+    this.emit({
+      type: 'bossDialogue',
+      kind: b.kind,
+      phase: phaseKey,
+      name: b.name,
+      title: b.title,
+      lines: lines.map((line) => ({ ...line })),
+    });
   }
 
   emit(ev) {
@@ -442,8 +816,9 @@ export class AshenGame {
       open = this.player.relic;
       reason = open ? '' : 'Segel kuno. Butuh Relik Bulu Bara.';
     } else if (requires === 'boss') {
-      open = !!this.bossDefeated[2] && !this.awaitingBlessing;
-      reason = open ? '' : this.awaitingBlessing ? 'Pilih berkahmu dahulu.' : 'Kalahkan Penjaga Agung.';
+      open = !!this.bossDefeated[this.roomIndex] && !this.awaitingBlessing;
+      const bossName = this.room.boss ? BOSS_INFO[this.room.boss]?.name : 'Penjaga Agung';
+      reason = open ? '' : this.awaitingBlessing ? 'Pilih berkahmu dahulu.' : `Kalahkan ${bossName}.`;
     }
     return { ...g, open, reason };
   }
@@ -876,7 +1251,7 @@ export class AshenGame {
     if (e.hp <= 0) {
       e.dead = true;
       this.kills += 1;
-      const reward = e.type === 'sentinel' ? 15 : 8;
+      const reward = ENEMY_INFO[e.type]?.reward ?? 8;
       this.ash += reward;
       this.burst(e.x + e.w / 2, e.y + e.h / 2, 16, '#c96a3a', 220);
       this.emit({ type: 'enemyDown' });
@@ -894,13 +1269,17 @@ export class AshenGame {
     this.shake = Math.max(this.shake, crit ? 0.35 : 0.2);
     this.emit({ type: 'bossHit', crit, x: b.x + b.w / 2, y: b.y + b.h * 0.35 });
     this.burst(b.x + b.w / 2, b.y + b.h * 0.4, crit ? 16 : 9, '#e9c46a', 200);
-    if (b.phase === 1 && b.hp <= b.maxHp * 0.5) {
-      b.phase = 2;
+    while (
+      b.phase < b.maxPhases &&
+      b.hp <= b.maxHp * (b.phaseThresholds[b.phase - 1] ?? 0.5)
+    ) {
+      b.phase += 1;
       b.invuln = 0.4;
       this.shake = 0.7;
-      this.emit({ type: 'bossPhase', name: b.name });
+      this.emit({ type: 'bossPhase', name: b.name, phase: b.phase });
+      this.emitBossDialogue(b, `phase${b.phase}`);
       this.burst(b.x + b.w / 2, b.y + b.h / 2, 26, '#ff7b3d', 280);
-      if (b.kind === 'warden') this.spawnShockwaves(b);
+      this.onBossPhase(b);
     }
     if (b.hp <= 0) {
       b.dying = true;
@@ -1016,8 +1395,13 @@ export class AshenGame {
       const ecx = e.x + e.w / 2;
       const distX = pcx - ecx;
       const dy = p.y + p.h - (e.y + e.h);
-      const aggroRange = e.type === 'sentinel' ? 720 : 540;
-      const aggro = Math.abs(distX) < aggroRange && Math.abs(dy) < 300;
+      const aggroRange = e.type === 'sentinel' || e.type === 'wraith' ? 720 : 540;
+      const aggro = Math.abs(distX) < aggroRange && Math.abs(dy) < (e.flying ? 420 : 300);
+
+      if (e.type === 'wraith') {
+        this.updateWraith(e, dt, aggro, distX);
+        continue;
+      }
 
       if (e.state === 'hurt') {
         e.vx = 0;
@@ -1036,6 +1420,48 @@ export class AshenGame {
           if (e.x <= e.minX) e.patrolDir = 1;
           if (e.x + e.w >= e.maxX) e.patrolDir = -1;
           this.moveEnemy(e, dt, e.patrolDir, e.speed, false);
+          e.x = clamp(e.x, e.minX, Math.max(e.minX, e.maxX - e.w));
+        }
+      } else if (e.type === 'brute') {
+        if (e.state === 'slamWind') {
+          e.vx = 0;
+          this.integrateEnemy(e, dt);
+          if (e.timer <= 0) {
+            e.state = 'slam';
+            e.timer = 0.24;
+            this.spawnBruteShockwaves(e);
+            this.shake = Math.max(this.shake, 0.35);
+            this.emit({ type: 'bossSlam' });
+          }
+        } else if (e.state === 'slam') {
+          e.vx = 0;
+          this.integrateEnemy(e, dt);
+          if (e.timer <= 0) {
+            e.state = 'recover';
+            e.timer = 0.8;
+            e.cooldown = 1.5;
+          }
+        } else if (e.state === 'recover') {
+          e.vx = 0;
+          this.integrateEnemy(e, dt);
+          if (e.timer <= 0) e.state = 'patrol';
+        } else if (aggro) {
+          if (e.cooldown <= 0 && Math.abs(distX) < 175 && Math.abs(dy) < 90) {
+            e.facing = sign(distX) || e.facing;
+            e.state = 'slamWind';
+            e.timer = 0.68;
+            e.vx = 0;
+            this.emit({ type: 'enemyTelegraph' });
+          } else {
+            e.state = 'chase';
+            const dir = Math.abs(distX) > 18 ? sign(distX) : 0;
+            this.moveEnemy(e, dt, dir, e.speed, true);
+          }
+        } else {
+          e.state = 'patrol';
+          if (e.x <= e.minX) e.patrolDir = 1;
+          if (e.x + e.w >= e.maxX) e.patrolDir = -1;
+          this.moveEnemy(e, dt, e.patrolDir, e.speed * 0.55, false);
           e.x = clamp(e.x, e.minX, Math.max(e.minX, e.maxX - e.w));
         }
       } else if (e.type === 'sentinel') {
@@ -1086,6 +1512,76 @@ export class AshenGame {
     }
   }
 
+  updateWraith(e, dt, aggro, distX) {
+    const p = this.player;
+    const targetY = FLOOR_Y - e.h - 76 + Math.sin(this.time * 1.8 + e.homeX * 0.02) * 24;
+    e.y += (targetY - e.y) * Math.min(1, dt * 2.4);
+    e.x = clamp(e.x, 20, WORLD_W - e.w - 20);
+    if (e.castCooldown > 0) e.castCooldown -= dt;
+    e.facing = distX < 0 ? -1 : 1;
+
+    if (e.state === 'hurt') {
+      e.vx *= 0.9;
+      e.x += e.vx * dt;
+      if (e.timer <= 0) e.state = 'patrol';
+      return;
+    }
+    if (e.state === 'castWind') {
+      e.vx = 0;
+      if (e.timer <= 0) {
+        const sx = e.x + e.w / 2;
+        const sy = e.y + e.h / 2;
+        const tx = p.x + p.w / 2;
+        const ty = p.y + p.h / 2;
+        const angle = Math.atan2(ty - sy, tx - sx);
+        this.spawnEnemyProjectile({
+          owner: 'boss',
+          type: 'wisp',
+          x: sx,
+          y: sy,
+          vx: Math.cos(angle) * 290,
+          vy: Math.sin(angle) * 290,
+          r: 8,
+          dmg: 12,
+          life: 3.2,
+        });
+        e.state = 'cast';
+        e.timer = 0.55;
+        this.emit({ type: 'fireball' });
+      }
+      return;
+    }
+    if (e.state === 'cast') {
+      e.vx = 0;
+      if (e.timer <= 0) {
+        e.state = 'patrol';
+        e.castCooldown = 2.4;
+      }
+      return;
+    }
+    if (aggro) {
+      e.state = 'chase';
+      if (e.castCooldown <= 0 && Math.abs(distX) < 620) {
+        e.state = 'castWind';
+        e.timer = 0.48;
+        e.vx = 0;
+        this.emit({ type: 'enemyTelegraph' });
+      } else {
+        const dir = Math.abs(distX) > 12 ? sign(distX) : 0;
+        const speed = Math.abs(distX) < 210 ? -dir * e.speed * 0.7 : dir * e.speed;
+        e.vx += clamp(speed - e.vx, -420 * dt, 420 * dt);
+        e.x += e.vx * dt;
+      }
+    } else {
+      e.state = 'patrol';
+      if (e.x <= e.minX) e.patrolDir = 1;
+      if (e.x + e.w >= e.maxX) e.patrolDir = -1;
+      e.vx += clamp(e.patrolDir * e.speed * 0.55 - e.vx, -300 * dt, 300 * dt);
+      e.x += e.vx * dt;
+      e.x = clamp(e.x, e.minX, Math.max(e.minX, e.maxX - e.w));
+    }
+  }
+
   // ── bosses ───────────────────────────────────────────────────────────────
   updateBoss(dt) {
     const b = this.boss;
@@ -1111,7 +1607,21 @@ export class AshenGame {
       return;
     }
     if (b.kind === 'warden') this.updateWarden(b, dt);
-    else this.updateWyrm(b, dt);
+    else if (b.kind === 'wyrm') this.updateWyrm(b, dt);
+    else if (b.kind === 'choir') this.updateChoir(b, dt);
+    else if (b.kind === 'oathbreaker') this.updateOathbreaker(b, dt);
+  }
+
+  onBossPhase(b) {
+    if (b.kind === 'warden') this.spawnShockwaves(b);
+    else if (b.kind === 'choir') {
+      for (let i = 0; i < 8; i++) this.spawnNote(b, (Math.PI * 2 * i) / 8);
+    } else if (b.kind === 'oathbreaker') {
+      this.spawnShockwaves(b);
+      for (let i = 0; i < 3; i++) {
+        this.spawnFireball(b, this.player.x + this.player.w / 2 + (i - 1) * 90, this.player.y + 20);
+      }
+    }
   }
 
   updateWarden(b, dt) {
@@ -1215,6 +1725,28 @@ export class AshenGame {
         r: 22,
         dmg: 15,
         life: 2.6,
+        warmup: 0,
+      });
+    }
+    this.emit({ type: 'shockwave' });
+  }
+
+  spawnBruteShockwaves(e) {
+    const y = FLOOR_Y - 24;
+    for (const dir of [-1, 1]) {
+      this.projectiles.push({
+        id: `brute_${this.time}_${dir}_${Math.random().toString(36).slice(2, 5)}`,
+        owner: 'boss',
+        type: 'shockwave',
+        x: e.x + e.w / 2 - 20,
+        y,
+        vx: dir * 260,
+        vy: 0,
+        w: 40,
+        h: 24,
+        r: 20,
+        dmg: 13,
+        life: 2.2,
         warmup: 0,
       });
     }
@@ -1358,6 +1890,261 @@ export class AshenGame {
     b.y = clamp(b.y, 50, FLOOR_Y - b.h);
   }
 
+  updateChoir(b, dt) {
+    const p = this.player;
+    const pcx = p.x + p.w / 2;
+    const bcx = b.x + b.w / 2;
+    b.hoverT += dt;
+    if (b.timer > 0) b.timer -= dt;
+    if (b.cooldown > 0) b.cooldown -= dt;
+
+    switch (b.state) {
+      case 'hover':
+      case 'idle': {
+        b.state = 'hover';
+        const targetY = 180 + Math.sin(b.hoverT * 1.5) * 34;
+        b.y += (targetY - b.y) * Math.min(1, dt * 2);
+        const desiredX = clamp(pcx - b.w / 2 + Math.sin(b.hoverT * 0.75) * 120, 100, WORLD_W - b.w - 100);
+        b.x += clamp(desiredX - b.x, -130 * dt, 130 * dt);
+        b.facing = pcx < bcx ? -1 : 1;
+        if (b.cooldown <= 0) {
+          const patterns = b.phase === 2 ? ['chord', 'beam', 'chord', 'echo'] : ['chord', 'beam'];
+          const pattern = patterns[b.pattern % patterns.length];
+          b.pattern += 1;
+          b.attackLanded = false;
+          if (pattern === 'chord' || pattern === 'echo') {
+            b.state = pattern === 'echo' ? 'echoWind' : 'chordWind';
+            b.timer = b.phase === 2 ? 0.34 : 0.48;
+            b.shotsLeft = pattern === 'echo' ? 6 : b.phase === 2 ? 6 : 4;
+            b.shotTimer = 0;
+            this.emit({ type: 'bossTelegraph', kind: pattern });
+          } else {
+            b.state = 'beamWind';
+            b.timer = 0.68;
+            b.targetX = pcx;
+            this.emit({ type: 'bossTelegraph', kind: 'beam' });
+          }
+        }
+        break;
+      }
+      case 'chordWind':
+      case 'echoWind': {
+        if (b.timer > 0) break;
+        b.shotTimer -= dt;
+        if (b.shotTimer <= 0 && b.shotsLeft > 0) {
+          const spiral = (b.shotTimer + b.shotsLeft) * 1.7 + b.hoverT;
+          this.spawnNote(b, spiral, b.phase === 2 ? 300 : 230);
+          if (b.state === 'echoWind') this.spawnNote(b, -spiral, b.phase === 2 ? 260 : 200);
+          b.shotsLeft -= 1;
+          b.shotTimer = 0.22;
+        }
+        if (b.shotsLeft <= 0) {
+          b.state = 'recover';
+          b.timer = 0.55;
+          b.cooldown = b.phase === 2 ? 1.05 : 1.55;
+        }
+        break;
+      }
+      case 'beamWind': {
+        b.facing = pcx < bcx ? -1 : 1;
+        if (b.timer <= 0) {
+          this.spawnBeam(b);
+          b.state = 'recover';
+          b.timer = 0.6;
+          b.cooldown = b.phase === 2 ? 1.2 : 1.7;
+          this.emit({ type: 'pillars' });
+        }
+        break;
+      }
+      case 'recover': {
+        const targetY = 180;
+        b.y += (targetY - b.y) * Math.min(1, dt * 2.5);
+        if (b.timer <= 0) b.state = 'hover';
+        break;
+      }
+      default:
+        b.state = 'hover';
+    }
+    b.x = clamp(b.x, 20, WORLD_W - b.w - 20);
+    b.y = clamp(b.y, 50, FLOOR_Y - b.h);
+  }
+
+  spawnNote(b, angle, speed = 240) {
+    const sx = b.x + b.w / 2;
+    const sy = b.y + b.h * 0.48;
+    this.projectiles.push({
+      id: `note_${this.time}_${Math.random().toString(36).slice(2, 6)}`,
+      owner: 'boss',
+      type: 'note',
+      x: sx,
+      y: sy,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      r: 10,
+      dmg: b.phase === 2 ? 13 : 10,
+      life: 3.4,
+      warmup: 0,
+    });
+    this.emit({ type: 'note' });
+  }
+
+  spawnBeam(b) {
+    this.projectiles.push({
+      id: `beam_${this.time}_${Math.random().toString(36).slice(2, 6)}`,
+      owner: 'boss',
+      type: 'beam',
+      x: clamp(b.targetX - 24, 20, WORLD_W - 60),
+      y: FLOOR_Y - 270,
+      vx: 0,
+      vy: 0,
+      w: 48,
+      h: 270,
+      r: 24,
+      dmg: b.phase === 2 ? 20 : 16,
+      life: 1.25,
+      warmup: 0.4,
+    });
+    this.burst(b.targetX, FLOOR_Y - 10, 12, '#c9b8ff', 180);
+  }
+
+  updateOathbreaker(b, dt) {
+    const p = this.player;
+    const pcx = p.x + p.w / 2;
+    const bcx = b.x + b.w / 2;
+    const dist = Math.abs(pcx - bcx);
+    const dir = sign(pcx - bcx) || b.facing;
+    if (b.timer > 0) b.timer -= dt;
+    if (b.cooldown > 0) b.cooldown -= dt;
+    b.y = FLOOR_Y - b.h;
+
+    switch (b.state) {
+      case 'chase': {
+        b.facing = dir;
+        if (b.cooldown <= 0) {
+          if (dist < 165) {
+            b.state = 'slashWind';
+            b.timer = b.phase >= 3 ? 0.2 : b.phase === 2 ? 0.3 : 0.44;
+            b.attackLanded = false;
+            this.emit({ type: 'bossTelegraph', kind: 'slash' });
+          } else if (b.phase >= 2 && (b.pattern + (b.phase === 3 ? 1 : 0)) % 3 === 0) {
+            b.state = 'dashWind';
+            b.timer = 0.36;
+            b.targetX = pcx;
+            this.emit({ type: 'bossTelegraph', kind: 'dash' });
+          } else if (b.phase >= 3 && b.pattern % 4 === 2) {
+            b.state = 'novaWind';
+            b.timer = 0.55;
+            this.emit({ type: 'bossTelegraph', kind: 'nova' });
+          } else {
+            b.state = 'volley';
+            b.timer = 0.38;
+            b.shotsLeft = b.phase >= 3 ? 4 : b.phase === 2 ? 3 : 2;
+            b.shotTimer = 0;
+            b.threat = true;
+            this.emit({ type: 'bossTelegraph', kind: 'volley' });
+          }
+          b.pattern += 1;
+        } else {
+          const speed = b.phase >= 3 ? 150 : b.phase === 2 ? 112 : 82;
+          if (dist > 70) b.x += dir * speed * dt;
+        }
+        break;
+      }
+      case 'slashWind': {
+        b.facing = dir;
+        if (b.timer <= 0) {
+          b.state = 'slashActive';
+          b.timer = 0.16;
+          b.attackLanded = false;
+          this.emit({ type: 'bossSlash' });
+          this.shake = Math.max(this.shake, 0.2);
+        }
+        break;
+      }
+      case 'slashActive': {
+        if (!b.attackLanded) {
+          const hb = {
+            x: b.facing > 0 ? b.x + b.w - 10 : b.x - 132,
+            y: b.y + 6,
+            w: 144,
+            h: b.h - 4,
+          };
+          if (rectHitsRect(hb, p)) {
+            b.attackLanded = true;
+            this.damagePlayer(b.phase >= 3 ? 30 : b.phase === 2 ? 25 : 20, bcx);
+          }
+        }
+        if (b.timer <= 0) {
+          b.state = 'recover';
+          b.timer = 0.42;
+          b.cooldown = b.phase >= 3 ? 0.65 : b.phase === 2 ? 0.9 : 1.3;
+        }
+        break;
+      }
+      case 'dashWind': {
+        b.facing = dir;
+        if (b.timer <= 0) {
+          b.state = 'dash';
+          b.timer = 0.3;
+          b.vx = dir * (b.phase >= 3 ? 620 : 520);
+          b.attackLanded = false;
+          this.emit({ type: 'wyrmDive' });
+        }
+        break;
+      }
+      case 'dash': {
+        b.x += b.vx * dt;
+        if (!b.attackLanded && rectHitsRect(b, p)) {
+          b.attackLanded = true;
+          this.damagePlayer(22, bcx);
+        }
+        if (b.timer <= 0) {
+          b.state = 'recover';
+          b.timer = 0.35;
+          b.cooldown = 0.9;
+          this.shake = 0.25;
+        }
+        break;
+      }
+      case 'volley': {
+        if (b.timer > 0) break;
+        b.shotTimer -= dt;
+        if (b.shotTimer <= 0 && b.shotsLeft > 0) {
+          this.spawnFireball(b, pcx, p.y + p.h / 2);
+          b.shotsLeft -= 1;
+          b.shotTimer = b.phase >= 3 ? 0.14 : 0.2;
+        }
+        if (b.shotsLeft <= 0) {
+          b.state = 'recover';
+          b.timer = 0.45;
+          b.cooldown = b.phase >= 3 ? 0.85 : 1.15;
+        }
+        break;
+      }
+      case 'novaWind': {
+        if (b.timer <= 0) {
+          this.spawnShockwaves(b);
+          for (let i = 0; i < 10; i++) {
+            this.spawnNote(b, (Math.PI * 2 * i) / 10, 220);
+          }
+          b.state = 'recover';
+          b.timer = 0.7;
+          b.cooldown = 1.4;
+          this.shake = 0.7;
+          this.emit({ type: 'bossSlam' });
+        }
+        break;
+      }
+      case 'recover': {
+        if (b.timer <= 0) b.state = 'chase';
+        break;
+      }
+      default:
+        b.state = 'chase';
+    }
+    b.x = clamp(b.x, 20, WORLD_W - b.w - 20);
+  }
+
   spawnFireball(b, tx, ty) {
     const sx = b.x + b.w / 2 + (b.facing > 0 ? 34 : -34);
     const sy = b.y + b.h * 0.55;
@@ -1403,21 +2190,23 @@ export class AshenGame {
   finishBoss() {
     const b = this.boss;
     if (!b) return;
+    const info = BOSS_INFO[b.kind];
     const room = this.roomIndex;
     this.bossDefeated[room] = true;
     this.boss = null;
     this.projectiles = [];
-    if (b.kind === 'warden') {
+    this.emitBossDialogue(b, 'defeat');
+    if (info?.reward === 'victory') {
+      this.state = 'victory';
+      this.deathTimer = 0;
+      this.emit({ type: 'victory' });
+    } else {
       this.awaitingBlessing = true;
       this.blessingChoices = BLESSINGS.map((x) => ({ ...x }));
       this.state = 'blessing';
       this.emit({ type: 'blessingOpen' });
-    } else {
-      this.state = 'victory';
-      this.deathTimer = 0;
-      this.emit({ type: 'victory' });
     }
-    const reward = b.kind === 'wyrm' ? 90 : 60;
+    const reward = info?.ashReward ?? 60;
     this.ash += reward;
     this.emit({ type: 'ashGain', amount: reward, total: this.ash });
     this.emit({ type: 'bossDown', room, kind: b.kind, name: b.name });
@@ -1453,7 +2242,7 @@ export class AshenGame {
     for (const pr of this.projectiles) {
       if (pr.dead) continue;
       pr.life -= dt;
-      if (pr.type === 'pillar') {
+      if (pr.type === 'pillar' || pr.type === 'beam') {
         if (pr.warmup > 0) pr.warmup -= dt;
       } else {
         pr.x += pr.vx * dt;
@@ -1501,7 +2290,7 @@ export class AshenGame {
         }
       }
       if (pr.owner === 'boss' && pr.life > 0) {
-        const box = pr.type === 'pillar' || pr.type === 'shockwave'
+        const box = pr.type === 'pillar' || pr.type === 'beam' || pr.type === 'shockwave'
           ? { x: pr.x, y: pr.y, w: pr.w, h: pr.h }
           : { x: pr.x - pr.r, y: pr.y - pr.r, w: pr.r * 2, h: pr.r * 2 };
         if (pr.warmup > 0) continue;
@@ -1521,13 +2310,20 @@ export class AshenGame {
     for (const e of this.enemies) {
       if (e.dead) continue;
       if (rectHitsRect(e, p)) {
-        const dmg = e.type === 'sentinel' && e.state === 'lunge' ? 18 : e.dmg;
+        const dmg = e.type === 'sentinel' && e.state === 'lunge'
+          ? 18
+          : e.type === 'brute' && e.state === 'slam'
+            ? 24
+            : e.dmg;
         this.damagePlayer(dmg, e.x + e.w / 2);
       }
     }
     const b = this.boss;
     if (b && !b.dying && b.intro <= 0 && rectHitsRect(b, p)) {
-      this.damagePlayer(b.kind === 'wyrm' && b.state === 'dive' ? 24 : b.contact, b.x + b.w / 2);
+      const heavyHit =
+        (b.kind === 'wyrm' && b.state === 'dive') ||
+        (b.kind === 'oathbreaker' && b.state === 'dash');
+      this.damagePlayer(heavyHit ? 24 : b.contact, b.x + b.w / 2);
     }
   }
 

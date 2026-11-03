@@ -1,9 +1,9 @@
 {
   "name": "ashen-vow",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "private": true,
   "type": "module",
-  "description": "Ashen Vow - medieval 2D metroidvania combat simulation with two bosses",
+  "description": "Ashen Vow - medieval 2D metroidvania combat simulation with eight rooms, four bosses, a map, and a codex",
   "scripts": {
     "start": "node server.js",
     "test": "node --test tests/*.test.js"

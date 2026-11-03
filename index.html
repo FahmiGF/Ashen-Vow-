@@ -4,10 +4,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#0b0807" />
-    <title>Ashen Vow — v0.0.5</title>
+    <title>Ashen Vow — v0.0.6</title>
     <meta
       name="description"
-      content="Ashen Vow adalah simulasi metroidvania medieval 2D dengan combat pedang real-time dan dua boss."
+      content="Ashen Vow adalah simulasi metroidvania medieval 2D dengan combat pedang real-time, delapan ruang, empat boss, peta, dan indeks sumpah."
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -92,12 +92,12 @@
         <!-- ══ MAIN MENU ══ -->
         <section id="title-screen" class="screen title-screen">
           <div class="screen-inner title-inner">
-            <p class="eyebrow">SEBUAH SUMPAH DI ANTARA ABU · v0.0.5</p>
+            <p class="eyebrow">SEBUAH SUMPAH DI ANTARA ABU · v0.0.6</p>
             <h1 class="game-title">ASHEN<span>VOW</span></h1>
             <div class="title-rule"><i></i><b>✦</b><i></i></div>
             <p class="lede">
-              Dua penjaga mengunci jalan menuju puncak. Satu sumpah menuntut darah.
-              <br />Angkat pedangmu, ambil relik, dan jatuhkan mahkota bara.
+              Empat penjaga mengunci jalan menuju puncak. Satu sumpah menuntut darah.
+              <br />Angkat pedangmu, ambil relik, buka peta, dan jatuhkan mahkota bara.
             </p>
 
             <nav class="main-menu" aria-label="Menu utama">
@@ -107,7 +107,15 @@
               </button>
               <button id="btn-levels" class="btn btn-ghost menu-btn" type="button">
                 <span>PILIH LEVEL</span>
-                <em>4 ruang · 2 boss · progres tersimpan</em>
+                <em>8 ruang · 4 boss · progres tersimpan</em>
+              </button>
+              <button id="btn-map-menu" class="btn btn-ghost menu-btn" type="button">
+                <span>PETA SUMPAH</span>
+                <em>Lihat seluruh perjalanan · M</em>
+              </button>
+              <button id="btn-codex-menu" class="btn btn-ghost menu-btn" type="button">
+                <span>INDEKS SUMPAH</span>
+                <em>Musuh · senjata · boss · barang · I</em>
               </button>
               <button id="btn-credits" class="btn btn-ghost menu-btn" type="button">
                 <span>CREDITS</span>
@@ -116,14 +124,14 @@
             </nav>
 
             <div class="menu-progress">
-              <span id="menu-progress">LEVEL TERBUKA 1 / 4</span>
+              <span id="menu-progress">LEVEL TERBUKA 1 / 8</span>
               <i>✦</i>
               <span>Progres tersimpan otomatis</span>
             </div>
 
             <p class="menu-controls">
               <kbd>A</kbd><kbd>D</kbd> gerak · <kbd>SPACE</kbd> lompat · <kbd>J</kbd> serang ·
-              <kbd>K</kbd> dash · <kbd>E</kbd> flask · <kbd>ESC</kbd> jeda
+              <kbd>K</kbd> dash · <kbd>E</kbd> flask · <kbd>M</kbd> peta · <kbd>I</kbd> indeks · <kbd>ESC</kbd> jeda
             </p>
 
             <p class="signature">
@@ -185,7 +193,7 @@
               </div>
             </div>
 
-            <p class="credit-version">ASHEN VOW · v0.0.5 · 2 BOSS · 4 RUANG</p>
+            <p class="credit-version">ASHEN VOW · v0.0.6 · 4 BOSS · 8 RUANG</p>
             <div class="screen-links">
               <button id="btn-credits-back" class="link-btn" type="button">← KEMBALI KE MENU</button>
             </div>
@@ -234,10 +242,12 @@
             <button id="btn-resume" class="btn btn-primary" type="button"><span>LANJUTKAN</span></button>
             <div class="screen-links">
               <button id="btn-shop" class="link-btn" type="button">WARUNG ABU</button>
+              <button id="btn-pause-map" class="link-btn" type="button">PETA</button>
+              <button id="btn-pause-codex" class="link-btn" type="button">INDEKS</button>
               <button id="btn-pause-levels" class="link-btn" type="button">PILIH LEVEL</button>
               <button id="btn-pause-menu" class="link-btn" type="button">MENU UTAMA</button>
             </div>
-            <p class="micro">Tekan <kbd>ESC</kbd> untuk kembali · <kbd>M</kbd> untuk suara</p>
+            <p class="micro">Tekan <kbd>ESC</kbd> untuk kembali · <kbd>M</kbd> peta · <kbd>I</kbd> indeks · <kbd>N</kbd> suara</p>
           </div>
         </section>
 
@@ -260,7 +270,7 @@
         <!-- ══ VICTORY ══ -->
         <section id="victory-screen" class="screen hidden">
           <div class="screen-inner">
-            <p class="eyebrow gold">DUA PENJAGA TELAH GUGUR</p>
+            <p class="eyebrow gold">EMPAT PENJAGA TELAH GUGUR</p>
             <h2 class="screen-title victory-title">SUMPAH TUNTAS</h2>
             <p class="screen-sub">Bara padam. Puncak sunyi. Namamu terukir di batu.</p>
             <div id="victory-stats" class="stats"></div>
@@ -270,7 +280,68 @@
               <button id="btn-victory-levels" class="link-btn" type="button">PILIH LEVEL</button>
               <button id="btn-victory-menu" class="link-btn" type="button">MENU UTAMA</button>
             </div>
-            <p class="micro">Terima kasih telah memainkan Ashen Vow v0.0.5</p>
+            <p class="micro">Terima kasih telah memainkan Ashen Vow v0.0.6</p>
+          </div>
+        </section>
+
+        <!-- ══ MAP ══ -->
+        <section id="map-screen" class="screen overlay-screen hidden">
+          <div class="screen-inner map-inner">
+            <p class="eyebrow">ARSIP PERJALANAN · SEMUA RUANG</p>
+            <h2 class="screen-title">PETA SUMPAH</h2>
+            <p class="screen-sub">
+              Delapan ruang, empat penjaga. Peta ini bisa dibuka kapan saja dengan <kbd>M</kbd>.
+            </p>
+            <div class="map-head">
+              <strong id="map-current">PETA SUMPAH · 8 RUANG · 4 BOSS</strong>
+              <span id="map-progress">0 / 8 RUANG TUNTAS</span>
+            </div>
+            <div id="map-rooms" class="map-rooms"></div>
+            <div class="screen-links">
+              <button id="btn-map-codex" class="link-btn" type="button">BUKA INDEKS SUMPAH</button>
+              <button id="btn-map-close" class="btn btn-primary btn-compact" type="button">
+                <span>KEMBALI</span>
+              </button>
+            </div>
+            <p class="micro">Tekan <kbd>M</kbd> atau <kbd>ESC</kbd> untuk menutup peta.</p>
+          </div>
+        </section>
+
+        <!-- ══ CODEX / INDEX ══ -->
+        <section id="codex-screen" class="screen overlay-screen hidden">
+          <div class="screen-inner codex-inner">
+            <p class="eyebrow">ARSIP SUMPAH · INDEKS LENGKAP</p>
+            <h2 class="screen-title">INDEKS SUMPAH</h2>
+            <p class="screen-sub">
+              Catatan tentang semua yang hidup, mati, dan menunggu di antara abu.
+            </p>
+            <div id="codex-tabs" class="codex-tabs" role="tablist" aria-label="Kategori indeks"></div>
+            <p id="codex-count" class="codex-count"></p>
+            <div id="codex-entries" class="codex-entries"></div>
+            <div class="screen-links">
+              <button id="btn-codex-map" class="link-btn" type="button">BUKA PETA SUMPAH</button>
+              <button id="btn-codex-close" class="btn btn-primary btn-compact" type="button">
+                <span>KEMBALI</span>
+              </button>
+            </div>
+            <p class="micro">Tekan <kbd>I</kbd> atau <kbd>ESC</kbd> untuk menutup indeks.</p>
+          </div>
+        </section>
+
+        <!-- ══ BOSS DIALOGUE ══ -->
+        <section id="dialogue-screen" class="dialogue-screen hidden" role="dialog" aria-modal="true" aria-live="polite">
+          <div class="dialogue-panel">
+            <div class="dialogue-head">
+              <span id="dialogue-phase">PERTEMPURAN DIMULAI</span>
+              <strong id="dialogue-name"></strong>
+            </div>
+            <span id="dialogue-speaker" class="dialogue-speaker"></span>
+            <p id="dialogue-line" class="dialogue-line"></p>
+            <div class="dialogue-foot">
+              <span id="dialogue-counter" class="dialogue-counter">1 / 1</span>
+              <button id="btn-dialogue-next" class="btn btn-primary btn-small" type="button">LANJUT</button>
+            </div>
+            <p class="dialogue-hint">SPACE / ENTER untuk melanjutkan</p>
           </div>
         </section>
 
@@ -308,9 +379,9 @@
       </div>
 
       <footer class="footer">
-        <span>ASHEN VOW · v0.0.5</span>
+        <span>ASHEN VOW · v0.0.6</span>
         <span class="dot">✦</span>
-        <span>Metroidvania medieval 2D · dibuat dengan Canvas</span>
+        <span>Metroidvania medieval 2D · 8 ruang · 4 boss · dibuat dengan Canvas</span>
       </footer>
     </main>
     <script type="module" src="./src/main.js"></script>

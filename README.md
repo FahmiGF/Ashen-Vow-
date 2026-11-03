@@ -1,6 +1,6 @@
-# Ashen Vow — v0.0.5
+# Ashen Vow — v0.0.6
 
-> **Sumpah di antara abu.** Simulasi metroidvania medieval 2D dengan combat pedang real-time, relik lompat ganda, **dua boss yang masing-masing punya dua fase**, checkpoint di ambang pertempuran, dan **Warung Abu** tempat membelanjakan abu untuk senjata baru.
+> **Sumpah di antara abu.** Simulasi metroidvania medieval 2D dengan combat pedang real-time, relik lompat ganda, **delapan ruang dan empat boss** (hingga tiga fase), **dialog boss** di awal/fase/akhir pertempuran, **peta perjalanan**, **indeks sumpah** untuk musuh/senjata/boss/barang, checkpoint di ambang pertempuran, dan **Warung Abu** tempat membelanjakan abu untuk senjata baru.
 
 Ashen Vow adalah game web tanpa build step: HTML5 Canvas + ES Modules murni. Seluruh simulasi combat berjalan deterministik di `src/core.js`, sehingga bisa diuji otomatis dengan Node tanpa browser.
 
@@ -32,10 +32,31 @@ Tidak perlu `npm install` — tidak ada dependensi runtime.
 Game **tidak langsung masuk ke gameplay**. Saat dibuka, yang tampil adalah menu utama:
 
 - **MULAI PERJALANAN** — memulai run baru dari Gerbang Abu.
-- **PILIH LEVEL** — melihat 4 ruang, status terkunci/terbuka/tuntas, dan progres tersimpan.
+- **PILIH LEVEL** — melihat 8 ruang, status terkunci/terbuka/tuntas, dan progres tersimpan.
+- **PETA SUMPAH** — peta seluruh perjalanan, bisa dibuka kapan saja dengan `M`.
+- **INDEKS SUMPAH** — indeks musuh, senjata, boss, dan barang, bisa dibuka dengan `I`.
 - **CREDITS** — halaman kredit game.
 
 Progres disimpan otomatis di `localStorage` dengan key `ashen-vow-progress-v1`. Menyelesaikan sebuah ruang membuka ruang berikutnya. Layar jeda, kematian, dan kemenangan juga punya jalan kembali ke **PILIH LEVEL** dan **MENU UTAMA**.
+
+### Peta dan Indeks
+
+![Peta Sumpah](docs/map.png)
+
+**Peta Sumpah** (`M`) menampilkan delapan ruang beserta bab, status (terkunci/terbuka/tuntas), penanda posisi saat ini, tag boss/relik/warung, dan hitungan ruang tuntas. Peta dapat dibuka dari menu utama, layar jeda, atau langsung saat berada di dalam stage tanpa menghentikan progres.
+
+![Indeks Sumpah](docs/codex.png)
+
+**Indeks Sumpah** (`I`) memiliki empat tab:
+
+- **MUSUH** — crawler, sentinel, hollow wraith, cinder brute.
+- **SENJATA** — Pedang Sumpah, Pike Penjaga, Busur Abu.
+- **BOSS** — keempat penjaga, HP, jumlah fase, hadiah abu, dan lokasinya.
+- **BARANG** — isi Warung Abu, relik, abu, dan berkah sumpah.
+
+### Dialog Boss
+
+Setiap boss berbicara di awal pertempuran, saat berpindah fase, dan ketika gugur. Dialog membekukan simulasi sampai pemain menekan `Space`/`Enter`, mengklik **LANJUT**, atau menutupnya dengan `Esc`. The Oathbreaker memiliki dialog tambahan untuk fase III.
 
 ### Level Select dan Sneak Peek
 
@@ -73,37 +94,47 @@ Halaman credits memuat:
 | Dash (i-frame) | `K` atau `Shift` |
 | Minum flask | `E` atau `Q` |
 | Jeda | `Esc` |
-| Suara | `M` |
+| Peta Sumpah | `M` |
+| Indeks Sumpah | `I` |
+| Suara | `N` |
 | Pilih berkah | `1` / `2` / `3` |
 
 Di menu: `Enter` memulai run, `L` membuka Level Select, `C` membuka Credits.
 Di perangkat sentuh, tombol kiri/kanan, lompat, serang, dash, flask, ganti senjata (`⇄`), dan lempar shuriken (`✦`) muncul otomatis.
 
-## Isi v0.0.5
+## Isi v0.0.6
 
 - **Menu awal, Level Select, Credits, dan progres tersimpan** — tidak langsung masuk gameplay.
-- **4 ruang** yang terhubung: Gerbang Abu → Balai Sumpah → Singgasana Bara → Sarang Wyrm.
-- **2 boss, masing-masing 2 fase**:
-  - **Sir Mordrake, the Fallen Warden** (340 HP) — telegraf tebasan, ground slam, gelombang kejut. Di fase II ia bergerak lebih cepat, windup lebih pendek, damage lebih besar, dan setiap tebasan memanggil gelombang kejut tambahan.
-  - **Vhael, the Ashen Wyrm** (480 HP) — volley bola api yang bisa ditebas dan dive attack. Di fase II volley menjadi 5 bola api yang lebih cepat, dan pola serangannya menambah **pilar api**.
+- **8 ruang** yang terhubung: Gerbang Abu → Balai Sumpah → Singgasana Bara → Sarang Wyrm → Jembatan Tulang → Katedral Sunyi → Menara Lonceng → Puncak Sumpah.
+- **4 boss** dengan dialog dan fase:
+  - **Sir Mordrake, the Fallen Warden** (340 HP, 2 fase) — telegraf tebasan, ground slam, gelombang kejut. Fase II mempercepat gerak, mempersingkat windup, dan menambah gelombang kejut.
+  - **Vhael, the Ashen Wyrm** (480 HP, 2 fase) — volley bola api dan dive attack. Fase II menambah **pilar api**.
+  - **The Hollow Choir** (560 HP, 2 fase) — koor tanpa suara yang melayang, menembakkan **note** spiral dan **beam** vertikal. Fase II mempercepat pola dan menambah gema.
+  - **The Oathbreaker** (720 HP, 3 fase) — final boss dengan tebasan, dash, volley, dan nova. Fase II dan III membuka pola tambahan; mengalahkannya menyelesaikan run.
+- **Dialog boss** untuk intro, setiap fase, dan akhir pertempuran; simulasi berhenti selama dialog.
+- **Peta Sumpah (`M`)** — terbuka dari menu, jeda, atau saat bermain.
+- **Indeks Sumpah (`I`)** — tab musuh, senjata, boss, dan barang.
+- **Dua musuh baru**:
+  - **Hollow Wraith** — melayang, menjaga jarak, dan melepas wisp.
+  - **Cinder Brute** — lambat dan besar; hentakan lantainya memancarkan gelombang kejut.
 - **Combat real-time**: kombo 3 hit, hitbox aktif per frame, hit-stop, screen shake, knockback, dan partikel.
-- **AI pengejaran platform-aware** — crawler dan sentinel kini benar-benar mengejar pemain, mendeteksi tepi platform, melompat ke pemain yang lebih tinggi, dan melintasi jurang. Patroli hanya aktif saat pemain di luar jangkauan.
+- **AI pengejaran platform-aware** — crawler dan sentinel mengejar pemain, mendeteksi tepi platform, melompat ke pemain yang lebih tinggi, dan melintasi jurang. Patroli hanya aktif saat pemain di luar jangkauan.
 - **Checkpoint Warung Abu** di ambang setiap ruang bos. Mati setelah checkpoint membangkitkan pemain di ruang bos dengan HP/flask penuh; abu, senjata, amunisi, dan berkah tetap tersimpan.
-- **Mata uang Abu (`ash`)** — didapat dari crawler (8), sentinel (15), Warden (60), dan Wyrm (90). Ditampilkan di HUD.
+- **Mata uang Abu (`ash`)** — didapat dari crawler (8), sentinel (15), wraith (16), brute (22), Warden (60), Wyrm (90), Choir (110), dan Oathbreaker (160). Ditampilkan di HUD.
 - **Warung Abu** — toko di samping checkpoint ruang bos. Buka dengan `F` saat dekat pedagang atau dari menu jeda. Menjual:
   - **Pike Penjaga** (35 abu) — jangkauan 118, windup lambat, damage 29.
   - **Busur Abu** (55 abu) — menembak anak panah, amunisi terbatas; termasuk 8 anak panah.
   - **Shuriken ×3** (14 abu) — konsumabel lempar, tombol `C`.
   - **Anak Panah ×6** (12 abu) — amunisi busur.
   - **Isi Ulang Flask** (10 abu).
-  Mulai langsung dari Level Select di ruang 2/3 memberi stipend 45/90 abu agar toko tetap bisa dipakai.
+  Mulai langsung dari Level Select di ruang 2–8 memberi stipend abu bertingkat (45 hingga 240) agar toko tetap bisa dipakai.
 - **Tiga senjata** dengan animasi berbeda: Pedang Sumpah (kombo), Pike Penjaga (jangkauan), Busur Abu (proyektil). Berganti dengan `X`.
 - **Dash dengan i-frame** dan cooldown.
 - **Relik Bulu Bara** — membuka lompat ganda dan menyegel gerbang Balai Sumpah.
 - **Jurang** sebagai hazard: jatuh mengurangi HP dan mengembalikan pemain ke titik aman.
-- **Tiga berkah** setelah Warden: Max HP, damage, atau dash.
+- **Tiga berkah** setelah setiap boss non-final: Max HP, damage, atau dash.
 - **Flask penyembuh** (3 charge) dengan waktu minum yang bisa diganggu.
-- **HUD** HP, flask, status relik, abu, senjata/amunisi, bar boss dengan label **FASE I / FASE II**, petunjuk gerbang, banner ruang.
+- **HUD** HP, flask, status relik, abu, senjata/amunisi, bar boss dengan label **FASE I / II / III**, petunjuk gerbang, banner ruang.
 - **Audio prosedural** WebAudio — tanpa file audio.
 - Layar judul, jeda, berkah, kematian, dan kemenangan.
 
@@ -123,7 +154,7 @@ Di perangkat sentuh, tombol kiri/kanan, lompat, serang, dash, flask, ganti senja
 npm test
 ```
 
-**36 tes deterministik, semuanya lulus.** Cakupannya:
+**45 tes deterministik, semuanya lulus.** Cakupannya:
 
 - gravitasi dan pendaratan di platform,
 - pergerakan dan batas dunia,
@@ -148,14 +179,25 @@ npm test
 - proyektil Wyrm melukai pemain,
 - siklus dive Wyrm dan bola api,
 - **transisi fase II Wyrm dan serangan pilar api**,
-- **kedua boss dikunci tepat di dua fase**,
-- kemenangan setelah Wyrm dikalahkan,
+- **kemenangan setelah Wyrm — kini berlanjut ke bab V, bukan mengakhiri run**,
+- **8 ruang dan 4 boss: warden, wyrm, choir, oathbreaker**,
+- **dialog intro, fase II, dan kekalahan untuk setiap boss; fase III khusus The Oathbreaker**,
+- **wraith yang melayang dan menembak wisp, brute yang menghentak lantai**,
+- **serangan note dan beam The Hollow Choir serta gerbangnya**,
+- **tiga fase The Oathbreaker dan kemenangan akhir**,
+- **isi indeks: 4 musuh, 3 senjata, 4 boss, dan seluruh barang**,
+- **gerbang boss memakai ruang saat ini, bukan indeks hardcoded**,
 - state kematian membekukan simulasi.
 
 Smoke test browser dijalankan lewat Chrome DevTools Protocol untuk memastikan:
 
 - menu awal tampil dan HUD tersembunyi,
-- Level Select menampilkan 4 kartu dengan status terkunci yang benar,
+- Level Select menampilkan 8 kartu dengan status terkunci yang benar,
+- peta menampilkan 8 ruang, menandai posisi saat ini, dan bisa dibuka dengan `M` saat bermain,
+- indeks memiliki 4 tab dengan entri yang benar,
+- dialog boss muncul untuk intro, fase, dan kekalahan; `Space`/`Enter` melanjutkannya,
+- HUD menampilkan FASE II / FASE III dengan benar,
+- ruang 5, 6, dan 8 (choir, oathbreaker, wraith/brute) berjalan tanpa exception,
 - Sneak Peek menyembunyikan pemain dan HUD,
 - teks credits sesuai,
 - progres tersimpan setelah reload,
@@ -163,23 +205,23 @@ Smoke test browser dijalankan lewat Chrome DevTools Protocol untuk memastikan:
 - **checkpoint respawn mempertahankan abu dan senjata serta memulihkan HP/flask/boss**,
 - **AI mengejar dan melompat, senjata berganti, dan busur tanpa amunisi ditolak**,
 - tidak ada error console,
-- layout desktop dan mobile portrait (390×844) tidak memiliki overflow horizontal.
+- layout desktop dan mobile portrait (390×844) tidak memiliki overflow horizontal, termasuk peta dan indeks.
 
 ## Struktur proyek
 
 ```
 ashen-vow/
-├── index.html          # shell, menu, HUD, level select, credits, spectate
-├── styles.css          # tema medieval, layout responsif, touch controls
+├── index.html          # shell, menu, HUD, level select, map, codex, dialogue, spectate
+├── styles.css          # tema medieval, layout responsif, touch controls, peta/indeks
 ├── server.js           # static server port 4300
 ├── CLAUDE.md           # master plan / handoff untuk Claude
 ├── src/
-│   ├── core.js         # simulasi murni: player, musuh, boss, senjata, toko, checkpoint
-│   ├── render.js       # renderer Canvas prosedural + mode spectate
+│   ├── core.js         # simulasi murni: player, musuh, boss, dialog, indeks, senjata, toko, checkpoint
+│   ├── render.js       # renderer Canvas prosedural + mode spectate, choir, oathbreaker
 │   ├── audio.js        # SFX WebAudio prosedural
-│   └── main.js         # loop fixed-timestep, menu, progres, input, HUD, toko
+│   └── main.js         # loop fixed-timestep, menu, progres, input, HUD, peta, indeks, dialog
 ├── tests/
-│   └── core.test.js    # 36 tes Node
+│   └── core.test.js    # 45 tes Node
 └── docs/               # tangkapan layar
 ```
 
@@ -191,14 +233,16 @@ Event penting:
 
 - `gatePass { from, to }` — ruang selesai dan ruang berikutnya dimasuki.
 - `bossDown { room, kind, name }` — boss dikalahkan.
-- `bossPhase { name }` — transisi ke fase II.
+- `bossPhase { name, phase }` — transisi fase boss.
+- `bossDialogue { kind, phase, name, title, lines }` — dialog boss untuk `intro`, `phase2`, `phase3`, atau `defeat`.
+- `bossSpawn`, `bossTelegraph`, `bossSlash`, `bossSlam`, `bossDie`, `note`, `beam`.
 - `checkpoint { room, name }` — checkpoint aktif saat memasuki ruang bos.
 - `checkpointRespawn { room }` — pemain bangkit di checkpoint.
 - `ashGain { amount, total }` — abu diperoleh dari musuh/boss.
 - `shopBuy { id, name, cost }` — pembelian Warung Abu berhasil.
 - `weaponSwitch`, `arrowShot`, `shurikenThrow`, `noAmmo` — umpan balik senjata/konsumabel.
 
-Debug hook `window.__ashen` tersedia untuk smoke test (`snap()`, `step()`, `enterRoom()`, `damageBoss()`, `chooseBlessing()`, `startSpectate()`, `openShop()`, `buyShopItem()`, `respawnAtCheckpoint()`, `giveAsh()`, `clearProgress()`).
+Debug hook `window.__ashen` tersedia untuk smoke test (`snap()`, `step()`, `enterRoom()`, `damageBoss()`, `chooseBlessing()`, `startSpectate()`, `openShop()`, `buyShopItem()`, `respawnAtCheckpoint()`, `giveAsh()`, `openMap()`, `closeMap()`, `openCodex()`, `closeCodex()`, `advanceDialogue()`, `clearProgress()`).
 
 ## Master plan
 

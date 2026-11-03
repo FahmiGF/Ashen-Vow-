@@ -1,5 +1,5 @@
-// Ashen Vow v0.0.5 — browser shell: menus, level select, spectate, fixed-step loop.
-import { AshenGame, ROOMS, WORLD_W, VIEW_W, WEAPONS, SHOP_ITEMS } from './core.js';
+// Ashen Vow v0.0.6 — browser shell: menus, level select, spectate, fixed-step loop.
+import { AshenGame, ROOMS, WORLD_W, VIEW_W, WEAPONS, SHOP_ITEMS, BOSS_INFO, CODEX } from './core.js';
 import { Renderer } from './render.js';
 import { SoundKit } from './audio.js';
 
@@ -18,6 +18,9 @@ let paused = false;
 let menuView = 'title'; // title | levels | credits | none
 let spectating = false;
 let shopOpen = false;
+let mapOpen = false;
+let codexOpen = false;
+let codexTab = 'enemies';
 let spectateGame = null;
 let spectateRoom = 0;
 let peekOffset = 0;
@@ -26,6 +29,10 @@ let attempts = 0;
 let lastGameState = game.state;
 let bannerTimer = 0;
 let toastTimer = 0;
+let dialogueOpen = false;
+let dialogueLines = [];
+let dialogueIndex = 0;
+let dialogueMeta = null;
 let accumulator = 0;
 let lastTime = performance.now();
 
@@ -58,13 +65,37 @@ const LEVEL_META = [
     glyph: '⚔',
     chapter: 'CHAPTER III',
     desc: 'Sir Mordrake menjaga singgasana. Setengah darahnya membuka fase kedua.',
-    tags: ['2 FASE'],
+    tags: ['2 FASE', 'DIALOG'],
   },
   {
     glyph: '⛧',
     chapter: 'CHAPTER IV',
-    desc: 'Vhael terbangun di sarang abu. Langit runtuh, api turun, sumpah berakhir.',
+    desc: 'Vhael terbangun di sarang abu. Langit runtuh, api turun, jalan terus menanjak.',
     tags: ['2 FASE', 'PILAR API'],
+  },
+  {
+    glyph: '☩',
+    chapter: 'CHAPTER V',
+    desc: 'Jembatan tulang membentang di atas jurang. Wraith dan Brute menjaga setiap pijakan.',
+    tags: ['WRAITH', 'BRUTE', 'JURANG'],
+  },
+  {
+    glyph: '♱',
+    chapter: 'CHAPTER VI',
+    desc: 'Katedral sunyi tempat The Hollow Choir menyanyikan kematian.',
+    tags: ['2 FASE', 'GEMA'],
+  },
+  {
+    glyph: '♜',
+    chapter: 'CHAPTER VII',
+    desc: 'Menara Lonceng berdiri di antara dua dunia. Setiap langkah memanggil penjaga.',
+    tags: ['3 MUSUH', 'LONCENG'],
+  },
+  {
+    glyph: '✠',
+    chapter: 'CHAPTER VIII',
+    desc: 'Puncak Sumpah. The Oathbreaker menanti dengan tiga fase dan satu akhir.',
+    tags: ['3 FASE', 'FINALE'],
   },
 ];
 
@@ -123,7 +154,7 @@ function updateMenuProgress() {
 // ── navigation ───────────────────────────────────────────────────────────
 function provisionStartAsh(index) {
   // Level-select runs skip earlier rooms, so grant a small ash stipend for the shop.
-  const stipend = index >= 3 ? 90 : index === 2 ? 45 : 0;
+  const stipend = index >= 7 ? 240 : index >= 6 ? 190 : index >= 5 ? 155 : index >= 4 ? 120 : index === 3 ? 90 : index === 2 ? 45 : 0;
   if (stipend > 0) game.ash = Math.max(game.ash, stipend);
 }
 
@@ -140,6 +171,9 @@ function startRun(index = 0) {
   started = true;
   paused = false;
   shopOpen = false;
+  mapOpen = false;
+  codexOpen = false;
+  closeDialogue(true);
   spectating = false;
   spectateGame = null;
   menuView = 'none';
@@ -168,6 +202,9 @@ function retryRun() {
   started = true;
   paused = false;
   shopOpen = false;
+  mapOpen = false;
+  codexOpen = false;
+  closeDialogue(true);
   spectating = false;
   spectateGame = null;
   menuView = 'none';
@@ -187,6 +224,9 @@ function showMenu() {
   started = false;
   paused = false;
   shopOpen = false;
+  mapOpen = false;
+  codexOpen = false;
+  closeDialogue(true);
   spectating = false;
   spectateGame = null;
   menuView = 'title';
@@ -201,6 +241,9 @@ function showLevels() {
   started = false;
   paused = false;
   shopOpen = false;
+  mapOpen = false;
+  codexOpen = false;
+  closeDialogue(true);
   spectating = false;
   spectateGame = null;
   menuView = 'levels';
@@ -222,7 +265,7 @@ function startSpectate(index) {
   peek.enterRoom(spectateRoom);
   if (peek.boss) {
     peek.boss.intro = 0;
-    peek.boss.state = peek.boss.kind === 'wyrm' ? 'hover' : 'chase';
+    peek.boss.state = peek.boss.flying ? 'hover' : 'chase';
     peek.boss.cooldown = 999;
     peek.boss.hp = peek.boss.maxHp;
   }
@@ -231,6 +274,9 @@ function startSpectate(index) {
   started = false;
   paused = false;
   shopOpen = false;
+  mapOpen = false;
+  codexOpen = false;
+  closeDialogue(true);
   menuView = 'none';
   peekOffset = 0;
   peekDir = 0;
@@ -238,8 +284,9 @@ function startSpectate(index) {
   $('peek-name').textContent = room.name;
   $('peek-sub').textContent = (room.subtitle || '').toUpperCase();
   let hint = 'Mode menonton — tidak ada combat. Kamu hanya melihat ruang ini.';
-  if (peek.boss) hint = `Boss: ${peek.boss.name} — ${peek.boss.title} · 2 fase`;
+  if (peek.boss) hint = `Boss: ${peek.boss.name} — ${peek.boss.title} · ${peek.boss.maxPhases} fase`;
   else if (room.relic) hint = `Relik: ${room.relic.name} · jurang di tengah balai`;
+  else if (room.enemies?.length) hint = `${room.enemies.length} penjaga · ${room.hint}`;
   $('peek-hint').textContent = hint;
   clearHeldKeys();
   syncScreens();
@@ -267,6 +314,190 @@ function spectateCamera() {
   return clamp(base + peekOffset, 0, max);
 }
 
+// ── map ──────────────────────────────────────────────────────────────────
+function buildMap() {
+  const wrap = $('map-rooms');
+  if (!wrap) return;
+  const inRun = started && !spectating && menuView === 'none';
+  const current = inRun ? game.roomIndex : -1;
+  wrap.innerHTML = ROOMS.map((room, i) => {
+    const meta = LEVEL_META[i];
+    const info = room.boss ? BOSS_INFO[room.boss] : null;
+    const unlocked = i < progress.unlocked;
+    const cleared = !!progress.cleared[i];
+    const isCurrent = i === current;
+    const tags = [];
+    if (info) tags.push(`BOSS · ${info.maxPhases || 2} FASE`);
+    if (room.relic) tags.push('RELIK');
+    if (room.checkpoint) tags.push('WARUNG');
+    if (!room.gate && i === ROOMS.length - 1) tags.push('FINALE');
+    const status = isCurrent ? 'KAU DI SINI' : cleared ? 'TUNTAS' : unlocked ? 'TERBUKA' : 'TERKUNCI';
+    return `
+      <article class="map-room${isCurrent ? ' current' : ''}${cleared ? ' cleared' : ''}${unlocked ? '' : ' locked'}" style="--accent:${room.accent}">
+        <div class="map-room-top">
+          <span class="map-chapter">${meta.chapter}</span>
+          <span class="map-status">${status}</span>
+        </div>
+        <span class="map-glyph" aria-hidden="true">${meta.glyph}</span>
+        <h3>${room.name}</h3>
+        <p>${meta.desc}</p>
+        <div class="map-tags">${tags.map((t) => `<span>${t}</span>`).join('')}</div>
+      </article>
+    `;
+  }).join('');
+  $('map-current').textContent = inRun
+    ? `POSISI · ${game.room.name.toUpperCase()}`
+    : 'PETA SUMPAH · 8 RUANG · 4 BOSS';
+  $('map-progress').textContent = `${progress.cleared.filter(Boolean).length} / ${ROOMS.length} RUANG TUNTAS`;
+}
+
+function openMap() {
+  if (dialogueOpen || spectating) return;
+  mapOpen = true;
+  codexOpen = false;
+  clearHeldKeys();
+  buildMap();
+  syncScreens();
+}
+
+function closeMap() {
+  if (!mapOpen) return;
+  mapOpen = false;
+  lastTime = performance.now();
+  accumulator = 0;
+  syncScreens();
+}
+
+function toggleMap() {
+  if (mapOpen) closeMap();
+  else openMap();
+}
+
+// ── codex ────────────────────────────────────────────────────────────────
+const CODEX_TABS = [
+  { id: 'enemies', label: 'MUSUH', glyph: '◈' },
+  { id: 'weapons', label: 'SENJATA', glyph: '†' },
+  { id: 'bosses', label: 'BOSS', glyph: '♜' },
+  { id: 'items', label: 'BARANG', glyph: '✦' },
+];
+
+function buildCodex() {
+  const tabs = $('codex-tabs');
+  const wrap = $('codex-entries');
+  if (!tabs || !wrap) return;
+  tabs.innerHTML = CODEX_TABS.map((tab) => `
+    <button class="codex-tab${codexTab === tab.id ? ' active' : ''}" type="button" data-codex-tab="${tab.id}">
+      <span aria-hidden="true">${tab.glyph}</span>${tab.label}
+    </button>
+  `).join('');
+  tabs.querySelectorAll('[data-codex-tab]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      codexTab = btn.dataset.codexTab;
+      buildCodex();
+    });
+  });
+  const entries = CODEX[codexTab] || [];
+  wrap.innerHTML = entries.map((entry) => `
+    <article class="codex-card" style="--accent:${codexTab === 'bosses' ? '#d98b58' : '#c9a25c'}">
+      <div class="codex-card-top">
+        <span class="codex-glyph" aria-hidden="true">${entry.glyph}</span>
+        <span class="codex-danger">${entry.danger}</span>
+      </div>
+      <h3>${entry.name}</h3>
+      <span class="codex-sub">${entry.subtitle}</span>
+      <p>${entry.desc}</p>
+      <div class="codex-meta">
+        ${entry.meta.map(([k, v]) => `<span><b>${k}</b>${v}</span>`).join('')}
+      </div>
+      <span class="codex-where">${entry.where}</span>
+    </article>
+  `).join('');
+  $('codex-count').textContent = `${entries.length} ENTRI · INDEKS ${CODEX_TABS.find((t) => t.id === codexTab).label}`;
+}
+
+function openCodex(tab) {
+  if (dialogueOpen || spectating) return;
+  if (tab && CODEX[tab]) codexTab = tab;
+  codexOpen = true;
+  mapOpen = false;
+  clearHeldKeys();
+  buildCodex();
+  syncScreens();
+}
+
+function closeCodex() {
+  if (!codexOpen) return;
+  codexOpen = false;
+  lastTime = performance.now();
+  accumulator = 0;
+  syncScreens();
+}
+
+function toggleCodex() {
+  if (codexOpen) closeCodex();
+  else openCodex();
+}
+
+// ── boss dialogue ────────────────────────────────────────────────────────
+const DIALOGUE_PHASE_LABEL = {
+  intro: 'PERTEMPURAN DIMULAI',
+  phase2: 'FASE II',
+  phase3: 'FASE III',
+  defeat: 'AKHIR PERTEMPURAN',
+};
+
+function queueDialogue(ev) {
+  if (!ev?.lines?.length) return;
+  dialogueLines = ev.lines.map((line) => ({ ...line }));
+  dialogueIndex = 0;
+  dialogueMeta = ev;
+  dialogueOpen = true;
+  clearHeldKeys();
+  renderDialogue();
+  syncScreens();
+}
+
+function renderDialogue() {
+  const screen = $('dialogue-screen');
+  if (!screen) return;
+  screen.classList.toggle('hidden', !dialogueOpen);
+  if (!dialogueOpen) return;
+  const line = dialogueLines[dialogueIndex];
+  if (!line) {
+    closeDialogue();
+    return;
+  }
+  $('dialogue-phase').textContent = DIALOGUE_PHASE_LABEL[dialogueMeta?.phase] || 'SUMPAH';
+  $('dialogue-name').textContent = dialogueMeta?.name || '';
+  $('dialogue-speaker').textContent = line.speaker || dialogueMeta?.name || '';
+  $('dialogue-line').textContent = line.text || '';
+  $('dialogue-counter').textContent = `${dialogueIndex + 1} / ${dialogueLines.length}`;
+  $('btn-dialogue-next').textContent = dialogueIndex >= dialogueLines.length - 1 ? 'LANJUTKAN' : 'LANJUT';
+}
+
+function advanceDialogue() {
+  if (!dialogueOpen) return;
+  dialogueIndex += 1;
+  if (dialogueIndex >= dialogueLines.length) closeDialogue();
+  else renderDialogue();
+}
+
+function closeDialogue(silent = false) {
+  const wasOpen = dialogueOpen;
+  dialogueOpen = false;
+  dialogueLines = [];
+  dialogueIndex = 0;
+  dialogueMeta = null;
+  const screen = $('dialogue-screen');
+  if (screen) screen.classList.add('hidden');
+  if (!silent && wasOpen) {
+    lastTime = performance.now();
+    accumulator = 0;
+    syncScreens();
+    updateHud();
+  }
+}
+
 // ── level select cards ───────────────────────────────────────────────────
 function buildLevelCards() {
   const wrap = $('level-cards');
@@ -278,7 +509,8 @@ function buildLevelCards() {
     const card = document.createElement('article');
     card.className = `level-card${locked ? ' locked' : ''}${cleared ? ' cleared' : ''}`;
     card.style.setProperty('--accent', room.accent);
-    const bossTag = room.boss ? '<span class="boss">BOSS · 2 FASE</span>' : '';
+    const bossInfo = room.boss ? BOSS_INFO[room.boss] : null;
+    const bossTag = bossInfo ? `<span class="boss">BOSS · ${bossInfo.maxPhases || 2} FASE</span>` : '';
     const tags = meta.tags
       .filter((t) => !t.includes('2 FASE'))
       .map((t) => `<span>${t}</span>`)
@@ -365,7 +597,32 @@ window.addEventListener('keydown', (e) => {
     e.preventDefault();
   }
 
+  if (dialogueOpen) {
+    if (['Space', 'Enter', 'Escape', 'KeyJ', 'KeyE'].includes(e.code)) advanceDialogue();
+    return;
+  }
+
+  if (mapOpen) {
+    if (e.code === 'KeyM' || e.code === 'Escape' || e.code === 'Backspace') closeMap();
+    else if (e.code === 'KeyI') openCodex();
+    return;
+  }
+
+  if (codexOpen) {
+    if (e.code === 'KeyI' || e.code === 'Escape' || e.code === 'Backspace') closeCodex();
+    else if (e.code === 'KeyM') openMap();
+    return;
+  }
+
   if (e.code === 'KeyM') {
+    openMap();
+    return;
+  }
+  if (e.code === 'KeyI') {
+    openCodex();
+    return;
+  }
+  if (e.code === 'KeyN') {
     toggleMute();
     return;
   }
@@ -478,9 +735,18 @@ function inputSnapshot() {
 $('btn-start').addEventListener('click', () => startRun(0));
 $('btn-levels').addEventListener('click', showLevels);
 $('btn-credits').addEventListener('click', showCredits);
+$('btn-map-menu').addEventListener('click', openMap);
+$('btn-codex-menu').addEventListener('click', () => openCodex());
 $('btn-levels-back').addEventListener('click', showMenu);
 $('btn-credits-back').addEventListener('click', showMenu);
 $('btn-peek-back').addEventListener('click', stopSpectate);
+$('btn-map-close').addEventListener('click', closeMap);
+$('btn-map-codex').addEventListener('click', () => openCodex());
+$('btn-codex-close').addEventListener('click', closeCodex);
+$('btn-codex-map').addEventListener('click', openMap);
+$('btn-dialogue-next').addEventListener('click', advanceDialogue);
+$('btn-pause-map').addEventListener('click', openMap);
+$('btn-pause-codex').addEventListener('click', () => openCodex());
 
 $('btn-retry').addEventListener('click', retryRun);
 $('btn-again').addEventListener('click', () => startRun(0));
@@ -697,6 +963,9 @@ function syncScreens() {
   $('levels-screen').classList.toggle('hidden', menuView !== 'levels');
   $('credits-screen').classList.toggle('hidden', menuView !== 'credits');
   $('spectate-ui').classList.toggle('hidden', !spectating);
+  $('map-screen').classList.toggle('hidden', !mapOpen);
+  $('codex-screen').classList.toggle('hidden', !codexOpen);
+  $('dialogue-screen').classList.toggle('hidden', !dialogueOpen);
 
   $('pause-screen').classList.toggle('hidden', !(inRun && paused && !shopOpen && s === 'playing'));
   $('shop-screen').classList.toggle('hidden', !(inRun && shopOpen));
@@ -704,11 +973,12 @@ function syncScreens() {
   $('dead-screen').classList.toggle('hidden', !(inRun && s === 'dead'));
   $('victory-screen').classList.toggle('hidden', !(inRun && s === 'victory'));
 
-  const hudVisible = inRun && !paused && !shopOpen && (s === 'playing' || s === 'blessing');
+  const hudVisible = inRun && !paused && !shopOpen && !mapOpen && !codexOpen && !dialogueOpen
+    && (s === 'playing' || s === 'blessing');
   $('hud').classList.toggle('hidden', !hudVisible);
   $('touch').classList.toggle(
     'hidden',
-    !(touchEnabled && inRun && !paused && !shopOpen && s === 'playing'),
+    !(touchEnabled && inRun && !paused && !shopOpen && !mapOpen && !codexOpen && !dialogueOpen && s === 'playing'),
   );
 
   if (inRun && !inMenu && s !== lastGameState) {
@@ -768,8 +1038,9 @@ function updateHud() {
     $('boss-title').textContent = boss.title;
     $('boss-fill').style.width = `${Math.max(0, (boss.hp / boss.maxHp) * 100)}%`;
     const phase = $('boss-phase');
-    phase.textContent = boss.phase === 2 ? 'FASE II' : 'FASE I';
-    phase.classList.toggle('on', boss.phase === 2);
+    const roman = ['I', 'II', 'III'][boss.phase - 1] || 'I';
+    phase.textContent = `FASE ${roman}`;
+    phase.classList.toggle('on', boss.phase > 1);
   }
 
   const gate = hud.gate;
@@ -798,7 +1069,11 @@ function drainEvents() {
     if (ev.type === 'roomEnter') showBanner(ev.name, ev.subtitle);
     else if (ev.type === 'bossSpawn') showToast(`⚔ ${ev.name} — ${ev.title}`, 2400);
     else if (ev.type === 'relic') showToast('Relik Bulu Bara — lompat ganda terbuka', 2400);
-    else if (ev.type === 'bossPhase') showToast(`FASE II — ${ev.name} bangkit`, 2200);
+    else if (ev.type === 'bossDialogue') queueDialogue(ev);
+    else if (ev.type === 'bossPhase') {
+      const roman = ['I', 'II', 'III'][ev.phase - 1] || String(ev.phase);
+      showToast(`FASE ${roman} — ${ev.name} bangkit`, 2200);
+    }
     else if (ev.type === 'respawn') showToast('Kau terlempar dari jurang');
     else if (ev.type === 'blessingChosen') showToast(`Berkah: ${ev.name}`, 1600);
     else if (ev.type === 'checkpoint') showToast(`Checkpoint aktif — ${ev.name}`, 2000);
@@ -817,6 +1092,8 @@ function drainEvents() {
 }
 
 function frame(now) {
+  // Schedule first so an exception in a handler cannot permanently stop the loop.
+  requestAnimationFrame(frame);
   const raw = Math.min(0.1, (now - lastTime) / 1000);
   lastTime = now;
 
@@ -825,7 +1102,7 @@ function frame(now) {
     if (peekDir !== 0) peekOffset = clamp(peekOffset + peekDir * 330 * raw, -WORLD_W, WORLD_W);
     renderer.render(spectateGame, { spectate: true, cameraX: spectateCamera() });
   } else {
-    if (started && !paused && !shopOpen && menuView === 'none') {
+    if (started && !paused && !shopOpen && !mapOpen && !codexOpen && !dialogueOpen && menuView === 'none') {
       accumulator += raw;
       let steps = 0;
       while (accumulator >= FIXED && steps < 10) {
@@ -846,8 +1123,6 @@ function frame(now) {
   drainEvents();
   syncScreens();
   updateHud();
-
-  requestAnimationFrame(frame);
 }
 
 window.addEventListener('resize', () => renderer.resize());
@@ -875,9 +1150,24 @@ window.__ashen = {
   get shopOpen() {
     return shopOpen;
   },
+  get mapOpen() {
+    return mapOpen;
+  },
+  get codexOpen() {
+    return codexOpen;
+  },
+  get dialogueOpen() {
+    return dialogueOpen;
+  },
   get progress() {
     return progress;
   },
+  openMap,
+  closeMap,
+  toggleMap,
+  openCodex,
+  closeCodex,
+  advanceDialogue,
   start: startRun,
   restart: startRun,
   retry: retryRun,
@@ -906,6 +1196,9 @@ window.__ashen = {
     started = true;
     paused = false;
     shopOpen = false;
+    mapOpen = false;
+    codexOpen = false;
+    closeDialogue(true);
     spectating = false;
     menuView = 'none';
     game.enterRoom(index);
