@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0b0807" />
+    <title>Ashen Vow — v0.0.5</title>
+    <meta
+      name="description"
+      content="Ashen Vow adalah simulasi metroidvania medieval 2D dengan combat pedang real-time dan dua boss."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;800;900&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%230b0807'/%3E%3Cpath d='M32 6l7 18 18 8-18 8-7 18-7-18-18-8 18-8z' fill='%23d08a45'/%3E%3C/svg%3E"
+    />
+  </head>
+  <body>
+    <main id="app">
+      <div class="frame">
+        <canvas id="game" width="960" height="540" aria-label="Arena permainan Ashen Vow"></canvas>
+
+        <!-- ══ HUD ══ -->
+        <div id="hud" class="hud hidden">
+          <div class="hud-top">
+            <div class="vitals">
+              <div class="crest" aria-hidden="true">
+                <span>AV</span>
+              </div>
+              <div class="bars">
+                <div class="name-row">
+                  <span class="char-name">The Oathbound</span>
+                  <span id="hp-text" class="hp-text">100 / 100</span>
+                </div>
+                <div class="hp-track">
+                  <div id="hp-fill" class="hp-fill"></div>
+                  <div class="hp-gloss"></div>
+                  <div class="hp-ticks"></div>
+                </div>
+                <div class="flask-row">
+                  <span class="flask-label">FLASK</span>
+                  <div id="flasks" class="flasks"></div>
+                  <span id="relic-badge" class="relic-badge">✦ BULU BARA</span>
+                </div>
+              </div>
+            </div>
+            <div class="hud-right">
+              <button id="sound-btn" class="sound-btn" type="button" title="Suara (M)" aria-label="Suara">♪</button>
+              <div class="room-plate">
+                <span id="room-sub" class="room-sub">THE ASHEN GATE</span>
+                <strong id="room-name" class="room-name">Gerbang Abu</strong>
+              </div>
+            </div>
+          </div>
+
+          <div id="boss-wrap" class="boss-wrap hidden">
+            <div class="boss-meta">
+              <span id="boss-name" class="boss-name">Sir Mordrake</span>
+              <span id="boss-phase" class="boss-phase"></span>
+            </div>
+            <div class="boss-track">
+              <div id="boss-fill" class="boss-fill"></div>
+              <div class="boss-gloss"></div>
+            </div>
+            <span id="boss-title" class="boss-title"></span>
+          </div>
+
+          <div id="hint" class="hint"></div>
+
+          <div id="banner" class="banner">
+            <span id="banner-sub" class="banner-sub"></span>
+            <strong id="banner-name" class="banner-name"></strong>
+          </div>
+          <div id="toast" class="toast"></div>
+        </div>
+
+        <!-- ══ TITLE ══ -->
+        <section id="title-screen" class="screen title-screen">
+          <div class="screen-inner title-inner">
+            <p class="eyebrow">SEBUAH SUMPAH DI ANTARA ABU · v0.0.5</p>
+            <h1 class="game-title">ASHEN<span>VOW</span></h1>
+            <div class="title-rule"><i></i><b>✦</b><i></i></div>
+            <p class="lede">
+              Dua penjaga mengunci jalan menuju puncak. Satu sumpah menuntut darah.
+              <br />Angkat pedangmu, ambil relik, dan jatuhkan mahkota bara.
+            </p>
+
+            <div class="feature-chips">
+              <span>4 Ruang</span>
+              <span>2 Boss</span>
+              <span>Relik Double Jump</span>
+              <span>Combat Real-time</span>
+            </div>
+
+            <div class="controls-grid">
+              <div><kbd>A</kbd><kbd>D</kbd><em>bergerak</em></div>
+              <div><kbd>SPACE</kbd><em>lompat · 2× dengan relik</em></div>
+              <div><kbd>J</kbd><em>serang · kombo 3 hit</em></div>
+              <div><kbd>K</kbd><em>dash · i-frame</em></div>
+              <div><kbd>E</kbd><em>minum flask</em></div>
+              <div><kbd>ESC</kbd><em>jeda</em></div>
+            </div>
+
+            <button id="btn-start" class="btn btn-primary" type="button">
+              <span>MULAI SUMPAH</span>
+            </button>
+            <p class="micro">Gunakan keyboard — atau tombol sentuh di perangkat mobile.</p>
+          </div>
+        </section>
+
+        <!-- ══ BLESSING ══ -->
+        <section id="blessing-screen" class="screen hidden">
+          <div class="screen-inner">
+            <p class="eyebrow">PENJAGA GUGUR · SUMPAH MENYAPA</p>
+            <h2 class="screen-title">PILIH BERKAHMU</h2>
+            <p class="screen-sub">Satu janji. Konsekuensi abadi. Pilih dengan hati-hati.</p>
+            <div id="blessing-cards" class="blessing-cards"></div>
+            <p class="micro">Klik kartu atau tekan <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd></p>
+          </div>
+        </section>
+
+        <!-- ══ PAUSE ══ -->
+        <section id="pause-screen" class="screen hidden">
+          <div class="screen-inner narrow">
+            <p class="eyebrow">DUNIA MENAHAN NAPAS</p>
+            <h2 class="screen-title">JEDA</h2>
+            <p class="screen-sub">Pedang tetap di tanganmu.</p>
+            <button id="btn-resume" class="btn btn-primary" type="button"><span>LANJUTKAN</span></button>
+            <p class="micro">Tekan <kbd>ESC</kbd> untuk kembali · <kbd>M</kbd> untuk suara</p>
+          </div>
+        </section>
+
+        <!-- ══ DEATH ══ -->
+        <section id="dead-screen" class="screen hidden">
+          <div class="screen-inner narrow">
+            <p class="eyebrow blood">ABU KEMBALI KE ABU</p>
+            <h2 class="screen-title dead-title">KAU GUGUR</h2>
+            <p id="death-sub" class="screen-sub">Sumpah belum tuntas. Bangkit dan coba lagi.</p>
+            <div id="death-stats" class="stats"></div>
+            <button id="btn-retry" class="btn btn-primary" type="button"><span>BANGKIT KEMBALI</span></button>
+            <p class="micro">R untuk mencoba ulang</p>
+          </div>
+        </section>
+
+        <!-- ══ VICTORY ══ -->
+        <section id="victory-screen" class="screen hidden">
+          <div class="screen-inner">
+            <p class="eyebrow gold">DUA PENJAGA TELAH GUGUR</p>
+            <h2 class="screen-title victory-title">SUMPAH TUNTAS</h2>
+            <p class="screen-sub">Bara padam. Puncak sunyi. Namamu terukir di batu.</p>
+            <div id="victory-stats" class="stats"></div>
+            <p id="victory-blessings" class="victory-blessings"></p>
+            <button id="btn-again" class="btn btn-primary" type="button"><span>MULAI LAGI</span></button>
+            <p class="micro">Terima kasih telah memainkan Ashen Vow v0.0.5</p>
+          </div>
+        </section>
+
+        <!-- ══ TOUCH ══ -->
+        <div id="touch" class="touch hidden" aria-hidden="true">
+          <div class="touch-side">
+            <button class="tbtn" data-action="left" type="button" aria-label="Kiri">◀</button>
+            <button class="tbtn" data-action="right" type="button" aria-label="Kanan">▶</button>
+          </div>
+          <div class="touch-side">
+            <button class="tbtn small" data-action="heal" type="button" aria-label="Minum flask">✚</button>
+            <button class="tbtn small" data-action="dash" type="button" aria-label="Dash">»</button>
+            <button class="tbtn" data-action="jump" type="button" aria-label="Lompat">▲</button>
+            <button class="tbtn attack" data-action="attack" type="button" aria-label="Serang">⚔</button>
+          </div>
+        </div>
+      </div>
+
+      <footer class="footer">
+        <span>ASHEN VOW · v0.0.5</span>
+        <span class="dot">✦</span>
+        <span>Metroidvania medieval 2D · dibuat dengan Canvas</span>
+      </footer>
+    </main>
+    <script type="module" src="./src/main.js"></script>
+  </body>
+</html>
