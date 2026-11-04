@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#0b0807" />
-    <title>Ashen Vow — v0.0.6</title>
+    <title>Ashen Vow — v0.0.7</title>
     <meta
       name="description"
       content="Ashen Vow adalah simulasi metroidvania medieval 2D dengan combat pedang real-time, delapan ruang, empat boss, peta, dan indeks sumpah."
@@ -92,7 +92,7 @@
         <!-- ══ MAIN MENU ══ -->
         <section id="title-screen" class="screen title-screen">
           <div class="screen-inner title-inner">
-            <p class="eyebrow">SEBUAH SUMPAH DI ANTARA ABU · v0.0.6</p>
+            <p class="eyebrow">SEBUAH SUMPAH DI ANTARA ABU · v0.0.7</p>
             <h1 class="game-title">ASHEN<span>VOW</span></h1>
             <div class="title-rule"><i></i><b>✦</b><i></i></div>
             <p class="lede">
@@ -103,7 +103,11 @@
             <nav class="main-menu" aria-label="Menu utama">
               <button id="btn-start" class="btn btn-primary menu-btn" type="button">
                 <span>MULAI PERJALANAN</span>
-                <em>Run baru dari Gerbang Abu</em>
+                <em>Prolog Opus + run baru dari Gerbang Abu</em>
+              </button>
+              <button id="btn-character-menu" class="btn btn-ghost menu-btn" type="button">
+                <span>PILIH PENJAGA</span>
+                <em>2 karakter · ras · warna · pakaian</em>
               </button>
               <button id="btn-levels" class="btn btn-ghost menu-btn" type="button">
                 <span>PILIH LEVEL</span>
@@ -193,7 +197,7 @@
               </div>
             </div>
 
-            <p class="credit-version">ASHEN VOW · v0.0.6 · 4 BOSS · 8 RUANG</p>
+            <p class="credit-version">ASHEN VOW · v0.0.7 · 4 BOSS · 8 RUANG</p>
             <div class="screen-links">
               <button id="btn-credits-back" class="link-btn" type="button">← KEMBALI KE MENU</button>
             </div>
@@ -280,7 +284,86 @@
               <button id="btn-victory-levels" class="link-btn" type="button">PILIH LEVEL</button>
               <button id="btn-victory-menu" class="link-btn" type="button">MENU UTAMA</button>
             </div>
-            <p class="micro">Terima kasih telah memainkan Ashen Vow v0.0.6</p>
+            <p class="micro">Terima kasih telah memainkan Ashen Vow v0.0.7</p>
+          </div>
+        </section>
+
+        <!-- ══ CHARACTER SELECT / CUSTOMIZATION ══ -->
+        <section id="character-screen" class="screen hidden">
+          <div class="screen-inner character-inner">
+            <p class="eyebrow">SEBELUM SUMPAH DIMULAI</p>
+            <h2 class="screen-title">PILIH PENJAGA</h2>
+            <p class="screen-sub">
+              Dua jiwa selamat dari kehancuran Opus. Pilih tubuh, ras, dan pakaian yang akan
+              membawa sumpah ini.
+            </p>
+
+            <div class="character-layout">
+              <div class="character-preview-col">
+                <div class="character-stage">
+                  <canvas id="char-preview" width="260" height="330" aria-label="Pratinjau penjaga"></canvas>
+                  <span class="character-stage-glow" aria-hidden="true"></span>
+                </div>
+                <strong id="char-name">Sera Vayne</strong>
+                <span id="char-title" class="char-title">The Oathbound</span>
+                <p id="char-desc" class="char-desc"></p>
+                <div id="char-stats" class="char-stats"></div>
+              </div>
+
+              <div class="character-options">
+                <div class="char-group">
+                  <span class="char-label">KARAKTER</span>
+                  <div id="char-roster" class="char-roster"></div>
+                </div>
+                <div class="char-group">
+                  <span class="char-label">RAS</span>
+                  <div id="char-races" class="char-chips"></div>
+                  <p id="char-race-desc" class="char-note"></p>
+                </div>
+                <div class="char-group">
+                  <span class="char-label">PAKAIAN</span>
+                  <div id="char-armors" class="char-chips"></div>
+                  <p id="char-armor-desc" class="char-note"></p>
+                </div>
+                <div class="char-group">
+                  <span class="char-label">WARNA KULIT</span>
+                  <div id="char-skins" class="char-swatches"></div>
+                </div>
+                <div class="char-group">
+                  <span class="char-label">WARNA PAKAIAN</span>
+                  <div id="char-colors" class="char-swatches"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="screen-links">
+              <button id="btn-character-back" class="link-btn" type="button">← KEMBALI</button>
+              <button id="btn-character-save" class="link-btn" type="button">SIMPAN TAMPILAN</button>
+              <button id="btn-character-start" class="btn btn-primary btn-compact" type="button">
+                <span>MULAI PERJALANAN</span>
+              </button>
+            </div>
+            <p class="micro">
+              Pilihan tersimpan otomatis di browser ini. Prolog satu menit diputar sebelum ruang pertama.
+            </p>
+          </div>
+        </section>
+
+        <!-- ══ PROLOGUE CUTSCENE ══ -->
+        <section id="prologue-screen" class="prologue-screen hidden" aria-label="Prolog Ashen Vow">
+          <canvas id="prologue-canvas" width="1280" height="720"></canvas>
+          <div class="prologue-top">
+            <span id="prologue-label" class="prologue-label">PROLOG</span>
+            <button id="btn-prologue-skip" class="prologue-skip" type="button">LEWATI ⏭</button>
+          </div>
+          <div class="prologue-subtitle">
+            <span id="prologue-speaker" class="prologue-speaker">NARATOR</span>
+            <p id="prologue-line" class="prologue-line"></p>
+            <div class="prologue-foot">
+              <div class="prologue-bar"><i id="prologue-progress"></i></div>
+              <span id="prologue-count" class="prologue-count">1 / 12</span>
+              <button id="btn-prologue-voice" class="prologue-voice" type="button">SUARA: AKTIF</button>
+            </div>
           </div>
         </section>
 
@@ -379,7 +462,7 @@
       </div>
 
       <footer class="footer">
-        <span>ASHEN VOW · v0.0.6</span>
+        <span>ASHEN VOW · v0.0.7</span>
         <span class="dot">✦</span>
         <span>Metroidvania medieval 2D · 8 ruang · 4 boss · dibuat dengan Canvas</span>
       </footer>

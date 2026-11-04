@@ -72,6 +72,86 @@ export class SoundKit {
     this.ambient = { g, o1, o2, lfo };
   }
 
+  // Low, slow prologue score. Kept separate so gameplay ambience can keep running.
+  startPrologue() {
+    this.init();
+    if (!this.ctx || this.prologue) return;
+    const ctx = this.ctx;
+    const now = ctx.currentTime;
+    const g = ctx.createGain();
+    g.gain.value = 0.0001;
+    g.connect(this.master);
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(220, now);
+    filter.frequency.linearRampToValueAtTime(620, now + 30);
+    filter.Q.value = 1.2;
+    filter.connect(g);
+
+    const oscs = [];
+    const freqs = [
+      [73.42, 'sine', 0.9],
+      [110, 'triangle', 0.5],
+      [146.83, 'sawtooth', 0.18],
+      [220, 'sine', 0.12],
+    ];
+    for (const [freq, type, level] of freqs) {
+      const osc = ctx.createOscillator();
+      osc.type = type;
+      osc.frequency.value = freq;
+      osc.detune.value = (Math.random() - 0.5) * 8;
+      const og = ctx.createGain();
+      og.gain.value = level;
+      osc.connect(og).connect(filter);
+      osc.start();
+      oscs.push(osc);
+    }
+    const lfo = ctx.createOscillator();
+    lfo.frequency.value = 0.07;
+    const lfoGain = ctx.createGain();
+    lfoGain.gain.value = 0.012;
+    lfo.connect(lfoGain).connect(g.gain);
+    lfo.start();
+    g.gain.linearRampToValueAtTime(0.055, now + 2.5);
+    this.prologue = { g, filter, oscs, lfo };
+  }
+
+  prologueBeat(index) {
+    if (!this.ctx || this.muted) return;
+    const now = this.ctx.currentTime;
+    if (this.prologue) {
+      this.prologue.filter.frequency.cancelScheduledValues(now);
+      this.prologue.filter.frequency.setValueAtTime(Math.min(620, 240 + index * 34), now);
+      this.prologue.filter.frequency.linearRampToValueAtTime(Math.min(900, 320 + index * 42), now + 3.5);
+    }
+    this.tone({ freq: 146.83, to: 110, type: 'sine', dur: 2.4, gain: 0.03 });
+    this.tone({ freq: 220, to: 164.81, type: 'triangle', dur: 2.8, gain: 0.016, delay: 0.25 });
+  }
+
+  stopPrologue() {
+    if (!this.ctx || !this.prologue) return;
+    const { g, oscs, lfo } = this.prologue;
+    const now = this.ctx.currentTime;
+    g.gain.cancelScheduledValues(now);
+    g.gain.setValueAtTime(Math.max(0.0001, g.gain.value), now);
+    g.gain.exponentialRampToValueAtTime(0.0001, now + 0.9);
+    this.prologue = null;
+    setTimeout(() => {
+      for (const osc of oscs) {
+        try {
+          osc.stop();
+        } catch {
+          /* already stopped */
+        }
+      }
+      try {
+        lfo.stop();
+      } catch {
+        /* already stopped */
+      }
+    }, 1000);
+  }
+
   setMuted(m) {
     this.muted = m;
     if (this.master) {

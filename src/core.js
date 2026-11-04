@@ -80,6 +80,123 @@ export const ENEMY_INFO = {
   },
 };
 
+// ── characters and appearance ─────────────────────────────────────────────
+export const RACES = {
+  human: {
+    id: 'human',
+    name: 'Manusia',
+    title: 'Human',
+    desc: 'Adaptif dan seimbang. Tidak punya kelebihan khusus, tetapi tidak pernah kehilangan akal.',
+    skin: '#c98f6a',
+    eye: '#ffb060',
+  },
+  elf: {
+    id: 'elf',
+    name: 'Elf',
+    title: 'High Elf',
+    desc: 'Langsing dan lincah. Telinga panjangnya mendengar gema sumpah sebelum sumpah itu diucapkan.',
+    skin: '#d8b892',
+    eye: '#8fe0c0',
+  },
+  goblin: {
+    id: 'goblin',
+    name: 'Goblin',
+    title: 'Goblin',
+    desc: 'Kecil, licik, dan tahan kelaparan. Bertahan hidup adalah satu-satunya sumpah yang ia kenal.',
+    skin: '#8fb06a',
+    eye: '#d9f06a',
+  },
+  orc: {
+    id: 'orc',
+    name: 'Orc',
+    title: 'Orc',
+    desc: 'Bertulang tebal dan bergigi taring. Luka yang membunuh manusia hanya membuatnya marah.',
+    skin: '#7f8f5c',
+    eye: '#ff9a4d',
+  },
+  devil: {
+    id: 'devil',
+    name: 'Iblis',
+    title: 'Devil',
+    desc: 'Keturunan api yang memilih berpihak pada manusia. Tanduknya mengingatkan dari mana ia berasal.',
+    skin: '#a8503f',
+    eye: '#ff5e3a',
+  },
+};
+
+export const OUTFITS = {
+  medieval: {
+    id: 'medieval',
+    name: 'Medieval',
+    title: 'Baja Ksatria',
+    desc: 'Pelat baja dan kain sumpah — pakaian para penjaga Opus.',
+    color: '#6d2323',
+  },
+  modern: {
+    id: 'modern',
+    name: 'Modern',
+    title: 'Jaket Perjalanan',
+    desc: 'Jaket gelap berlapis pelat ringan, dibuat untuk bertahan di kota yang tidak lagi punya raja.',
+    color: '#2f4a5c',
+  },
+  tribal: {
+    id: 'tribal',
+    name: 'Tribal',
+    title: 'Buluf & Cat Perang',
+    desc: 'Kulit, bulu, dan cat perang dari suku yang menolak tunduk pada mahkota mana pun.',
+    color: '#7a4a24',
+  },
+  royal: {
+    id: 'royal',
+    name: 'Royal',
+    title: 'Jubah Bangsawan',
+    desc: 'Sutra dan emas terakhir dari istana Opus, dirawat agar tidak ikut menjadi abu.',
+    color: '#8b6a1f',
+  },
+  ashen: {
+    id: 'ashen',
+    name: 'Ashen',
+    title: 'Kain Abu',
+    desc: 'Kain yang pernah terbakar dan menolak hancur. Pakaian mereka yang tidak punya apa-apa lagi.',
+    color: '#4a4440',
+  },
+};
+
+export const SKIN_TONES = ['#f0c9a8', '#d8a97f', '#c98f6a', '#a9714c', '#7d5238', '#8fb06a', '#7f8f5c', '#a8503f'];
+
+export const OUTFIT_COLORS = ['#6d2323', '#2f4a5c', '#7a4a24', '#8b6a1f', '#3b4a2f', '#4a4440', '#5b2f6b', '#2a2a30'];
+
+export const CHARACTERS = {
+  sera: {
+    id: 'sera',
+    name: 'Sera Vayne',
+    title: 'The Oathbound',
+    glyph: '⚔',
+    desc: 'Ksatria terakhir Opus. Seimbang dalam serangan dan pertahanan, dengan dash yang paling ringan.',
+    maxHp: 100,
+    speed: 1,
+    damage: 1,
+    dash: 1,
+    build: 1,
+    appearance: { race: 'human', skin: '#c98f6a', outfit: '#6d2323', armor: 'medieval' },
+  },
+  karn: {
+    id: 'karn',
+    name: 'Karn of the Ash',
+    title: 'The Broken Vow',
+    glyph: '⛨',
+    desc: 'Prajurit yang bangkit dari tumpukan mayat. Lebih tebal dan keras, tetapi sedikit lebih lambat.',
+    maxHp: 125,
+    speed: 0.93,
+    damage: 1.08,
+    dash: 0.9,
+    build: 1.08,
+    appearance: { race: 'orc', skin: '#7f8f5c', outfit: '#3b4a2f', armor: 'tribal' },
+  },
+};
+
+export const DEFAULT_APPEARANCE = { race: 'human', skin: '#c98f6a', outfit: '#6d2323', armor: 'medieval' };
+
 const PIKE_ATTACK = {
   windup: 0.24,
   active: 0.15,
@@ -610,6 +727,10 @@ export class AshenGame {
       maxFlasks: 3,
       healing: 0,
       damageMult: 1,
+      speedMult: 1,
+      build: 1,
+      characterId: 'sera',
+      appearance: { ...DEFAULT_APPEARANCE },
       hitFlash: 0,
       pitGrace: false,
       weapon: 'sword',
@@ -620,6 +741,38 @@ export class AshenGame {
     };
 
     this.loadRoom(0, true);
+  }
+
+  // ── characters ───────────────────────────────────────────────────────────
+  applyCharacter(id) {
+    const character = CHARACTERS[id] || CHARACTERS.sera;
+    const p = this.player;
+    this.characterId = character.id;
+    p.characterId = character.id;
+    p.maxHp = character.maxHp;
+    p.hp = character.maxHp;
+    p.damageMult = character.damage;
+    p.speedMult = character.speed;
+    p.dashCooldownMax = 0.78 * (character.dash || 1);
+    p.build = character.build || 1;
+    p.appearance = { ...(character.appearance || DEFAULT_APPEARANCE) };
+    this.appearance = { ...p.appearance };
+    return character;
+  }
+
+  setAppearance(appearance = {}) {
+    const race = RACES[appearance.race] ? appearance.race : 'human';
+    const armor = OUTFITS[appearance.armor] ? appearance.armor : 'medieval';
+    const isHex = (value) => typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value);
+    const next = {
+      race,
+      armor,
+      skin: isHex(appearance.skin) ? appearance.skin : RACES[race].skin,
+      outfit: isHex(appearance.outfit) ? appearance.outfit : OUTFITS[armor].color,
+    };
+    this.appearance = { ...next };
+    this.player.appearance = { ...next };
+    return next;
   }
 
   // ── setup ────────────────────────────────────────────────────────────────
@@ -945,10 +1098,11 @@ export class AshenGame {
       // rooted while drinking
     } else if (moving !== 0) {
       p.facing = moving;
-      const target = moving * 255 * control;
+      const speedMult = p.speedMult || 1;
+      const target = moving * 255 * speedMult * control;
       const accel = (p.onGround ? 2400 : 1500) * dt;
       p.vx += clamp(target - p.vx, -accel, accel);
-      p.vx = clamp(p.vx, -300, 300);
+      p.vx = clamp(p.vx, -300 * speedMult, 300 * speedMult);
     } else if (p.dashTimer <= 0) {
       const fric = (p.onGround ? 2800 : 900) * dt;
       if (Math.abs(p.vx) <= fric) p.vx = 0;

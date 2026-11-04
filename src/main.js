@@ -1,11 +1,28 @@
 // Ashen Vow v0.0.6 — browser shell: menus, level select, spectate, fixed-step loop.
-import { AshenGame, ROOMS, WORLD_W, VIEW_W, WEAPONS, SHOP_ITEMS, BOSS_INFO, CODEX } from './core.js';
+import {
+  AshenGame,
+  ROOMS,
+  WORLD_W,
+  VIEW_W,
+  WEAPONS,
+  SHOP_ITEMS,
+  BOSS_INFO,
+  CODEX,
+  CHARACTERS,
+  RACES,
+  OUTFITS,
+  SKIN_TONES,
+  OUTFIT_COLORS,
+  DEFAULT_APPEARANCE,
+} from './core.js';
 import { Renderer } from './render.js';
 import { SoundKit } from './audio.js';
+import { PROLOGUE_BEATS, PROLOGUE_TOTAL, drawPrologue } from './prologue.js';
 
 const $ = (id) => document.getElementById(id);
 const FIXED = 1 / 120;
 const PROGRESS_KEY = 'ashen-vow-progress-v1';
+const CHARACTER_KEY = 'ashen-vow-character-v1';
 const clamp = (v, lo, hi) => (v < lo ? lo : v > hi ? hi : v);
 
 const canvas = $('game');
@@ -33,6 +50,11 @@ let dialogueOpen = false;
 let dialogueLines = [];
 let dialogueIndex = 0;
 let dialogueMeta = null;
+let prologueActive = false;
+let prologueIndex = -1;
+let prologueTimer = 0;
+let prologueTotal = 0;
+let prologueVoice = true;
 let accumulator = 0;
 let lastTime = performance.now();
 
@@ -127,6 +149,64 @@ function saveProgress() {
 
 let progress = loadProgress();
 
+// ── character customization ──────────────────────────────────────────────
+function defaultCharacter() {
+  return { characterId: 'sera', ...DEFAULT_APPEARANCE };
+}
+
+function sanitizeCharacter(raw) {
+  const source = raw && typeof raw === 'object' ? raw : {};
+  const characterId = CHARACTERS[source.characterId] ? source.characterId : 'sera';
+  const race = RACES[source.race] ? source.race : 'human';
+  const armor = OUTFITS[source.armor] ? source.armor : 'medieval';
+  return {
+    characterId,
+    race,
+    armor,
+    skin: SKIN_TONES.includes(source.skin) ? source.skin : RACES[race].skin,
+    outfit: OUTFIT_COLORS.includes(source.outfit) ? source.outfit : OUTFITS[armor].color,
+  };
+}
+
+function loadCharacter() {
+  try {
+    const raw = localStorage.getItem(CHARACTER_KEY);
+    if (!raw) return defaultCharacter();
+    return sanitizeCharacter(JSON.parse(raw));
+  } catch {
+    return defaultCharacter();
+  }
+}
+
+let character = loadCharacter();
+
+function saveCharacter() {
+  try {
+    localStorage.setItem(CHARACTER_KEY, JSON.stringify(character));
+  } catch {
+    /* storage unavailable - keep in memory */
+  }
+}
+
+function setCharacter(next) {
+  character = sanitizeCharacter({ ...character, ...next });
+  saveCharacter();
+  applyCharacterToGame();
+  if (menuView === 'character') buildCharacterScreen();
+}
+
+function applyCharacterToGame() {
+  game.applyCharacter(character.characterId);
+  game.setAppearance({
+    race: character.race,
+    skin: character.skin,
+    outfit: character.outfit,
+    armor: character.armor,
+  });
+  const plate = document.querySelector('#hud .char-name');
+  if (plate) plate.textContent = CHARACTERS[character.characterId]?.name || 'The Oathbound';
+}
+
 function markCleared(index) {
   if (!Number.isInteger(index) || index < 0 || index >= ROOMS.length) return;
   let changed = false;
@@ -162,6 +242,7 @@ function startRun(index = 0) {
   audio.init();
   attempts = 1;
   game.reset();
+  applyCharacterToGame();
   if (index > 0) {
     game.enterRoom(index);
     if (index >= 2) game.player.relic = true;
@@ -192,6 +273,7 @@ function retryRun() {
   if (!usedCheckpoint) {
     const index = game.roomIndex;
     game.reset();
+    applyCharacterToGame();
     if (index > 0) {
       game.enterRoom(index);
       if (index >= 2) game.player.relic = true;
@@ -221,6 +303,7 @@ function retryRun() {
 }
 
 function showMenu() {
+  cancelPrologue();
   started = false;
   paused = false;
   shopOpen = false;
@@ -238,6 +321,7 @@ function showMenu() {
 }
 
 function showLevels() {
+  cancelPrologue();
   started = false;
   paused = false;
   shopOpen = false;
@@ -256,6 +340,260 @@ function showLevels() {
 function showCredits() {
   menuView = 'credits';
   syncScreens();
+}
+
+// ── character select / customization ─────────────────────────────────────
+function showCharacter() {
+  cancelPrologue();
+  started = false;
+  paused = false;
+  shopOpen = false;
+  mapOpen = false;
+  codexOpen = false;
+  closeDialogue(true);
+  spectating = false;
+  spectateGame = null;
+  menuView = 'character';
+  clearHeldKeys();
+  buildCharacterScreen();
+  syncScreens();
+}
+
+function closeCharacter() {
+  showMenu();
+}
+
+let previewCtx = null;
+let previewDpr = 0;
+
+function statBar(label, value, max) {
+  const pct = clamp(value / max, 0, 1) * 100;
+  return `<div class="char-stat"><span>${label}</span><i><b style="width:${pct}%"></b></i></div>`;
+}
+
+function buildCharacterScreen() {
+  const roster = $('char-roster');
+  if (!roster) return;
+
+  roster.innerHTML = Object.values(CHARACTERS)
+    .map(
+      (c) => `
+      <button class="char-card${c.id === character.characterId ? ' active' : ''}" type="button" data-char="${c.id}" aria-pressed="${c.id === character.characterId}">
+        <span class="char-glyph" aria-hidden="true">${c.glyph}</span>
+        <strong>${c.name}</strong>
+        <em>${c.title}</em>
+      </button>`,
+    )
+    .join('');
+
+  $('char-races').innerHTML = Object.values(RACES)
+    .map(
+      (r) => `
+      <button class="char-chip${r.id === character.race ? ' active' : ''}" type="button" data-race="${r.id}" aria-pressed="${r.id === character.race}">${r.name}</button>`,
+    )
+    .join('');
+
+  $('char-armors').innerHTML = Object.values(OUTFITS)
+    .map(
+      (o) => `
+      <button class="char-chip${o.id === character.armor ? ' active' : ''}" type="button" data-armor="${o.id}" aria-pressed="${o.id === character.armor}">
+        <i class="chip-dot" style="background:${o.color}"></i>${o.name}
+      </button>`,
+    )
+    .join('');
+
+  $('char-skins').innerHTML = SKIN_TONES.map(
+    (color, i) => `
+      <button class="char-swatch${color === character.skin ? ' active' : ''}" type="button" data-skin="${color}" aria-label="Warna kulit ${i + 1}" aria-pressed="${color === character.skin}" style="--sw:${color}"></button>`,
+  ).join('');
+
+  $('char-colors').innerHTML = OUTFIT_COLORS.map(
+    (color, i) => `
+      <button class="char-swatch${color === character.outfit ? ' active' : ''}" type="button" data-outfit="${color}" aria-label="Warna pakaian ${i + 1}" aria-pressed="${color === character.outfit}" style="--sw:${color}"></button>`,
+  ).join('');
+
+  const c = CHARACTERS[character.characterId] || CHARACTERS.sera;
+  $('char-name').textContent = c.name;
+  $('char-title').textContent = c.title;
+  $('char-desc').textContent = c.desc;
+  $('char-stats').innerHTML = [
+    statBar('DARAH', c.maxHp, 140),
+    statBar('SERANGAN', c.damage, 1.15),
+    statBar('KECEPATAN', c.speed, 1.08),
+  ].join('');
+  $('char-race-desc').textContent = RACES[character.race]?.desc || '';
+  $('char-armor-desc').textContent = OUTFITS[character.armor]?.desc || '';
+
+  roster.querySelectorAll('[data-char]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.char;
+      const picked = CHARACTERS[id];
+      if (!picked) return;
+      setCharacter({
+        characterId: id,
+        race: picked.appearance.race,
+        skin: picked.appearance.skin,
+        outfit: picked.appearance.outfit,
+        armor: picked.appearance.armor,
+      });
+    });
+  });
+
+  $('char-races').querySelectorAll('[data-race]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const race = btn.dataset.race;
+      setCharacter({ race, skin: RACES[race]?.skin || character.skin });
+    });
+  });
+
+  $('char-armors').querySelectorAll('[data-armor]').forEach((btn) => {
+    btn.addEventListener('click', () => setCharacter({ armor: btn.dataset.armor }));
+  });
+
+  $('char-skins').querySelectorAll('[data-skin]').forEach((btn) => {
+    btn.addEventListener('click', () => setCharacter({ skin: btn.dataset.skin }));
+  });
+
+  $('char-colors').querySelectorAll('[data-outfit]').forEach((btn) => {
+    btn.addEventListener('click', () => setCharacter({ outfit: btn.dataset.outfit }));
+  });
+
+  const canvas = $('char-preview');
+  if (canvas) {
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const cssW = canvas.clientWidth || 260;
+    const cssH = canvas.clientHeight || 330;
+    if (previewDpr !== dpr) {
+      previewDpr = dpr;
+      canvas.width = Math.round(cssW * dpr);
+      canvas.height = Math.round(cssH * dpr);
+    }
+    previewCtx = canvas.getContext('2d');
+    previewCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+}
+
+// ── prologue cutscene ────────────────────────────────────────────────────
+let prologueDone = null;
+
+function prologueSpeak(text) {
+  if (!prologueVoice) return;
+  const synth = window.speechSynthesis;
+  if (!synth || typeof window.SpeechSynthesisUtterance !== 'function') return;
+  try {
+    synth.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'id-ID';
+    utterance.rate = 0.92;
+    utterance.pitch = 0.85;
+    utterance.volume = 1;
+    const voices = synth.getVoices ? synth.getVoices() : [];
+    const indo = voices.find((v) => /^id([-_]|$)/i.test(v.lang)) || voices.find((v) => /indones/i.test(v.name));
+    if (indo) utterance.voice = indo;
+    synth.speak(utterance);
+  } catch {
+    /* speech unavailable - subtitles carry the story */
+  }
+}
+
+function stopPrologueVoice() {
+  const synth = window.speechSynthesis;
+  if (!synth) return;
+  try {
+    synth.cancel();
+  } catch {
+    /* ignore */
+  }
+}
+
+function paintPrologue() {
+  const canvas = $('prologue-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const beat = PROLOGUE_BEATS[Math.max(0, prologueIndex)] || PROLOGUE_BEATS[0];
+  drawPrologue(ctx, canvas.width, canvas.height, beat, prologueTimer, prologueTotal);
+}
+
+function showPrologueBeat(index) {
+  prologueIndex = clamp(index, 0, PROLOGUE_BEATS.length - 1);
+  prologueTimer = 0;
+  const beat = PROLOGUE_BEATS[prologueIndex];
+  $('prologue-label').textContent = beat.label;
+  $('prologue-line').textContent = beat.text;
+  $('prologue-speaker').textContent = 'NARATOR';
+  $('prologue-count').textContent = `${prologueIndex + 1} / ${PROLOGUE_BEATS.length}`;
+  audio.prologueBeat(prologueIndex);
+  prologueSpeak(beat.text);
+  paintPrologue();
+}
+
+function startPrologue(onDone) {
+  audio.init();
+  prologueActive = true;
+  prologueDone = onDone || (() => startRun(0));
+  prologueIndex = 0;
+  prologueTimer = 0;
+  prologueTotal = 0;
+  started = false;
+  paused = false;
+  shopOpen = false;
+  mapOpen = false;
+  codexOpen = false;
+  closeDialogue(true);
+  spectating = false;
+  spectateGame = null;
+  menuView = 'none';
+  game.reset();
+  game.events.length = 0;
+  clearHeldKeys();
+  audio.startPrologue();
+  $('btn-prologue-voice').textContent = prologueVoice ? 'SUARA: AKTIF' : 'SUARA: MATI';
+  $('btn-prologue-voice').setAttribute('aria-pressed', String(prologueVoice));
+  showPrologueBeat(0);
+  syncScreens();
+}
+
+function advancePrologue() {
+  if (!prologueActive) return;
+  if (prologueIndex + 1 >= PROLOGUE_BEATS.length) {
+    finishPrologue();
+    return;
+  }
+  showPrologueBeat(prologueIndex + 1);
+}
+
+function finishPrologue() {
+  if (!prologueActive) return;
+  prologueActive = false;
+  audio.stopPrologue();
+  stopPrologueVoice();
+  $('prologue-progress').style.width = '0%';
+  syncScreens();
+  const done = prologueDone;
+  prologueDone = null;
+  if (done) done();
+}
+
+function beginJourney() {
+  startPrologue(() => startRun(0));
+}
+
+function cancelPrologue() {
+  if (!prologueActive) return;
+  prologueActive = false;
+  prologueDone = null;
+  audio.stopPrologue();
+  stopPrologueVoice();
+  $('prologue-progress').style.width = '0%';
+}
+
+function togglePrologueVoice() {
+  prologueVoice = !prologueVoice;
+  const btn = $('btn-prologue-voice');
+  btn.textContent = prologueVoice ? 'SUARA: AKTIF' : 'SUARA: MATI';
+  btn.setAttribute('aria-pressed', String(prologueVoice));
+  if (!prologueVoice) stopPrologueVoice();
+  else if (prologueActive) prologueSpeak(PROLOGUE_BEATS[prologueIndex].text);
 }
 
 function startSpectate(index) {
@@ -597,6 +935,13 @@ window.addEventListener('keydown', (e) => {
     e.preventDefault();
   }
 
+  if (prologueActive) {
+    if (e.code === 'Escape' || e.code === 'Backspace') finishPrologue();
+    else if (e.code === 'Space' || e.code === 'Enter' || e.code === 'KeyJ') advancePrologue();
+    else if (e.code === 'KeyN') togglePrologueVoice();
+    return;
+  }
+
   if (dialogueOpen) {
     if (['Space', 'Enter', 'Escape', 'KeyJ', 'KeyE'].includes(e.code)) advanceDialogue();
     return;
@@ -638,14 +983,15 @@ window.addEventListener('keydown', (e) => {
     return;
   }
 
-  if (menuView === 'levels' || menuView === 'credits') {
+  if (menuView === 'levels' || menuView === 'credits' || menuView === 'character') {
     if (e.code === 'Escape' || e.code === 'Backspace') showMenu();
     return;
   }
 
   if (menuView === 'title' || !started) {
-    if (e.code === 'Enter' || e.code === 'Space' || e.code === 'KeyJ') startRun(0);
+    if (e.code === 'Enter' || e.code === 'Space' || e.code === 'KeyJ') beginJourney();
     else if (e.code === 'KeyL') showLevels();
+    else if (e.code === 'KeyP') showCharacter();
     else if (e.code === 'KeyC') showCredits();
     return;
   }
@@ -732,7 +1078,17 @@ function inputSnapshot() {
 }
 
 // ── UI wiring ────────────────────────────────────────────────────────────
-$('btn-start').addEventListener('click', () => startRun(0));
+$('btn-start').addEventListener('click', beginJourney);
+$('btn-character-menu').addEventListener('click', showCharacter);
+$('btn-character-back').addEventListener('click', closeCharacter);
+$('btn-character-save').addEventListener('click', () => {
+  saveCharacter();
+  applyCharacterToGame();
+  showToast('Tampilan penjaga tersimpan.', 1600);
+});
+$('btn-character-start').addEventListener('click', beginJourney);
+$('btn-prologue-skip').addEventListener('click', finishPrologue);
+$('btn-prologue-voice').addEventListener('click', togglePrologueVoice);
 $('btn-levels').addEventListener('click', showLevels);
 $('btn-credits').addEventListener('click', showCredits);
 $('btn-map-menu').addEventListener('click', openMap);
@@ -962,6 +1318,8 @@ function syncScreens() {
   $('title-screen').classList.toggle('hidden', menuView !== 'title');
   $('levels-screen').classList.toggle('hidden', menuView !== 'levels');
   $('credits-screen').classList.toggle('hidden', menuView !== 'credits');
+  $('character-screen').classList.toggle('hidden', menuView !== 'character');
+  $('prologue-screen').classList.toggle('hidden', !prologueActive);
   $('spectate-ui').classList.toggle('hidden', !spectating);
   $('map-screen').classList.toggle('hidden', !mapOpen);
   $('codex-screen').classList.toggle('hidden', !codexOpen);
@@ -1097,12 +1455,23 @@ function frame(now) {
   const raw = Math.min(0.1, (now - lastTime) / 1000);
   lastTime = now;
 
+  if (prologueActive) {
+    const dt = Math.min(raw, 0.1);
+    prologueTimer += dt;
+    prologueTotal += dt;
+    const beat = PROLOGUE_BEATS[prologueIndex] || PROLOGUE_BEATS[0];
+    const overall = (prologueIndex + clamp(prologueTimer / beat.duration, 0, 1)) / PROLOGUE_BEATS.length;
+    $('prologue-progress').style.width = `${overall * 100}%`;
+    if (prologueTimer >= beat.duration) advancePrologue();
+    if (prologueActive) paintPrologue();
+  }
+
   if (spectating && spectateGame) {
     spectateGame.time += Math.min(raw, 0.05);
     if (peekDir !== 0) peekOffset = clamp(peekOffset + peekDir * 330 * raw, -WORLD_W, WORLD_W);
     renderer.render(spectateGame, { spectate: true, cameraX: spectateCamera() });
   } else {
-    if (started && !paused && !shopOpen && !mapOpen && !codexOpen && !dialogueOpen && menuView === 'none') {
+    if (started && !paused && !shopOpen && !mapOpen && !codexOpen && !dialogueOpen && !prologueActive && menuView === 'none') {
       accumulator += raw;
       let steps = 0;
       while (accumulator >= FIXED && steps < 10) {
@@ -1118,6 +1487,10 @@ function frame(now) {
       accumulator = 0;
     }
     renderer.render(game);
+
+    if (menuView === 'character' && previewCtx) {
+      renderer.drawCharacterPreview(previewCtx, character, character.characterId, now / 1000);
+    }
   }
 
   drainEvents();
@@ -1159,9 +1532,37 @@ window.__ashen = {
   get dialogueOpen() {
     return dialogueOpen;
   },
+  get prologueActive() {
+    return prologueActive;
+  },
+  get prologueIndex() {
+    return prologueIndex;
+  },
+  get prologueBeat() {
+    return PROLOGUE_BEATS[prologueIndex] || null;
+  },
+  get prologueVoice() {
+    return prologueVoice;
+  },
+  get character() {
+    return { ...character };
+  },
   get progress() {
     return progress;
   },
+  showCharacter,
+  closeCharacter,
+  buildCharacterScreen,
+  setCharacter,
+  setCharacterField(next) {
+    setCharacter(next);
+  },
+  saveCharacter,
+  beginJourney,
+  startPrologue,
+  advancePrologue,
+  finishPrologue,
+  togglePrologueVoice,
   openMap,
   closeMap,
   toggleMap,
@@ -1283,6 +1684,7 @@ window.__ashen = {
 // kick off
 updateMenuProgress();
 buildLevelCards();
+applyCharacterToGame();
 renderer.render(game);
 syncScreens();
 updateHud();

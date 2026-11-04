@@ -1,4 +1,4 @@
-# Ashen Vow — v0.0.6
+# Ashen Vow — v0.0.7
 
 > **Sumpah di antara abu.** Simulasi metroidvania medieval 2D dengan combat pedang real-time, relik lompat ganda, **delapan ruang dan empat boss** (hingga tiga fase), **dialog boss** di awal/fase/akhir pertempuran, **peta perjalanan**, **indeks sumpah** untuk musuh/senjata/boss/barang, checkpoint di ambang pertempuran, dan **Warung Abu** tempat membelanjakan abu untuk senjata baru.
 
@@ -32,6 +32,7 @@ Tidak perlu `npm install` — tidak ada dependensi runtime.
 Game **tidak langsung masuk ke gameplay**. Saat dibuka, yang tampil adalah menu utama:
 
 - **MULAI PERJALANAN** — memulai run baru dari Gerbang Abu.
+- **PILIH PENJAGA** — buka layar karakter: pilih Sera atau Karn, atur ras, warna kulit, warna pakaian, dan gaya armor sebelum berangkat.
 - **PILIH LEVEL** — melihat 8 ruang, status terkunci/terbuka/tuntas, dan progres tersimpan.
 - **PETA SUMPAH** — peta seluruh perjalanan, bisa dibuka kapan saja dengan `M`.
 - **INDEKS SUMPAH** — indeks musuh, senjata, boss, dan barang, bisa dibuka dengan `I`.
@@ -80,6 +81,46 @@ Halaman credits memuat:
 
 ![Credits](docs/credits.png)
 
+### Pilih Penjaga dan Kustomisasi
+
+Ada **dua penjaga** yang bisa dimainkan:
+
+| Penjaga | Julukan | Darah | Serangan | Kecepatan | Bawaan |
+| --- | --- | --- | --- | --- | --- |
+| **Sera Vayne** | The Oathbound | 100 | 1.00x | 1.00x | Manusia · Medieval |
+| **Karn of the Ash** | The Broken Vow | 125 | 1.08x | 0.93x | Orc · Tribal |
+
+Di layar **PILIH PENJAGA** kamu bisa mengganti:
+
+- **Ras** — Manusia, Elf, Goblin, Orc, Iblis. Setiap ras punya warna kulit, mata, dan ciri wajah sendiri (telinga panjang, taring, tanduk).
+- **Pakaian** — Medieval, Modern, Tribal, Royal, Ashen. Gaya menentukan bentuk armor, helm, jubah, dan aksen.
+- **Warna kulit** — delapan nada dari pucat sampai hijau goblin dan merah iblis.
+- **Warna pakaian** — delapan warna kain, jubah, dan aksen.
+
+![Layar karakter](docs/character.png)
+
+Pratinjau karakter digambar langsung di Canvas dan ikut berubah setiap kali pilihan diganti. Pilihan disimpan otomatis di `localStorage` dengan key `ashen-vow-character-v1`, jadi tetap ada saat game dibuka lagi. Stat karakter tetap seimbang: Karn lebih tebal dan keras, Sera lebih lincah.
+
+### Prolog Opus (60 detik)
+
+Saat memulai perjalanan baru dari menu utama atau layar karakter, game memutar **prolog sinematik satu menit** sebelum ruang pertama. Prolog menceritakan:
+
+1. Kemegahan **Kerajaan Opus** di atas tujuh bukit.
+2. Sumpah para raja dan kemakmuran yang menarik perhatian dunia lain.
+3. **Serangan Iblis** yang membelah langit dan membuka gerbang neraka.
+4. **Pengkhianatan Elf Kegelapan** yang menyerang dari bayangan.
+5. Kehancuran Opus, ladang abu, dan sumpah yang masih berdiri.
+
+![Prolog Opus](docs/prologue.png)
+
+Prolog terdiri dari **12 babak × 5 detik**. Setiap babak punya narasi suara (Web Speech API, `id-ID`) dan **subtitle** yang selalu tampil, sehingga cerita tetap terbaca meskipun browser tidak punya suara. Musik prolog dimainkan lewat WebAudio.
+
+- **LEWATI** atau `Esc` — langsung memulai permainan.
+- `Space` / `Enter` — maju ke babak berikutnya.
+- **SUARA: AKTIF/MATI** atau `N` — menyalakan atau mematikan narasi.
+
+Prolog hanya diputar untuk perjalanan baru; memulai dari **PILIH LEVEL** atau tombol coba lagi tidak memutarnya kembali.
+
 ## Kontrol
 
 | Aksi | Keyboard |
@@ -99,10 +140,14 @@ Halaman credits memuat:
 | Suara | `N` |
 | Pilih berkah | `1` / `2` / `3` |
 
-Di menu: `Enter` memulai run, `L` membuka Level Select, `C` membuka Credits.
+Di menu: `Enter` memulai run (dengan prolog), `P` membuka layar karakter, `L` membuka Level Select, `C` membuka Credits.
 Di perangkat sentuh, tombol kiri/kanan, lompat, serang, dash, flask, ganti senjata (`⇄`), dan lempar shuriken (`✦`) muncul otomatis.
 
-## Isi v0.0.6
+## Isi v0.0.7
+
+- **2 penjaga yang bisa dipilih** — Sera Vayne (seimbang) dan Karn of the Ash (lebih tebal, lebih keras).
+- **Kustomisasi karakter** — ras (manusia, elf, goblin, orc, iblis), 5 gaya armor, 8 warna kulit, dan 8 warna pakaian, dengan pratinjau Canvas langsung.
+- **Prolog sinematik 60 detik** — 12 babak naratif tentang kejatuhan Opus, lengkap dengan voice-over dan subtitle, dapat dilewati.
 
 - **Menu awal, Level Select, Credits, dan progres tersimpan** — tidak langsung masuk gameplay.
 - **8 ruang** yang terhubung: Gerbang Abu → Balai Sumpah → Singgasana Bara → Sarang Wyrm → Jembatan Tulang → Katedral Sunyi → Menara Lonceng → Puncak Sumpah.

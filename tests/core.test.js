@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { AshenGame, FLOOR_Y, ROOMS, ATTACKS, BOSS_INFO, CODEX } from '../src/core.js';
+import { AshenGame, FLOOR_Y, ROOMS, ATTACKS, BOSS_INFO, CODEX, CHARACTERS, RACES, OUTFITS, SKIN_TONES, OUTFIT_COLORS, DEFAULT_APPEARANCE } from '../src/core.js';
+import { PROLOGUE_BEATS, PROLOGUE_TOTAL } from '../src/prologue.js';
 
 const DT = 1 / 120;
 
@@ -745,4 +746,85 @@ test('boss gates reference the current room instead of a hardcoded room', () => 
   g.bossDefeated[5] = true;
   g.awaitingBlessing = false;
   assert.equal(g.gate.open, true);
+});
+
+test('two selectable characters expose balanced stats and valid appearances', () => {
+  const ids = Object.keys(CHARACTERS);
+  assert.equal(ids.length, 2);
+  assert.deepEqual(ids.sort(), ['karn', 'sera']);
+  for (const c of Object.values(CHARACTERS)) {
+    assert.ok(c.name && c.title && c.desc && c.glyph);
+    assert.ok(c.maxHp > 0 && c.speed > 0 && c.damage > 0);
+    assert.ok(RACES[c.appearance.race], `${c.id} needs a valid race`);
+    assert.ok(OUTFITS[c.appearance.armor], `${c.id} needs a valid armor`);
+    assert.ok(SKIN_TONES.includes(c.appearance.skin));
+    assert.ok(OUTFIT_COLORS.includes(c.appearance.outfit));
+  }
+});
+
+test('applyCharacter switches stats and default appearance', () => {
+  const g = fresh();
+  assert.equal(g.player.characterId, 'sera');
+  assert.equal(g.player.maxHp, 100);
+
+  g.applyCharacter('karn');
+  assert.equal(g.player.characterId, 'karn');
+  assert.equal(g.player.maxHp, 125);
+  assert.equal(g.player.hp, 125);
+  assert.equal(g.player.speedMult, CHARACTERS.karn.speed);
+  assert.equal(g.player.damageMult, CHARACTERS.karn.damage);
+  assert.deepEqual(g.player.appearance, CHARACTERS.karn.appearance);
+
+  // unknown ids fall back to the default character instead of breaking the run
+  g.applyCharacter('nobody');
+  assert.equal(g.player.characterId, 'sera');
+  assert.equal(g.player.maxHp, 100);
+});
+
+test('setAppearance sanitizes custom races, armor, and colors', () => {
+  const g = fresh();
+  const look = g.setAppearance({
+    race: 'elf',
+    armor: 'royal',
+    skin: '#123456',
+    outfit: '#abcdef',
+  });
+  assert.deepEqual(look, { race: 'elf', armor: 'royal', skin: '#123456', outfit: '#abcdef' });
+  assert.deepEqual(g.player.appearance, look);
+
+  const fallback = g.setAppearance({ race: 'dragon', armor: 'spacesuit', skin: 'red', outfit: null });
+  assert.equal(fallback.race, 'human');
+  assert.equal(fallback.armor, 'medieval');
+  assert.equal(fallback.skin, RACES.human.skin);
+  assert.equal(fallback.outfit, OUTFITS.medieval.color);
+  assert.deepEqual(g.player.appearance, fallback);
+});
+
+test('character movement uses the speed multiplier without changing the hitbox', () => {
+  const g = fresh();
+  g.applyCharacter('karn');
+  const box = { w: g.player.w, h: g.player.h };
+  for (let i = 0; i < 60; i++) g.update(DT, { right: true });
+  assert.deepEqual({ w: g.player.w, h: g.player.h }, box);
+  assert.ok(Math.abs(g.player.vx) <= 300 * CHARACTERS.karn.speed + 1);
+  assert.ok(g.player.x > ROOMS[0].spawn.x);
+});
+
+test('the prologue runs exactly one minute with a subtitle line per beat', () => {
+  assert.equal(PROLOGUE_BEATS.length, 12);
+  assert.equal(PROLOGUE_TOTAL, 60);
+  let total = 0;
+  for (const beat of PROLOGUE_BEATS) {
+    assert.ok(beat.text && beat.label && beat.scene);
+    assert.ok(beat.duration > 0);
+    total += beat.duration;
+  }
+  assert.equal(total, 60);
+});
+
+test('the default appearance stays valid', () => {
+  assert.ok(RACES[DEFAULT_APPEARANCE.race]);
+  assert.ok(OUTFITS[DEFAULT_APPEARANCE.armor]);
+  assert.ok(SKIN_TONES.includes(DEFAULT_APPEARANCE.skin));
+  assert.ok(OUTFIT_COLORS.includes(DEFAULT_APPEARANCE.outfit));
 });

@@ -1,6 +1,6 @@
 # Ashen Vow — Claude Master Plan
 
-> Compressed handoff for continuing **Ashen Vow v0.0.6**.
+> Compressed handoff for continuing **Ashen Vow v0.0.7**.
 > Status: **playable, browser-verified, pushed to GitHub**.
 > Repo: `https://github.com/FahmiGF/Ashen-Vow-` · branch `main` · push account `isshinAshinaSeal`.
 
@@ -9,7 +9,7 @@
 **Ashen Vow** is a 2D medieval metroidvania / roguelike-lite played in the browser.
 The UI is Indonesian; the tone is dark-fantasy ash and oath imagery.
 
-Non-negotiable v0.0.6 requirements:
+Non-negotiable v0.0.7 requirements:
 
 1. Boot into a **startup menu**, never directly into gameplay.
 2. **8 rooms and 4 bosses**; every boss has at least 2 phases and The Oathbreaker has 3.
@@ -23,6 +23,9 @@ Non-negotiable v0.0.6 requirements:
 10. Combat must be real and testable, not a mock.
 11. Every boss room keeps a **Warung Abu checkpoint** at its entrance.
 12. Weapons, ammunition, and consumables are bought with run-scoped **ash**; keep `SHOP_ITEMS`, `WEAPONS`, `BOSS_INFO`, `ENEMY_INFO`, and `CODEX` data-driven.
+13. **Two selectable characters** at the menu: Sera Vayne (balanced) and Karn of the Ash (tankier, slower).
+14. **Character customization** before starting: race (human, elf, goblin, orc, devil), 5 armor styles, skin color, and outfit color, with a live Canvas preview.
+15. A **60-second narrative prologue** plays before the first stage on a new journey, with voice-over and always-visible subtitles; it is skippable and never replays from Level Select.
 
 ## 2. Stack and constraints
 
@@ -42,13 +45,14 @@ Do **not** add a framework, bundler, or asset pipeline unless the product scope 
 
 | File | Responsibility |
 | --- | --- |
-| `index.html` | Canvas shell, HUD, main menu, level select, credits, map, codex, boss dialogue, Sneak Peek UI, Warung Abu, overlays |
+| `index.html` | Canvas shell, HUD, main menu, character screen, prologue screen, level select, credits, map, codex, boss dialogue, Sneak Peek UI, Warung Abu, overlays |
 | `styles.css` | Medieval theme, responsive layout, portrait menu fix, touch controls, shop/map/codex/dialogue cards |
-| `src/core.js` | Pure simulation: player, enemies, bosses, dialogue, codex, weapons, projectiles, ash, shop, checkpoints, gates, blessings, events |
+| `src/core.js` | Pure simulation: player, characters/appearance, enemies, bosses, dialogue, codex, weapons, projectiles, ash, shop, checkpoints, gates, blessings, events |
 | `src/render.js` | Canvas renderer; supports `render(game, { spectate, cameraX })` and all four bosses |
-| `src/audio.js` | Procedural SFX and mute toggle |
-| `src/main.js` | Menus, progress, spectate camera, fixed-step loop, input, HUD, shop/map/codex/dialogue UI, debug hooks |
-| `tests/core.test.js` | 45 deterministic Node tests |
+| `src/audio.js` | Procedural SFX, prologue score, and mute toggle |
+| `src/prologue.js` | 12-beat, 60-second prologue timeline plus procedural cutscene art (`drawPrologue`) |
+| `src/main.js` | Menus, character customization, prologue playback, progress, spectate camera, fixed-step loop, input, HUD, shop/map/codex/dialogue UI, debug hooks |
+| `tests/core.test.js` | 51 deterministic Node tests |
 | `server.js` | Static server on port 4300 |
 | `docs/` | Committed screenshots |
 
@@ -183,15 +187,20 @@ Boss rooms 2, 3, 5, and 7 define `checkpoint` and `merchant` at the entrance. `l
 
 `src/main.js` state:
 
-- `menuView`: `title | levels | credits | none`
+- `menuView`: `title | levels | credits | character | none`
 - `started`, `paused`, `spectating`, `shopOpen`
 - `mapOpen`, `codexOpen`, `codexTab`, `dialogueOpen`, `dialogueLines`, `dialogueIndex`, `dialogueMeta`
+- `character` (`characterId`, `race`, `armor`, `skin`, `outfit`), persisted in `localStorage` key `ashen-vow-character-v1`
+- `prologueActive`, `prologueIndex`, `prologueTimer`, `prologueTotal`, `prologueVoice`; `prologueDone` is the deferred start callback
 - `spectateGame` is a separate `AshenGame` instance, never the live run.
 
 Rules:
 
 - Boot: `menuView = 'title'`, `started = false`, HUD hidden.
-- `MULAI PERJALANAN` → `startRun(0)`.
+- `MULAI PERJALANAN` → `beginJourney()` → `startPrologue(() => startRun(0))`.
+- `PILIH PENJAGA` → `showCharacter()`; roster, race, armor, skin, and outfit buttons call `setCharacter()`, which sanitizes, saves, and applies the appearance to the live game player.
+- `startRun()` always applies the saved character after `game.reset()`; Level Select and retry call `startRun()` directly, so they never replay the prologue.
+- While `prologueActive`: game simulation is frozen, HUD/touch are hidden, the cutscene canvas renders every frame, and each beat auto-advances after 5 s. `Space`/`Enter` advances, `Esc` skips, `N` toggles voice. Subtitles are DOM text and work without speech synthesis.
 - `PILIH LEVEL` → cards for all 8 rooms.
 - Locked card: **no `MAINKAN` button**, only `SNEAK PEEK`.
 - Unlocked card: `MAINKAN` + `SNEAK PEEK`.
@@ -216,7 +225,7 @@ Rules:
 npm test
 ```
 
-Current result: **45/45 passing**. Coverage includes:
+Current result: **51/51 passing**. Coverage includes:
 
 - gravity, floor landing, movement and world bounds;
 - single jump vs double jump after relic;
@@ -248,9 +257,13 @@ Current result: **45/45 passing**. Coverage includes:
 - **Oathbreaker three-phase transition and final victory**;
 - **codex entries for enemies, weapons, bosses, and items**;
 - **boss gates resolve against the current room, not a hardcoded index**;
+- **two characters expose valid stats and default appearances; applyCharacter swaps HP/damage/speed and falls back to Sera**;
+- **setAppearance sanitizes race, armor, skin, and outfit while preserving custom colors**;
+- **character speed multiplier changes movement without changing the 30×46 hitbox**;
+- **prologue has exactly 12 beats summing to 60 seconds, each with a label and subtitle line**;
 - death freezes the simulation.
 
-New tests added for v0.0.5/v0.0.6 menus, map, codex, and dialogue are browser-level, not all Node-level.
+New tests added for v0.0.5–v0.0.7 menus, character customization, prologue, map, codex, and dialogue are browser-level, not all Node-level.
 
 ### Browser smoke tests
 
@@ -261,14 +274,16 @@ npm start
 chrome --remote-debugging-port=9333 --user-data-dir=<temp> http://127.0.0.1:4300/
 ```
 
-Verified through Chrome DevTools Protocol (v0.0.6):
+Verified through Chrome DevTools Protocol (v0.0.7):
 
-- startup menu visible, HUD hidden, five menu actions present;
-- map opens from the title, renders 8 rooms, marks the current room, and opens with `M` mid-stage;
-- codex has 4 tabs and correct entry counts (4 enemies, 3 weapons, 4 bosses, 8 items);
-- boss intro dialogue opens, `Space` advances, phase dialogue shows FASE II, HUD label updates;
-- rooms 5/6/8 and the Oathbreaker's phase II/III run without exceptions;
-- mobile 390×844 map and codex have zero horizontal overflow;
+- character screen opens from the title with 2 characters, 5 races, 5 armors, 8 skin tones, and 8 outfit colors;
+- selecting Karn, Goblin, Royal, and custom swatches updates the live preview, the game player, and `ashen-vow-character-v1`;
+- saved appearance survives leaving and reopening the screen;
+- prologue starts from the character screen at beat 1/12, renders the cutscene canvas, shows subtitles, and auto-advances after 5 s;
+- `Space` advances a beat, voice toggle changes state, skip starts the run in room 0 with the chosen stats (125 HP for Karn) and appearance;
+- Level Select start skips the prologue;
+- map/codex still open, render 8 rooms and 4 tabs;
+- mobile 390×844 character screen has zero horizontal overflow and the prologue subtitle stays on screen;
 - no page exceptions and no console errors.
 
 > `requestAnimationFrame` is throttled when the Chrome page is backgrounded. Call `Page.bringToFront` in CDP before asserting anything that depends on the game loop.
@@ -277,8 +292,9 @@ Verified through Chrome DevTools Protocol (v0.0.6):
 
 `window.__ashen` exists for smoke tests:
 
-- Getters: `game`, `renderer`, `started`, `paused`, `spectating`, `menuView`, `progress`, `shopOpen`, `mapOpen`, `codexOpen`, `dialogueOpen`.
-- Navigation: `start`, `restart`, `retry`, `showMenu`, `showLevels`, `showCredits`, `enterRoom`, `clearProgress`.
+- Getters: `game`, `renderer`, `started`, `paused`, `spectating`, `menuView`, `progress`, `shopOpen`, `mapOpen`, `codexOpen`, `dialogueOpen`, `prologueActive`, `prologueIndex`, `prologueBeat`, `prologueVoice`, `character`.
+- Navigation: `start`, `restart`, `retry`, `showMenu`, `showLevels`, `showCredits`, `showCharacter`, `closeCharacter`, `enterRoom`, `clearProgress`.
+- Character/prologue: `buildCharacterScreen`, `setCharacter`, `setCharacterField`, `saveCharacter`, `beginJourney`, `startPrologue`, `advancePrologue`, `finishPrologue`, `togglePrologueVoice`.
 - Overlays: `openMap`, `closeMap`, `toggleMap`, `openCodex`, `closeCodex`, `advanceDialogue`.
 - Spectate: `startSpectate`, `stopSpectate`.
 - Simulation: `step`, `tap`, `damageBoss`, `chooseBlessing`, `togglePause`.
@@ -291,7 +307,7 @@ Verified through Chrome DevTools Protocol (v0.0.6):
 - Ash is run-scoped and is not persisted with level progress; weapons are re-earned each run.
 - Sneak Peek has no touch pan control; camera auto-drifts.
 - No new game plus, no difficulty selection, no controller mapping screen.
-- Audio is procedural only; no music track.
+- Audio is procedural only; no recorded music or voice files. Prologue narration depends on the browser speech-synthesis voices, but subtitles always carry the story.
 - Art is procedural; no sprite/tileset pipeline.
 - Boss tuning lives in constants inside `src/core.js`; the data tables (`BOSS_INFO`, `ENEMY_INFO`, `CODEX`) are the extension point.
 - Enemy AI is platform-aware but not a full navmesh; complex multi-level layouts may still need hand-tuned jumps.

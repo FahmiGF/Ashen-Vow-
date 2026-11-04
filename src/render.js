@@ -1,5 +1,5 @@
 // Canvas renderer — procedural medieval art, no external assets.
-import { VIEW_W, VIEW_H, WORLD_W, FLOOR_Y, ROOMS, ATTACKS, BOSS_INFO } from './core.js';
+import { VIEW_W, VIEW_H, WORLD_W, FLOOR_Y, ROOMS, ATTACKS, BOSS_INFO, RACES, CHARACTERS, DEFAULT_APPEARANCE } from './core.js';
 
 const clamp = (v, lo, hi) => (v < lo ? lo : v > hi ? hi : v);
 const lerp = (a, b, t) => a + (b - a) * t;
@@ -661,65 +661,142 @@ export class Renderer {
 
     ctx.save();
     ctx.translate(cx, baseY);
-    ctx.scale(flip, 1);
+    const look = p.appearance || DEFAULT_APPEARANCE;
+    const race = RACES[look.race] || RACES.human;
+    const skin = look.skin || race.skin;
+    const eye = race.eye || '#ffb060';
+    const armor = look.armor || 'medieval';
+    const outfit = look.outfit || '#6d2323';
+    const build = p.build || 1;
+    ctx.scale(flip * build, build);
     if (p.invuln > 0 && p.dashTimer <= 0 && Math.floor(t * 30) % 2 === 0) ctx.globalAlpha = 0.55;
 
     const run = Math.abs(p.vx) > 20 && p.onGround;
     const bob = run ? Math.sin(t * 16) * 1.5 : Math.sin(t * 2.4) * 1;
     const legSwing = run ? Math.sin(t * 16) * 5 : 0;
 
-    // cape
+    // cape / back cloth
     ctx.beginPath();
     ctx.moveTo(2, -40);
     ctx.quadraticCurveTo(-14 - p.vx * 0.03, -26, -16 - p.vx * 0.035, -5 + bob);
     ctx.quadraticCurveTo(-4, -12, 4, -18);
     ctx.closePath();
     const capeG = ctx.createLinearGradient(-16, -40, 4, -8);
-    capeG.addColorStop(0, '#6d2323');
-    capeG.addColorStop(1, '#3b1414');
+    capeG.addColorStop(0, armor === 'royal' ? '#c9a25c' : outfit);
+    capeG.addColorStop(1, armor === 'ashen' ? '#211d1a' : this.shade(outfit, -0.45));
     ctx.fillStyle = capeG;
     ctx.fill();
 
     // legs
-    ctx.fillStyle = '#2c3138';
+    const legColor = armor === 'modern' ? '#2b3038' : armor === 'tribal' ? '#5a422c' : '#2c3138';
+    ctx.fillStyle = legColor;
     rr(ctx, -9 + legSwing, -18, 7, 18, 3);
     ctx.fill();
     rr(ctx, 3 - legSwing, -18, 7, 18, 3);
     ctx.fill();
-    ctx.fillStyle = '#1b1e22';
+    ctx.fillStyle = armor === 'royal' ? '#6b5322' : '#1b1e22';
     rr(ctx, -10 + legSwing, -4, 9, 4, 2);
     ctx.fill();
     rr(ctx, 2 - legSwing, -4, 9, 4, 2);
     ctx.fill();
 
-    // body armor
+    // body per outfit style
     const body = ctx.createLinearGradient(-12, -42, 12, -16);
-    body.addColorStop(0, '#aebcc7');
-    body.addColorStop(0.55, '#717f8b');
-    body.addColorStop(1, '#3d474f');
+    if (armor === 'medieval') {
+      body.addColorStop(0, '#aebcc7');
+      body.addColorStop(0.55, '#717f8b');
+      body.addColorStop(1, '#3d474f');
+    } else if (armor === 'modern') {
+      body.addColorStop(0, '#59636e');
+      body.addColorStop(0.55, '#333b44');
+      body.addColorStop(1, '#1b2025');
+    } else if (armor === 'tribal') {
+      body.addColorStop(0, '#b98a58');
+      body.addColorStop(0.55, '#7c5836');
+      body.addColorStop(1, '#4a3220');
+    } else if (armor === 'royal') {
+      body.addColorStop(0, '#f0d69a');
+      body.addColorStop(0.55, '#b8913f');
+      body.addColorStop(1, '#6b4f1c');
+    } else {
+      body.addColorStop(0, '#7b6f63');
+      body.addColorStop(0.55, '#4b423a');
+      body.addColorStop(1, '#26201c');
+    }
     ctx.fillStyle = body;
     rr(ctx, -12, -40 + bob, 24, 24, 5);
     ctx.fill();
 
-    // tabard
-    ctx.fillStyle = '#c4ad7c';
-    ctx.beginPath();
-    ctx.moveTo(-7, -36 + bob);
-    ctx.lineTo(7, -36 + bob);
-    ctx.lineTo(5, -18);
-    ctx.lineTo(0, -14);
-    ctx.lineTo(-5, -18);
-    ctx.closePath();
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(120,40,30,0.8)';
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.moveTo(0, -35 + bob);
-    ctx.lineTo(0, -17);
-    ctx.stroke();
+    // chest detail
+    if (armor === 'medieval') {
+      ctx.fillStyle = outfit;
+      ctx.beginPath();
+      ctx.moveTo(-7, -36 + bob);
+      ctx.lineTo(7, -36 + bob);
+      ctx.lineTo(5, -18);
+      ctx.lineTo(0, -14);
+      ctx.lineTo(-5, -18);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(220,190,140,0.7)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(0, -35 + bob);
+      ctx.lineTo(0, -17);
+      ctx.stroke();
+    } else if (armor === 'modern') {
+      ctx.fillStyle = outfit;
+      rr(ctx, -9, -35 + bob, 18, 5, 2);
+      ctx.fill();
+      rr(ctx, -3, -33 + bob, 6, 15, 2);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(180,200,215,0.55)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(-8, -40 + bob);
+      ctx.lineTo(-4, -17);
+      ctx.moveTo(7, -40 + bob);
+      ctx.lineTo(5, -18);
+      ctx.stroke();
+    } else if (armor === 'tribal') {
+      ctx.strokeStyle = this.alpha(outfit, 0.9);
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(-9, -36 + bob);
+      ctx.lineTo(8, -30 + bob);
+      ctx.moveTo(-8, -26 + bob);
+      ctx.lineTo(7, -20);
+      ctx.stroke();
+      ctx.fillStyle = '#d8c8a0';
+      ctx.beginPath();
+      ctx.arc(0, -25 + bob, 2.4, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (armor === 'royal') {
+      ctx.strokeStyle = outfit;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(-9, -36 + bob);
+      ctx.quadraticCurveTo(0, -30 + bob, 9, -36 + bob);
+      ctx.stroke();
+      ctx.fillStyle = '#f5e3b0';
+      rr(ctx, -3, -38 + bob, 6, 10, 2);
+      ctx.fill();
+    } else {
+      ctx.strokeStyle = `rgba(255,140,70,${0.35 + 0.25 * Math.sin(t * 5)})`;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(-7, -37 + bob);
+      ctx.lineTo(-2, -27 + bob);
+      ctx.lineTo(-6, -18);
+      ctx.moveTo(6, -37 + bob);
+      ctx.lineTo(2, -26 + bob);
+      ctx.lineTo(7, -19);
+      ctx.stroke();
+    }
 
     // pauldrons
-    ctx.fillStyle = '#8b99a5';
+    const pauldron = armor === 'royal' ? '#d6b268' : armor === 'tribal' ? '#8a6238' : armor === 'modern' ? '#46505a' : armor === 'ashen' ? '#574d44' : '#8b99a5';
+    ctx.fillStyle = pauldron;
     ctx.beginPath();
     ctx.ellipse(-12, -38 + bob, 7, 5, -0.25, 0, Math.PI * 2);
     ctx.fill();
@@ -727,23 +804,133 @@ export class Renderer {
     ctx.ellipse(12, -38 + bob, 7, 5, 0.25, 0, Math.PI * 2);
     ctx.fill();
 
-    // head / helm
-    ctx.fillStyle = '#9dabb6';
+    // head and racial features
+    if (race.id === 'elf') {
+      ctx.fillStyle = skin;
+      ctx.beginPath();
+      ctx.moveTo(-8, -49 + bob);
+      ctx.lineTo(-19, -54 + bob);
+      ctx.lineTo(-8, -43 + bob);
+      ctx.moveTo(8, -49 + bob);
+      ctx.lineTo(19, -54 + bob);
+      ctx.lineTo(8, -43 + bob);
+      ctx.fill();
+    } else if (race.id === 'goblin') {
+      ctx.fillStyle = skin;
+      ctx.beginPath();
+      ctx.moveTo(-8, -48 + bob);
+      ctx.lineTo(-25, -58 + bob);
+      ctx.lineTo(-9, -40 + bob);
+      ctx.moveTo(8, -48 + bob);
+      ctx.lineTo(25, -58 + bob);
+      ctx.lineTo(9, -40 + bob);
+      ctx.fill();
+    } else if (race.id === 'orc') {
+      ctx.fillStyle = skin;
+      ctx.beginPath();
+      ctx.moveTo(-8, -48 + bob);
+      ctx.lineTo(-17, -51 + bob);
+      ctx.lineTo(-8, -42 + bob);
+      ctx.moveTo(8, -48 + bob);
+      ctx.lineTo(17, -51 + bob);
+      ctx.lineTo(8, -42 + bob);
+      ctx.fill();
+    }
+
+    // face
+    ctx.fillStyle = skin;
     rr(ctx, -9, -55 + bob, 18, 17, 7);
     ctx.fill();
-    ctx.fillStyle = '#2a3138';
-    rr(ctx, -7, -48 + bob, 15, 4, 2);
-    ctx.fill();
-    // eye glow
-    ctx.fillStyle = '#ffb060';
+    // eyes
+    ctx.fillStyle = eye;
     ctx.fillRect(1, -47 + bob, 5, 2);
-    // plume
-    ctx.beginPath();
-    ctx.moveTo(-2, -55 + bob);
-    ctx.quadraticCurveTo(-4, -66, -14, -63);
-    ctx.quadraticCurveTo(-6, -60, -3, -54);
-    ctx.fillStyle = '#b8562f';
-    ctx.fill();
+    ctx.fillStyle = 'rgba(20,16,14,0.55)';
+    ctx.fillRect(-7, -47 + bob, 5, 1.4);
+
+    // tusks / horns / headgear
+    if (race.id === 'orc') {
+      ctx.fillStyle = '#e8dcc0';
+      ctx.beginPath();
+      ctx.moveTo(-6, -41 + bob);
+      ctx.lineTo(-4, -35 + bob);
+      ctx.lineTo(-2, -41 + bob);
+      ctx.moveTo(6, -41 + bob);
+      ctx.lineTo(4, -35 + bob);
+      ctx.lineTo(2, -41 + bob);
+      ctx.fill();
+    }
+    if (race.id === 'devil') {
+      ctx.fillStyle = '#3b1a16';
+      ctx.beginPath();
+      ctx.moveTo(-7, -55 + bob);
+      ctx.quadraticCurveTo(-16, -68 + bob, -20, -57 + bob);
+      ctx.quadraticCurveTo(-11, -60 + bob, -5, -53 + bob);
+      ctx.moveTo(7, -55 + bob);
+      ctx.quadraticCurveTo(16, -68 + bob, 20, -57 + bob);
+      ctx.quadraticCurveTo(11, -60 + bob, 5, -53 + bob);
+      ctx.fill();
+    }
+
+    if (armor === 'medieval') {
+      ctx.fillStyle = '#9dabb6';
+      ctx.beginPath();
+      ctx.moveTo(-10, -53 + bob);
+      ctx.quadraticCurveTo(0, -63 + bob, 10, -53 + bob);
+      ctx.lineTo(10, -49 + bob);
+      ctx.lineTo(-10, -49 + bob);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = '#6d7a85';
+      ctx.fillRect(-1.5, -55 + bob, 3, 8);
+    } else if (armor === 'royal') {
+      ctx.fillStyle = '#e3c27a';
+      ctx.beginPath();
+      ctx.moveTo(-9, -54 + bob);
+      ctx.lineTo(-9, -63 + bob);
+      ctx.lineTo(-3, -58 + bob);
+      ctx.lineTo(0, -66 + bob);
+      ctx.lineTo(3, -58 + bob);
+      ctx.lineTo(9, -63 + bob);
+      ctx.lineTo(9, -54 + bob);
+      ctx.closePath();
+      ctx.fill();
+    } else if (armor === 'tribal') {
+      ctx.fillStyle = outfit;
+      ctx.fillRect(-9, -55 + bob, 18, 3);
+      ctx.strokeStyle = '#d8c8a0';
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.moveTo(8, -55 + bob);
+      ctx.quadraticCurveTo(14, -66 + bob, 20, -62 + bob);
+      ctx.stroke();
+    } else if (armor === 'modern') {
+      ctx.fillStyle = '#22282e';
+      rr(ctx, -10, -55 + bob, 20, 6, 2);
+      ctx.fill();
+      ctx.fillStyle = this.alpha(eye, 0.8);
+      ctx.fillRect(-6, -53 + bob, 12, 1.6);
+    } else {
+      // ashen hood
+      ctx.fillStyle = '#3a332d';
+      ctx.beginPath();
+      ctx.moveTo(-11, -43 + bob);
+      ctx.quadraticCurveTo(-13, -62 + bob, 0, -65 + bob);
+      ctx.quadraticCurveTo(13, -62 + bob, 11, -43 + bob);
+      ctx.lineTo(7, -50 + bob);
+      ctx.lineTo(-7, -50 + bob);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    if (armor === 'medieval') {
+      // plume
+      ctx.beginPath();
+      ctx.moveTo(-2, -55 + bob);
+      ctx.quadraticCurveTo(-4, -66, -14, -63);
+      ctx.quadraticCurveTo(-6, -60, -3, -54);
+      ctx.fillStyle = outfit;
+      ctx.fill();
+    }
 
     // shield arm
     ctx.fillStyle = '#5c4a32';
@@ -1819,6 +2006,59 @@ export class Renderer {
       ctx.fillStyle = `rgba(40,4,4,${clamp(game.deathTimer * 0.5, 0, 0.55)})`;
       ctx.fillRect(0, 0, VIEW_W, VIEW_H);
     }
+  }
+
+  drawCharacterPreview(ctx, appearance, characterId, t) {
+    const dpr = ctx.getTransform().a || 1;
+    const w = ctx.canvas.width / dpr;
+    const h = ctx.canvas.height / dpr;
+    ctx.clearRect(0, 0, w, h);
+    const glow = ctx.createRadialGradient(w / 2, h * 0.42, 8, w / 2, h * 0.42, w * 0.6);
+    glow.addColorStop(0, 'rgba(208,122,53,0.16)');
+    glow.addColorStop(1, 'rgba(208,122,53,0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = 'rgba(0,0,0,0.45)';
+    ctx.beginPath();
+    ctx.ellipse(w / 2, h * 0.9, w * 0.22, 9, 0, 0, Math.PI * 2);
+    ctx.fill();
+    const fake = {
+      state: 'playing',
+      deathTimer: 0,
+      player: {
+        x: 0,
+        y: 0,
+        w: 30,
+        h: 46,
+        vx: 0,
+        vy: 0,
+        facing: 1,
+        onGround: true,
+        attack: null,
+        weapon: 'sword',
+        invuln: 0,
+        dashTimer: 0,
+        characterId,
+        build: CHARACTERS[characterId]?.build || 1,
+        appearance,
+      },
+    };
+    ctx.save();
+    ctx.translate(w / 2, h * 0.9);
+    const scale = Math.min(w / 120, h / 150) * (CHARACTERS[characterId]?.build || 1);
+    ctx.scale(scale, scale);
+    this.drawPlayer(ctx, fake, t);
+    ctx.restore();
+  }
+
+  shade(hex, amount) {
+    const h = hex.replace('#', '');
+    const n = parseInt(h.length === 3 ? h.split('').map((c) => c + c).join('') : h, 16);
+    const clampByte = (v) => Math.max(0, Math.min(255, Math.round(v)));
+    const r = clampByte(((n >> 16) & 255) * (1 + amount));
+    const g = clampByte(((n >> 8) & 255) * (1 + amount));
+    const b = clampByte((n & 255) * (1 + amount));
+    return `rgb(${r},${g},${b})`;
   }
 
   alpha(hex, a) {
