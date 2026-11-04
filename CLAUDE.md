@@ -23,8 +23,8 @@ Non-negotiable v0.0.7 requirements:
 10. Combat must be real and testable, not a mock.
 11. Every boss room keeps a **Warung Abu checkpoint** at its entrance.
 12. Weapons, ammunition, and consumables are bought with run-scoped **ash**; keep `SHOP_ITEMS`, `WEAPONS`, `BOSS_INFO`, `ENEMY_INFO`, and `CODEX` data-driven.
-13. **Two selectable characters** at the menu: Sera Vayne (balanced) and Karn of the Ash (tankier, slower).
-14. **Character customization** before starting: race (human, elf, goblin, orc, devil), 5 armor styles, skin color, and outfit color, with a live Canvas preview.
+13. **Five selectable characters/classes** at the menu: Knight (Sera), Elf Archer (Lyna), Assassin (Kael), Brawler (Karn), Mage (Ignis) with unique active abilities.
+14. **Character customization** before starting: race (human, elf, goblin, orc, devil), 5 armor styles, skin color, and outfit color, with a live Canvas preview featuring runic altar, sparkling glitter stars, and transition pulse VFX.
 15. A **60-second narrative prologue** plays before the first stage on a new journey, with voice-over and always-visible subtitles; it is skippable and never replays from Level Select.
 
 ## 2. Stack and constraints
@@ -225,7 +225,7 @@ Rules:
 npm test
 ```
 
-Current result: **51/51 passing**. Coverage includes:
+Current result: **56/56 passing**. Coverage includes:
 
 - gravity, floor landing, movement and world bounds;
 - single jump vs double jump after relic;

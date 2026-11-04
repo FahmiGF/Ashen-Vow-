@@ -1,0 +1,166 @@
+================================================================================
+                    PANDUAN MEMULAI GAME: ASHEN VOW
+                    (HOW TO START ASHEN VOW v0.0.7)
+================================================================================
+
+Ashen Vow adalah game 2D Dark-Fantasy Metroidvania / Action Combat yang berjalan
+langsung di browser web (HTML5 Canvas + Vanilla ES Modules, zero-build).
+
+--------------------------------------------------------------------------------
+1. CARA MENJALANKAN GAME (HOW TO START)
+--------------------------------------------------------------------------------
+
+Persyaratan Sistem:
+- Node.js (versi 18 ke atas disarankan)
+- Browser modern (Google Chrome, Microsoft Edge, Firefox, Brave, Safari, dll)
+
+Langkah-langkah:
+1. Buka Terminal / Command Prompt / PowerShell di dalam folder "ashen-vow":
+   cd C:\Users\ASUS\Downloads\ashen-vow
+
+2. Jalankan server lokal dengan perintah:
+   npm start
+   (atau: node server.js)
+
+3. Terminal akan menampilkan pesan:
+   "Ashen Vow running at http://127.0.0.1:4300"
+
+4. Buka browser Anda dan kunjungi alamat:
+   http://localhost:4300   atau   http://127.0.0.1:4300
+
+5. Selamat bermain! Anda akan langsung masuk ke menu awal "ASHEN VOW".
+   Pilih "PILIH PENJAGA" untuk kustomisasi atau "MULAI PERJALANAN" untuk mulai.
+
+--------------------------------------------------------------------------------
+2. KONTROL PERMAINAN (CONTROLS)
+--------------------------------------------------------------------------------
+
+[KEYBOARD]
+- Gerak Kiri / Kanan  : A / D  atau  Tombol Panah Kiri / Kanan (◀ / ▶)
+- Lompat              : Spasi (Space) / W / Tombol Panah Atas (▲)
+- Double Jump         : Tekan lompat lagi di udara (setelah dapat Relik Bulu Bara)
+- Serang Senjata      : J  atau  Z
+- Dash (Menghindar)   : K  atau  Shift Kiri / Shift Kanan
+- Keahlian / Ability  : U  atau  V  atau  R   (Keahlian unik tiap karakter!)
+- Minum Flask (Heal)  : E  atau  Q
+- Ganti Senjata       : X  (Ganti antara Pedang, Pike, Busur)
+- Lempar Shuriken     : C  (Memerlukan shuriken dari Warung Abu)
+- Buka Warung Abu     : F  (Saat berada dekat pedagang di checkpoint)
+- Buka Peta Dunia     : M
+- Buka Kodeks (Codex) : I
+- Suara Mute / Unmute : N
+- Jeda / Menu         : Esc
+
+[TOUCH / MOBILE CONTROLS]
+- Sisi Kiri           : Tombol Panah [◀] dan [▶] untuk bergerak.
+- Sisi Kanan          : 
+  * [⚔] Serang Pedang / Senjata aktif
+  * [▲] Lompat / Double Jump
+  * [⚡] Keahlian Khusus Karakter (Active Ability)
+  * [»] Dash
+  * [✚] Minum Flask Pemulih HP
+  * [⇄] Ganti Senjata
+  * [✦] Lempar Shuriken
+
+--------------------------------------------------------------------------------
+3. DAFTAR KELAS KARAKTER & KEAHLIAN KHUSUS (CHARACTER ABILITIES)
+--------------------------------------------------------------------------------
+
+Setiap karakter memiliki statistik unik, gaya bermain berbeda, dan KEAHLIAN KHUSUS
+(Active Skill) yang dapat dipicu menggunakan tombol [U] / [V] / [R] atau tombol touch [⚡]:
+
+1. SERA VAYNE (THE KNIGHT / THE OATHBOUND)
+   - Glyph: ⚔  |  HP: 100  |  Kecepatan: 1.00x  |  Serangan: 1.00x
+   - Deskripsi: Ksatria seimbang dari kerajaan Opus, ahli pedang suci.
+   - Keahlian Khusus: "TEBASAN SUMPAH" (Ultimate Oath Sweep)
+     * Efek: Mengayunkan tebasan busur besar bercahaya keemasan berskala 360/depan.
+       Menghasilkan 46 damage, memicu knockback masif, memantulkan/menghancurkan
+       bola api musuh, dan menyapu bersih musuh di sekitarnya.
+     * Cooldown: 5.5 detik.
+
+2. LYNA WINDSTRIDER (THE ELF ARCHER / ASHEN RANGER)
+   - Glyph: 🏹  |  HP: 88  |  Kecepatan: 1.08x  |  Serangan: 1.04x
+   - Deskripsi: Pemanah elf lincah dan berdarah dingin yang mematikan dari jauh.
+   - Keahlian Khusus: "TEMBAKAN BADAI" (Piercing Long Shot)
+     * Efek: Menembakkan anak panah badai berkecepatan 880 px/s berhawa es/angin.
+       Panah menembus (piercing) SEMUA musuh dalam satu garis lurus dengan 52 damage
+       tanpa menghabiskan amunisi panah biasa.
+     * Cooldown: 5.0 detik.
+
+3. KAEL SHADOWSTEP (THE NIGHTBLADE / ASSASSIN)
+   - Glyph: 🗡  |  HP: 82  |  Kecepatan: 1.14x  |  Serangan: 1.12x
+   - Deskripsi: Pembunuh bayaran berkecepatan tinggi dengan burst damage mematikan.
+   - Keahlian Khusus: "LANGKAH BAYANGAN" (Shadow Step Blink)
+     * Efek: Berteleportasi instan menembus bayangan sejauh 180 px dengan i-frame
+       kebal, meninggalkan jejak kabut ungu dan menebas semua musuh di jalur
+       lintasannya sebesar 48 damage.
+     * Cooldown: 4.8 detik.
+
+4. KARN OF THE ASH (THE BRAWLER / THE BROKEN VOW)
+   - Glyph: ⛨  |  HP: 125  |  Kecepatan: 0.93x  |  Serangan: 1.08x
+   - Deskripsi: Prajurit bertubuh batu cadas yang tebal, tahan banting dan keras.
+   - Keahlian Khusus: "HENTAKAN BARA" (Ground Slam)
+     * Efek: Menghantam bumi dengan kekuatan seismik raksasa (54 damage radius),
+       mengguncang layar dan memunculkan 2 gelombang kejut api (shockwave)
+       yang menjalar ke kiri dan kanan menyapu musuh di lantai.
+     * Cooldown: 6.5 detik.
+
+5. IGNIS PYREWALKER (THE MAGE / CINDER WEAVER)
+   - Glyph: 🔥  |  HP: 86  |  Kecepatan: 0.98x  |  Serangan: 1.16x
+   - Deskripsi: Penyihir abu keturunan iblis dengan potensi daya hancur area tertinggi.
+   - Keahlian Khusus: "LEDAKAN NOVA BARA" (Flame Nova)
+     * Efek: Melepaskan ledakan pusaran 8 bola api bara suci ke segala arah,
+       membakar musuh di sekitar serta melenyapkan semua proyektil lawan terdekat.
+     * Cooldown: 6.0 detik.
+
+--------------------------------------------------------------------------------
+4. KUSTOMISASI KARAKTER & EFEK VFX / ANIMASI PERPINDAHAN
+--------------------------------------------------------------------------------
+
+Di menu "PILIH PENJAGA":
+- Anda dapat memilih 5 Karakter, 5 Ras (Manusia, Elf, Goblin, Orc, Iblis), 5 Jubah/Armor,
+  8 Warna Kulit, dan 8 Warna Pakaian.
+- Dilengkapi Live Canvas VFX:
+  * Lingkaran altar magis bercahaya di lantai dengan runa berputar.
+  * Efek partikel sparkling / bintang gemerlap (4-pointed glitter stars) dan bara abu
+    yang melayang di sekitar karakter.
+  * Efek Animasi Transisi & Gelombang Kejut (Shockwave Pulse):
+    Saat mengganti karakter, ras, atau pakaian, layar pratinjau akan melepaskan
+    semburan kilau partikel (burst sparks) sesuai warna elemen karakter, disertai
+    gelombang kejut bercahaya dan animasi denyut lembut (scale pop) pada tubuh karakter.
+  * Diiringi efek suara (SFX) denting magis (sparkle chime) yang memuaskan.
+
+--------------------------------------------------------------------------------
+5. FITUR PERMAINAN & KONTEN DUNIA
+--------------------------------------------------------------------------------
+
+- 8 Ruang Berbeda (Gerbang Abu, Balai Sumpah, Singgasana Bara, Sarang Wyrm,
+  Jembatan Tulang, Katedral Sunyi, Menara Lonceng, Puncak Sumpah).
+- 4 Boss Besar Multi-Fase dengan Dialog Suara:
+  * Sir Mordrake, The Fallen Warden (2 Fase)
+  * Vhael, The Ashen Wyrm (2 Fase)
+  * The Hollow Choir (2 Fase)
+  * The Oathbreaker (3 Fase - Boss Terakhir)
+- Warung Abu (Merchant Checkpoint): Tempat belanja senjata Pike, Busur, Shuriken, Amunisi,
+  dan isi ulang Flask menggunakan Abu hasil membunuh monster.
+- Relik Bulu Bara: Membuka kemampuan Double Jump untuk mencapai area tinggi.
+- Fitur Sneak Peek: Mengintip ruang yang terkunci tanpa memasuki pertempuran.
+- Kodeks Ensiklopedia [I] & Peta Interaktif [M].
+
+--------------------------------------------------------------------------------
+6. CARA MENGUJI (TESTING)
+--------------------------------------------------------------------------------
+
+Untuk menjalankan seluruh unit test otomatis deterministik (56 pengujian logika simulasi):
+   npm test
+
+Semua 56 pengujian mencakup:
+- Fisika gerak, lompatan, double jump relik, dan platform
+- Mekanik kombo pedang, bow, pike, shuriken, dan deteksi hit
+- Kelima karakter dengan statistik dan keahlian khususnya (Sweep, Long Shot, Shadow Step, Slam, Nova)
+- Sistem fase boss dan pergerakan musuh AI
+- Sistem ekonomi Warung Abu dan checkpoint respawn
+
+================================================================================
+          SELAMAT MENJELAJAH DAN MENEPA SUMPAHMU DI ASHEN VOW!
+================================================================================

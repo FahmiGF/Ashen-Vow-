@@ -247,6 +247,15 @@ export class SoundKit {
       case 'dash':
         this.noise({ dur: 0.22, gain: 0.1, freq: 700, sweepTo: 3200, type: 'bandpass', q: 1.4 });
         break;
+      case 'ability':
+        this.noise({ dur: 0.28, gain: 0.12, freq: 1600, sweepTo: 380, type: 'bandpass', q: 1.2 });
+        this.tone({ freq: 280, to: 720, type: 'sawtooth', dur: 0.22, gain: 0.09 });
+        this.tone({ freq: 520, to: 1080, type: 'triangle', dur: 0.26, gain: 0.08, delay: 0.04 });
+        break;
+      case 'sparkle':
+        this.tone({ freq: 880, to: 1760, type: 'sine', dur: 0.18, gain: 0.05 });
+        this.tone({ freq: 1320, to: 2200, type: 'triangle', dur: 0.2, gain: 0.04, delay: 0.05 });
+        break;
       case 'deflect':
         this.tone({ freq: 880, to: 1320, type: 'triangle', dur: 0.12, gain: 0.07 });
         break;

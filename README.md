@@ -81,21 +81,26 @@ Halaman credits memuat:
 
 ![Credits](docs/credits.png)
 
-### Pilih Penjaga dan Kustomisasi
+### Pilih Penjaga, Kustomisasi & Keahlian Khusus
 
-Ada **dua penjaga** yang bisa dimainkan:
+Terdapat **lima penjaga/kelas** yang bisa dimainkan, masing-masing dengan statistik dan **Keahlian Khusus (*Active Ability*)**:
 
-| Penjaga | Julukan | Darah | Serangan | Kecepatan | Bawaan |
+| Penjaga | Kelas | Darah | Serangan | Kecepatan | Keahlian Khusus |
 | --- | --- | --- | --- | --- | --- |
-| **Sera Vayne** | The Oathbound | 100 | 1.00x | 1.00x | Manusia · Medieval |
-| **Karn of the Ash** | The Broken Vow | 125 | 1.08x | 0.93x | Orc · Tribal |
+| **Sera Vayne** | The Knight | 100 | 1.00x | 1.00x | **Tebasan Sumpah** (`U`/`V`) |
+| **Lyna Windstrider** | Elf Archer | 88 | 1.04x | 1.08x | **Tembakan Badai** (`U`/`V`) |
+| **Kael Shadowstep** | Assassin | 82 | 1.12x | 1.14x | **Langkah Bayangan** (`U`/`V`) |
+| **Karn of the Ash** | Brawler | 125 | 1.08x | 0.93x | **Hentakan Bara** (`U`/`V`) |
+| **Ignis Pyrewalker** | Mage | 86 | 1.16x | 0.98x | **Ledakan Nova Bara** (`U`/`V`) |
 
 Di layar **PILIH PENJAGA** kamu bisa mengganti:
 
+- **Karakter / Kelas** — Knight, Archer, Assassin, Brawler, Mage.
 - **Ras** — Manusia, Elf, Goblin, Orc, Iblis. Setiap ras punya warna kulit, mata, dan ciri wajah sendiri (telinga panjang, taring, tanduk).
 - **Pakaian** — Medieval, Modern, Tribal, Royal, Ashen. Gaya menentukan bentuk armor, helm, jubah, dan aksen.
 - **Warna kulit** — delapan nada dari pucat sampai hijau goblin dan merah iblis.
 - **Warna pakaian** — delapan warna kain, jubah, dan aksen.
+- **Efek VFX & Animasi Altar**: Altar berputar, partikel bintang sparkling berkilau (*glitter stars*), dan gelombang kejut transisi (*shockwave pulse*) saat pergantian karakter.
 
 ![Layar karakter](docs/character.png)
 
@@ -129,6 +134,7 @@ Prolog hanya diputar untuk perjalanan baru; memulai dari **PILIH LEVEL** atau to
 | Lompat | `Space` / `W` / `↑` |
 | Lompat ganda | Tekan lompat lagi setelah **Relik Bulu Bara** |
 | Serang (kombo 3 hit) | `J` atau `Z` |
+| Keahlian Khusus (Ability) | `U` / `V` / `R` |
 | Ganti senjata | `X` |
 | Lempar shuriken | `C` |
 | Buka/tutup Warung Abu | `F` (dekat pedagang) |

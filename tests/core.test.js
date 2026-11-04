@@ -748,18 +748,107 @@ test('boss gates reference the current room instead of a hardcoded room', () => 
   assert.equal(g.gate.open, true);
 });
 
-test('two selectable characters expose balanced stats and valid appearances', () => {
+test('selectable characters expose balanced stats, valid appearances, and unique abilities', () => {
   const ids = Object.keys(CHARACTERS);
-  assert.equal(ids.length, 2);
-  assert.deepEqual(ids.sort(), ['karn', 'sera']);
+  assert.equal(ids.length, 5);
+  assert.deepEqual(ids.sort(), ['ignis', 'kael', 'karn', 'lyna', 'sera']);
   for (const c of Object.values(CHARACTERS)) {
     assert.ok(c.name && c.title && c.desc && c.glyph);
     assert.ok(c.maxHp > 0 && c.speed > 0 && c.damage > 0);
+    assert.ok(c.ability && c.ability.id && c.ability.name && c.ability.desc && c.ability.cooldown > 0);
     assert.ok(RACES[c.appearance.race], `${c.id} needs a valid race`);
     assert.ok(OUTFITS[c.appearance.armor], `${c.id} needs a valid armor`);
     assert.ok(SKIN_TONES.includes(c.appearance.skin));
     assert.ok(OUTFIT_COLORS.includes(c.appearance.outfit));
   }
+});
+
+test('knight ability (oath_sweep) unleashes a sweep attack and goes on cooldown', () => {
+  const g = fresh();
+  g.applyCharacter('sera');
+  assert.equal(g.player.ability.id, 'oath_sweep');
+  assert.equal(g.player.abilityCooldown, 0);
+
+  // Trigger ability
+  g.update(DT, { ability: true });
+  assert.ok(g.player.attack);
+  assert.equal(g.player.attack.weapon, 'ability');
+  assert.equal(g.player.attack.def.name, 'sweep');
+  assert.ok(g.player.abilityCooldown > 0);
+
+  // Gated by cooldown
+  const cd = g.player.abilityCooldown;
+  g.update(DT, { ability: true });
+  assert.ok(g.player.abilityCooldown <= cd);
+});
+
+test('archer ability (long_shot) fires a piercing arrow that damages enemies', () => {
+  const g = fresh();
+  g.applyCharacter('lyna');
+  assert.equal(g.player.ability.id, 'long_shot');
+
+  const enemy = g.enemies[0];
+  const initialHp = enemy.hp;
+  enemy.x = g.player.x + 80;
+  enemy.y = g.player.y;
+
+  g.update(DT, { ability: true });
+  assert.ok(g.player.abilityCooldown > 0);
+
+  const shot = g.projectiles.find((p) => p.type === 'long_shot');
+  assert.ok(shot);
+  assert.equal(shot.pierce, true);
+
+  // advance until projectile reaches enemy
+  for (let i = 0; i < 20; i++) g.update(DT);
+  assert.ok(enemy.hp < initialHp, 'enemy took damage from long shot');
+});
+
+test('assassin ability (shadow_step) teleports forward and deals path damage', () => {
+  const g = fresh();
+  g.applyCharacter('kael');
+  assert.equal(g.player.ability.id, 'shadow_step');
+
+  const startX = g.player.x;
+  const enemy = g.enemies[0];
+  const initialHp = enemy.hp;
+  enemy.x = startX + 60;
+  enemy.y = g.player.y;
+
+  g.update(DT, { ability: true });
+  assert.ok(g.player.x > startX, 'teleported forward');
+  assert.ok(enemy.hp < initialHp, 'enemy damaged during shadow step');
+  assert.ok(g.player.abilityCooldown > 0);
+});
+
+test('brawler ability (ground_slam) damages nearby enemies and sends shockwaves', () => {
+  const g = fresh();
+  g.applyCharacter('karn');
+  assert.equal(g.player.ability.id, 'ground_slam');
+
+  const enemy = g.enemies[0];
+  const initialHp = enemy.hp;
+  enemy.x = g.player.x + 40;
+  enemy.y = g.player.y;
+
+  g.update(DT, { ability: true });
+  assert.ok(enemy.hp < initialHp, 'nearby enemy took slam damage');
+  assert.ok(g.player.abilityCooldown > 0);
+
+  const shockwaves = g.projectiles.filter((p) => p.type === 'shockwave' && p.owner === 'player');
+  assert.equal(shockwaves.length, 2, 'spawned twin shockwaves');
+});
+
+test('mage ability (flame_nova) radiates flame orbs in a circle', () => {
+  const g = fresh();
+  g.applyCharacter('ignis');
+  assert.equal(g.player.ability.id, 'flame_nova');
+
+  g.update(DT, { ability: true });
+  assert.ok(g.player.abilityCooldown > 0);
+
+  const orbs = g.projectiles.filter((p) => p.type === 'flame_orb' && p.owner === 'player');
+  assert.equal(orbs.length, 8, 'spawned 8 flame orbs in all directions');
 });
 
 test('applyCharacter switches stats and default appearance', () => {

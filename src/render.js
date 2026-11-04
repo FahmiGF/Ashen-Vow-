@@ -31,6 +31,10 @@ export class Renderer {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
     this.dpr = 1;
+    this.previewSparkles = [];
+    this.previewTransition = 0;
+    this.lastPreviewChar = null;
+    this.lastPreviewLook = null;
     this.resize();
   }
 
@@ -530,6 +534,56 @@ export class Renderer {
         ctx.lineTo(-20, 4);
         ctx.stroke();
         ctx.restore();
+      } else if (pr.type === 'long_shot') {
+        ctx.save();
+        ctx.translate(pr.x, pr.y);
+        ctx.scale(pr.vx < 0 ? -1 : 1, 1);
+        const glow = ctx.createRadialGradient(0, 0, 2, 0, 0, 28);
+        glow.addColorStop(0, 'rgba(125,249,255,0.95)');
+        glow.addColorStop(0.4, 'rgba(0,180,216,0.6)');
+        glow.addColorStop(1, 'rgba(0,119,182,0)');
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(0, 0, 28, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 3.5;
+        ctx.beginPath();
+        ctx.moveTo(-32, 0);
+        ctx.lineTo(16, 0);
+        ctx.stroke();
+
+        ctx.fillStyle = '#7df9ff';
+        ctx.beginPath();
+        ctx.moveTo(26, 0);
+        ctx.lineTo(12, -7);
+        ctx.lineTo(12, 7);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.strokeStyle = '#00f0ff';
+        ctx.lineWidth = 1.8;
+        ctx.beginPath();
+        ctx.moveTo(-32, 0);
+        ctx.lineTo(-40, -8);
+        ctx.moveTo(-32, 0);
+        ctx.lineTo(-40, 8);
+        ctx.stroke();
+        ctx.restore();
+      } else if (pr.type === 'flame_orb') {
+        const glow = ctx.createRadialGradient(pr.x, pr.y, 1, pr.x, pr.y, pr.r * 2.8);
+        glow.addColorStop(0, 'rgba(255,240,160,0.95)');
+        glow.addColorStop(0.45, 'rgba(255,100,20,0.65)');
+        glow.addColorStop(1, 'rgba(255,40,0,0)');
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(pr.x, pr.y, pr.r * 2.8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#fff4cc';
+        ctx.beginPath();
+        ctx.arc(pr.x, pr.y, pr.r * 0.7, 0, Math.PI * 2);
+        ctx.fill();
       } else if (pr.type === 'shuriken') {
         ctx.save();
         ctx.translate(pr.x, pr.y);
@@ -949,6 +1003,7 @@ export class Renderer {
     let weaponLen = weapon === 'pike' ? 104 : weapon === 'bow' ? 30 : 46;
     if (atk) {
       if (weapon === 'pike') weaponLen = 112;
+      else if (def.name === 'sweep' || atk.weapon === 'ability') weaponLen = 78;
       else if (weapon === 'sword') weaponLen = atk.combo === 2 ? 56 : 46;
       const total = def.windup + def.active + def.recover;
       if (atk.t < def.windup) {
@@ -966,21 +1021,32 @@ export class Renderer {
         atk.t < def.windup + def.active + 0.08
       ) {
         ctx.save();
-        const arc = ctx.createRadialGradient(6, -26, 12, 6, -26, weaponLen + 26);
+        const isSweep = def.name === 'sweep' || atk.weapon === 'ability';
+        const arcRadius = isSweep ? weaponLen + 55 : weaponLen + 26;
+        const arc = ctx.createRadialGradient(6, -26, 12, 6, -26, arcRadius);
         arc.addColorStop(0, 'rgba(255,230,180,0)');
         arc.addColorStop(
           0.7,
-          def.name === 'heavy' || def.name === 'pierce'
+          isSweep
+            ? 'rgba(255,215,0,0.65)'
+            : def.name === 'heavy' || def.name === 'pierce'
             ? 'rgba(255,150,70,0.38)'
             : 'rgba(230,220,200,0.28)',
         );
-        arc.addColorStop(1, 'rgba(255,220,160,0)');
+        arc.addColorStop(1, isSweep ? 'rgba(255,140,0,0.08)' : 'rgba(255,220,160,0)');
         ctx.fillStyle = arc;
         ctx.beginPath();
-        ctx.arc(6, -26, weaponLen + 26, -2.2, angle + 0.3);
+        ctx.arc(6, -26, arcRadius, isSweep ? -2.6 : -2.2, angle + (isSweep ? 0.45 : 0.3));
         ctx.lineTo(6, -26);
         ctx.closePath();
         ctx.fill();
+        if (isSweep) {
+          ctx.strokeStyle = '#fff4ba';
+          ctx.lineWidth = 3.5;
+          ctx.beginPath();
+          ctx.arc(6, -26, arcRadius - 4, -2.5, angle + 0.4);
+          ctx.stroke();
+        }
         ctx.restore();
       }
     }
@@ -2008,20 +2074,210 @@ export class Renderer {
     }
   }
 
+  triggerPreviewSparkle(count = 38, color = null) {
+    this.previewTransition = 1.0;
+    const w = 260;
+    const h = 330;
+    const colors = color
+      ? [color, '#ffffff', '#ffd700']
+      : ['#ffd700', '#ffaa44', '#7df9ff', '#ffffff', '#e8c07a'];
+    for (let i = 0; i < count; i++) {
+      const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.45;
+      const speed = 45 + Math.random() * 135;
+      this.previewSparkles.push({
+        x: w / 2 + (Math.random() - 0.5) * 28,
+        y: h * 0.62 + (Math.random() - 0.5) * 36,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - 32,
+        size: 2.2 + Math.random() * 4.8,
+        life: 0.65 + Math.random() * 0.65,
+        maxLife: 0.65 + Math.random() * 0.65,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        rot: Math.random() * Math.PI,
+        rotSpeed: (Math.random() - 0.5) * 8,
+        kind: Math.random() < 0.65 ? 'star' : 'ember',
+      });
+    }
+  }
+
+  drawGlitterStar(ctx, x, y, r, color, alpha, rot = 0) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(rot);
+    ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
+
+    // Outer aura
+    const g = ctx.createRadialGradient(0, 0, 0.5, 0, 0, r * 2.8);
+    g.addColorStop(0, color);
+    g.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 2.8, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 4-pointed sparkling diamond star
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.moveTo(0, -r * 1.9);
+    ctx.quadraticCurveTo(0, 0, r * 0.32, 0);
+    ctx.quadraticCurveTo(0, 0, 0, r * 1.9);
+    ctx.quadraticCurveTo(0, 0, -r * 0.32, 0);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.moveTo(-r * 1.9, 0);
+    ctx.quadraticCurveTo(0, 0, 0, r * 0.32);
+    ctx.quadraticCurveTo(0, 0, r * 1.9, 0);
+    ctx.quadraticCurveTo(0, 0, 0, -r * 0.32);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.restore();
+  }
+
   drawCharacterPreview(ctx, appearance, characterId, t) {
     const dpr = ctx.getTransform().a || 1;
     const w = ctx.canvas.width / dpr;
     const h = ctx.canvas.height / dpr;
     ctx.clearRect(0, 0, w, h);
-    const glow = ctx.createRadialGradient(w / 2, h * 0.42, 8, w / 2, h * 0.42, w * 0.6);
-    glow.addColorStop(0, 'rgba(208,122,53,0.16)');
-    glow.addColorStop(1, 'rgba(208,122,53,0)');
+
+    // Character theme colors
+    const themeColors = {
+      sera: '#ffd700',
+      lyna: '#7df9ff',
+      kael: '#a855f7',
+      karn: '#f97316',
+      ignis: '#ef4444',
+    };
+    const activeColor = themeColors[characterId] || '#d07a35';
+
+    // Detect switch / appearance change
+    const lookKey = `${characterId}_${appearance?.race}_${appearance?.armor}_${appearance?.skin}_${appearance?.outfit}`;
+    if (this.lastPreviewLook && this.lastPreviewLook !== lookKey) {
+      this.triggerPreviewSparkle(38, activeColor);
+    }
+    this.lastPreviewLook = lookKey;
+    this.lastPreviewChar = characterId;
+
+    // Background glow
+    const glow = ctx.createRadialGradient(w / 2, h * 0.44, 10, w / 2, h * 0.44, w * 0.65);
+    glow.addColorStop(0, this.alpha(activeColor, 0.22));
+    glow.addColorStop(0.5, 'rgba(208,122,53,0.08)');
+    glow.addColorStop(1, 'rgba(10,8,6,0)');
     ctx.fillStyle = glow;
     ctx.fillRect(0, 0, w, h);
-    ctx.fillStyle = 'rgba(0,0,0,0.45)';
+
+    // Glowing runic pedestal
+    const pedX = w / 2;
+    const pedY = h * 0.88;
+    const pedRadius = w * 0.28;
+
+    // Floor shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';
     ctx.beginPath();
-    ctx.ellipse(w / 2, h * 0.9, w * 0.22, 9, 0, 0, Math.PI * 2);
+    ctx.ellipse(pedX, pedY + 4, pedRadius * 0.85, 11, 0, 0, Math.PI * 2);
     ctx.fill();
+
+    // Concentric glowing rings on floor
+    ctx.save();
+    ctx.translate(pedX, pedY);
+    ctx.scale(1, 0.28);
+
+    // Outer magical ring
+    ctx.strokeStyle = this.alpha(activeColor, 0.45);
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.arc(0, 0, pedRadius, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Rotating dashed rune ring
+    ctx.save();
+    ctx.rotate(t * 0.6);
+    ctx.strokeStyle = this.alpha('#ffffff', 0.5);
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([8, 12]);
+    ctx.beginPath();
+    ctx.arc(0, 0, pedRadius * 0.78, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+
+    // Inner glowing ring
+    ctx.strokeStyle = this.alpha(activeColor, 0.7);
+    ctx.lineWidth = 1.8;
+    ctx.beginPath();
+    ctx.arc(0, 0, pedRadius * 0.52, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+
+    // Transition shockwave ring and radiant aura
+    if (this.previewTransition > 0) {
+      this.previewTransition = Math.max(0, this.previewTransition - 0.024);
+      const prog = 1 - this.previewTransition;
+      const waveR = pedRadius * (0.4 + prog * 1.6);
+      ctx.save();
+      ctx.translate(pedX, pedY);
+      ctx.scale(1, 0.32);
+      ctx.strokeStyle = this.alpha(activeColor, this.previewTransition * 0.85);
+      ctx.lineWidth = 4 * this.previewTransition;
+      ctx.beginPath();
+      ctx.arc(0, 0, waveR, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+
+      // Radiant light flare behind character
+      const flare = ctx.createRadialGradient(pedX, h * 0.56, 4, pedX, h * 0.56, 115);
+      flare.addColorStop(0, this.alpha('#ffffff', this.previewTransition * 0.45));
+      flare.addColorStop(0.35, this.alpha(activeColor, this.previewTransition * 0.35));
+      flare.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = flare;
+      ctx.fillRect(0, 0, w, h);
+    }
+
+    // Ambient floating sparkles (spawn new ones if below target)
+    if (this.previewSparkles.length < 22) {
+      this.previewSparkles.push({
+        x: w * (0.2 + Math.random() * 0.6),
+        y: h * (0.35 + Math.random() * 0.5),
+        vx: (Math.random() - 0.5) * 16,
+        vy: -20 - Math.random() * 35,
+        size: 1.8 + Math.random() * 3.6,
+        life: 0.9 + Math.random() * 0.9,
+        maxLife: 0.9 + Math.random() * 0.9,
+        color: Math.random() < 0.6 ? activeColor : '#ffffff',
+        rot: Math.random() * Math.PI,
+        rotSpeed: (Math.random() - 0.5) * 4,
+        kind: Math.random() < 0.7 ? 'star' : 'ember',
+      });
+    }
+
+    // Update and draw sparkles (behind character)
+    const dtPreview = 0.016;
+    for (let i = this.previewSparkles.length - 1; i >= 0; i--) {
+      const sp = this.previewSparkles[i];
+      sp.life -= dtPreview;
+      if (sp.life <= 0) {
+        this.previewSparkles.splice(i, 1);
+        continue;
+      }
+      sp.x += sp.vx * dtPreview;
+      sp.y += sp.vy * dtPreview;
+      sp.rot += sp.rotSpeed * dtPreview;
+      const alpha = Math.min(1, sp.life / (sp.maxLife * 0.35));
+      if (sp.kind === 'star') {
+        this.drawGlitterStar(ctx, sp.x, sp.y, sp.size, sp.color, alpha, sp.rot);
+      } else {
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = sp.color;
+        ctx.beginPath();
+        ctx.arc(sp.x, sp.y, sp.size * 0.7, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    // Character drawing with transition pulse
     const fake = {
       state: 'playing',
       deathTimer: 0,
@@ -2043,9 +2299,12 @@ export class Renderer {
         appearance,
       },
     };
+
     ctx.save();
-    ctx.translate(w / 2, h * 0.9);
-    const scale = Math.min(w / 120, h / 150) * (CHARACTERS[characterId]?.build || 1);
+    ctx.translate(w / 2, pedY);
+    const pulse = 1 + Math.sin(this.previewTransition * Math.PI) * 0.08;
+    const baseScale = Math.min(w / 120, h / 150) * (CHARACTERS[characterId]?.build || 1);
+    const scale = baseScale * pulse;
     ctx.scale(scale, scale);
     this.drawPlayer(ctx, fake, t);
     ctx.restore();

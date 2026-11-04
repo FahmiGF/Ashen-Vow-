@@ -171,27 +171,106 @@ export const CHARACTERS = {
     id: 'sera',
     name: 'Sera Vayne',
     title: 'The Oathbound',
+    className: 'Knight',
     glyph: '⚔',
-    desc: 'Ksatria terakhir Opus. Seimbang dalam serangan dan pertahanan, dengan dash yang paling ringan.',
+    desc: 'Ksatria terakhir Opus. Seimbang dalam serangan dan pertahanan, dengan kemampuan tebasan menyapu suci.',
     maxHp: 100,
     speed: 1,
     damage: 1,
     dash: 1,
     build: 1,
     appearance: { race: 'human', skin: '#c98f6a', outfit: '#6d2323', armor: 'medieval' },
+    ability: {
+      id: 'oath_sweep',
+      name: 'Tebasan Sumpah',
+      key: 'U / V',
+      cooldown: 5.5,
+      desc: 'Tebasan busur besar (Sweep) bercahaya emas yang menyapu seluruh musuh di depan dan menangkis proyektil.',
+    },
+  },
+  lyna: {
+    id: 'lyna',
+    name: 'Lyna Windstrider',
+    title: 'The Ashen Ranger',
+    className: 'Elf Archer',
+    glyph: '🏹',
+    desc: 'Pemanah elf berdarah dingin. Bergerak sangat lincah dan membidik celah kelemahan musuh dari kejauhan.',
+    maxHp: 88,
+    speed: 1.08,
+    damage: 1.04,
+    dash: 0.85,
+    build: 0.95,
+    appearance: { race: 'elf', skin: '#d8a97f', outfit: '#3b4a2f', armor: 'modern' },
+    ability: {
+      id: 'long_shot',
+      name: 'Tembakan Badai',
+      key: 'U / V',
+      cooldown: 5,
+      desc: 'Menembakkan panah badai berkecepatan tinggi yang menembus semua musuh dalam satu garis lurus.',
+    },
+  },
+  kael: {
+    id: 'kael',
+    name: 'Kael Shadowstep',
+    title: 'The Nightblade',
+    className: 'Assassin',
+    glyph: '🗡',
+    desc: 'Pembunuh bayaran bayangan Opus. Sangat lincah dan mematikan saat menyelinap menembus pertahanan musuh.',
+    maxHp: 82,
+    speed: 1.14,
+    damage: 1.12,
+    dash: 0.75,
+    build: 0.92,
+    appearance: { race: 'goblin', skin: '#8fb06a', outfit: '#2a2a30', armor: 'modern' },
+    ability: {
+      id: 'shadow_step',
+      name: 'Langkah Bayangan',
+      key: 'U / V',
+      cooldown: 4.8,
+      desc: 'Menerobos bayangan secara instan dengan i-frame, menebas semua musuh di sepanjang jalur lintasan.',
+    },
   },
   karn: {
     id: 'karn',
     name: 'Karn of the Ash',
     title: 'The Broken Vow',
+    className: 'Brawler',
     glyph: '⛨',
-    desc: 'Prajurit yang bangkit dari tumpukan mayat. Lebih tebal dan keras, tetapi sedikit lebih lambat.',
+    desc: 'Prajurit bertubuh baja yang bangkit dari tumpukan mayat. Lebih tebal dan keras, dengan hentakan penghancur batu.',
     maxHp: 125,
     speed: 0.93,
     damage: 1.08,
     dash: 0.9,
     build: 1.08,
-    appearance: { race: 'orc', skin: '#7f8f5c', outfit: '#3b4a2f', armor: 'tribal' },
+    appearance: { race: 'orc', skin: '#7f8f5c', outfit: '#7a4a24', armor: 'tribal' },
+    ability: {
+      id: 'ground_slam',
+      name: 'Hentakan Bara',
+      key: 'U / V',
+      cooldown: 6.5,
+      desc: 'Menghantam tanah dengan kekuatan dahsyat, melepaskan gelombang kejut seismik ke kiri dan kanan.',
+    },
+  },
+  ignis: {
+    id: 'ignis',
+    name: 'Ignis Pyrewalker',
+    title: 'The Cinder Weaver',
+    className: 'Mage',
+    glyph: '🔥',
+    desc: 'Penyihir abu keturunan iblis. Mengorbankan pertahanan demi pusaran api magis berdaya rusak tinggi.',
+    maxHp: 86,
+    speed: 0.98,
+    damage: 1.16,
+    dash: 0.92,
+    build: 0.96,
+    appearance: { race: 'devil', skin: '#a8503f', outfit: '#5b2f6b', armor: 'royal' },
+    ability: {
+      id: 'flame_nova',
+      name: 'Ledakan Nova Bara',
+      key: 'U / V',
+      cooldown: 6,
+      desc: 'Memicu pusaran 8 bola api bara melingkar yang membakar musuh di sekitar dan melenyapkan proyektil lawan.',
+    },
   },
 };
 
@@ -731,6 +810,8 @@ export class AshenGame {
       build: 1,
       characterId: 'sera',
       appearance: { ...DEFAULT_APPEARANCE },
+      ability: { ...(CHARACTERS.sera.ability || {}) },
+      abilityCooldown: 0,
       hitFlash: 0,
       pitGrace: false,
       weapon: 'sword',
@@ -755,6 +836,8 @@ export class AshenGame {
     p.speedMult = character.speed;
     p.dashCooldownMax = 0.78 * (character.dash || 1);
     p.build = character.build || 1;
+    p.ability = character.ability ? { ...character.ability } : null;
+    p.abilityCooldown = 0;
     p.appearance = { ...(character.appearance || DEFAULT_APPEARANCE) };
     this.appearance = { ...p.appearance };
     return character;
@@ -1028,6 +1111,7 @@ export class AshenGame {
     if (p.jumpBuffer > 0) p.jumpBuffer -= dt;
     if (p.coyote > 0) p.coyote -= dt;
     if (p.consumeCooldown > 0) p.consumeCooldown -= dt;
+    if (p.abilityCooldown > 0) p.abilityCooldown = Math.max(0, p.abilityCooldown - dt);
 
     if (p.healing > 0) {
       p.healing -= dt;
@@ -1089,6 +1173,15 @@ export class AshenGame {
       p.healing <= 0
     ) {
       this.throwConsumable();
+    }
+    if (
+      pressed('ability') &&
+      p.ability &&
+      p.abilityCooldown <= 0 &&
+      p.healing <= 0 &&
+      p.dashTimer <= 0
+    ) {
+      this.useAbility();
     }
 
     // horizontal movement
@@ -1175,9 +1268,169 @@ export class AshenGame {
 
   currentAttackDef() {
     const p = this.player;
+    if (p.attack?.def) return p.attack.def;
     if (p.weapon === 'pike') return PIKE_ATTACK;
     if (p.weapon === 'bow') return BOW_ATTACK;
     return ATTACKS[p.attack ? p.attack.combo : 0];
+  }
+
+  useAbility() {
+    const p = this.player;
+    if (!p.ability || p.abilityCooldown > 0) return false;
+    const abilityId = p.ability.id;
+    p.abilityCooldown = p.ability.cooldown || 6;
+
+    if (abilityId === 'oath_sweep') {
+      // The Knight: Ultimate Sweep
+      const def = {
+        windup: 0.05,
+        active: 0.18,
+        recover: 0.2,
+        range: 130,
+        height: 75,
+        dmg: 46,
+        knock: 320,
+        name: 'sweep',
+      };
+      p.attack = { weapon: 'ability', def, t: 0, hitIds: [], landed: false };
+      p.x += p.facing * 8;
+      this.shake = Math.max(this.shake, 0.26);
+      this.burst(p.x + p.w / 2 + p.facing * 40, p.y + p.h / 2, 20, '#ffd700', 220);
+      this.emit({ type: 'ability', ability: abilityId, name: p.ability.name });
+      return true;
+    }
+
+    if (abilityId === 'long_shot') {
+      // The Elf Archer: Piercing Long Shot
+      this.spawnPlayerProjectile('long_shot', {
+        x: p.x + p.w / 2 + p.facing * 18,
+        y: p.y + p.h * 0.44,
+        vx: p.facing * 880,
+        vy: 0,
+        r: 8,
+        dmg: 52,
+        life: 1.4,
+        pierce: true,
+      });
+      p.vx = -p.facing * 140;
+      this.shake = Math.max(this.shake, 0.18);
+      this.burst(p.x + p.w / 2 + p.facing * 18, p.y + p.h * 0.44, 16, '#7df9ff', 180);
+      this.emit({ type: 'ability', ability: abilityId, name: p.ability.name });
+      return true;
+    }
+
+    if (abilityId === 'shadow_step') {
+      // The Assassin: Shadow Step
+      const oldX = p.x;
+      const stepDist = 180;
+      const targetX = clamp(p.x + p.facing * stepDist, 10, WORLD_W - p.w - 10);
+      const minX = Math.min(oldX, targetX);
+      const maxX = Math.max(oldX + p.w, targetX + p.w);
+      const slashBox = { x: minX, y: p.y - 12, w: maxX - minX, h: p.h + 24 };
+
+      for (const e of this.enemies) {
+        if (e.dead) continue;
+        if (rectHitsRect(slashBox, e)) {
+          this.hurtEnemy(e, { dmg: 48, knock: 160, name: 'shadow_step' }, p.facing);
+          this.burst(e.x + e.w / 2, e.y + e.h / 2, 12, '#9d4edd', 160);
+        }
+      }
+      if (this.boss && !this.boss.dying && rectHitsRect(slashBox, this.boss)) {
+        this.hurtBoss(48 * p.damageMult, 140, p.facing, false);
+        this.burst(this.boss.x + this.boss.w / 2, this.boss.y + this.boss.h / 2, 14, '#9d4edd', 180);
+      }
+
+      for (let sx = minX; sx <= maxX; sx += 24) {
+        this.spawnFx('dust', sx, p.y + p.h * 0.5, {
+          life: 0.35,
+          size: 14,
+          color: '#3a0ca3',
+        });
+      }
+      p.x = targetX;
+      p.invuln = Math.max(p.invuln, 0.32);
+      this.shake = Math.max(this.shake, 0.16);
+      this.emit({ type: 'ability', ability: abilityId, name: p.ability.name });
+      return true;
+    }
+
+    if (abilityId === 'ground_slam') {
+      // The Brawler: Ground Slam
+      p.vy = 260;
+      this.shake = Math.max(this.shake, 0.38);
+      const slamBox = { x: p.x - 70, y: p.y - 10, w: p.w + 140, h: p.h + 30 };
+      for (const e of this.enemies) {
+        if (e.dead) continue;
+        if (rectHitsRect(slamBox, e)) {
+          this.hurtEnemy(e, { dmg: 54, knock: 340, name: 'ground_slam' }, sign(e.x - p.x) || p.facing);
+          this.burst(e.x + e.w / 2, e.y + e.h / 2, 12, '#ff6b35', 180);
+        }
+      }
+      if (this.boss && !this.boss.dying && rectHitsRect(slamBox, this.boss)) {
+        this.hurtBoss(54 * p.damageMult, 260, p.facing, true);
+      }
+      this.spawnPlayerProjectile('shockwave', {
+        x: p.x - 10,
+        y: FLOOR_Y - 24,
+        vx: -380,
+        vy: 0,
+        w: 26,
+        h: 24,
+        r: 13,
+        dmg: 26,
+        life: 0.85,
+        pierce: true,
+      });
+      this.spawnPlayerProjectile('shockwave', {
+        x: p.x + p.w + 10,
+        y: FLOOR_Y - 24,
+        vx: 380,
+        vy: 0,
+        w: 26,
+        h: 24,
+        r: 13,
+        dmg: 26,
+        life: 0.85,
+        pierce: true,
+      });
+      this.burst(p.x + p.w / 2, FLOOR_Y - 10, 24, '#e65100', 200);
+      this.emit({ type: 'ability', ability: abilityId, name: p.ability.name });
+      return true;
+    }
+
+    if (abilityId === 'flame_nova') {
+      // The Mage: Flame Nova
+      const cx = p.x + p.w / 2;
+      const cy = p.y + p.h / 2;
+      const count = 8;
+      for (let i = 0; i < count; i++) {
+        const ang = (i / count) * Math.PI * 2;
+        this.spawnPlayerProjectile('flame_orb', {
+          x: cx,
+          y: cy,
+          vx: Math.cos(ang) * 440,
+          vy: Math.sin(ang) * 440,
+          r: 8,
+          dmg: 28,
+          life: 0.75,
+        });
+      }
+      this.shake = Math.max(this.shake, 0.22);
+      this.burst(cx, cy, 22, '#ff7b00', 200);
+      for (const pr of this.projectiles) {
+        if (pr.owner === 'boss' && pr.type === 'fireball') {
+          const d2 = (pr.x - cx) ** 2 + (pr.y - cy) ** 2;
+          if (d2 < 120 ** 2) {
+            pr.dead = true;
+            this.burst(pr.x, pr.y, 8, '#ffd08a', 120);
+          }
+        }
+      }
+      this.emit({ type: 'ability', ability: abilityId, name: p.ability.name });
+      return true;
+    }
+
+    return false;
   }
 
   startAttack() {
@@ -2431,16 +2684,31 @@ export class AshenGame {
         for (const e of this.enemies) {
           if (e.dead || pr.dead) continue;
           if (rectHitsRect(box, e)) {
-            pr.dead = true;
-            this.hurtEnemy(e, { dmg: pr.dmg, knock: 110, name: pr.type }, sign(pr.vx));
+            if (pr.pierce) {
+              pr.hitIds = pr.hitIds || [];
+              if (pr.hitIds.includes(e.id)) continue;
+              pr.hitIds.push(e.id);
+            } else {
+              pr.dead = true;
+            }
+            this.hurtEnemy(e, { dmg: pr.dmg, knock: 120, name: pr.type }, sign(pr.vx) || p.facing);
             this.burst(pr.x, pr.y, 7, '#d8c08a', 130);
           }
         }
         const b = this.boss;
         if (!pr.dead && b && !b.dying && rectHitsRect(box, b)) {
-          pr.dead = true;
-          this.hurtBoss(pr.dmg * p.damageMult, 90, sign(pr.vx), false);
-          this.burst(pr.x, pr.y, 8, '#d8c08a', 140);
+          if (pr.pierce) {
+            pr.hitIds = pr.hitIds || [];
+            if (!pr.hitIds.includes('boss')) {
+              pr.hitIds.push('boss');
+              this.hurtBoss(pr.dmg * p.damageMult, 90, sign(pr.vx) || p.facing, false);
+              this.burst(pr.x, pr.y, 8, '#d8c08a', 140);
+            }
+          } else {
+            pr.dead = true;
+            this.hurtBoss(pr.dmg * p.damageMult, 90, sign(pr.vx) || p.facing, false);
+            this.burst(pr.x, pr.y, 8, '#d8c08a', 140);
+          }
         }
       }
       if (pr.owner === 'boss' && pr.life > 0) {

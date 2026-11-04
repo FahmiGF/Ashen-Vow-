@@ -51,6 +51,7 @@
                 <div class="gear-row">
                   <span id="weapon-badge" class="weapon-badge">PEDANG</span>
                   <span id="ammo-badge" class="ammo-badge">SHURIKEN 0</span>
+                  <span id="ability-badge" class="ability-badge ready">⚡ SKILL [U]</span>
                 </div>
               </div>
             </div>
@@ -308,6 +309,14 @@
                 <span id="char-title" class="char-title">The Oathbound</span>
                 <p id="char-desc" class="char-desc"></p>
                 <div id="char-stats" class="char-stats"></div>
+                <div id="char-ability-box" class="char-ability-box">
+                  <div class="ability-title-row">
+                    <span class="ability-badge-label">KEAHLIAN KHUSUS</span>
+                    <span id="char-ability-key" class="ability-key">[U / V]</span>
+                  </div>
+                  <strong id="char-ability-name">Tebasan Sumpah (Knight)</strong>
+                  <p id="char-ability-desc">Tebasan busur besar (Sweep) bercahaya emas yang menyapu seluruh musuh di depan dan menangkis proyektil.</p>
+                </div>
               </div>
 
               <div class="character-options">
@@ -455,6 +464,7 @@
             <button class="tbtn small" data-action="dash" type="button" aria-label="Dash">»</button>
             <button class="tbtn small" data-action="swap" type="button" aria-label="Ganti senjata">⇄</button>
             <button class="tbtn small" data-action="consume" type="button" aria-label="Lempar shuriken">✦</button>
+            <button class="tbtn small ability" data-action="ability" type="button" aria-label="Keahlian Khusus">⚡</button>
             <button class="tbtn" data-action="jump" type="button" aria-label="Lompat">▲</button>
             <button class="tbtn attack" data-action="attack" type="button" aria-label="Serang">⚔</button>
           </div>

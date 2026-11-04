@@ -192,6 +192,10 @@ function setCharacter(next) {
   character = sanitizeCharacter({ ...character, ...next });
   saveCharacter();
   applyCharacterToGame();
+  if (renderer && typeof renderer.triggerPreviewSparkle === 'function') {
+    renderer.triggerPreviewSparkle(36);
+  }
+  audio.play('sparkle');
   if (menuView === 'character') buildCharacterScreen();
 }
 
@@ -418,9 +422,14 @@ function buildCharacterScreen() {
   $('char-desc').textContent = c.desc;
   $('char-stats').innerHTML = [
     statBar('DARAH', c.maxHp, 140),
-    statBar('SERANGAN', c.damage, 1.15),
-    statBar('KECEPATAN', c.speed, 1.08),
+    statBar('SERANGAN', c.damage, 1.2),
+    statBar('KECEPATAN', c.speed, 1.2),
   ].join('');
+  if ($('char-ability-name') && c.ability) {
+    $('char-ability-name').textContent = `${c.ability.name} (${c.className || 'Kelas'})`;
+    $('char-ability-desc').textContent = c.ability.desc;
+    if ($('char-ability-key')) $('char-ability-key').textContent = `[${c.ability.key || 'U / V'}] · CD ${c.ability.cooldown}s`;
+  }
   $('char-race-desc').textContent = RACES[character.race]?.desc || '';
   $('char-armor-desc').textContent = OUTFITS[character.armor]?.desc || '';
 
@@ -928,6 +937,9 @@ const KEY_ACTIONS = {
   KeyQ: 'heal',
   KeyX: 'swap',
   KeyC: 'consume',
+  KeyU: 'ability',
+  KeyV: 'ability',
+  KeyR: 'ability',
 };
 
 window.addEventListener('keydown', (e) => {
@@ -1071,7 +1083,7 @@ document.querySelectorAll('.tbtn').forEach((btn) => {
 
 function inputSnapshot() {
   const input = {};
-  for (const action of ['left', 'right', 'jump', 'attack', 'dash', 'heal', 'swap', 'consume']) {
+  for (const action of ['left', 'right', 'jump', 'attack', 'dash', 'heal', 'swap', 'consume', 'ability']) {
     input[action] = !!(keys[action] || touchInput[action]);
   }
   return input;
@@ -1387,6 +1399,24 @@ function updateHud() {
   } else {
     $('ammo-badge').textContent = `SHURIKEN ${p.shurikens}`;
     $('ammo-badge').classList.toggle('empty', p.shurikens <= 0);
+  }
+
+  const abilityBadge = $('ability-badge');
+  if (abilityBadge) {
+    if (p.ability) {
+      abilityBadge.classList.remove('hidden');
+      if (p.abilityCooldown > 0) {
+        abilityBadge.textContent = `⚡ ${p.ability.name.toUpperCase()} (${p.abilityCooldown.toFixed(1)}s)`;
+        abilityBadge.classList.add('cooldown');
+        abilityBadge.classList.remove('ready');
+      } else {
+        abilityBadge.textContent = `⚡ ${p.ability.name.toUpperCase()} [U]`;
+        abilityBadge.classList.add('ready');
+        abilityBadge.classList.remove('cooldown');
+      }
+    } else {
+      abilityBadge.classList.add('hidden');
+    }
   }
 
   const boss = hud.boss;
