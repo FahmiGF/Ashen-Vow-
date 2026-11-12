@@ -1,9 +1,34 @@
 // Ashen Vow — release history shown in the in-game Update Log.
 // Keep the newest entry first. `GAME_VERSION` is the single source of truth
 // for the version shown by the Update Log screen and the debug hooks.
-export const GAME_VERSION = '0.3.0';
+export const GAME_VERSION = '0.4.0';
 
 export const UPDATE_LOG = [
+  {
+    version: '0.4.0',
+    date: '12 November 2026',
+    title: 'INFINITE FRONTIERS — BEYOND THE VEIL',
+    tag: 'MAJOR EXPANSION & 3D MODE',
+    summary:
+      'Ekspansi kolosal: Mode 3D penuh pertama dengan petualangan orang ketiga di Thornveil Forest, 100 level kampanye baru (Level 101–200) melintasi 10 bab dimensi asing, 15 kelas karakter baru dengan 3 spesialisasi, 15 Elite Mobs cerdas berperingkat E1–E7, 15 kategori senjata baru, Map Editor 2D & 3D, Kingdom Defense, 10 Mount & 10 Companion, serta kustomisasi 12 lapis zirah.',
+    highlights: [
+      'Mode 3D Penuh (Thornveil Forest Slice): eksplorasi orang ketiga, kamera orbital bebas, lock-on target, kombo 3D, parry, dan pertarungan boss kolosal Elder Yggvar.',
+      'Kampanye 101–200 (10 Bab Baru): The Shattered Continent, Forgotten Empire, Abyssal Kingdom, Eternal Desert, Verdant Colossus, Astral Frontier, Hollow Dimension, Celestial Machine, Primordial Lands, dan The Last Beyond.',
+      '15 Kelas Karakter Baru: Warden, Arcanist, Shadowblade, Ranger, Templar, Reaver, Beastcaller, Spellbreaker, Gunsmith, Bloodweaver, Chronomancer, Stormcaller, Plague Doctor, Soul Knight, dan Riftwalker masing-masing dengan 4 jurus dan 3 spesialisasi.',
+      'Sistem Elite Mobs Tingkat Lanjut: 7 peringkat (E1 Veteran hingga E7 Worldbreaker), 15 jenis Elite Mob unik ber-AI cerdas, dan 10 modifier tempur acak.',
+      '15 Kategori Senjata & Kerajinan Regional: Greatsword, Twin Daggers, Warhammer, Spear, Scythe, Longbow, Crossbow, Arcane Staff, Rune Blade, Storm Spear, Arcane Pistol, Repeater, Spirit Blade, Chain Whip, dan Battle Gauntlets.',
+      'Kustomisasi 12 Lapis Visual: penyesuaian independen kepala, wajah, dada, pundak, lengan, tangan, pinggang, kaki, sepatu, punggung, senjata, dan aura dengan 10 warna pewarna murni dan 20 slot preset.',
+      'Mode Tambahan & Tower Defense: Kingdom Defense dengan 10 jenis menara tempur, Abyssal Gauntlet tanpa akhir, Relic Hunt, Expanded Boss Rush, Expedition, dan Survival.',
+      'Pembangun Dunia 2D & 3D: Map Editor canggih dengan pemahat medan 3D, penempatan prefab modular, peletakan boss, serta visual scripting berbasis node berizin aman.',
+      '10 Mount & 10 Companion: dari Ashen Warhorse hingga Astral Elk, dan Spirit Wolf hingga Void Moth dengan sistem ikatan dan perintah taktis.',
+      'Pohon Progresi 3 Lapis: Atribut Inti (Vitality, Strength, Agility, Intelligence, Endurance, Luck), Spesialisasi Kelas, dan Penguasaan Jangka Panjang.',
+    ],
+    fixes: [
+      'Kampanye 2D asli 1–100 tetap 100% utuh dan kompatibel tanpa konversi paksa.',
+      'Semua data save v0.0.7 hingga v0.3.0 termigrasi dengan aman tanpa risiko kehilangan progres.',
+      'Mode 3D berjalan dengan mesin Canvas murni tanpa dependensi eksternal atau build tools.',
+    ],
+  },
   {
     version: '0.3.0',
     date: '12 November 2026',

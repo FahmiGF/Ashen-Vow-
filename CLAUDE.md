@@ -1,13 +1,13 @@
 # Ashen Vow — Claude Master Plan
 
-> Compressed handoff for continuing **Ashen Vow v0.3.0**.
-> Status: **playable, browser-verified, Milestones A and B plus Sigil & Ritual and the Echoes of the Forgotten World expansion complete**.
+> Compressed handoff for continuing **Ashen Vow v0.4.0**.
+> Status: **playable, browser-verified, Milestones A and B plus Sigil & Ritual, Echoes of the Forgotten World, and Infinite Frontiers (Beyond the Veil) complete**.
 > Roadmap: [`MASTERPLAN.md`](MASTERPLAN.md).
 > Repo: `https://github.com/FahmiGF/Ashen-Vow-` · branch `main` · push account `isshinAshinaSeal`.
 
 ## 1. Product definition
 
-**Ashen Vow** is a 2D medieval metroidvania / roguelike-lite played in the browser.
+**Ashen Vow** is a 2D medieval metroidvania / roguelike-lite played in the browser, featuring an optional dedicated third-person **3D Mode**.
 The UI is Indonesian; the tone is dark-fantasy ash and oath imagery.
 
 Non-negotiable v0.1.0 requirements (v0.0.7/v0.0.8 scope preserved):
@@ -35,6 +35,7 @@ Non-negotiable v0.1.0 requirements (v0.0.7/v0.0.8 scope preserved):
 21. **Sigil & Ritual (v0.2.0)** — 4 permanent Sigils, 4 counted Ritual items, 6 consumables, quick-item cycling (`R`), an in-run Inventory overlay (`I`), a Whetstone damage buff, and an in-game Update Log (`src/updates.js`) reachable from the main menu.
 22. **Echoes of the Forgotten World (v0.3.0)** — 100 expansion levels in 10 chapters (7 standard + 1 environmental + 1 elite mini-boss + 1 major boss each), 10 biomes, 100 enemy base types with 300 variants, 20 mini-bosses, 10 major bosses, 5 difficulties, 6 modifiers, 5 NG+ tiers, 8 repeatable modes, 4 endgame trials, Thornveil Haven with 10 fixed NPCs / 8 upgrades / 12 quests, 8 settlements, 52 NPCs, 6 seasonal events, 32 visual-only skins, 12 collectible categories with 120 entries, and save-compatible progress under `progress.expansion`.
 23. **Expansion hub** (`X` or the main-menu button) with four tabs: **Kampanye**, **Thornveil Haven**, **Ashen Chronicle**, and **Lemari & Jurnal**. All expansion content is real playable data, not documentation-only.
+24. **Infinite Frontiers: Beyond the Veil (v0.4.0)** — Dedicated third-person **3D Mode** (Thornveil Forest vertical slice with interactive tribal village, NPCs Elder Tova / Scout Rian / Shaman Lyra, 3 enemies, Thornveil Alpha elite mob, Elder Yggvar colossal boss, 3D traversal, lock-on combat, parry); **Levels 101–200** across 10 chapters (11–20); **15 playable classes** with 4 abilities and 3 specializations each; **15 Elite Mobs** across 7 ranks (E1–E7) with 10 modifiers; **15 weapon categories** and 8 regional materials; **12-layer visual customization** with 10 dyes; **Kingdom Defense** tower defense (10 towers); **10 mounts and 10 companions**; **2D & 3D Map Editor** with visual scripting nodes; and complete **30-point release checklist**. Accessible from main menu via **ASHEN VOW: 3D MODE** and **INFINITE FRONTIERS**.
 
 ## 2. Stack and constraints
 

@@ -1,7 +1,7 @@
 # ASHEN VOW — MASTER PLAN
 
 > **Version 2.0 — v1.0 roadmap + post-launch expansion.**
-> Status snapshot: **Milestones A (v0.0.8) and B (v0.1.0) complete, plus content update v0.2.0 (Sigil & Ritual) and the v0.3.0 Echoes of the Forgotten World expansion** · Milestones C–F remain future work.
+> Status snapshot: **Milestones A (v0.0.8) and B (v0.1.0) complete, plus content update v0.2.0 (Sigil & Ritual), the v0.3.0 Echoes of the Forgotten World expansion, and the v0.4.0 Infinite Frontiers (Beyond the Veil) expansion** · Milestones C–F remain future work.
 > The full game stays a zero-build, dependency-free HTML5 Canvas + ES-module project.
 
 ## Document map
@@ -58,6 +58,16 @@
 | Tests | 103 Node tests + browser smoke coverage for gates, trampoline, climb, secret wall, boss phases, flask reward, persistence, shop, inventory, update log, and expansion data/migration/events |
 
 Known gaps after v0.3.0: Tidewrought Cistern, Frostglass Cathedral, and Cinder Maw still have zone configuration but no playable legacy rooms; no branching story or multiple endings; no fast travel. The Echoes expansion is a content layer, not Milestone C.
+
+### Shipped expansion — v0.4.0: Infinite Frontiers (Beyond the Veil) — COMPLETE
+
+**Goal:** Expand Ashen Vow beyond its original 2D Roguelike Metroidvania experience with a dedicated third-person 3D Mode, campaign levels 101–200, 15 playable classes, 15 intelligent elite mobs, 15 weapons, Kingdom Defense, 10 mounts, 10 companions, and an advanced 2D & 3D Map Editor.
+
+**Shipped:**
+- `src/frontier.js`: 10 expansion chapters (Chapters 11–20: The Shattered Continent, Forgotten Empire, Abyssal Kingdom, Eternal Desert, Verdant Colossus, Astral Frontier, Hollow Dimension, Celestial Machine, Primordial Lands, The Last Beyond); 100 level specifications (101–200) with environmental hazards; 15 playable classes (Warden, Arcanist, Shadowblade, Ranger, Templar, Reaver, Beastcaller, Spellbreaker, Gunsmith, Bloodweaver, Chronomancer, Stormcaller, Plague Doctor, Soul Knight, Riftwalker) with 4 abilities and 3 specializations each; 15 Elite Mobs across 7 ranks (E1 Veteran – E7 Worldbreaker) with 10 modifiers; 15 weapon categories and 8 regional materials; 12 visual customization layers and 10 dyes; Kingdom Defense tower defense (10 towers); 10 mounts and 10 companions; 3-layer progression trees; Map Editor node scripting catalog; and 30-item release checklist.
+- `src/mode3d.js`: Full zero-dependency 3D Metroidvania simulation and Canvas software renderer. Implements third-person follow camera, lock-on targeting, free 3D character movement, jump, double jump, glider descent, air dash, 3D combat combos, parry, stagger/poise, and complete **Thornveil Forest vertical slice** with interactive tribal village, NPCs (Elder Tova, Scout Rian, Shaman Lyra), 3 enemy types, Thornveil Alpha elite, and Elder Yggvar colossal boss.
+- Main menu UI entries for **ASHEN VOW: 3D MODE** and **INFINITE FRONTIERS — BEYOND THE VEIL**.
+- Acceptance verified: 116/116 Node tests pass green.
 
 ### Shipped expansion — v0.3.0: Echoes of the Forgotten World — COMPLETE
 

@@ -28,10 +28,21 @@ test('update log is complete and ordered newest first', () => {
   }
 });
 
-test('the latest update documents the Echoes of the Forgotten World expansion', () => {
+test('the latest update documents the Infinite Frontiers expansion', () => {
   const latest = LATEST_UPDATE;
-  assert.equal(latest.version, '0.3.0');
+  assert.equal(latest.version, '0.4.0');
   const text = [latest.summary, ...latest.highlights, ...(latest.fixes || [])].join(' ');
+  assert.match(text, /Mode 3D/i);
+  assert.match(text, /Thornveil Forest/i);
+  assert.match(text, /15 Kelas/i);
+  assert.match(text, /Elite Mobs/i);
+  assert.match(text, /Map Editor/i);
+});
+
+test('the update log documents the Echoes of the Forgotten World expansion', () => {
+  const entry = UPDATE_LOG.find((u) => u.version === '0.3.0');
+  assert.ok(entry);
+  const text = [entry.summary, ...entry.highlights, ...(entry.fixes || [])].join(' ');
   assert.match(text, /100 level/i);
   assert.match(text, /Thornveil Haven/i);
   assert.match(text, /Ashen Chronicle/i);

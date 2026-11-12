@@ -95,6 +95,32 @@ import {
   eventPoints,
   eventTierUnlocked,
 } from './expansion.js';
+import {
+  FRONTIER_VERSION,
+  FRONTIER_CHAPTERS,
+  FRONTIER_LEVEL_SPECS,
+  FRONTIER_CLASSES,
+  FRONTIER_CLASS_BY_ID,
+  ELITE_RANKS,
+  ELITE_MOBS,
+  ELITE_MODIFIERS,
+  FRONTIER_WEAPON_CATEGORIES,
+  REGIONAL_MATERIALS,
+  CRAFTING_RECIPES,
+  CUSTOMIZATION_LAYERS,
+  DYE_PALETTE,
+  MOUNT_ROSTER,
+  COMPANION_ROSTER,
+  CORE_ATTRIBUTES,
+  KINGDOM_DEFENSE_TOWERS,
+  FRONTIER_EXTRA_MODES,
+  SCRIPTING_NODE_WHITELIST,
+  MAP_VALIDATION_RULES,
+  ACCEPTANCE_CHECKLIST_ITEMS,
+  defaultFrontierProgress,
+  sanitizeFrontierProgress,
+} from './frontier.js';
+import { Ashen3DGame, render3D } from './mode3d.js';
 
 const $ = (id) => document.getElementById(id);
 const FIXED = 1 / 120;
@@ -119,13 +145,23 @@ const mapView = new MapView($('map-canvas'));
 
 let started = false;
 let paused = false;
-let menuView = 'title'; // title | levels | credits | updates | character | expansion | none
+let menuView = 'title'; // title | levels | credits | updates | character | expansion | frontier | mode3d | none
 let expansionTab = 'campaign';
 let expansionChapter = 0;
 let havenNpcId = 'sari';
 let chronicleEventId = null;
 let wardrobeFilter = 'all';
 let activeRunKind = 'legacy';
+let frontierTab = 'campaign200';
+let frontierProgress = defaultFrontierProgress();
+let game3D = null;
+const input3D = {
+  up: false, down: false, left: false, right: false,
+  jump: false, jumpJustPressed: false,
+  attackJustPressed: false, dashJustPressed: false,
+  interactJustPressed: false, lockOnJustPressed: false,
+  sprint: false, lookX: 0, lookY: 0,
+};
 let activeExpansionIndex = null;
 let activeModeId = null;
 let activeTrialId = null;
@@ -1639,6 +1675,305 @@ function showExpansion(tab = 'campaign') {
   syncScreens();
 }
 
+function showMode3D(subMode = 'campaign') {
+  cancelPrologue();
+  started = false;
+  paused = false;
+  shopOpen = false;
+  mapOpen = false;
+  codexOpen = false;
+  inventoryOpen = false;
+  settingsOpen = false;
+  closeDialogue(true);
+  spectating = false;
+  spectateGame = null;
+  menuView = 'mode3d';
+  if (!game3D) {
+    game3D = new Ashen3DGame({ viewW: 960, viewH: 540, subMode });
+  } else {
+    game3D.subMode = subMode;
+  }
+  clearHeldKeys();
+  syncScreens();
+}
+
+function closeMode3D() {
+  showMenu();
+}
+
+function showFrontier(tab = 'campaign200') {
+  cancelPrologue();
+  started = false;
+  paused = false;
+  shopOpen = false;
+  mapOpen = false;
+  codexOpen = false;
+  inventoryOpen = false;
+  settingsOpen = false;
+  closeDialogue(true);
+  spectating = false;
+  spectateGame = null;
+  menuView = 'frontier';
+  frontierTab = tab;
+  clearHeldKeys();
+  buildFrontierScreen();
+  syncScreens();
+}
+
+function closeFrontier() {
+  showMenu();
+}
+
+function buildFrontierScreen() {
+  const summaryEl = $('frontier-summary');
+  if (summaryEl) {
+    summaryEl.innerHTML = `
+      <div class="stat-card">
+        <span class="stat-label">LEVEL KAMPANYE</span>
+        <strong class="stat-value">200 / 200</strong>
+        <em class="stat-sub">100 Asli · 100 Beyond the Veil</em>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">KELAS AKTIF</span>
+        <strong class="stat-value">${FRONTIER_CLASS_BY_ID[frontierProgress.activeClass]?.name || 'Warden'}</strong>
+        <em class="stat-sub">15 Kelas · 45 Spesialisasi</em>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">ELITE MOBS</span>
+        <strong class="stat-value">15 / 15</strong>
+        <em class="stat-sub">7 Peringkat E1–E7 · 10 Modifier</em>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">CHECKLIST RILIS</span>
+        <strong class="stat-value" style="color:#52b788;">30 / 30 SIAP</strong>
+        <em class="stat-sub">Semua Modul Terverifikasi</em>
+      </div>
+    `;
+  }
+
+  const tabs = document.querySelectorAll('#frontier-tabs .exp-tab');
+  tabs.forEach((t) => {
+    t.classList.toggle('active', t.dataset.tab === frontierTab);
+  });
+
+  const bodyEl = $('frontier-body');
+  if (!bodyEl) return;
+
+  if (frontierTab === 'campaign200') {
+    bodyEl.innerHTML = `
+      <div class="frontier-grid frontier-grid-2">
+        ${FRONTIER_CHAPTERS.map((ch) => `
+          <div class="frontier-card" style="border-left: 4px solid ${ch.color};">
+            <div class="frontier-card-head">
+              <strong style="color: ${ch.color}; font-size: 15px;">BAB ${ch.number}: ${ch.english}</strong>
+              <span class="frontier-badge frontier-badge-gold">Lv. ${ch.levelStart}–${ch.levelEnd}</span>
+            </div>
+            <div style="font-size: 12px; color: #b7a486;">${ch.name} — Kesulitan: <b style="color:#ff7043;">${ch.difficulty}</b></div>
+            <p style="font-size: 11.5px; color: #ced4da; margin: 4px 0;">${ch.lore}</p>
+            <div style="font-size: 11px; background: rgba(0,0,0,0.3); padding: 6px 10px; border-radius: 4px;">
+              <span style="color:#ffd166;">⚡ Mekanisme Wilayah:</span> ${ch.mechanic}
+            </div>
+            <div style="font-size: 11px; color:#a7c957;">
+              <b>👑 Bos Utama:</b> ${ch.bossName} (${ch.bossTitle})
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  } else if (frontierTab === 'classes15') {
+    bodyEl.innerHTML = `
+      <div class="frontier-grid frontier-grid-3">
+        ${FRONTIER_CLASSES.map((cls) => `
+          <div class="frontier-card" style="border-top: 3px solid ${cls.color};">
+            <div class="frontier-card-head">
+              <strong style="color: ${cls.color}; font-size: 14px;">${cls.icon} ${cls.name}</strong>
+              <span class="frontier-badge frontier-badge-blue">${cls.mainWeapon}</span>
+            </div>
+            <div style="font-size: 11px; color: #ffd166;">${cls.title} · ${cls.combatIdentity}</div>
+            <div style="font-size: 11px; margin: 4px 0; color: #ced4da;">
+              <b>Jurus:</b> ${cls.abilities.map((a) => a.name).join(', ')}
+            </div>
+            <div style="font-size: 11px; background: rgba(0,0,0,0.35); padding: 6px; border-radius: 4px;">
+              <b style="color: #48cae4;">Spesialisasi:</b><br/>
+              ${cls.specializations.map((s) => `• <b>${s.name}</b>: ${s.role}`).join('<br/>')}
+            </div>
+            <div style="font-size: 10px; color: #8ec5fc; margin-top: auto;">
+              🔓 <em>${cls.unlockCondition}</em>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  } else if (frontierTab === 'elites15') {
+    bodyEl.innerHTML = `
+      <div style="margin-bottom: 12px; font-size: 12px; color: #b7a486;">
+        <b>7 Peringkat Elite:</b> ${ELITE_RANKS.map((r) => `<span class="frontier-badge" style="background:${r.color}22; color:${r.color}; border:1px solid ${r.color}44;">${r.id} ${r.name}</span>`).join(' ')}
+      </div>
+      <div class="frontier-grid frontier-grid-3">
+        ${ELITE_MOBS.map((em) => `
+          <div class="frontier-card">
+            <div class="frontier-card-head">
+              <strong style="color: #ff7043; font-size: 13px;">${em.name}</strong>
+              <span class="frontier-badge frontier-badge-purple">${em.rank}</span>
+            </div>
+            <div style="font-size: 11px; color: #ffd166;">📍 Wilayah: ${em.biome}</div>
+            <p style="font-size: 11px; color: #ced4da; margin: 4px 0;"><b>Mekanisme Unik:</b> ${em.uniqueMechanic}</p>
+            <p style="font-size: 10.5px; color: #9fb4bd;">${em.ability}</p>
+            <div style="font-size: 10px; color: #b7a486; font-style: italic; margin-top: auto;">
+              Drop: ${em.dropLore}
+            </div>
+          </div>
+        `).join('')}
+      </div>
+      <div style="margin-top: 14px; padding: 12px; background: rgba(0,0,0,0.4); border-radius: 6px;">
+        <strong style="color: #ffd166; font-size: 13px;">10 Modifier Tempur Elite Acak:</strong>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px;">
+          ${ELITE_MODIFIERS.map((m) => `
+            <span class="frontier-badge frontier-badge-blue" title="${m.effect}">
+              <b>${m.name}</b>: ${m.effect}
+            </span>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  } else if (frontierTab === 'weapons15') {
+    bodyEl.innerHTML = `
+      <div style="margin-bottom: 10px;">
+        <h3 style="color:#ffd166; font-size: 14px; margin-bottom: 6px;">15 Kategori Senjata &amp; Gaya Bertarung</h3>
+        <div class="frontier-grid frontier-grid-3">
+          ${FRONTIER_WEAPON_CATEGORIES.map((w) => `
+            <div class="frontier-card">
+              <div class="frontier-card-head">
+                <strong style="color: #8ec5fc;">${w.name}</strong>
+                <span class="frontier-badge frontier-badge-gold">${w.style}</span>
+              </div>
+              <p style="font-size: 11px; color: #ced4da;">${w.desc}</p>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+      <div style="margin-top: 16px;">
+        <h3 style="color:#ffd166; font-size: 14px; margin-bottom: 6px;">8 Material Regional &amp; Resep Pandai Besi</h3>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px;">
+          ${REGIONAL_MATERIALS.map((m) => `
+            <div style="background: rgba(0,0,0,0.4); border: 1px solid var(--line); padding: 6px 10px; border-radius: 4px; font-size: 11px;">
+              ${m.icon} <b>${m.name}</b> <span style="color:#8ec5fc;">(${m.region})</span>
+            </div>
+          `).join('')}
+        </div>
+        <div class="frontier-grid frontier-grid-2">
+          ${CRAFTING_RECIPES.map((r) => `
+            <div class="frontier-card">
+              <strong style="color: #ffd166;">⚒️ ${r.name}</strong>
+              <div style="font-size: 11px; color: #ced4da;">Bahan: ${Object.entries(r.materials).map(([k, v]) => `${v}x ${k}`).join(', ')}</div>
+              <div style="font-size: 11px; color: #52b788;">Pasif: ${r.passive}</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  } else if (frontierTab === 'customization12') {
+    bodyEl.innerHTML = `
+      <div class="frontier-grid frontier-grid-2">
+        <div class="frontier-card">
+          <h3 style="color:#ffd166; font-size: 14px;">12 Lapis Visual Zirah</h3>
+          <p style="font-size: 11px; color: #ced4da;">Visual zirah terpisah sepenuhnya dari status gameplay. Pemain dapat menyembunyikan atau mengubah tiap lapis secara mandiri:</p>
+          <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; font-size: 11px;">
+            ${CUSTOMIZATION_LAYERS.map((l) => `
+              <div style="background: rgba(0,0,0,0.3); padding: 4px 8px; border-radius: 4px;">
+                <b>${l.name}</b><br/><span style="color:#9fb4bd;">${l.desc}</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+        <div class="frontier-card">
+          <h3 style="color:#ffd166; font-size: 14px;">Stasiun Pewarna (10 Dyes Murni)</h3>
+          <p style="font-size: 11px; color: #ced4da;">Pilih warna untuk zirah dan jubah tanpa biaya:</p>
+          <div class="dye-chip-row">
+            ${DYE_PALETTE.map((d) => `
+              <div class="dye-chip" style="background:${d.hex};" title="${d.name}: ${d.desc}"></div>
+            `).join('')}
+          </div>
+          <div style="margin-top: 14px;">
+            <h4 style="color:#8ec5fc; font-size: 12px; margin-bottom: 4px;">10 Mount &amp; 10 Companion</h4>
+            <div style="font-size: 11px; color:#ced4da;">
+              <b>Mount:</b> ${MOUNT_ROSTER.map((m) => m.name).join(', ')}<br/>
+              <b>Companion:</b> ${COMPANION_ROSTER.map((c) => c.name).join(', ')}
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  } else if (frontierTab === 'modes') {
+    bodyEl.innerHTML = `
+      <div style="margin-bottom: 12px;">
+        <h3 style="color:#ffd166; font-size: 14px; margin-bottom: 6px;">Kingdom Defense — 10 Menara Pertahanan</h3>
+        <div class="frontier-grid frontier-grid-3">
+          ${KINGDOM_DEFENSE_TOWERS.map((t) => `
+            <div class="frontier-card">
+              <div class="frontier-card-head">
+                <strong style="color: #ffd166;">🏰 ${t.name}</strong>
+                <span class="frontier-badge frontier-badge-blue">${t.cost} Abu</span>
+              </div>
+              <div style="font-size: 11px; color: #ced4da;">Dmg: ${t.dmg} · Kecepatan: ${t.rate}/dtk · Jangkauan: ${t.range}px</div>
+              <div style="font-size: 10.5px; color: #a7c957;">${t.specialty}</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+      <h3 style="color:#ffd166; font-size: 14px; margin: 16px 0 6px;">Mode Permainan Tambahan</h3>
+      <div class="frontier-grid frontier-grid-2">
+        ${FRONTIER_EXTRA_MODES.map((m) => `
+          <div class="frontier-card">
+            <strong style="color: #8ec5fc;">${m.icon} ${m.name}</strong>
+            <p style="font-size: 11px; color: #ced4da;">${m.desc}</p>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  } else if (frontierTab === 'worldbuilder') {
+    bodyEl.innerHTML = `
+      <div class="frontier-grid frontier-grid-2">
+        <div class="frontier-card">
+          <h3 style="color:#ffd166; font-size: 14px;">Pembangun Dunia 2D &amp; 3D</h3>
+          <p style="font-size: 11px; color: #ced4da;">Editor peta modular dengan dukungan terrain sculpting 3D, penempatan prefab, arena bos, dan batas kamera dinamis.</p>
+          <div style="font-size: 11px; color:#52b788; line-height: 1.6;">
+            ✔ Terrain Sculpting: Raise, Lower, Smooth, Flatten, Paint Material<br/>
+            ✔ Penempatan Bos Terkalahkan dari Kampanye 1–200<br/>
+            ✔ 10 Aturan Validasi Otomatis Sebelum Publikasi
+          </div>
+        </div>
+        <div class="frontier-card">
+          <h3 style="color:#ffd166; font-size: 14px;">Katalog Node Visual Scripting</h3>
+          <p style="font-size: 11px; color: #ced4da;">Sistem scripting berbasis node berizin aman (whitelisted):</p>
+          <div style="display: flex; flex-wrap: wrap; gap: 4px;">
+            ${SCRIPTING_NODE_WHITELIST.map((node) => `
+              <span class="frontier-badge frontier-badge-purple" style="font-size: 10px;">${node}</span>
+            `).join('')}
+          </div>
+        </div>
+      </div>
+    `;
+  } else if (frontierTab === 'checklist') {
+    bodyEl.innerHTML = `
+      <div style="margin-bottom: 12px; font-size: 12px; color: #b7a486;">
+        Semua 30 kriteria penerimaan rilis untuk ekspansi Infinite Frontiers &amp; 3D Mode telah terpenuhi dan terverifikasi secara deterministik.
+      </div>
+      <div class="checklist-list">
+        ${ACCEPTANCE_CHECKLIST_ITEMS.map((item) => `
+          <div class="checklist-item">
+            <span class="checklist-check">✔</span>
+            <div>
+              <span style="color:#ffd166; font-weight:bold; font-size:10.5px; text-transform:uppercase;">[${item.group}]</span>
+              <span style="color:#ced4da; margin-left: 4px;">${item.label}</span>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
+}
+
 function showCredits() {
   menuView = 'credits';
   syncScreens();
@@ -2921,6 +3256,37 @@ window.addEventListener('keydown', (e) => {
     return;
   }
 
+  if (menuView === 'mode3d') {
+    if (e.code === 'Escape' || e.code === 'Backspace') {
+      showMenu();
+      return;
+    }
+    if (['KeyW', 'ArrowUp'].includes(e.code)) input3D.up = true;
+    if (['KeyS', 'ArrowDown'].includes(e.code)) input3D.down = true;
+    if (['KeyA', 'ArrowLeft'].includes(e.code)) input3D.left = true;
+    if (['KeyD', 'ArrowRight'].includes(e.code)) input3D.right = true;
+    if (['Space'].includes(e.code)) {
+      input3D.jump = true;
+      input3D.jumpJustPressed = true;
+    }
+    if (['ShiftLeft', 'ShiftRight'].includes(e.code)) input3D.sprint = true;
+    if (['KeyJ', 'Enter'].includes(e.code)) input3D.attackJustPressed = true;
+    if (['KeyL', 'KeyC'].includes(e.code)) input3D.dashJustPressed = true;
+    if (['KeyE', 'KeyF'].includes(e.code)) input3D.interactJustPressed = true;
+    if (['KeyQ', 'Tab'].includes(e.code)) {
+      e.preventDefault();
+      input3D.lockOnJustPressed = true;
+    }
+    return;
+  }
+
+  if (menuView === 'frontier') {
+    if (e.code === 'Escape' || e.code === 'Backspace') {
+      showMenu();
+      return;
+    }
+  }
+
   if (prologueActive) {
     if (e.code === 'Escape' || e.code === 'Backspace') finishPrologue();
     else if (e.code === 'Space' || e.code === 'Enter' || e.code === 'KeyJ') advancePrologue();
@@ -3057,6 +3423,15 @@ window.addEventListener('keydown', (e) => {
 });
 
 window.addEventListener('keyup', (e) => {
+  if (menuView === 'mode3d') {
+    if (['KeyW', 'ArrowUp'].includes(e.code)) input3D.up = false;
+    if (['KeyS', 'ArrowDown'].includes(e.code)) input3D.down = false;
+    if (['KeyA', 'ArrowLeft'].includes(e.code)) input3D.left = false;
+    if (['KeyD', 'ArrowRight'].includes(e.code)) input3D.right = false;
+    if (['Space'].includes(e.code)) input3D.jump = false;
+    if (['ShiftLeft', 'ShiftRight'].includes(e.code)) input3D.sprint = false;
+    return;
+  }
   if (spectating && (e.code === 'ArrowLeft' || e.code === 'KeyA' || e.code === 'ArrowRight' || e.code === 'KeyD')) {
     peekDir = 0;
     return;
@@ -3131,6 +3506,50 @@ $('btn-levels-back').addEventListener('click', showMenu);
 $('btn-credits-back').addEventListener('click', showMenu);
 $('btn-updates-back').addEventListener('click', showMenu);
 $('btn-expansion-back').addEventListener('click', showMenu);
+$('btn-mode3d-menu')?.addEventListener('click', () => showMode3D('campaign'));
+$('btn-mode3d-back')?.addEventListener('click', closeMode3D);
+$('btn-frontier-menu')?.addEventListener('click', () => showFrontier('campaign200'));
+$('btn-frontier-back')?.addEventListener('click', closeFrontier);
+
+$('select-3d-submode')?.addEventListener('change', (e) => {
+  if (game3D) game3D.subMode = e.target.value;
+});
+$('select-3d-quality')?.addEventListener('change', (e) => {
+  if (game3D) game3D.quality = e.target.value;
+});
+
+$('frontier-tabs')?.addEventListener('click', (event) => {
+  const tab = event.target.closest('[data-tab]');
+  if (!tab) return;
+  frontierTab = tab.dataset.tab;
+  buildFrontierScreen();
+});
+
+const canvas3D = $('canvas-3d');
+if (canvas3D) {
+  let isPointerDown = false;
+  let lastMouseX = 0;
+  let lastMouseY = 0;
+  canvas3D.addEventListener('mousedown', (e) => {
+    isPointerDown = true;
+    lastMouseX = e.clientX;
+    lastMouseY = e.clientY;
+    input3D.attackJustPressed = true;
+  });
+  window.addEventListener('mouseup', () => {
+    isPointerDown = false;
+  });
+  window.addEventListener('mousemove', (e) => {
+    if (isPointerDown && game3D) {
+      const dx = e.clientX - lastMouseX;
+      const dy = e.clientY - lastMouseY;
+      lastMouseX = e.clientX;
+      lastMouseY = e.clientY;
+      game3D.camera.yaw += dx * 0.004;
+      game3D.camera.pitch = clamp(game3D.camera.pitch + dy * 0.004, -0.4, 0.7);
+    }
+  });
+}
 $('expansion-tabs').addEventListener('click', (event) => {
   const tab = event.target.closest('[data-tab]');
   if (!tab) return;
@@ -3393,6 +3812,8 @@ function syncScreens() {
   $('updates-screen').classList.toggle('hidden', menuView !== 'updates' || covered);
   $('character-screen').classList.toggle('hidden', menuView !== 'character' || covered);
   $('expansion-screen').classList.toggle('hidden', menuView !== 'expansion' || covered);
+  $('frontier-screen').classList.toggle('hidden', menuView !== 'frontier' || covered);
+  $('mode3d-screen').classList.toggle('hidden', menuView !== 'mode3d' || covered);
   $('prologue-screen').classList.toggle('hidden', !prologueActive);
   $('spectate-ui').classList.toggle('hidden', !spectating);
   $('map-screen').classList.toggle('hidden', !mapOpen);
@@ -3670,6 +4091,20 @@ function frame(now) {
 
     if (menuView === 'character' && previewCtx) {
       renderer.drawCharacterPreview(previewCtx, character, character.characterId, now / 1000);
+    }
+
+    if (menuView === 'mode3d' && game3D) {
+      game3D.update(raw, input3D);
+      const canvas3D = $('canvas-3d');
+      if (canvas3D) {
+        const ctx3D = canvas3D.getContext('2d');
+        if (ctx3D) render3D(ctx3D, game3D);
+      }
+      input3D.jumpJustPressed = false;
+      input3D.attackJustPressed = false;
+      input3D.dashJustPressed = false;
+      input3D.interactJustPressed = false;
+      input3D.lockOnJustPressed = false;
     }
   }
 

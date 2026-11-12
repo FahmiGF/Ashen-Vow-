@@ -127,6 +127,14 @@
                 <span>INDEKS SUMPAH</span>
                 <em>Musuh · senjata · boss · barang · I</em>
               </button>
+              <button id="btn-mode3d-menu" class="btn btn-ghost menu-btn mode3d-menu-btn" type="button">
+                <span>ASHEN VOW: MODE 3D</span>
+                <em>Petualangan 3D orang ketiga · Thornveil Forest · Bos Yggvar</em>
+              </button>
+              <button id="btn-frontier-menu" class="btn btn-ghost menu-btn frontier-menu-btn" type="button">
+                <span>INFINITE FRONTIERS — BEYOND THE VEIL</span>
+                <em>Level 101–200 · 15 Kelas · 15 Elite Mobs · Map Editor 3D · v0.4.0</em>
+              </button>
               <button id="btn-expansion-menu" class="btn btn-ghost menu-btn expansion-menu-btn" type="button">
                 <span>ECHOES OF THE FORGOTTEN WORLD</span>
                 <em>100 level · Thornveil Haven · Chronicle · v0.3.0</em>
@@ -264,6 +272,71 @@
               <button id="btn-expansion-back" class="link-btn" type="button">← KEMBALI KE MENU</button>
             </div>
             <p class="micro">Semua progres ekspansi tersimpan di browser ini. Kulit tidak pernah memberi keuntungan tempur.</p>
+          </div>
+        </section>
+
+        <!-- ══ 3D MODE SCREEN ══ -->
+        <section id="mode3d-screen" class="screen hidden">
+          <div class="screen-inner mode3d-inner">
+            <div class="mode3d-header">
+              <div>
+                <p class="eyebrow">ASHEN VOW 3D · METROIDVANIA ORANG KETIGA · v0.4.0</p>
+                <h2 class="screen-title">THORNVEIL FOREST VERTICAL SLICE</h2>
+              </div>
+              <div class="mode3d-controls-bar">
+                <select id="select-3d-submode" class="mode3d-select" aria-label="Pilih Sub-Mode 3D">
+                  <option value="campaign">3D Campaign (Thornveil)</option>
+                  <option value="exploration">3D Exploration (Santai)</option>
+                  <option value="boss_rush">3D Boss Rush (Yggvar)</option>
+                  <option value="training">3D Training Grounds</option>
+                  <option value="editor">3D Map Editor</option>
+                </select>
+                <select id="select-3d-quality" class="mode3d-select" aria-label="Kualitas Grafis 3D">
+                  <option value="high">Preset: High (60 FPS)</option>
+                  <option value="ultra">Preset: Ultra</option>
+                  <option value="medium">Preset: Medium</option>
+                  <option value="low">Preset: Low</option>
+                </select>
+              </div>
+            </div>
+            <div class="canvas-3d-wrap">
+              <canvas id="canvas-3d" width="960" height="540"></canvas>
+            </div>
+            <div class="mode3d-footer">
+              <p class="micro">
+                <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> Gerak · <kbd>SHIFT</kbd> Sprint · <kbd>SPACE</kbd> Lompat / Glider · <kbd>J</kbd> / Klik Serang · <kbd>L</kbd> Air Dash · <kbd>E</kbd> Bicara NPC · <kbd>Q</kbd> / <kbd>TAB</kbd> Lock-On · <kbd>ESC</kbd> Keluar
+              </p>
+              <div class="screen-links">
+                <button id="btn-mode3d-back" class="link-btn" type="button">← KEMBALI KE MENU UTAMA</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ══ INFINITE FRONTIERS HUB ══ -->
+        <section id="frontier-screen" class="screen hidden">
+          <div class="screen-inner frontier-inner">
+            <p class="eyebrow">ASHEN VOW — INFINITE FRONTIERS UPDATE · v0.4.0</p>
+            <h2 class="screen-title">BEYOND THE VEIL</h2>
+            <p class="screen-sub">
+              Kampanye Level 101–200, 15 Kelas Baru, 15 Elite Mobs, 15 Senjata, Mode 3D, Kingdom Defense, dan Pembangun Dunia 2D &amp; 3D.
+            </p>
+            <div id="frontier-summary" class="frontier-summary"></div>
+            <nav id="frontier-tabs" class="exp-tabs" aria-label="Bagian Infinite Frontiers">
+              <button class="exp-tab active" type="button" data-tab="campaign200">KAMPANYE 101–200</button>
+              <button class="exp-tab" type="button" data-tab="classes15">15 KELAS &amp; SPESIALISASI</button>
+              <button class="exp-tab" type="button" data-tab="elites15">ELITE CODEX</button>
+              <button class="exp-tab" type="button" data-tab="weapons15">BENGKEL &amp; SENJATA</button>
+              <button class="exp-tab" type="button" data-tab="customization12">LEMARI &amp; DYE</button>
+              <button class="exp-tab" type="button" data-tab="modes">MODE TAMBAHAN</button>
+              <button class="exp-tab" type="button" data-tab="worldbuilder">PEMBANGUN DUNIA</button>
+              <button class="exp-tab" type="button" data-tab="checklist">CHECKLIST RILIS (30/30)</button>
+            </nav>
+            <div id="frontier-body" class="frontier-body"></div>
+            <div class="screen-links">
+              <button id="btn-frontier-back" class="link-btn" type="button">← KEMBALI KE MENU</button>
+            </div>
+            <p class="micro">Kampanye 2D asli 1–100 tetap utuh. Mode 3D adalah pengalaman terpisah yang saling melengkapi.</p>
           </div>
         </section>
 

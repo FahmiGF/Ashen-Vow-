@@ -1,10 +1,19 @@
-# Ashen Vow — v0.3.0
+# Ashen Vow — v0.4.0
 
-> **Sumpah di antara abu.** Simulasi metroidvania medieval 2D dengan combat pedang real-time, relik lompat ganda, **sepuluh penjaga**, **114 ruang dan 36 boss** (hingga tiga fase), **dialog boss** di awal/fase/akhir pertempuran, **bioma Mycelial Hollow** dengan trampolin spora dan miselium yang bisa dipanjat, **musik prosedural per zona**, **pengaturan + keybind yang bisa diubah**, **peta interaktif**, **indeks sumpah** untuk musuh/senjata/boss/barang, **inventaris Sigil & Ritual**, **catatan update di dalam game**, checkpoint di ambang pertempuran, dan **Warung Abu** dengan delapan belas barang.
+> **Sumpah di antara abu — Infinite Frontiers Update (Beyond the Veil).**
 >
-> **Echoes of the Forgotten World (v0.3.0)** menambahkan kampanye **100 level dalam 10 bab**, **Thornveil Haven** yang tumbuh permanen, **52 NPC**, **10 boss besar + 20 mini-boss**, **8 mode berulang**, **New Game Plus**, **6 event Ashen Chronicle**, **32 kulit**, dan **jurnal 120 koleksi** — semuanya berjalan di atas engine yang sama dan save yang sama.
+> Mengembangkan Ashen Vow melampaui pengalaman 2D Metroidvania Roguelike aslinya dengan:
+> - **Mode 3D Lengkap**: petualangan metroidvania 3D orang ketiga di Thornveil Forest dengan kamera orbital bebas, lock-on target, kombo 3D, parry, dan pertarungan boss kolosal Elder Yggvar.
+> - **Kampanye Level 101–200 (Total 200 Level)**: 10 bab baru (Bab 11–20) melintasi The Shattered Continent, Forgotten Empire, Abyssal Kingdom, Eternal Desert, Verdant Colossus, Astral Frontier, Hollow Dimension, Celestial Machine, Primordial Lands, hingga The Last Beyond.
+> - **15 Kelas Karakter Baru**: Warden, Arcanist, Shadowblade, Ranger, Templar, Reaver, Beastcaller, Spellbreaker, Gunsmith, Bloodweaver, Chronomancer, Stormcaller, Plague Doctor, Soul Knight, dan Riftwalker (4 jurus & 3 spesialisasi per kelas).
+> - **Sistem Elite Mobs Tingkat Lanjut**: 7 peringkat (E1 Veteran – E7 Worldbreaker), 15 jenis Elite Mob berkemampuan cerdas, dan 10 modifier tempur acak.
+> - **15 Kategori Senjata & Kerajinan Regional**: Greatsword, Twin Daggers, Warhammer, Spear, Scythe, Longbow, Crossbow, Arcane Staff, Rune Blade, Storm Spear, Arcane Pistol, Repeater, Spirit Blade, Chain Whip, dan Battle Gauntlets dengan 8 material regional.
+> - **Pembangun Dunia 2D & 3D**: Map Editor canggih dengan pemahat medan 3D, penempatan prefab modular, peletakan boss, serta visual scripting berbasis node berizin aman.
+> - **Kingdom Defense & Mode Tambahan**: Tower defense 10 jenis menara, Abyssal Gauntlet, Relic Hunt, Boss Rush, Expedition, dan Survival.
+> - **Kustomisasi 12 Lapis Visual**: penyesuaian independen kepala, wajah, dada, pundak, lengan, tangan, pinggang, kaki, sepatu, punggung, senjata, dan aura dengan 10 warna pewarna murni, 10 Mount, dan 10 Companion.
+> - **Prinsip Utama**: Kampanye 2D asli 1–100 tetap utuh dan kompatibel penuh. Mode 3D adalah mode tambahan yang saling melengkapi.
 
-Ashen Vow adalah game web tanpa build step: HTML5 Canvas + ES Modules murni. Seluruh simulasi combat berjalan deterministik di `src/core.js`, sehingga bisa diuji otomatis dengan Node tanpa browser.
+Ashen Vow adalah game web tanpa build step: HTML5 Canvas + ES Modules murni. Seluruh simulasi combat berjalan deterministik di `src/core.js` dan `src/mode3d.js`, sehingga bisa diuji otomatis dengan Node tanpa browser.
 
 ![Menu utama Ashen Vow](docs/menu.png)
 
