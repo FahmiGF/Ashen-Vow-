@@ -1,5 +1,15 @@
-// Ashen Vow v0.0.6 — deterministic 2D combat simulation.
+// Ashen Vow v0.3.0 — deterministic 2D combat simulation.
 // Pure logic: no DOM, no canvas, no audio. Runs identically in Node and the browser.
+import {
+  EXPANSION_ROOMS,
+  EXPANSION_ENEMY_INFO,
+  EXPANSION_BOSS_INFO,
+  DIFFICULTY_BY_ID,
+  MODIFIER_BY_ID,
+  expansionModifierTotals,
+  expansionLevelByIndex,
+  ENEMY_VARIANTS,
+} from './expansion.js';
 
 export const VIEW_W = 960;
 export const VIEW_H = 540;
@@ -964,6 +974,11 @@ export const ROOMS = [
   },
 ];
 
+// Legacy rooms stay exactly as they were so old saves, map layout and tests keep
+// their meaning. The campaign is a second set of rooms appended at indices 14+.
+export const ALL_ROOMS = [...ROOMS, ...EXPANSION_ROOMS];
+export const ALL_ENEMY_INFO = { ...ENEMY_INFO, ...EXPANSION_ENEMY_INFO };
+
 const BOSS_INFO = {
   warden: {
     name: 'Sir Mordrake',
@@ -1133,6 +1148,9 @@ const BOSS_INFO = {
     },
   },
 };
+
+export const ALL_BOSS_INFO = { ...BOSS_INFO, ...EXPANSION_BOSS_INFO };
+export const EXPANSION_BOSS_IDS = Object.keys(EXPANSION_BOSS_INFO);
 
 export const CODEX = {
   enemies: Object.entries(ENEMY_INFO).map(([kind, enemy]) => ({
@@ -1307,6 +1325,23 @@ export class AshenGame {
     this.brokenWalls = {};
     this.wallHp = {};
     this.wallHitFlash = 0;
+    this.difficulty = 'normal';
+    this.modifiers = [];
+    this.ngPlus = 0;
+    this.echoes = 0;
+    this.collected = {};
+    this.knownCollectibles = new Set();
+    this.hazardTime = 0;
+    this.hazardState = {};
+    this.healBonus = 0;
+    this.echoBonus = 1;
+    this.gainBonus = 1;
+    this.noSigils = false;
+    this.fog = false;
+    this.metaBonus = {};
+    this._baseMaxHp = null;
+    this._baseMaxFlasks = null;
+    this._baseDamageMult = null;
     this.checkpoint = null;
     this.checkpointRoom = null;
     this.awaitingBlessing = false;
@@ -1409,8 +1444,42 @@ export class AshenGame {
   }
 
   // ── setup ────────────────────────────────────────────────────────────────
+  setChallenge(options = {}) {
+    const difficulty = DIFFICULTY_BY_ID[options.difficulty] ? options.difficulty : 'normal';
+    const modifiers = Array.isArray(options.modifiers)
+      ? [...new Set(options.modifiers.filter((id) => MODIFIER_BY_ID[id]))]
+      : [];
+    const ngPlus = clamp(Math.round(Number(options.ngPlus) || 0), 0, 4);
+    const bonus = options.bonus && typeof options.bonus === 'object' ? { ...options.bonus } : {};
+    const mods = expansionModifierTotals(modifiers);
+    const p = this.player;
+    if (this._baseMaxHp == null) this._baseMaxHp = p.maxHp;
+    if (this._baseMaxFlasks == null) this._baseMaxFlasks = p.maxFlasks;
+    if (this._baseDamageMult == null) this._baseDamageMult = p.damageMult;
+    this.difficulty = difficulty;
+    this.modifiers = modifiers;
+    this.ngPlus = ngPlus;
+    this.metaBonus = bonus;
+    this.healBonus = Number(bonus.heal) || 0;
+    this.echoBonus = 1 + (Number(bonus.echo) || 0);
+    this.gainBonus = 1 + (Number(bonus.gain) || 0);
+    this.noSigils = !!mods.noSigils;
+    this.fog = !!mods.fog;
+    p.maxHp = Math.max(1, Math.round((this._baseMaxHp + (Number(bonus.maxHp) || 0)) * mods.hp));
+    p.hp = p.maxHp;
+    p.maxFlasks = Math.max(1, this._baseMaxFlasks + (Number(bonus.flasks) || 0) + mods.flasks);
+    p.flasks = p.maxFlasks;
+    p.damageMult = this._baseDamageMult * mods.dmg * (1 + (Number(bonus.damage) || 0));
+    return { difficulty, modifiers: [...modifiers], ngPlus, bonus };
+  }
+
+  setKnownCollectibles(ids) {
+    this.knownCollectibles = new Set(Array.isArray(ids) ? ids : []);
+    return this.knownCollectibles.size;
+  }
+
   loadRoom(index, initial = false) {
-    const room = ROOMS[index];
+    const room = ALL_ROOMS[index];
     if (!room) return;
     this.roomIndex = index;
     this.room = room;
@@ -1422,6 +1491,8 @@ export class AshenGame {
     this.blessingChoices = null;
     this.awaitingBlessing = false;
     this.bossIntro = room.boss ? 1.0 : 0;
+    this.hazardState = {};
+    this.hazardTime = 0;
     const p = this.player;
     p.x = room.spawn.x;
     p.y = room.spawn.y;
@@ -1446,6 +1517,9 @@ export class AshenGame {
       this.spawnBoss(room.boss);
     }
     this.emit({ type: 'roomEnter', room: index, name: room.name, subtitle: room.subtitle });
+    if (room.condition) {
+      this.emit({ type: 'roomCondition', room: index, weather: room.weather || '', condition: room.condition });
+    }
     if (this.checkpoint) {
       this.emit({ type: 'checkpoint', room: index, name: this.checkpoint.name });
     }
@@ -1457,9 +1531,28 @@ export class AshenGame {
   }
 
   spawnEnemy(def) {
+    const info = ALL_ENEMY_INFO[def.type] || ALL_ENEMY_INFO.crawler;
+    const expansion = !ENEMY_INFO[def.type] && !!info.behavior;
+    const difficulty = DIFFICULTY_BY_ID[this.difficulty] || DIFFICULTY_BY_ID.normal;
+    const mods = expansionModifierTotals(this.modifiers);
+    const ngScale = 1 + (this.ngPlus || 0) * 0.2;
+    const variant = ENEMY_VARIANTS.find((v) => v.id === def.variant) || ENEMY_VARIANTS[1];
+    const aiMap = {
+      chaser: 'crawler',
+      lunge: 'sentinel',
+      ranged: 'wraith',
+      slam: 'brute',
+      burrower: 'stalker',
+      spawner: 'broodmother',
+      hopper: 'sporeling',
+    };
     const base = {
       id: `e${this.enemies.length}_${Math.floor(this.time * 1000)}`,
       type: def.type,
+      species: def.type,
+      ai: expansion ? aiMap[info.behavior] || 'crawler' : def.type,
+      expansion,
+      variant: variant.id,
       x: def.x,
       y: 0,
       vx: 0,
@@ -1483,18 +1576,19 @@ export class AshenGame {
       targetX: def.x,
       hopTimer: 0.5 + Math.random() * 0.8,
     };
-    const info = ENEMY_INFO[def.type] || ENEMY_INFO.crawler;
     const e = {
       ...base,
       w: info.w,
       h: info.h,
-      hp: info.hp,
-      maxHp: info.hp,
-      dmg: info.dmg,
-      speed: info.speed,
-      flying: def.type === 'wraith',
+      hp: Math.max(1, Math.round(info.hp * variant.hp * difficulty.enemyHp * mods.hp * ngScale)),
+      maxHp: Math.max(1, Math.round(info.hp * variant.hp * difficulty.enemyHp * mods.hp * ngScale)),
+      dmg: Math.max(1, Math.round(info.dmg * variant.dmg * difficulty.enemyDmg * mods.incoming * ngScale)),
+      speed: Math.max(20, Math.round(info.speed * variant.speed * difficulty.enemySpeed)),
+      reward: Math.max(1, Math.round(info.reward * variant.reward * difficulty.reward * mods.ash)),
+      flying: def.type === 'wraith' || !!info.flying || info.behavior === 'ranged',
       castCooldown: 0.8,
-      spawnCooldown: def.type === 'broodmother' ? 2.4 : 0,
+      spawnCooldown: info.behavior === 'spawner' || def.type === 'broodmother' ? 2.4 : 0,
+      childType: expansion ? `echo_${info.chapter + 1}_1` : 'sporeling',
     };
     e.y = e.flying ? FLOOR_Y - 148 : FLOOR_Y - e.h;
     this.enemies.push(e);
@@ -1502,8 +1596,16 @@ export class AshenGame {
   }
 
   spawnBoss(kind) {
-    const info = BOSS_INFO[kind];
+    const info = ALL_BOSS_INFO[kind];
+    if (!info) return null;
     const spawn = info.spawn || { x: 760, y: FLOOR_Y - info.h };
+    const difficulty = DIFFICULTY_BY_ID[this.difficulty] || DIFFICULTY_BY_ID.normal;
+    const mods = expansionModifierTotals(this.modifiers);
+    const ngScale = 1 + (this.ngPlus || 0) * 0.2;
+    const expansion = !!info.chapter && !BOSS_INFO[kind];
+    const maxPhases = expansion && difficulty.extraPhase && (info.maxPhases || 2) === 2 ? 3 : info.maxPhases || 2;
+    const thresholds = maxPhases === 3 && !info.phaseThresholds ? [0.66, 0.33] : info.phaseThresholds || [0.5];
+    const maxHp = Math.max(1, Math.round(info.maxHp * difficulty.bossHp * mods.hp * ngScale));
     const b = {
       kind,
       name: info.name,
@@ -1515,13 +1617,13 @@ export class AshenGame {
       h: info.h,
       vx: 0,
       vy: 0,
-      maxHp: info.maxHp,
-      hp: info.maxHp,
-      contact: info.contact,
+      maxHp,
+      hp: maxHp,
+      contact: Math.max(1, Math.round(info.contact * difficulty.bossDmg * mods.incoming * ngScale)),
       facing: -1,
       phase: 1,
-      maxPhases: info.maxPhases || 2,
-      phaseThresholds: info.phaseThresholds || [0.5],
+      maxPhases,
+      phaseThresholds: thresholds,
       flying: !!info.flying,
       state: 'idle',
       timer: 0,
@@ -1530,6 +1632,11 @@ export class AshenGame {
       invuln: 0,
       attackLanded: false,
       pattern: 0,
+      patternType: info.pattern || null,
+      chapter: info.chapter ?? null,
+      expansion,
+      mini: !!info.mini,
+      echoReward: info.echoReward || 0,
       hoverT: 0,
       shotsLeft: 0,
       shotTimer: 0,
@@ -1542,10 +1649,11 @@ export class AshenGame {
     this.emit({ type: 'bossSpawn', name: info.name, title: info.title, kind });
     this.emitBossDialogue(b, 'intro');
     this.shake = 0.5;
+    return b;
   }
 
   emitBossDialogue(b, phaseKey) {
-    const info = BOSS_INFO[b.kind];
+    const info = ALL_BOSS_INFO[b.kind];
     const lines = info?.dialogue?.[phaseKey];
     if (!lines || !lines.length) return;
     this.emit({
@@ -1611,7 +1719,7 @@ export class AshenGame {
         reason = open ? '' : 'Segel kuno. Butuh Relik Bulu Bara.';
       } else if (requires === 'boss') {
         open = !!this.bossDefeated[this.roomIndex] && !this.awaitingBlessing;
-        const bossName = this.room.boss ? BOSS_INFO[this.room.boss]?.name : 'Penjaga Agung';
+        const bossName = this.room.boss ? ALL_BOSS_INFO[this.room.boss]?.name : 'Penjaga Agung';
         reason = open ? '' : this.awaitingBlessing ? 'Pilih berkahmu dahulu.' : `Kalahkan ${bossName}.`;
       } else if (requires === 'wall') {
         open = !!this.brokenWalls[this.roomIndex];
@@ -1643,7 +1751,7 @@ export class AshenGame {
   }
 
   activeWall(index = this.roomIndex) {
-    const wall = ROOMS[index]?.secretWall;
+    const wall = ALL_ROOMS[index]?.secretWall;
     if (!wall || this.brokenWalls[index]) return null;
     return {
       ...wall,
@@ -1706,6 +1814,8 @@ export class AshenGame {
         this.updateProjectiles(dt);
         this.checkContacts();
         this.updateRelic();
+        this.updateHazards(dt);
+        this.updateCollectibles();
         this.updateGate();
         this.cleanup();
       }
@@ -1742,7 +1852,7 @@ export class AshenGame {
       p.vx *= Math.pow(0.001, dt);
       if (p.healing <= 0) {
         p.flasks -= 1;
-        p.hp = Math.min(p.maxHp, p.hp + 38);
+        p.hp = Math.min(p.maxHp, p.hp + 38 + (this.healBonus || 0));
         this.emit({ type: 'heal' });
         this.burst(p.x + p.w / 2, p.y + p.h / 2, 10, '#8fd98a', 110);
       }
@@ -2673,7 +2783,7 @@ export class AshenGame {
     if (e.hp <= 0) {
       e.dead = true;
       this.kills += 1;
-      const reward = ENEMY_INFO[e.type]?.reward ?? 8;
+      const reward = Math.round((e.reward ?? ALL_ENEMY_INFO[e.type]?.reward ?? 8) * (this.gainBonus || 1));
       this.ash += reward;
       this.burst(e.x + e.w / 2, e.y + e.h / 2, 16, e.type === 'sporeling' || e.type === 'stalker' || e.type === 'broodmother' ? '#b07be8' : '#c96a3a', 220);
       if (e.type === 'sporeling') {
@@ -2834,18 +2944,19 @@ export class AshenGame {
       const ecx = e.x + e.w / 2;
       const distX = pcx - ecx;
       const dy = p.y + p.h - (e.y + e.h);
-      const aggroRange = e.type === 'sentinel' || e.type === 'wraith' ? 720 : 540;
+      const ai = e.ai || e.type;
+      const aggroRange = ai === 'sentinel' || ai === 'wraith' ? 720 : 540;
       const aggro = Math.abs(distX) < aggroRange && Math.abs(dy) < (e.flying ? 420 : 300);
 
-      if (e.type === 'wraith') {
+      if (ai === 'wraith') {
         this.updateWraith(e, dt, aggro, distX);
         continue;
       }
-      if (e.type === 'stalker') {
+      if (ai === 'stalker') {
         this.updateStalker(e, dt, aggro, distX, dy);
         continue;
       }
-      if (e.type === 'broodmother') {
+      if (ai === 'broodmother') {
         this.updateBroodmother(e, dt, aggro, distX);
         continue;
       }
@@ -2857,7 +2968,7 @@ export class AshenGame {
         continue;
       }
 
-      if (e.type === 'sporeling') {
+      if (ai === 'sporeling') {
         if (e.hopTimer > 0) e.hopTimer -= dt;
         if (aggro) {
           e.state = 'chase';
@@ -2888,7 +2999,7 @@ export class AshenGame {
         }
         this.integrateEnemy(e, dt);
         e.x = clamp(e.x, Math.min(e.minX, e.maxX - e.w), Math.max(e.minX, e.maxX - e.w));
-      } else if (e.type === 'crawler') {
+      } else if (ai === 'crawler') {
         if (aggro) {
           e.state = 'chase';
           const dir = Math.abs(distX) > 10 ? sign(distX) : 0;
@@ -2900,7 +3011,7 @@ export class AshenGame {
           this.moveEnemy(e, dt, e.patrolDir, e.speed, false);
           e.x = clamp(e.x, e.minX, Math.max(e.minX, e.maxX - e.w));
         }
-      } else if (e.type === 'brute') {
+      } else if (ai === 'brute') {
         if (e.state === 'slamWind') {
           e.vx = 0;
           this.integrateEnemy(e, dt);
@@ -2942,7 +3053,7 @@ export class AshenGame {
           this.moveEnemy(e, dt, e.patrolDir, e.speed * 0.55, false);
           e.x = clamp(e.x, e.minX, Math.max(e.minX, e.maxX - e.w));
         }
-      } else if (e.type === 'sentinel') {
+      } else if (ai === 'sentinel') {
         if (e.state === 'windup') {
           e.vx = 0;
           this.integrateEnemy(e, dt);
@@ -3104,8 +3215,9 @@ export class AshenGame {
     this.moveEnemy(e, dt, Math.abs(distX) > 90 ? sign(distX) : 0, e.speed, true);
     if (e.spawnCooldown <= 0 && this.enemies.filter((x) => !x.dead).length < 11) {
       const spawnX = clamp(e.x + (e.facing > 0 ? -34 : e.w + 10), e.minX, e.maxX - 36);
+      const childType = e.childType || 'sporeling';
       const child = this.spawnEnemy({
-        type: 'sporeling',
+        type: childType,
         x: spawnX,
         minX: e.minX,
         maxX: e.maxX,
@@ -3114,7 +3226,7 @@ export class AshenGame {
       child.vy = -180;
       child.vx = e.facing * 120;
       e.spawnCooldown = 4.2;
-      this.emit({ type: 'enemySpawn', kind: 'sporeling' });
+      this.emit({ type: 'enemySpawn', kind: childType });
       this.burst(e.x + e.w / 2, e.y + e.h * 0.7, 12, '#b07be8', 160);
     }
   }
@@ -3219,6 +3331,7 @@ export class AshenGame {
     else if (b.kind === 'oathbreaker') this.updateOathbreaker(b, dt);
     else if (b.kind === 'sporebound') this.updateSporebound(b, dt);
     else if (b.kind === 'root') this.updateRoot(b, dt);
+    else if (b.patternType) this.updateEchoBoss(b, dt);
   }
 
   onBossPhase(b) {
@@ -3248,6 +3361,11 @@ export class AshenGame {
     } else if (b.kind === 'root') {
       this.spawnShockwaves(b);
       this.spawnSporeRing(b, 6, 200);
+    } else if (b.patternType) {
+      this.spawnShockwaves(b);
+      this.spawnEchoRing(b, b.phase >= 3 ? 16 : b.phase >= 2 ? 12 : 9, 210 + b.phase * 18);
+      if (b.patternType === 'summon') this.spawnEchoMinions(b, 2);
+      this.emit({ type: 'bossPhaseFx', kind: b.patternType });
     }
   }
 
@@ -3951,6 +4069,216 @@ export class AshenGame {
     }
   }
 
+  updateEchoBoss(b, dt) {
+    const p = this.player;
+    const pcx = p.x + p.w / 2;
+    const bcx = b.x + b.w / 2;
+    const dist = Math.abs(pcx - bcx);
+    const dir = sign(pcx - bcx) || b.facing;
+    const chapter = b.chapter || 0;
+    if (b.timer > 0) b.timer -= dt;
+    if (b.cooldown > 0) b.cooldown -= dt;
+    if (!b.flying) b.y = FLOOR_Y - b.h;
+    b.facing = dir;
+
+    switch (b.state) {
+      case 'idle':
+      case 'chase': {
+        if (b.flying) {
+          const targetY = 150 + Math.sin(this.time * 1.5) * 36;
+          b.y += (targetY - b.y) * Math.min(1, dt * 1.8);
+        }
+        if (dist > 150) {
+          const speed = (82 + chapter * 4) * (b.phase >= 2 ? 1.2 : 1);
+          b.x += dir * speed * dt;
+        }
+        if (b.cooldown <= 0) {
+          const pattern = b.patternType || 'slam';
+          if (pattern === 'slam') {
+            b.state = 'echoSlamWind';
+            b.timer = b.phase >= 2 ? 0.5 : 0.68;
+            this.emit({ type: 'bossTelegraph', kind: 'slam' });
+          } else if (pattern === 'volley') {
+            b.state = 'echoVolleyWind';
+            b.timer = 0.5;
+            this.emit({ type: 'bossTelegraph', kind: 'volley' });
+          } else if (pattern === 'ring') {
+            b.state = 'echoRingWind';
+            b.timer = 0.55;
+            this.emit({ type: 'bossTelegraph', kind: 'ring' });
+          } else if (pattern === 'charge') {
+            b.state = 'echoChargeWind';
+            b.timer = 0.58;
+            b.targetX = clamp(pcx, 80, WORLD_W - 80);
+            this.emit({ type: 'bossTelegraph', kind: 'charge' });
+          } else if (pattern === 'summon') {
+            b.state = 'echoSummonWind';
+            b.timer = 0.72;
+            this.emit({ type: 'bossTelegraph', kind: 'summon' });
+          } else {
+            b.state = 'echoRainWind';
+            b.timer = 0.72;
+            this.emit({ type: 'bossTelegraph', kind: 'rain' });
+          }
+          b.attackLanded = false;
+        }
+        break;
+      }
+      case 'echoSlamWind': {
+        b.vx = 0;
+        if (b.timer <= 0) {
+          b.state = 'echoSlam';
+          b.timer = 0.3;
+          this.spawnShockwaves(b);
+          this.shake = Math.max(this.shake, 0.45);
+          this.emit({ type: 'bossSlam' });
+          if (dist < 220 && Math.abs(p.y + p.h - (b.y + b.h)) < 120) {
+            this.damagePlayer(16 + chapter * 2 + (b.phase >= 2 ? 6 : 0), bcx);
+          }
+        }
+        break;
+      }
+      case 'echoSlam': {
+        if (b.timer <= 0) {
+          b.state = 'recover';
+          b.timer = 0.7;
+          b.cooldown = Math.max(0.8, 2.2 - b.phase * 0.25 - chapter * 0.04);
+        }
+        break;
+      }
+      case 'echoVolleyWind': {
+        b.vx = 0;
+        if (b.timer <= 0) {
+          const count = b.phase >= 3 ? 7 : b.phase >= 2 ? 5 : 3;
+          for (let i = 0; i < count; i++) {
+            this.spawnFireball(
+              b,
+              p.x + p.w / 2 + (i - (count - 1) / 2) * 74,
+              p.y + p.h * 0.6,
+            );
+          }
+          b.state = 'recover';
+          b.timer = 0.65;
+          b.cooldown = 1.7;
+          this.shake = Math.max(this.shake, 0.2);
+        }
+        break;
+      }
+      case 'echoRingWind': {
+        b.vx = 0;
+        if (b.timer <= 0) {
+          this.spawnEchoRing(b, b.phase >= 3 ? 16 : b.phase >= 2 ? 12 : 9, 220);
+          b.state = 'recover';
+          b.timer = 0.7;
+          b.cooldown = 2.0;
+        }
+        break;
+      }
+      case 'echoChargeWind': {
+        b.vx = 0;
+        if (b.timer <= 0) {
+          b.state = 'echoCharge';
+          b.timer = 0.42;
+          b.vx = dir * (420 + chapter * 12);
+          this.emit({ type: 'bossCharge' });
+        }
+        break;
+      }
+      case 'echoCharge': {
+        b.x += b.vx * dt;
+        if (!b.attackLanded && Math.abs(pcx - (b.x + b.w / 2)) < b.w * 0.6 && Math.abs(p.y + p.h - (b.y + b.h)) < 120) {
+          b.attackLanded = true;
+          this.damagePlayer(18 + chapter * 2, bcx);
+        }
+        if (b.timer <= 0 || b.x < 40 || b.x + b.w > WORLD_W - 40) {
+          b.state = 'recover';
+          b.timer = 0.8;
+          b.cooldown = 1.8;
+          b.vx = 0;
+          this.shake = Math.max(this.shake, 0.3);
+        }
+        break;
+      }
+      case 'echoSummonWind': {
+        b.vx = 0;
+        if (b.timer <= 0) {
+          this.spawnEchoMinions(b, b.phase >= 2 ? 3 : 2);
+          b.state = 'recover';
+          b.timer = 0.8;
+          b.cooldown = 2.4;
+        }
+        break;
+      }
+      case 'echoRainWind': {
+        b.vx = 0;
+        if (b.timer <= 0) {
+          const count = b.phase >= 2 ? 7 : 4;
+          for (let i = 0; i < count; i++) {
+            const x = clamp(pcx + rand(-220, 220), 60, WORLD_W - 60);
+            this.spawnEnemyProjectile({
+              owner: 'boss',
+              type: 'fireball',
+              x,
+              y: -20 - i * 26,
+              vx: rand(-20, 20),
+              vy: 260 + i * 16,
+              r: 12,
+              dmg: 14 + chapter * 2,
+              life: 4,
+            });
+          }
+          b.state = 'recover';
+          b.timer = 0.75;
+          b.cooldown = 2.1;
+          this.emit({ type: 'bossRain' });
+        }
+        break;
+      }
+      case 'recover': {
+        b.vx = 0;
+        if (b.timer <= 0) b.state = 'chase';
+        break;
+      }
+      default:
+        b.state = 'chase';
+    }
+    b.x = clamp(b.x, 40, WORLD_W - b.w - 40);
+  }
+
+  spawnEchoRing(b, count, speed) {
+    const sx = b.x + b.w / 2;
+    const sy = b.y + b.h * 0.45;
+    const color = b.phase >= 2 ? '#ff9a5c' : '#ffd08a';
+    for (let i = 0; i < count; i++) {
+      const angle = (Math.PI * 2 * i) / count + (b.phase >= 2 ? this.time * 0.4 : 0);
+      this.spawnEnemyProjectile({
+        owner: 'boss',
+        type: 'echoBolt',
+        color,
+        x: sx,
+        y: sy,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        r: 9,
+        dmg: 10 + (b.chapter || 0) * 2,
+        life: 4,
+      });
+    }
+    this.shake = Math.max(this.shake, 0.25);
+  }
+
+  spawnEchoMinions(b, count) {
+    const chapter = b.chapter || 0;
+    const baseType = `echo_${chapter + 1}_1`;
+    for (let i = 0; i < count; i++) {
+      const x = clamp(b.x + (i - (count - 1) / 2) * 90, 60, WORLD_W - 100);
+      const child = this.spawnEnemy({ type: baseType, variant: 'young', x, minX: 40, maxX: WORLD_W - 80 });
+      child.y = FLOOR_Y - child.h;
+      this.burst(x, FLOOR_Y - 10, 10, '#e0b45f', 160);
+    }
+    this.emit({ type: 'bossSummon', kind: baseType });
+  }
+
   spawnSporeAt(x, y, vx, vy, dmg = 9) {
     this.projectiles.push({
       id: `spore_${this.time}_${Math.random().toString(36).slice(2, 7)}`,
@@ -4058,9 +4386,9 @@ export class AshenGame {
   finishBoss() {
     const b = this.boss;
     if (!b) return;
-    const info = BOSS_INFO[b.kind];
+    const info = ALL_BOSS_INFO[b.kind];
     const room = this.roomIndex;
-    const next = primaryGateDef(ROOMS[room])?.next ?? (room + 1 < ROOMS.length ? room + 1 : null);
+    const next = primaryGateDef(ALL_ROOMS[room])?.next ?? (room + 1 < ALL_ROOMS.length ? room + 1 : null);
     this.bossDefeated[room] = true;
     this.boss = null;
     this.projectiles = [];
@@ -4069,6 +4397,7 @@ export class AshenGame {
       this.state = 'victory';
       this.deathTimer = 0;
       this.emit({ type: 'victory' });
+      if (room >= 14) this.emit({ type: 'campaignComplete', room, chapter: Math.floor((room - 14) / 10) });
     } else if (info?.reward === 'flask') {
       const p = this.player;
       p.maxFlasks += 1;
@@ -4085,7 +4414,15 @@ export class AshenGame {
     const reward = info?.ashReward ?? 60;
     this.ash += reward;
     this.emit({ type: 'ashGain', amount: reward, total: this.ash });
-    this.emit({ type: 'bossDown', room, kind: b.kind, name: b.name, next, reward: info?.reward });
+    const echoReward = Math.round((info?.echoReward || 0) * (DIFFICULTY_BY_ID[this.difficulty]?.reward || 1) * expansionModifierTotals(this.modifiers).echo * (this.echoBonus || 1));
+    if (echoReward > 0) {
+      this.echoes = (this.echoes || 0) + echoReward;
+      this.emit({ type: 'echoGain', amount: echoReward, total: this.echoes });
+    }
+    this.emit({
+      type: 'bossDown', room, kind: b.kind, name: b.name, next, reward: info?.reward,
+      chapter: info?.chapter ?? null, mini: !!info?.mini, echoes: echoReward,
+    });
     this.shake = 0.9;
   }
 
@@ -4269,6 +4606,80 @@ export class AshenGame {
     }
   }
 
+  updateCollectibles() {
+    const list = this.room?.collectibles;
+    if (!Array.isArray(list) || !list.length) return;
+    const p = this.player;
+    for (const item of list) {
+      if (this.collected[item.id] || this.knownCollectibles.has(item.id)) continue;
+      if (!rectHitsRect(item, p)) continue;
+      this.collected[item.id] = true;
+      this.knownCollectibles.add(item.id);
+      const echo = 6 + (this.room.chapterIndex || 0) * 3;
+      this.echoes = (this.echoes || 0) + echo;
+      this.emit({
+        type: 'collectible',
+        id: item.id,
+        name: item.name,
+        category: item.category,
+        categoryName: item.categoryName,
+        echo,
+      });
+      this.emit({ type: 'echoGain', amount: echo, total: this.echoes });
+      this.burst(item.x + item.w / 2, item.y + item.h / 2, 18, item.color || '#ffe2a8', 190);
+      this.shake = Math.max(this.shake, 0.16);
+    }
+  }
+
+  updateHazards(dt) {
+    const hazards = this.room?.hazards;
+    if (!Array.isArray(hazards) || !hazards.length) return;
+    this.hazardTime = (this.hazardTime || 0) + dt;
+    const p = this.player;
+    hazards.forEach((hazard, index) => {
+      const state = this.hazardState[index] || (this.hazardState[index] = {
+        timer: hazard.phase || 0,
+        active: false,
+        hit: false,
+        x: hazard.x || 0,
+      });
+      if (hazard.type === 'wind') {
+        if (rectHitsRect(hazard, p)) {
+          p.x = clamp(p.x + (hazard.force || 0) * dt * 0.55, 0, WORLD_W - p.w);
+          if (Math.random() < dt * 6) {
+            this.spawnFx('spark', p.x + rand(0, p.w), p.y + rand(0, p.h), {
+              vx: (hazard.force || 0) * 0.7,
+              vy: rand(-20, 20),
+              life: rand(0.2, 0.4),
+              size: rand(1, 3),
+              color: '#d8c8a8',
+            });
+          }
+        }
+        return;
+      }
+      if (hazard.type === 'fog') return;
+      if (hazard.type === 'saw') {
+        const range = Math.max(80, hazard.range || 320);
+        state.x = (hazard.originX ?? hazard.x ?? 500) + Math.sin(this.hazardTime * ((hazard.speed || 120) / 90)) * (range / 2 - 30);
+        const blade = { x: state.x, y: hazard.y, w: hazard.w, h: hazard.h };
+        if (rectHitsRect(blade, p)) this.damagePlayer(hazard.dmg || 16, state.x + blade.w / 2);
+        return;
+      }
+      state.timer += dt;
+      const period = hazard.period || 3.2;
+      const cycle = state.timer % period;
+      const active = cycle < (hazard.type === 'spore' ? period * 0.62 : 0.62);
+      if (active && !state.active) state.hit = false;
+      state.active = active;
+      if (!active || state.hit) return;
+      if (!rectHitsRect(hazard, p)) return;
+      state.hit = true;
+      this.damagePlayer(hazard.dmg || 12, hazard.x + hazard.w / 2);
+      this.shake = Math.max(this.shake, 0.18);
+    });
+  }
+
   updateGate() {
     if ((this.gateLock || 0) > 0) return;
     const p = this.player;
@@ -4276,7 +4687,7 @@ export class AshenGame {
       if (!g.open) continue;
       if (p.x + p.w > g.x + 6 && p.x < g.x + g.w + 20) {
         const next = g.next;
-        if (next != null && next !== this.roomIndex && ROOMS[next]) {
+        if (next != null && next !== this.roomIndex && ALL_ROOMS[next]) {
           this.emit({ type: 'gatePass', from: this.roomIndex, to: next, secret: !!g.secret });
           this.loadRoom(next);
           this.gateLock = 0.6;

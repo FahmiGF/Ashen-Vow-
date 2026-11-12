@@ -1,6 +1,8 @@
-# Ashen Vow — v0.2.0
+# Ashen Vow — v0.3.0
 
-> **Sumpah di antara abu.** Simulasi metroidvania medieval 2D dengan combat pedang real-time, relik lompat ganda, **sepuluh penjaga**, **empat belas ruang dan enam boss** (hingga tiga fase), **dialog boss** di awal/fase/akhir pertempuran, **bioma Mycelial Hollow** dengan trampolin spora dan miselium yang bisa dipanjat, **musik prosedural per zona**, **pengaturan + keybind yang bisa diubah**, **peta interaktif**, **indeks sumpah** untuk musuh/senjata/boss/barang, **inventaris Sigil & Ritual**, **catatan update di dalam game**, checkpoint di ambang pertempuran, dan **Warung Abu** dengan delapan belas barang.
+> **Sumpah di antara abu.** Simulasi metroidvania medieval 2D dengan combat pedang real-time, relik lompat ganda, **sepuluh penjaga**, **114 ruang dan 36 boss** (hingga tiga fase), **dialog boss** di awal/fase/akhir pertempuran, **bioma Mycelial Hollow** dengan trampolin spora dan miselium yang bisa dipanjat, **musik prosedural per zona**, **pengaturan + keybind yang bisa diubah**, **peta interaktif**, **indeks sumpah** untuk musuh/senjata/boss/barang, **inventaris Sigil & Ritual**, **catatan update di dalam game**, checkpoint di ambang pertempuran, dan **Warung Abu** dengan delapan belas barang.
+>
+> **Echoes of the Forgotten World (v0.3.0)** menambahkan kampanye **100 level dalam 10 bab**, **Thornveil Haven** yang tumbuh permanen, **52 NPC**, **10 boss besar + 20 mini-boss**, **8 mode berulang**, **New Game Plus**, **6 event Ashen Chronicle**, **32 kulit**, dan **jurnal 120 koleksi** — semuanya berjalan di atas engine yang sama dan save yang sama.
 
 Ashen Vow adalah game web tanpa build step: HTML5 Canvas + ES Modules murni. Seluruh simulasi combat berjalan deterministik di `src/core.js`, sehingga bisa diuji otomatis dengan Node tanpa browser.
 
@@ -36,7 +38,8 @@ Game **tidak langsung masuk ke gameplay**. Saat dibuka, yang tampil adalah menu 
 - **PILIH LEVEL** — melihat 14 ruang, status terkunci/terbuka/tuntas, dan progres tersimpan.
 - **PETA SUMPAH** — peta interaktif perjalanan dengan kabut perang dan pin, bisa dibuka kapan saja dengan `M`.
 - **INDEKS SUMPAH** — indeks musuh, senjata, boss, dan barang, bisa dibuka dengan `O`.
-- **CATATAN UPDATE** — riwayat rilis di dalam game, dari fondasi pertama sampai **Sigil & Ritual**.
+- **ECHOES OF THE FORGOTTEN WORLD** — hub ekspansi dengan tab **Kampanye**, **Thornveil Haven**, **Ashen Chronicle**, dan **Lemari & Jurnal**, bisa dibuka dengan `X`.
+- **CATATAN UPDATE** — riwayat rilis di dalam game, dari fondasi pertama sampai **Echoes of the Forgotten World**.
 - **PENGATURAN** — audio, keybind, gamepad, dan aksesibilitas.
 - **CREDITS** — halaman kredit game.
 
@@ -48,7 +51,7 @@ Progres disimpan otomatis di `localStorage` dengan key `ashen-vow-progress-v1`; 
 
 **Peta Sumpah** (`M`) sekarang berupa kanvas interaktif: ruang yang belum dimasuki tertutup kabut, tetangga langsung tampil sebagai garis putus-putus, setiap zona punya warna sendiri, posisi pemain berdenyut, boss yang gugur berubah menjadi tengkorak abu, dan tooltip menampilkan isi ruang. Geser untuk pan, gulir atau `+`/`−` untuk zoom, klik ganda untuk recenter. Klik peta untuk menaruh pin (catatan, air, kunci, kembali nanti; maksimal 10); klik kanan di dekat pin untuk menghapusnya. Pin dan fog tersimpan bersama progres.
 
-Lima zona sudah didefinisikan — Ashen Hall, Mycelial Hollow, Tidewrought Cistern, Frostglass Cathedral, dan Cinder Maw — dan empat belas ruang saat ini dipetakan ke empat di antaranya. Mycelial Hollow kini bisa dimainkan penuh sebagai cabang opsional dari Singgasana Bara. Zona baru akan muncul otomatis di peta dan memakai track musiknya sendiri.
+Lima zona lama — Ashen Hall, Mycelial Hollow, Tidewrought Cistern, Frostglass Cathedral, dan Cinder Maw — kini ditambah sepuluh zona biome ekspansi, sehingga totalnya **15 zona**. Empat belas ruang lama tetap dipetakan ke empat zona; seratus ruang ekspansi memakai zona biome masing-masing, lengkap dengan palette, parallax, partikel, dan track musik sendiri. Mycelial Hollow bisa dimainkan penuh sebagai cabang opsional dari Singgasana Bara.
 
 ![Indeks Sumpah](docs/codex.png)
 
@@ -212,6 +215,23 @@ Update konten pertama setelah fondasi dan Mycelial Hollow. Semua sistem di bawah
 - **Keybind yang dirapikan** — ability kini `U`/`V`, `I` menjadi inventaris, `O` membuka Indeks, `R` mengganti item cepat, dan gamepad memakai Select untuk inventaris, L3 untuk item cepat, serta R3 untuk peta.
 - **Perbaikan HUD dan toko** — ikon, label tipe, status sigil aktif, dan tata letak grid toko diperluas untuk 18 barang.
 
+## Echoes of the Forgotten World — v0.3.0
+
+Ekspansi besar yang dibangun sebagai lapisan data di atas engine lama. Kampanye lama, peta, Level Select, Indeks Sumpah, dan save tetap utuh; konten baru memakai indeks ruang global **14–113** melalui `ALL_ROOMS`.
+
+- **100 level dalam 10 bab** — setiap bab berisi 7 level standar, 1 level lingkungan/puzzle, 1 level elite dengan mini-boss, dan 1 level boss besar. Bab bergerak dari Hutan Abu, Rawa Tulang, Kawah Gema, Kota Terkubur, Gua Kristal, Padang Badai, Kuil Akar, Lautan Kabut, Menara Waktu, sampai Singgasana Terlupakan.
+- **10 biome baru** — masing-masing punya parallax bergerak, cuaca dinamis, kondisi wilayah, hazard khas (angin, kabut, geyser, gergaji, beam, spora, void), platform, prop, waystone, dan track musik prosedural.
+- **100 tipe musuh dasar + 300 varian** — dipetakan ke tujuh arketipe AI yang sudah teruji: chaser, lunge, ranged flyer, slam, burrower, spawner, dan hopper.
+- **10 boss besar + 20 mini-boss** — pola slam, volley, ring, charge, summon, dan rain dengan dialog intro, fase, dan kekalahan. Level special dan elite masing-masing membawa satu mini-boss; level boss membawa boss bab.
+- **5 kesulitan** — Cerita, Normal, Veteran, Mimpi Buruk, dan Master Abu — plus **6 modifier opsional** (Kulit Besi, Bilah Kaca, Paceklik, Buruan, Rapuh, Buta Kabut).
+- **Thornveil Haven** — permukiman permanen dengan 10 NPC tetap, dialog yang mengikuti flag kampanye, 12 quest, 8 fasilitas yang bisa ditingkatkan memakai Gema, dan evolusi visual permukiman.
+- **8 permukiman dan 52 NPC** — Thornveil Haven plus tujuh pos terdepan yang terbuka seiring bab; masing-masing punya layanan, dialog, dan NPC sendiri.
+- **Ashen Chronicle** — 6 tema event musiman (Festival Abu, Bulan Lonceng, Musim Spora, Malam Badai, Pesta Panen, Gerhana Terakhir), misi, jalur hadiah, toko event, dan 20+ kulit eksklusif. Event berjalan lokal sesuai bulan; hadiah yang sudah diklaim **tidak pernah hilang** saat event berakhir.
+- **Lemari & Jurnal** — pratinjau 32 kulit (hanya visual, tanpa bonus tempur) dan jurnal 12 kategori berisi 120 koleksi.
+- **8 mode berulang** — Ujian Gema, Boss Rush, Gelombang Abu, Gauntlet, Buruan Besar, Perburuan Relik, Cermin Sumpah, dan Tanpa Akhir.
+- **New Game Plus dan ujian akhir** — 5 tingkat NG+ serta 4 ujian endgame setelah kampanye tuntas.
+- **Save yang sama** — progres ekspansi disimpan di `progress.expansion` dalam key `ashen-vow-progress-v1`. Save lama dimigrasikan tanpa menghapus progres, boss, peralatan, proyek peta, skill point, achievement, atau flag NPC.
+
 ## Isi v0.2.0
 
 - **10 penjaga yang bisa dipilih** — Sera Vayne, Lyna Windstrider, Kael Shadowstep, Karn of the Ash, Ignis Pyrewalker, Varek the Unbroken, Neris of the Net, Astra Stormcaller, Bram Ironward, dan Maera Thornward.
@@ -277,7 +297,7 @@ Update konten pertama setelah fondasi dan Mycelial Hollow. Semua sistem di bawah
 npm test
 ```
 
-**93 tes deterministik, semuanya lulus.** Cakupannya:
+**103 tes deterministik, semuanya lulus.** Cakupannya:
 
 - gravitasi dan pendaratan di platform,
 - pergerakan dan batas dunia,
@@ -323,6 +343,12 @@ npm test
 - **item cepat: siklus Shuriken → Pisau → Bom, lemparan, dan ledakan area**,
 - **konsumabel Tonik, Asap, dan Batu Asah beserta durasi buff-nya**,
 - **katalog Warung Abu berisi 18 barang dengan tipe, glyph, dan efek lengkap**,
+- **ekspansi: 100 level, 10 bab dengan komposisi 7+1+1+1, 100 musuh, 300 varian, 20 mini-boss, 10 boss besar, 52 NPC, 32 kulit, 6 event, dan 120 koleksi**,
+- **ruang ekspansi 14–113 terhubung, sedangkan 14 ruang lama dan 6 boss lama tetap utuh di `ROOMS`/`BOSS_INFO`/`CODEX`**,
+- **unlock level mengikuti gerbang bab dan level sebelumnya; boss serta room lookup mengembalikan data yang benar**,
+- **migrasi save ekspansi mempertahankan level tuntas, quest, upgrade, event yang sudah diklaim, stash, mode, flag, dan field tambahan**,
+- **quest dan event hanya maju pada kondisi yang cocok; event nonaktif tidak bertambah, tetapi hadiah dan poin yang sudah diklaim tetap tersimpan**,
+- **bonus Thornveil, modifier tantangan, hitungan koleksi, dan ringkasan save dihitung dengan benar**,
 - **Update Log: versi terbaru di atas, tidak ada duplikat, dan cocok dengan `GAME_VERSION`**,
 - **settings: satu atau dua slot unik per aksi, sanitasi nilai, persistensi, dan pemulihan JSON rusak**,
 - **rebinding menukar aksi yang berkonflik tanpa meninggalkan tombol ganda**,
@@ -332,7 +358,25 @@ npm test
 - **MusicManager aman tanpa AudioContext**,
 - state kematian membekukan simulasi.
 
-Smoke test browser dijalankan lewat Chrome DevTools Protocol untuk memastikan:
+Smoke test browser dijalankan lewat Chrome DevTools Protocol. Verifikasi v0.3.0 (**15/15 pemeriksaan, tanpa error console**):
+
+- boot di v0.3.0 pada layar judul dengan progres ekspansi bersih,
+- tab kampanye menampilkan 10 bab, 10 level per bab, dan kontrol progresi,
+- Thornveil Haven menampilkan 10 NPC, 8 upgrade, 12 quest, dan 8 permukiman,
+- Ashen Chronicle menampilkan 6 event dengan festival November aktif,
+- wardrobe menampilkan 32 kulit dan jurnal koleksi 12 kategori,
+- memulai level 1 memasuki ruang ekspansi 14 dengan musuh dan challenge state,
+- memulai Ujian Gema memakai ruang awal ekspansi dan modifier mode,
+- upgrade haven dan klaim quest mengubah Gema serta menyimpan flag,
+- klaim misi dan tier Chronicle tersimpan dan memberi hadiah,
+- memakai kulit event memperbarui run aktif dan save,
+- progres ekspansi, hadiah event, upgrade haven, dan kulit bertahan setelah reload,
+- hub ekspansi terbuka kembali dengan ringkasan tersimpan setelah reload,
+- boss bab gugur → level tuntas, Gema bertambah, dan pilihan berkah terbuka,
+- boss terakhir menyelesaikan kampanye dan membuka New Game Plus,
+- tidak ada exception runtime atau error console selama alur smoke.
+
+Pemeriksaan legacy tetap dipertahankan:
 
 - menu awal tampil dan HUD tersembunyi,
 - Level Select menampilkan 14 kartu dengan status terkunci yang benar dan kartu rahasia yang tetap tersembunyi sampai ditemukan,
@@ -377,10 +421,12 @@ ashen-vow/
 │   ├── settings.js     # pengaturan, keybind satu/dua slot, konflik, gamepad, persistensi
 │   ├── updates.js      # riwayat rilis + GAME_VERSION untuk Update Log
 │   ├── zones.js        # konfigurasi zona: palette, partikel, warna peta, ID musik
+│   ├── expansion.js    # data ekspansi: 100 level, biome, musuh, boss, NPC, quest, event, kulit, mode, progres
 │   ├── map.js          # model peta (fog, pin, statistik) + renderer canvas peta
-│   └── main.js         # loop fixed-timestep, menu, progres, input, HUD, peta, pengaturan, dialog, inventaris
+│   └── main.js         # loop fixed-timestep, menu, progres, input, HUD, peta, pengaturan, dialog, inventaris, hub ekspansi
 ├── tests/
 │   ├── core.test.js
+│   ├── expansion.test.js    # data ekspansi, migrasi save, quest/event, boss, unlock
 │   ├── foundations.test.js  # settings, keybind, peta, zona, musik
 │   └── updates.test.js      # urutan dan kelengkapan Update Log
 └── docs/               # tangkapan layar
@@ -405,8 +451,12 @@ Event penting:
 - `ashGain { amount, total }` — abu diperoleh dari musuh/boss.
 - `shopBuy { id, name, cost }` — pembelian Warung Abu berhasil.
 - `weaponSwitch`, `arrowShot`, `shurikenThrow`, `noAmmo` — umpan balik senjata/konsumabel.
+- `roomCondition { room, weather, condition }` — cuaca dan kondisi wilayah ekspansi saat memasuki ruang.
+- `collectible { id, name, category }` — koleksi ekspansi diambil dan disimpan permanen.
+- `echoGain { amount, total }` — Gema diperoleh dari level, boss, dan mode ekspansi.
+- `campaignComplete { room, chapter }` — boss terakhir kampanye ekspansi gugur.
 
-Debug hook `window.__ashen` tersedia untuk smoke test (`snap()`, `step()`, `enterRoom()`, `damageBoss()`, `chooseBlessing()`, `startSpectate()`, `openShop()`, `buyShopItem()`, `respawnAtCheckpoint()`, `giveAsh()`, `openMap()`, `closeMap()`, `openCodex()`, `closeCodex()`, `openInventory()`, `closeInventory()`, `useInventoryItem()`, `showUpdates()`, `advanceDialogue()`, `showSettings()`, `closeSettings()`, `clearProgress()`, serta getter `settings`, `mapData`, `musicTrack`, `audioState`, `inventoryOpen`, dan `version`).
+Debug hook `window.__ashen` tersedia untuk smoke test (`snap()`, `step()`, `enterRoom()`, `damageBoss()`, `chooseBlessing()`, `startSpectate()`, `openShop()`, `buyShopItem()`, `respawnAtCheckpoint()`, `giveAsh()`, `openMap()`, `closeMap()`, `openCodex()`, `closeCodex()`, `openInventory()`, `closeInventory()`, `useInventoryItem()`, `showUpdates()`, `advanceDialogue()`, `showSettings()`, `closeSettings()`, `clearProgress()`, `showExpansion()`, `buildExpansionScreen()`, `startExpansionLevel()`, `startExpansionMode()`, `startExpansionTrial()`, `claimQuest()`, `buyHavenUpgrade()`, `equipSkin()`, `claimEventMission()`, `claimEventTier()`, `buyEventShop()`, serta getter `settings`, `mapData`, `musicTrack`, `audioState`, `inventoryOpen`, `expansion`, dan `version`).
 
 ## Master plan
 

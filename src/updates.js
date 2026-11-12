@@ -1,9 +1,33 @@
 // Ashen Vow — release history shown in the in-game Update Log.
 // Keep the newest entry first. `GAME_VERSION` is the single source of truth
 // for the version shown by the Update Log screen and the debug hooks.
-export const GAME_VERSION = '0.2.0';
+export const GAME_VERSION = '0.3.0';
 
 export const UPDATE_LOG = [
+  {
+    version: '0.3.0',
+    date: '12 November 2026',
+    title: 'ECHOES OF THE FORGOTTEN WORLD',
+    tag: 'MAJOR EXPANSION',
+    summary:
+      'Ekspansi besar: seratus level baru dalam sepuluh bab, Thornveil Haven yang tumbuh permanen, Ashen Chronicle dengan event dan kulit eksklusif, serta jurnal koleksi yang menyimpan setiap penemuan.',
+    highlights: [
+      '100 level baru dalam 10 bab — 7 level standar, 1 level lingkungan, 1 elite, dan 1 boss besar di setiap bab.',
+      '10 biome baru dengan parallax bergerak, cuaca dinamis, kondisi wilayah, hazard, dan musik prosedural sendiri.',
+      '100 tipe musuh dasar dengan 300 varian, 20 mini-boss, dan 10 boss besar dengan pola serangan baru.',
+      'Thornveil Haven: 10 NPC tetap, 12 quest bercabang, 8 fasilitas permanen, dan evolusi visual permukiman.',
+      '8 permukiman dan 52 NPC yang tersebar di seluruh kampanye, masing-masing dengan dialog dan layanan.',
+      '5 tingkat kesulitan, 6 modifier tantangan opsional, 5 tingkat New Game Plus, 8 mode berulang, dan 4 ujian akhir.',
+      'Ashen Chronicle: 6 tema event musiman, misi, jalur hadiah, toko event, dan 20+ kulit eksklusif yang permanen.',
+      'Lemari kulit dengan pratinjau dan Jurnal Koleksi berisi 12 kategori serta 120 koleksi.',
+      'Progres ekspansi disimpan di save yang sama; save lama tetap utuh dan semua hadiah event tidak pernah hilang.',
+    ],
+    fixes: [
+      'Wraith kembali terbang dengan benar setelah pemisahan arsitektur musuh ekspansi.',
+      'Peta, level select, dan Indeks Sumpah lama tetap berisi 14 ruang dan 6 boss tanpa perubahan.',
+      'Kulit hanya mengubah tampilan — tidak ada bonus tempur atau mekanisme bayar-untuk-menang.',
+    ],
+  },
   {
     version: '0.2.0',
     date: '11 November 2026',

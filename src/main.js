@@ -46,6 +46,55 @@ import {
 } from './map.js';
 import { PROLOGUE_BEATS, PROLOGUE_TOTAL, drawPrologue } from './prologue.js';
 import { UPDATE_LOG, GAME_VERSION } from './updates.js';
+import {
+  EXPANSION_NAME,
+  EXPANSION_ROOM_START,
+  TOTAL_LEVELS,
+  LEVELS_PER_CHAPTER,
+  CHAPTERS,
+  BIOMES,
+  DIFFICULTIES,
+  DIFFICULTY_BY_ID,
+  CHALLENGE_MODIFIERS,
+  MODIFIER_BY_ID,
+  EXPANSION_LEVELS,
+  EXPANSION_BOSS_INFO,
+  expansionLevelUnlocked,
+  expansionChapterProgress,
+  expansionCompletion,
+  expansionCollectibleCounts,
+  defaultExpansionProgress,
+  sanitizeExpansionProgress,
+  HAVEN_UPGRADES,
+  UPGRADE_BY_ID,
+  HAVEN_NPCS,
+  ALL_NPCS,
+  NPC_BY_ID,
+  SETTLEMENTS,
+  SETTLEMENT_BY_ID,
+  QUESTS,
+  QUEST_BY_ID,
+  dialogueForNpc,
+  EVENT_THEMES,
+  EVENT_BY_ID,
+  activeEventIds,
+  isEventActive,
+  COSMETIC_SKINS,
+  SKIN_BY_ID,
+  REPEATABLE_MODES,
+  MODE_BY_ID,
+  NG_PLUS_TIERS,
+  ENDGAME_TRIALS,
+  COLLECTIBLE_CATEGORIES,
+  COLLECTIBLE_BY_ID,
+  havenBonus,
+  applyQuestProgress,
+  applyEventProgress,
+  eventMissionProgress,
+  eventMissionReady,
+  eventPoints,
+  eventTierUnlocked,
+} from './expansion.js';
 
 const $ = (id) => document.getElementById(id);
 const FIXED = 1 / 120;
@@ -70,7 +119,17 @@ const mapView = new MapView($('map-canvas'));
 
 let started = false;
 let paused = false;
-let menuView = 'title'; // title | levels | credits | none
+let menuView = 'title'; // title | levels | credits | updates | character | expansion | none
+let expansionTab = 'campaign';
+let expansionChapter = 0;
+let havenNpcId = 'sari';
+let chronicleEventId = null;
+let wardrobeFilter = 'all';
+let activeRunKind = 'legacy';
+let activeExpansionIndex = null;
+let activeModeId = null;
+let activeTrialId = null;
+let modeRunRewarded = false;
 let spectating = false;
 let shopOpen = false;
 let mapOpen = false;
@@ -216,6 +275,7 @@ function defaultProgress() {
     unlocked: 1,
     cleared: ROOMS.map(() => false),
     map: defaultMapState(ROOMS.length),
+    expansion: defaultExpansionProgress(),
   };
 }
 
@@ -224,6 +284,7 @@ function loadProgress() {
     const raw = localStorage.getItem(PROGRESS_KEY);
     if (!raw) return defaultProgress();
     const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return defaultProgress();
     const cleared = ROOMS.map((_, i) => !!parsed.cleared?.[i]);
     const unlocked = clamp(Number(parsed.unlocked) || 1, 1, ROOMS.length);
     // v0.0.7 saves have no map state. Migrate by revealing cleared rooms and
@@ -234,7 +295,17 @@ function loadProgress() {
           discovered: ROOMS.map((_, i) => cleared[i] || i === 0),
           pins: [],
         };
-    return { version: 1, unlocked, cleared, map };
+    // Keep every unknown top-level field. v0.3.0 adds `expansion` without
+    // changing the storage key or discarding future/legacy save data.
+    const { version, unlocked: _unlocked, cleared: _cleared, map: _map, expansion: _expansion, ...extras } = parsed;
+    return {
+      ...extras,
+      version: 1,
+      unlocked,
+      cleared,
+      map,
+      expansion: sanitizeExpansionProgress(parsed.expansion),
+    };
   } catch {
     return defaultProgress();
   }
@@ -252,6 +323,7 @@ function saveProgress() {
 let progress = loadProgress();
 
 function discoverCurrentRoom(index = game.roomIndex) {
+  if (!Number.isInteger(index) || index < 0 || index >= ROOMS.length) return;
   const next = discoverRoom(progress.map, index, ROOMS.length);
   if (next !== progress.map) {
     progress.map = next;
@@ -347,6 +419,1077 @@ function markCleared(index, nextIndex = null) {
 function updateMenuProgress() {
   const clearedCount = progress.cleared.filter(Boolean).length;
   $('menu-progress').textContent = `LEVEL TERBUKA ${progress.unlocked} / ${ROOMS.length} · ${clearedCount} TUNTAS`;
+  const expansion = $('menu-expansion-progress');
+  if (expansion) {
+    const summary = expansionCompletion(expState());
+    expansion.textContent = `ECHOES · ${summary.cleared}/${summary.total} LEVEL · BAB ${(expState().unlockedChapter || 0) + 1}/10 · ${expState().echoes} GEMA`;
+  }
+}
+
+// ── expansion progression ────────────────────────────────────────────────
+const CHAPTER_COMPLETION_SKINS = {
+  2: 'skin_first_echo',
+  4: 'skin_glass_queen',
+  5: 'skin_storm_sovereign',
+  6: 'skin_root_mother',
+  7: 'skin_mist_sovereign',
+  9: 'skin_forgotten',
+};
+
+function esc(value) {
+  return String(value ?? '').replace(/[&<>"']/g, (ch) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+  }[ch]));
+}
+
+function expState() {
+  if (!progress.expansion) progress.expansion = defaultExpansionProgress();
+  return progress.expansion;
+}
+
+function syncExpansionUnlocks() {
+  const e = expState();
+  e.unlockedChapter = clamp(Math.floor(Number(e.unlockedChapter) || 0), 0, CHAPTERS.length - 1);
+  for (const settlement of SETTLEMENTS) {
+    if (!e.settlements[settlement.id]) {
+      e.settlements[settlement.id] = {
+        unlocked: settlement.chapter === 0,
+        tier: 0,
+        upgrades: Object.fromEntries(HAVEN_UPGRADES.map((upgrade) => [upgrade.id, 0])),
+        visited: false,
+      };
+    }
+    if (settlement.chapter <= e.unlockedChapter) e.settlements[settlement.id].unlocked = true;
+  }
+  return e;
+}
+
+function havenTier(e = expState()) {
+  const haven = e.settlements?.thornveil;
+  if (!haven) return 0;
+  const total = HAVEN_UPGRADES.reduce(
+    (sum, upgrade) => sum + (Number(haven.upgrades?.[upgrade.id]) || 0),
+    0,
+  );
+  return total <= 0 ? 0 : total <= 5 ? 1 : total <= 13 ? 2 : 3;
+}
+
+function grantSkin(id) {
+  if (!SKIN_BY_ID[id]) return false;
+  const e = expState();
+  if (!Array.isArray(e.cosmetics)) e.cosmetics = [];
+  if (e.cosmetics.includes(id)) return false;
+  e.cosmetics.push(id);
+  return true;
+}
+
+function applySkinToGame() {
+  const e = expState();
+  game.activeSkin = e.selectedSkin && SKIN_BY_ID[e.selectedSkin] ? SKIN_BY_ID[e.selectedSkin] : null;
+}
+
+function expansionChallengeConfig() {
+  const e = expState();
+  let modifiers = Array.isArray(e.modifiers) ? [...e.modifiers] : [];
+  let ngPlus = Math.max(0, Number(e.ngPlus) || 0);
+  if (activeModeId && MODE_BY_ID[activeModeId]?.modifiers?.length) {
+    modifiers = [...MODE_BY_ID[activeModeId].modifiers];
+  }
+  if (activeTrialId === 'trial_name') {
+    modifiers = CHALLENGE_MODIFIERS.map((modifier) => modifier.id);
+    ngPlus = 4;
+  } else if (activeTrialId === 'trial_echo') {
+    modifiers = ['glass_blade', 'hunter'];
+    ngPlus = Math.max(ngPlus, 2);
+  } else if (activeTrialId === 'trial_memory') {
+    modifiers = ['blind', 'hunter'];
+  } else if (activeTrialId === 'trial_thornveil') {
+    modifiers = ['iron_skin', 'hunter'];
+  }
+  return {
+    difficulty: e.difficulty,
+    modifiers,
+    ngPlus,
+    bonus: havenBonus(e),
+  };
+}
+
+function provisionExpansionAsh(localIndex) {
+  const level = EXPANSION_LEVELS[localIndex];
+  if (!level) return;
+  const stipend = 45 + level.chapterIndex * 35 + (level.kind === 'boss' ? 40 : level.kind === 'elite' ? 25 : 0);
+  game.ash = Math.max(game.ash, stipend);
+}
+
+function transferExpansionStash() {
+  const e = expState();
+  if (!e.stash || typeof e.stash !== 'object') return;
+  let transferred = 0;
+  for (const [id, count] of Object.entries(e.stash)) {
+    const n = Math.floor(Number(count) || 0);
+    if (n <= 0) continue;
+    if (!SHOP_ITEMS.some((item) => item.id === id)) continue;
+    game.player.consumables[id] = (game.player.consumables[id] || 0) + n;
+    transferred += n;
+  }
+  if (transferred > 0) {
+    e.stash = {};
+    saveProgress();
+    showToast(`Persediaan Thornveil dibawa: ${transferred} item.`, 2200);
+  }
+}
+
+function startExpansionLevel(localIndex, options = {}) {
+  const level = EXPANSION_LEVELS[localIndex];
+  if (!level) return;
+  audio.init();
+  attempts = 1;
+  activeRunKind = 'expansion';
+  activeExpansionIndex = localIndex;
+  activeModeId = options.modeId || null;
+  activeTrialId = options.trialId || null;
+  modeRunRewarded = false;
+  game.reset();
+  applyCharacterToGame();
+  game.setChallenge(expansionChallengeConfig());
+  game.setKnownCollectibles(expState().collectibles);
+  applySkinToGame();
+  transferExpansionStash();
+  game.enterRoom(EXPANSION_ROOM_START + localIndex);
+  game.player.relic = true;
+  provisionExpansionAsh(localIndex);
+  game.events.length = 0;
+  started = true;
+  paused = false;
+  shopOpen = false;
+  mapOpen = false;
+  codexOpen = false;
+  inventoryOpen = false;
+  settingsOpen = false;
+  closeDialogue(true);
+  spectating = false;
+  spectateGame = null;
+  menuView = 'none';
+  lastGameState = 'playing';
+  accumulator = 0;
+  lastTime = performance.now();
+  clearHeldKeys();
+  showBanner(level.name, level.subtitle);
+  syncScreens();
+  updateHud();
+  const mode = activeModeId ? MODE_BY_ID[activeModeId] : null;
+  if (mode) showToast(`Mode ${mode.name} — ${mode.duration}`, 2800);
+  else if (activeTrialId) {
+    const trial = ENDGAME_TRIALS.find((entry) => entry.id === activeTrialId);
+    if (trial) showToast(`Ujian: ${trial.name}`, 3000);
+  } else {
+    showToast(`Bab ${level.chapterNumeral} · ${level.chapterLevel}/10 — ${level.kind.toUpperCase()}`, 2200);
+  }
+}
+
+const MODE_LEVEL_INDEX = {
+  echo_trials: 7,
+  boss_rush: 19,
+  horde: 20,
+  gauntlet: 30,
+  hunt: 48,
+  relic_hunt: 57,
+  mirror: 69,
+  endless: 80,
+};
+
+function startExpansionMode(modeId) {
+  const e = syncExpansionUnlocks();
+  const mode = MODE_BY_ID[modeId];
+  if (!mode || mode.unlockChapter > e.unlockedChapter) return;
+  startExpansionLevel(MODE_LEVEL_INDEX[modeId] ?? 0, { modeId });
+}
+
+function startExpansionTrial(trialId) {
+  const e = syncExpansionUnlocks();
+  const trial = ENDGAME_TRIALS.find((entry) => entry.id === trialId);
+  if (!trial || !e.flags.campaignComplete) return;
+  const index = trialId === 'trial_thornveil' ? 7 : trialId === 'trial_memory' ? 68 : 99;
+  startExpansionLevel(index, { trialId });
+}
+
+function completeModeRun() {
+  if (!activeModeId || modeRunRewarded) return;
+  const e = syncExpansionUnlocks();
+  const mode = MODE_BY_ID[activeModeId];
+  if (!mode) return;
+  modeRunRewarded = true;
+  const state = e.modes[mode.id] || { completions: 0, best: 0 };
+  state.completions = (Number(state.completions) || 0) + 1;
+  state.best = Math.max(Number(state.best) || 0, 1);
+  e.modes[mode.id] = state;
+  if (mode.reward?.echoes) e.echoes += mode.reward.echoes;
+  if (mode.reward?.skin) grantSkin(mode.reward.skin);
+  applyQuestProgress(e, 'mode', { mode: mode.id });
+  applyEventProgress(e, 'mode', { mode: mode.id });
+  saveProgress();
+  showToast(`Mode ${mode.name} tuntas${mode.reward?.echoes ? ` · +${mode.reward.echoes} Gema` : ''}.`, 3600);
+}
+
+function completeTrialRun() {
+  if (!activeTrialId) return;
+  const e = syncExpansionUnlocks();
+  const trial = ENDGAME_TRIALS.find((entry) => entry.id === activeTrialId);
+  if (!trial) return;
+  const key = `trial_${trial.id}`;
+  if (e.flags[key]) return;
+  e.flags[key] = true;
+  if (trial.reward?.echoes) e.echoes += trial.reward.echoes;
+  if (trial.reward?.skin) grantSkin(trial.reward.skin);
+  saveProgress();
+  showToast(`Ujian ${trial.name} tuntas${trial.reward?.echoes ? ` · +${trial.reward.echoes} Gema` : ''}.`, 4000);
+}
+
+function markExpansionCleared(localIndex) {
+  const e = syncExpansionUnlocks();
+  if (!Number.isInteger(localIndex) || localIndex < 0 || localIndex >= TOTAL_LEVELS) return;
+  const level = EXPANSION_LEVELS[localIndex];
+  const firstClear = !e.cleared[localIndex];
+  if (firstClear) {
+    e.cleared[localIndex] = true;
+    e.stats.levels = (Number(e.stats.levels) || 0) + 1;
+    applyQuestProgress(e, 'level', { level: localIndex });
+    applyEventProgress(e, 'level', { level: localIndex });
+  }
+  const chapterIndex = level.chapterIndex;
+  const chapterProgress = expansionChapterProgress(e, chapterIndex);
+  if (chapterProgress.cleared >= LEVELS_PER_CHAPTER && !e.chapterCleared[chapterIndex]) {
+    e.chapterCleared[chapterIndex] = true;
+    e.unlockedChapter = Math.min(CHAPTERS.length - 1, Math.max(e.unlockedChapter, chapterIndex + 1));
+    const chapterSkin = CHAPTER_COMPLETION_SKINS[chapterIndex];
+    if (chapterSkin) grantSkin(chapterSkin);
+    e.echoes += 60 + chapterIndex * 25;
+    applyQuestProgress(e, 'chapter', { chapter: chapterIndex });
+    applyEventProgress(e, 'chapter', { chapter: chapterIndex });
+    if (chapterIndex === CHAPTERS.length - 1) {
+      e.flags.campaignComplete = true;
+      e.flags.ngPlusUnlocked = true;
+      grantSkin('skin_forgotten');
+    }
+    saveProgress();
+    showToast(`Bab ${CHAPTERS[chapterIndex].numeral} tuntas — ${CHAPTERS[chapterIndex].name}.`, 3800);
+  }
+  if (firstClear) saveProgress();
+  if (menuView === 'expansion') buildExpansionScreen();
+  completeModeRun();
+  completeTrialRun();
+}
+
+function handleExpansionBoss(localIndex, ev) {
+  const e = syncExpansionUnlocks();
+  const level = EXPANSION_LEVELS[localIndex];
+  if (!level) return;
+  if (ev.mini) e.stats.miniBosses = (Number(e.stats.miniBosses) || 0) + 1;
+  else e.stats.bosses = (Number(e.stats.bosses) || 0) + 1;
+  applyQuestProgress(e, ev.mini ? 'miniBoss' : 'boss', { chapter: level.chapterIndex });
+  applyEventProgress(e, ev.mini ? 'miniBoss' : 'boss', { chapter: level.chapterIndex });
+  saveProgress();
+  markExpansionCleared(localIndex);
+}
+
+function handleExpansionCollectible(ev) {
+  if (!ev?.id) return;
+  const e = syncExpansionUnlocks();
+  if (e.collectibles.includes(ev.id)) return;
+  e.collectibles.push(ev.id);
+  e.stats.collectibles = (Number(e.stats.collectibles) || 0) + 1;
+  applyQuestProgress(e, 'collectible', { category: ev.category });
+  applyEventProgress(e, 'collectible', { category: ev.category });
+  saveProgress();
+  showToast(`Koleksi baru: ${ev.name} · ${ev.categoryName}`, 2600);
+  if (menuView === 'expansion') buildExpansionScreen();
+}
+
+function handleExpansionEcho(ev) {
+  const amount = Math.max(0, Number(ev?.amount) || 0);
+  if (!amount) return;
+  const e = syncExpansionUnlocks();
+  e.echoes += amount;
+  saveProgress();
+}
+
+function handleExpansionCampaignComplete() {
+  const e = syncExpansionUnlocks();
+  e.flags.campaignComplete = true;
+  e.flags.ngPlusUnlocked = true;
+  grantSkin('skin_forgotten');
+  saveProgress();
+  showToast('Kampanye Echoes selesai — New Game Plus terbuka.', 4600);
+}
+
+function claimQuest(questId) {
+  const e = syncExpansionUnlocks();
+  const quest = QUEST_BY_ID[questId];
+  const state = e.quests[questId];
+  if (!quest || !state || state.status !== 'ready') return;
+  state.status = 'done';
+  if (quest.reward?.echoes) e.echoes += quest.reward.echoes;
+  if (quest.reward?.skin) grantSkin(quest.reward.skin);
+  if (quest.flag) e.flags[quest.flag] = true;
+  saveProgress();
+  showToast(`Quest tuntas: ${quest.title}${quest.reward?.echoes ? ` · +${quest.reward.echoes} Gema` : ''}.`, 3400);
+  buildExpansionScreen();
+}
+
+function buyHavenUpgrade(upgradeId) {
+  const e = syncExpansionUnlocks();
+  const upgrade = UPGRADE_BY_ID[upgradeId];
+  const haven = e.settlements.thornveil;
+  if (!upgrade || !haven) return;
+  const tier = Number(haven.upgrades[upgradeId]) || 0;
+  if (tier >= upgrade.maxTier) return;
+  const cost = upgrade.costs[tier];
+  if (e.echoes < cost) {
+    showToast(`Gema tidak cukup — butuh ${cost}.`, 2200);
+    return;
+  }
+  e.echoes -= cost;
+  haven.upgrades[upgradeId] = tier + 1;
+  haven.tier = havenTier(e);
+  haven.visited = true;
+  applyQuestProgress(e, 'upgrade', { upgrade: upgradeId, tier: tier + 1 });
+  applyEventProgress(e, 'upgrade', { upgrade: upgradeId, tier: tier + 1 });
+  saveProgress();
+  showToast(`${upgrade.name} tingkat ${tier + 1} — ${upgrade.effects[tier]}.`, 3000);
+  buildExpansionScreen();
+}
+
+function equipSkin(skinId) {
+  const e = syncExpansionUnlocks();
+  if (skinId && !e.cosmetics.includes(skinId)) return;
+  e.selectedSkin = e.selectedSkin === skinId ? null : skinId;
+  applySkinToGame();
+  saveProgress();
+  showToast(
+    e.selectedSkin ? `Kulit dipakai: ${SKIN_BY_ID[e.selectedSkin]?.name || e.selectedSkin}` : 'Kulit dilepas.',
+    2200,
+  );
+  buildExpansionScreen();
+}
+
+function claimEventMission(eventId, missionId) {
+  const e = syncExpansionUnlocks();
+  const event = EVENT_BY_ID[eventId];
+  const state = e.events[eventId];
+  const mission = event?.missions.find((entry) => entry.id === missionId);
+  if (!event || !state || !mission) return;
+  if (state.missionsClaimed.includes(missionId) || !eventMissionReady(state, mission)) return;
+  state.missionsClaimed.push(missionId);
+  saveProgress();
+  showToast(`Misi event: ${mission.name} · +${mission.points} poin.`, 3000);
+  buildExpansionScreen();
+}
+
+function claimEventTier(eventId, points) {
+  const e = syncExpansionUnlocks();
+  const event = EVENT_BY_ID[eventId];
+  const state = e.events[eventId];
+  const tier = event?.rewardTrack.find((entry) => entry.points === points);
+  if (!event || !state || !tier) return;
+  if (state.tiersClaimed.includes(points) || !eventTierUnlocked(state, event, tier)) return;
+  state.tiersClaimed.push(points);
+  if (tier.reward?.echoes) e.echoes += tier.reward.echoes;
+  if (tier.reward?.skin) grantSkin(tier.reward.skin);
+  if (tier.reward?.item) {
+    e.stash[tier.reward.item] = (Number(e.stash[tier.reward.item]) || 0) + 1;
+  }
+  saveProgress();
+  showToast(`Hadiah event: ${tier.name}.`, 3000);
+  buildExpansionScreen();
+}
+
+function buyEventShop(eventId, itemId) {
+  const e = syncExpansionUnlocks();
+  const event = EVENT_BY_ID[eventId];
+  const state = e.events[eventId];
+  const item = event?.shop.find((entry) => entry.id === itemId);
+  if (!event || !state || !item) return;
+  if (state.shopPurchased.includes(itemId)) return;
+  const available = eventPoints(state, event) - (Number(state.spent) || 0);
+  if (available < item.cost) {
+    showToast(`Poin event tidak cukup — butuh ${item.cost}.`, 2200);
+    return;
+  }
+  state.spent = (Number(state.spent) || 0) + item.cost;
+  state.shopPurchased.push(itemId);
+  if (item.echoes) e.echoes += item.echoes;
+  if (item.skin) grantSkin(item.skin);
+  saveProgress();
+  showToast(`Ditukar: ${item.name}.`, 2600);
+  buildExpansionScreen();
+}
+
+// ── expansion hub UI ─────────────────────────────────────────────────────
+const EXP_KIND_LABEL = {
+  standard: 'STANDAR',
+  special: 'LINGKUNGAN',
+  elite: 'ELITE',
+  boss: 'BOSS BESAR',
+};
+
+function expBar(value, max) {
+  const pct = max > 0 ? clamp(Math.round((value / max) * 100), 0, 100) : 0;
+  return `<span class="exp-bar"><i style="width:${pct}%"></i></span>`;
+}
+
+function expBossForLevel(level) {
+  return level.boss ? EXPANSION_BOSS_INFO[level.boss] || null : null;
+}
+
+function expQuestAmount(quest) {
+  return quest.objective.amount || quest.objective.tier || 1;
+}
+
+function buildExpansionScreen() {
+  const wrap = $('expansion-body');
+  if (!wrap) return;
+  const e = syncExpansionUnlocks();
+  const summary = expansionCompletion(e);
+  const summaryEl = $('expansion-summary');
+  if (summaryEl) {
+    summaryEl.innerHTML = `
+      <div><span>KAMPANYE</span><strong>${summary.cleared} / ${summary.total}</strong><em>${summary.pct}% tuntas</em></div>
+      <div><span>GEMA</span><strong>✦ ${e.echoes}</strong><em>mata uang abadi</em></div>
+      <div><span>BAB TERBUKA</span><strong>${Math.min(CHAPTERS.length, (e.unlockedChapter || 0) + 1)} / ${CHAPTERS.length}</strong><em>${CHAPTERS[clamp(e.unlockedChapter, 0, CHAPTERS.length - 1)].name}</em></div>
+      <div><span>KOLEKSI</span><strong>${e.collectibles.length}</strong><em>${e.cosmetics.length} kulit dimiliki</em></div>
+    `;
+  }
+  document.querySelectorAll('#expansion-tabs [data-tab]').forEach((tab) => {
+    tab.classList.toggle('active', tab.dataset.tab === expansionTab);
+  });
+  if (expansionTab === 'haven') buildHavenTab(e, wrap);
+  else if (expansionTab === 'chronicle') buildChronicleTab(e, wrap);
+  else if (expansionTab === 'wardrobe') buildWardrobeTab(e, wrap);
+  else buildCampaignTab(e, wrap);
+}
+
+function buildCampaignTab(e, wrap) {
+  const chapterIndex = clamp(Number(expansionChapter) || 0, 0, CHAPTERS.length - 1);
+  expansionChapter = chapterIndex;
+  const chapter = CHAPTERS[chapterIndex];
+  const chapterProgress = expansionChapterProgress(e, chapterIndex);
+  const ngUnlocked = !!e.flags.ngPlusUnlocked;
+  const levels = EXPANSION_LEVELS.slice(
+    chapterIndex * LEVELS_PER_CHAPTER,
+    chapterIndex * LEVELS_PER_CHAPTER + LEVELS_PER_CHAPTER,
+  );
+  const modesDone = REPEATABLE_MODES.filter((mode) => (e.modes[mode.id]?.completions || 0) > 0).length;
+  const trialsDone = ENDGAME_TRIALS.filter((trial) => e.flags[`trial_${trial.id}`]).length;
+
+  wrap.innerHTML = `
+    <section class="exp-section">
+      <div class="exp-section-head">
+        <h3>KESULITAN</h3>
+        <span>${esc(DIFFICULTY_BY_ID[e.difficulty]?.name || 'Normal')} · hadiah ×${DIFFICULTY_BY_ID[e.difficulty]?.reward || 1}</span>
+      </div>
+      <div class="exp-difficulty-row">
+        ${DIFFICULTIES.map((difficulty) => `
+          <button class="exp-diff${difficulty.id === e.difficulty ? ' active' : ''}" type="button"
+            data-action="difficulty" data-difficulty="${difficulty.id}">
+            <strong>${esc(difficulty.name)}</strong>
+            <span>${esc(difficulty.subtitle)}</span>
+            <em>${esc(difficulty.desc)}</em>
+          </button>`).join('')}
+      </div>
+    </section>
+
+    <section class="exp-section">
+      <div class="exp-section-head">
+        <h3>MODIFIER TANTANGAN</h3>
+        <span>${e.modifiers.length} aktif · opsional</span>
+      </div>
+      <div class="exp-chip-row">
+        ${CHALLENGE_MODIFIERS.map((modifier) => `
+          <button class="exp-chip${e.modifiers.includes(modifier.id) ? ' active' : ''}" type="button"
+            data-action="modifier" data-modifier="${modifier.id}" title="${esc(modifier.desc)}">
+            <b>${modifier.glyph}</b> ${esc(modifier.name)}
+          </button>`).join('')}
+      </div>
+    </section>
+
+    <section class="exp-section">
+      <div class="exp-section-head">
+        <h3>NEW GAME PLUS</h3>
+        <span>${ngUnlocked ? 'terbuka' : 'selesaikan kampanye untuk membuka'}</span>
+      </div>
+      <div class="exp-ng-row">
+        ${NG_PLUS_TIERS.map((tier) => {
+          const locked = tier.tier > 0 && !ngUnlocked;
+          return `<button class="exp-ng${e.ngPlus === tier.tier ? ' active' : ''}${locked ? ' locked' : ''}" type="button"
+            data-action="ngplus" data-tier="${tier.tier}" ${locked ? 'disabled' : ''}>
+            <strong>${tier.tier === 0 ? 'NG' : `NG+${tier.tier}`}</strong>
+            <span>${esc(tier.name)}</span>
+            <em>${esc(tier.desc)}</em>
+          </button>`;
+        }).join('')}
+      </div>
+    </section>
+
+    <section class="exp-section">
+      <div class="exp-section-head">
+        <h3>PILIH BAB</h3>
+        <span>${chapterProgress.cleared} / ${chapterProgress.total} level tuntas</span>
+      </div>
+      <div class="exp-chapter-row">
+        ${CHAPTERS.map((entry) => `
+          <button class="exp-chapter-btn${entry.index === chapterIndex ? ' active' : ''}${entry.index > e.unlockedChapter ? ' locked' : ''}" type="button"
+            data-action="chapter" data-chapter="${entry.index}" style="--accent:${entry.accent}">
+            <b>${entry.numeral}</b>
+            <span>${esc(entry.name)}</span>
+            <em>${entry.index > e.unlockedChapter ? 'TERKUNCI' : `${expansionChapterProgress(e, entry.index).cleared}/10`}</em>
+          </button>`).join('')}
+      </div>
+    </section>
+
+    <section class="exp-chapter-panel" style="--accent:${chapter.accent}">
+      <header class="exp-chapter-head">
+        <span class="exp-chapter-glyph">${chapter.glyph}</span>
+        <div>
+          <p class="eyebrow">BAB ${chapter.numeral} · ${esc(chapter.subtitle)}</p>
+          <h3>${esc(chapter.name)}</h3>
+          <p>${esc(chapter.tagline)}</p>
+        </div>
+        <div class="exp-chapter-progress">
+          <strong>${chapterProgress.cleared}/${chapterProgress.total}</strong>
+          ${expBar(chapterProgress.cleared, chapterProgress.total)}
+          <span>${esc(BIOMES[chapter.biome]?.weather || '')}</span>
+        </div>
+      </header>
+      <p class="exp-chapter-desc">${esc(chapter.desc)}</p>
+      <div class="exp-level-grid">
+        ${levels.map((level) => {
+          const unlocked = expansionLevelUnlocked(e, level.localIndex);
+          const cleared = !!e.cleared[level.localIndex];
+          const boss = expBossForLevel(level);
+          return `
+            <article class="exp-level${cleared ? ' cleared' : ''}${unlocked ? '' : ' locked'}" style="--accent:${level.accent}">
+              <div class="exp-level-top">
+                <span class="exp-level-num">${level.chapterLevel}</span>
+                <span class="exp-kind kind-${level.kind}">${EXP_KIND_LABEL[level.kind] || level.kind}</span>
+                ${cleared ? '<span class="exp-clear">✓</span>' : ''}
+              </div>
+              <h4>${esc(level.name)}</h4>
+              <span class="exp-level-sub">${esc(level.subtitle)}</span>
+              <p>${esc(level.hint)}</p>
+              ${boss ? `<span class="exp-boss-tag">${level.kind === 'boss' ? 'BOSS' : 'MINI-BOSS'} · ${esc(boss.name)} — ${esc(boss.title)}</span>` : ''}
+              <div class="exp-level-meta">
+                <span>${esc(level.biomeName)}</span>
+                <span>✦ ${level.echoReward}</span>
+              </div>
+              <button class="btn ${unlocked ? 'btn-primary' : 'btn-ghost'} btn-small exp-start" type="button"
+                data-action="start-level" data-level="${level.localIndex}" ${unlocked ? '' : 'disabled'}>
+                ${unlocked ? (cleared ? 'ULANGI LEVEL' : 'MULAI LEVEL') : 'TERKUNCI'}
+              </button>
+            </article>`;
+        }).join('')}
+      </div>
+    </section>
+
+    <section class="exp-section">
+      <div class="exp-section-head">
+        <h3>MODE BERULANG</h3>
+        <span>${modesDone} / ${REPEATABLE_MODES.length} pernah tuntas</span>
+      </div>
+      <div class="exp-mode-grid">
+        ${REPEATABLE_MODES.map((mode) => {
+          const locked = mode.unlockChapter > e.unlockedChapter;
+          const state = e.modes[mode.id] || { completions: 0, best: 0 };
+          return `
+            <article class="exp-mode${locked ? ' locked' : ''}">
+              <div class="exp-mode-head">
+                <span class="exp-mode-glyph">${mode.glyph}</span>
+                <div><h4>${esc(mode.name)}</h4><span>${esc(mode.subtitle)}</span></div>
+              </div>
+              <p>${esc(mode.desc)}</p>
+              <div class="exp-mode-meta">
+                <span>${esc(mode.duration)}</span>
+                <span>${state.completions}× tuntas</span>
+                <span>✦ ${mode.reward?.echoes || 0}</span>
+              </div>
+              <button class="btn ${locked ? 'btn-ghost' : 'btn-primary'} btn-small" type="button"
+                data-action="start-mode" data-mode="${mode.id}" ${locked ? 'disabled' : ''}>
+                ${locked ? `TERBUKA DI BAB ${mode.unlockChapter + 1}` : 'MULAI MODE'}
+              </button>
+            </article>`;
+        }).join('')}
+      </div>
+    </section>
+
+    <section class="exp-section">
+      <div class="exp-section-head">
+        <h3>UJIAN AKHIR</h3>
+        <span>${e.flags.campaignComplete ? `${trialsDone} / ${ENDGAME_TRIALS.length} tuntas` : 'selesaikan kampanye'}</span>
+      </div>
+      <div class="exp-mode-grid">
+        ${ENDGAME_TRIALS.map((trial) => {
+          const cleared = !!e.flags[`trial_${trial.id}`];
+          const locked = !e.flags.campaignComplete;
+          return `
+            <article class="exp-mode trial${cleared ? ' cleared' : ''}${locked ? ' locked' : ''}">
+              <div class="exp-mode-head">
+                <span class="exp-mode-glyph">${trial.glyph}</span>
+                <div><h4>${esc(trial.name)}</h4><span>${cleared ? 'TUNTAS' : 'UJIAN'}</span></div>
+              </div>
+              <p>${esc(trial.desc)}</p>
+              <div class="exp-mode-meta"><span>✦ ${trial.reward?.echoes || 0}</span>${trial.reward?.skin ? `<span>${esc(SKIN_BY_ID[trial.reward.skin]?.name || 'Kulit')}</span>` : ''}</div>
+              <button class="btn ${locked ? 'btn-ghost' : 'btn-primary'} btn-small" type="button"
+                data-action="start-trial" data-trial="${trial.id}" ${locked ? 'disabled' : ''}>
+                ${locked ? 'TERKUNCI' : cleared ? 'ULANGI UJIAN' : 'MULAI UJIAN'}
+              </button>
+            </article>`;
+        }).join('')}
+      </div>
+    </section>
+  `;
+}
+
+function buildHavenTab(e, wrap) {
+  const haven = e.settlements.thornveil;
+  const tier = havenTier(e);
+  const bonus = havenBonus(e);
+  const npc = NPC_BY_ID[havenNpcId] || HAVEN_NPCS[0];
+  const quest = npc.questId ? QUEST_BY_ID[npc.questId] : null;
+  const questState = quest ? e.quests[quest.id] : null;
+  const lines = dialogueForNpc(npc, {
+    chapter: e.unlockedChapter,
+    questDone: questState?.status === 'done',
+    flag: !!(quest && e.flags[quest.flag]),
+  });
+  const tierNames = ['Berlindung', 'Tumbuh', 'Berakar', 'Berkilau'];
+  const totalUpgradeTiers = HAVEN_UPGRADES.reduce(
+    (sum, upgrade) => sum + (Number(haven.upgrades?.[upgrade.id]) || 0),
+    0,
+  );
+  const maxUpgradeTiers = HAVEN_UPGRADES.reduce((sum, upgrade) => sum + upgrade.maxTier, 0);
+  const readyQuests = QUESTS.filter((entry) => e.quests[entry.id]?.status === 'ready').length;
+
+  wrap.innerHTML = `
+    <section class="exp-haven-hero">
+      <span class="exp-haven-glyph">⌂</span>
+      <div>
+        <p class="eyebrow">PERMUKIMAN PERMANEN · ${esc(SETTLEMENT_BY_ID.thornveil.subtitle)}</p>
+        <h3>Thornveil Haven</h3>
+        <p>${esc(SETTLEMENT_BY_ID.thornveil.desc)}</p>
+      </div>
+      <div class="exp-haven-tier">
+        <span>TAHAP ${tier + 1}</span>
+        <strong>${tierNames[tier]}</strong>
+        <em>${totalUpgradeTiers}/${maxUpgradeTiers} peningkatan</em>
+      </div>
+    </section>
+
+    <div class="exp-haven-stats">
+      <div><span>DAMAGE</span><strong>+${Math.round(bonus.damage * 100)}%</strong></div>
+      <div><span>MAX HP</span><strong>+${bonus.maxHp}</strong></div>
+      <div><span>FLASK</span><strong>+${bonus.flasks}</strong></div>
+      <div><span>ABU &amp; GEMA</span><strong>+${Math.round(bonus.gain * 100)}%</strong></div>
+      <div><span>PENYEMBUHAN</span><strong>+${bonus.heal}</strong></div>
+      <div><span>QUEST SIAP</span><strong>${readyQuests}</strong></div>
+    </div>
+
+    <section class="exp-section">
+      <div class="exp-section-head">
+        <h3>PENDUDUK HAVEN</h3>
+        <span>10 NPC tetap · dialog mengikuti progres</span>
+      </div>
+      <div class="exp-npc-grid">
+        ${HAVEN_NPCS.map((entry) => `
+          <button class="exp-npc${entry.id === havenNpcId ? ' active' : ''}" type="button"
+            data-action="haven-npc" data-npc="${entry.id}">
+            <span>${entry.glyph}</span>
+            <strong>${esc(entry.name)}</strong>
+            <em>${esc(entry.role)}</em>
+            ${e.quests[entry.questId]?.status === 'ready' ? '<b class="exp-npc-ready">!</b>' : ''}
+          </button>`).join('')}
+      </div>
+    </section>
+
+    <section class="exp-dialogue">
+      <div class="exp-dialogue-head">
+        <span>${npc.glyph}</span>
+        <div><h4>${esc(npc.name)}</h4><em>${esc(npc.role)}</em></div>
+        <b>${esc(npc.chapterReq > e.unlockedChapter ? 'BELUM TERBUKA' : 'DI THORNVEIL')}</b>
+      </div>
+      <p class="exp-dialogue-desc">${esc(npc.desc)}</p>
+      <div class="exp-dialogue-lines">
+        ${lines.map((line) => `<p>“${esc(line)}”</p>`).join('')}
+      </div>
+      ${quest ? `
+        <div class="exp-dialogue-quest">
+          <div><span>QUEST</span><strong>${esc(quest.title)}</strong><p>${esc(quest.desc)}</p></div>
+          <div class="exp-dialogue-quest-state">
+            ${questState?.status === 'ready'
+              ? `<button class="btn btn-primary btn-small" type="button" data-action="claim-quest" data-quest="${quest.id}">AMBIL HADIAH</button>`
+              : questState?.status === 'done'
+                ? '<span class="exp-done">SELESAI</span>'
+                : `<span>${questState?.status === 'active' ? 'BERLANGSUNG' : 'TERKUNCI'}</span>`}
+          </div>
+        </div>` : ''}
+    </section>
+
+    <section class="exp-section">
+      <div class="exp-section-head">
+        <h3>FASILITAS PERMANEN</h3>
+        <span>Gema abadi · efek berlaku di semua run</span>
+      </div>
+      <div class="exp-upgrade-grid">
+        ${HAVEN_UPGRADES.map((upgrade) => {
+          const current = Number(haven.upgrades?.[upgrade.id]) || 0;
+          const max = current >= upgrade.maxTier;
+          const cost = max ? 0 : upgrade.costs[current];
+          const canBuy = !max && e.echoes >= cost;
+          return `
+            <article class="exp-upgrade">
+              <div class="exp-upgrade-head">
+                <span>${upgrade.glyph}</span>
+                <div><h4>${esc(upgrade.name)}</h4><p>${esc(upgrade.desc)}</p></div>
+              </div>
+              <div class="exp-pips">${Array.from({ length: upgrade.maxTier }, (_, i) => `<i class="${i < current ? 'on' : ''}"></i>`).join('')}</div>
+              <div class="exp-upgrade-foot">
+                <span>${current > 0 ? esc(upgrade.effects[current - 1]) : 'Belum dibangun'}</span>
+                ${max ? '<b class="exp-max">MAKS</b>' : `<button class="btn btn-small ${canBuy ? 'btn-primary' : 'btn-ghost'}" type="button" data-action="buy-upgrade" data-upgrade="${upgrade.id}" ${canBuy ? '' : 'disabled'}>✦ ${cost}</button>`}
+              </div>
+            </article>`;
+        }).join('')}
+      </div>
+    </section>
+
+    <section class="exp-section">
+      <div class="exp-section-head">
+        <h3>QUEST THORNVEIL</h3>
+        <span>${readyQuests} siap diambil</span>
+      </div>
+      <div class="exp-quest-list">
+        ${QUESTS.map((entry) => {
+          const state = e.quests[entry.id] || { status: 'locked', progress: 0 };
+          const amount = expQuestAmount(entry);
+          const ready = state.status === 'ready';
+          const done = state.status === 'done';
+          return `
+            <article class="exp-quest${done ? ' done' : ''}${ready ? ' ready' : ''}">
+              <div class="exp-quest-main">
+                <span>${esc(NPC_BY_ID[entry.npc]?.name || entry.npc)}</span>
+                <h4>${esc(entry.title)}</h4>
+                <p>${esc(entry.desc)}</p>
+              </div>
+              <div class="exp-quest-progress">
+                <span>${Math.min(state.progress, amount)} / ${amount}</span>
+                ${expBar(state.progress, amount)}
+              </div>
+              ${ready
+                ? `<button class="btn btn-primary btn-small" type="button" data-action="claim-quest" data-quest="${entry.id}">AMBIL HADIAH</button>`
+                : done
+                  ? '<span class="exp-done">SELESAI</span>'
+                  : `<span class="exp-quest-status">${state.status === 'active' ? 'BERLANGSUNG' : 'TERKUNCI'}</span>`}
+            </article>`;
+        }).join('')}
+      </div>
+    </section>
+
+    <section class="exp-section">
+      <div class="exp-section-head">
+        <h3>POS TERBUKA</h3>
+        <span>${SETTLEMENTS.filter((entry) => e.settlements[entry.id]?.unlocked).length} / ${SETTLEMENTS.length} permukiman</span>
+      </div>
+      <div class="exp-outpost-grid">
+        ${SETTLEMENTS.map((settlement) => {
+          const unlocked = !!e.settlements[settlement.id]?.unlocked;
+          return `
+            <article class="exp-outpost${unlocked ? '' : ' locked'}" style="--accent:${settlement.accent}">
+              <header><span>${settlement.glyph}</span><div><h4>${esc(settlement.name)}</h4><em>${esc(settlement.subtitle)}</em></div></header>
+              <p>${esc(settlement.desc)}</p>
+              <div class="exp-outpost-services">${settlement.services.map((service) => `<span>${esc(service)}</span>`).join('')}</div>
+              ${unlocked
+                ? `<div class="exp-outpost-npcs">${settlement.npcs.slice(0, 6).map((id) => {
+                    const outpostNpc = NPC_BY_ID[id];
+                    return outpostNpc ? `<button type="button" data-action="haven-npc" data-npc="${id}" class="${havenNpcId === id ? 'active' : ''}">${outpostNpc.glyph} ${esc(outpostNpc.name)}</button>` : '';
+                  }).join('')}</div>`
+                : '<span class="exp-quest-status">TERBUKA SETELAH BAB LEBIH JAUH</span>'}
+            </article>`;
+        }).join('')}
+      </div>
+    </section>
+  `;
+}
+
+function buildChronicleTab(e, wrap) {
+  const activeIds = activeEventIds();
+  let selectedId = chronicleEventId && EVENT_BY_ID[chronicleEventId] ? chronicleEventId : activeIds[0] || EVENT_THEMES[0].id;
+  if (!EVENT_BY_ID[selectedId]) selectedId = EVENT_THEMES[0].id;
+  chronicleEventId = selectedId;
+  const event = EVENT_BY_ID[selectedId];
+  const state = e.events[selectedId];
+  const active = isEventActive(event);
+  const points = eventPoints(state, event);
+  const spent = Number(state.spent) || 0;
+  const available = Math.max(0, points - spent);
+  const ownedEventSkins = event.skins.filter((skin) => e.cosmetics.includes(skin.id)).length;
+  const claimedTiers = state.tiersClaimed.length;
+
+  wrap.innerHTML = `
+    <section class="exp-section">
+      <div class="exp-section-head">
+        <h3>ASHEN CHRONICLE</h3>
+        <span>${activeIds.length} event aktif bulan ini · ${EVENT_THEMES.length} tema</span>
+      </div>
+      <div class="exp-event-row">
+        ${EVENT_THEMES.map((entry) => {
+          const entryState = e.events[entry.id];
+          const entryPoints = eventPoints(entryState, entry);
+          const entryActive = isEventActive(entry);
+          return `
+            <button class="exp-event-card${entry.id === selectedId ? ' active' : ''}${entryActive ? ' live' : ''}" type="button"
+              data-action="event-select" data-event="${entry.id}" style="--accent:${entry.accent}">
+              <span>${entry.glyph}</span>
+              <strong>${esc(entry.name)}</strong>
+              <em>${esc(entry.subtitle)}</em>
+              <b>${entryActive ? 'AKTIF' : 'TIDAK AKTIF'} · ✦ ${entryPoints}</b>
+            </button>`;
+        }).join('')}
+      </div>
+    </section>
+
+    <section class="exp-event-detail" style="--accent:${event.accent}">
+      <header class="exp-event-head">
+        <span class="exp-event-glyph">${event.glyph}</span>
+        <div>
+          <p class="eyebrow">${active ? 'EVENT AKTIF' : 'EVENT TIDAK AKTIF'} · ${esc(event.subtitle)}</p>
+          <h3>${esc(event.name)}</h3>
+          <p>${esc(event.theme)}</p>
+        </div>
+        <div class="exp-event-points">
+          <span>${esc(event.currency)}</span>
+          <strong>✦ ${points}</strong>
+          <em>${available} tersedia</em>
+        </div>
+      </header>
+      <p class="exp-event-desc">${esc(event.desc)}</p>
+      <div class="exp-haven-stats">
+        <div><span>POIN</span><strong>${points}</strong></div>
+        <div><span>TERPAKAI</span><strong>${spent}</strong></div>
+        <div><span>MISI DIKLAIM</span><strong>${state.missionsClaimed.length} / ${event.missions.length}</strong></div>
+        <div><span>JALUR HADIAH</span><strong>${claimedTiers} / ${event.rewardTrack.length}</strong></div>
+        <div><span>KULIT EVENT</span><strong>${ownedEventSkins} / ${event.skins.length}</strong></div>
+      </div>
+      ${active ? '' : '<p class="exp-note">Event ini sedang tidak aktif. Progres misi tidak bertambah, tetapi semua hadiah yang sudah kau klaim tetap tersimpan selamanya.</p>'}
+      <div class="exp-event-columns">
+        <section class="exp-event-column">
+          <h4>MISI EVENT</h4>
+          ${event.missions.map((mission) => {
+            const progress = eventMissionProgress(state, mission);
+            const ready = eventMissionReady(state, mission);
+            const claimed = state.missionsClaimed.includes(mission.id);
+            return `
+              <article class="exp-mission${claimed ? ' claimed' : ''}${ready && !claimed ? ' ready' : ''}">
+                <div><strong>${esc(mission.name)}</strong><p>${esc(mission.desc)}</p></div>
+                <div class="exp-mission-progress"><span>${progress} / ${mission.amount} · +${mission.points} poin</span>${expBar(progress, mission.amount)}</div>
+                ${claimed
+                  ? '<span class="exp-done">DIKLAIM</span>'
+                  : ready
+                    ? `<button class="btn btn-primary btn-small" type="button" data-action="claim-mission" data-event="${event.id}" data-mission="${mission.id}">KLAIM</button>`
+                    : '<span class="exp-quest-status">BERLANGSUNG</span>'}
+              </article>`;
+          }).join('')}
+        </section>
+        <section class="exp-event-column">
+          <h4>JALUR HADIAH</h4>
+          ${event.rewardTrack.map((tier) => {
+            const unlocked = eventTierUnlocked(state, event, tier);
+            const claimed = state.tiersClaimed.includes(tier.points);
+            return `
+              <article class="exp-tier${claimed ? ' claimed' : ''}${unlocked && !claimed ? ' ready' : ''}">
+                <span class="exp-tier-glyph">${tier.glyph}</span>
+                <div><strong>${esc(tier.name)}</strong><em>${tier.points} poin</em>
+                  <p>${[
+                    tier.reward?.echoes ? `✦ ${tier.reward.echoes} Gema` : '',
+                    tier.reward?.item ? `${SHOP_ITEMS.find((item) => item.id === tier.reward.item)?.name || tier.reward.item}` : '',
+                    tier.reward?.skin ? esc(SKIN_BY_ID[tier.reward.skin]?.name || tier.reward.skin) : '',
+                  ].filter(Boolean).join(' · ')}</p>
+                </div>
+                ${claimed
+                  ? '<span class="exp-done">DIKLAIM</span>'
+                  : unlocked
+                    ? `<button class="btn btn-primary btn-small" type="button" data-action="claim-tier" data-event="${event.id}" data-points="${tier.points}">KLAIM</button>`
+                    : '<span class="exp-quest-status">TERKUNCI</span>'}
+              </article>`;
+          }).join('')}
+        </section>
+        <section class="exp-event-column">
+          <h4>TOKO EVENT</h4>
+          ${event.shop.map((item) => {
+            const purchased = state.shopPurchased.includes(item.id);
+            const canBuy = !purchased && available >= item.cost;
+            return `
+              <article class="exp-shop-item${purchased ? ' claimed' : ''}">
+                <div><strong>${esc(item.name)}</strong><p>${esc(item.desc)}</p></div>
+                <div class="exp-shop-foot">
+                  <span>✦ ${item.cost}</span>
+                  ${purchased
+                    ? '<span class="exp-done">DIMILIKI</span>'
+                    : `<button class="btn btn-small ${canBuy ? 'btn-primary' : 'btn-ghost'}" type="button" data-action="buy-event" data-event="${event.id}" data-item="${item.id}" ${canBuy ? '' : 'disabled'}>TUKAR</button>`}
+                </div>
+              </article>`;
+          }).join('')}
+        </section>
+      </div>
+      <p class="exp-note">Semua hadiah event bersifat lokal dan permanen. Kulit hanya mengubah tampilan — tidak pernah memberi keuntungan tempur.</p>
+    </section>
+  `;
+}
+
+function buildWardrobeTab(e, wrap) {
+  const owned = new Set(e.cosmetics);
+  const filters = [
+    ['all', 'SEMUA'],
+    ['owned', 'DIMILIKI'],
+    ['event', 'EVENT'],
+    ['milestone', 'MILESTONE'],
+  ];
+  const skins = COSMETIC_SKINS.filter((skin) => {
+    if (wardrobeFilter === 'owned') return owned.has(skin.id);
+    if (wardrobeFilter === 'event') return !!skin.eventId;
+    if (wardrobeFilter === 'milestone') return !skin.eventId;
+    return true;
+  });
+  const collectionTotal = Object.keys(COLLECTIBLE_BY_ID).length;
+  const counts = expansionCollectibleCounts(e);
+
+  wrap.innerHTML = `
+    <section class="exp-section">
+      <div class="exp-section-head">
+        <h3>LEMARI KULIT</h3>
+        <span>${owned.size} / ${COSMETIC_SKINS.length} dimiliki · hanya visual</span>
+      </div>
+      <div class="exp-filter-row">
+        ${filters.map(([id, label]) => `<button class="exp-filter${wardrobeFilter === id ? ' active' : ''}" type="button" data-action="wardrobe-filter" data-filter="${id}">${label}</button>`).join('')}
+      </div>
+      <div class="exp-skin-grid">
+        ${skins.length ? skins.map((skin) => {
+          const isOwned = owned.has(skin.id);
+          const equipped = e.selectedSkin === skin.id;
+          return `
+            <article class="exp-skin${isOwned ? ' owned' : ' locked'}${equipped ? ' equipped' : ''}">
+              <div class="exp-skin-preview" style="--outfit:${skin.outfit};--skin:${skin.skin};--aura:${skin.aura}">
+                <span>${skin.glyph || '✦'}</span>
+                ${equipped ? '<b>DIPAKAI</b>' : ''}
+              </div>
+              <div class="exp-skin-body">
+                <h4>${esc(skin.name)}</h4>
+                <span>${esc(skin.subtitle)}</span>
+                <p>${esc(skin.desc)}</p>
+                <small>${esc(skin.source)}</small>
+              </div>
+              ${isOwned
+                ? `<button class="btn btn-small ${equipped ? 'btn-ghost' : 'btn-primary'}" type="button" data-action="equip-skin" data-skin="${skin.id}">${equipped ? 'LEPAS' : 'PAKAI'}</button>`
+                : '<span class="exp-quest-status">BELUM DIMILIKI</span>'}
+            </article>`;
+        }).join('') : '<p class="exp-empty">Belum ada kulit pada filter ini.</p>'}
+      </div>
+    </section>
+
+    <section class="exp-section">
+      <div class="exp-section-head">
+        <h3>JURNAL KOLEKSI</h3>
+        <span>${e.collectibles.length} / ${collectionTotal} terkumpul · 12 kategori</span>
+      </div>
+      <div class="exp-collection-grid">
+        ${COLLECTIBLE_CATEGORIES.map((category) => {
+          const count = counts[category.id] || 0;
+          return `
+            <article class="exp-collection" style="--accent:${category.color}">
+              <header>
+                <span>${category.glyph}</span>
+                <div><h4>${esc(category.name)}</h4><em>${count} / ${category.items.length}</em></div>
+              </header>
+              <div class="exp-collection-bar">${expBar(count, category.items.length)}</div>
+              <div class="exp-collection-items">
+                ${category.items.map((name, index) => {
+                  const id = `${category.id}_${index + 1}`;
+                  const has = e.collectibles.includes(id);
+                  return `<span class="${has ? 'has' : ''}" title="${has ? esc(name) : 'Belum ditemukan'}">${has ? esc(name) : '???'}</span>`;
+                }).join('')}
+              </div>
+            </article>`;
+        }).join('')}
+      </div>
+    </section>
+  `;
+}
+
+function handleExpansionAction(target) {
+  const action = target.dataset.action;
+  if (!action) return;
+  const e = syncExpansionUnlocks();
+  if (action === 'chapter') {
+    expansionChapter = clamp(Number(target.dataset.chapter) || 0, 0, CHAPTERS.length - 1);
+    buildExpansionScreen();
+  } else if (action === 'start-level') {
+    const index = Number(target.dataset.level);
+    if (Number.isInteger(index) && expansionLevelUnlocked(e, index)) startExpansionLevel(index);
+  } else if (action === 'difficulty') {
+    const id = target.dataset.difficulty;
+    if (DIFFICULTY_BY_ID[id]) {
+      e.difficulty = id;
+      saveProgress();
+      buildExpansionScreen();
+    }
+  } else if (action === 'modifier') {
+    const id = target.dataset.modifier;
+    if (!MODIFIER_BY_ID[id]) return;
+    const next = new Set(e.modifiers || []);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    e.modifiers = [...next];
+    saveProgress();
+    buildExpansionScreen();
+  } else if (action === 'ngplus') {
+    const tier = clamp(Number(target.dataset.tier) || 0, 0, NG_PLUS_TIERS.length - 1);
+    if (tier > 0 && !e.flags.ngPlusUnlocked) {
+      showToast('Selesaikan kampanye untuk membuka New Game Plus.', 2400);
+      return;
+    }
+    e.ngPlus = tier;
+    saveProgress();
+    buildExpansionScreen();
+  } else if (action === 'start-mode') {
+    startExpansionMode(target.dataset.mode);
+  } else if (action === 'start-trial') {
+    startExpansionTrial(target.dataset.trial);
+  } else if (action === 'haven-npc') {
+    if (NPC_BY_ID[target.dataset.npc]) {
+      havenNpcId = target.dataset.npc;
+      buildExpansionScreen();
+    }
+  } else if (action === 'buy-upgrade') {
+    buyHavenUpgrade(target.dataset.upgrade);
+  } else if (action === 'claim-quest') {
+    claimQuest(target.dataset.quest);
+  } else if (action === 'event-select') {
+    if (EVENT_BY_ID[target.dataset.event]) {
+      chronicleEventId = target.dataset.event;
+      buildExpansionScreen();
+    }
+  } else if (action === 'claim-mission') {
+    claimEventMission(target.dataset.event, target.dataset.mission);
+  } else if (action === 'claim-tier') {
+    claimEventTier(target.dataset.event, Number(target.dataset.points));
+  } else if (action === 'buy-event') {
+    buyEventShop(target.dataset.event, target.dataset.item);
+  } else if (action === 'wardrobe-filter') {
+    wardrobeFilter = target.dataset.filter || 'all';
+    buildExpansionScreen();
+  } else if (action === 'equip-skin') {
+    equipSkin(target.dataset.skin);
+  }
 }
 
 // ── navigation ───────────────────────────────────────────────────────────
@@ -359,8 +1502,14 @@ function provisionStartAsh(index) {
 function startRun(index = 0) {
   audio.init();
   attempts = 1;
+  activeRunKind = 'legacy';
+  activeExpansionIndex = null;
+  activeModeId = null;
+  activeTrialId = null;
+  modeRunRewarded = false;
   game.reset();
   applyCharacterToGame();
+  applySkinToGame();
   if (index > 0) {
     game.enterRoom(index);
     if (index >= 2) game.player.relic = true;
@@ -395,10 +1544,16 @@ function retryRun() {
     const index = game.roomIndex;
     game.reset();
     applyCharacterToGame();
+    if (activeRunKind === 'expansion') {
+      game.setChallenge(expansionChallengeConfig());
+      game.setKnownCollectibles(expState().collectibles);
+      applySkinToGame();
+    }
     if (index > 0) {
       game.enterRoom(index);
       if (index >= 2) game.player.relic = true;
-      provisionStartAsh(index);
+      if (index >= EXPANSION_ROOM_START) provisionExpansionAsh(index - EXPANSION_ROOM_START);
+      else provisionStartAsh(index);
     }
   }
   game.events.length = 0;
@@ -461,6 +1616,26 @@ function showLevels() {
   clearHeldKeys();
   updateMenuProgress();
   buildLevelCards();
+  syncScreens();
+}
+
+function showExpansion(tab = 'campaign') {
+  cancelPrologue();
+  started = false;
+  paused = false;
+  shopOpen = false;
+  mapOpen = false;
+  codexOpen = false;
+  inventoryOpen = false;
+  settingsOpen = false;
+  closeDialogue(true);
+  spectating = false;
+  spectateGame = null;
+  menuView = 'expansion';
+  expansionTab = tab;
+  clearHeldKeys();
+  syncExpansionUnlocks();
+  buildExpansionScreen();
   syncScreens();
 }
 
@@ -1821,7 +2996,7 @@ window.addEventListener('keydown', (e) => {
     return;
   }
 
-  if (menuView === 'levels' || menuView === 'credits' || menuView === 'updates' || menuView === 'character') {
+  if (menuView === 'levels' || menuView === 'credits' || menuView === 'updates' || menuView === 'character' || menuView === 'expansion') {
     if (e.code === 'Escape' || e.code === 'Backspace') showMenu();
     return;
   }
@@ -1834,6 +3009,7 @@ window.addEventListener('keydown', (e) => {
     else if (e.code === 'KeyP') showCharacter();
     else if (e.code === 'KeyC') showCredits();
     else if (e.code === 'KeyU') showUpdates();
+    else if (e.code === 'KeyX') showExpansion();
     return;
   }
 
@@ -1950,9 +3126,23 @@ $('btn-credits').addEventListener('click', showCredits);
 $('btn-updates').addEventListener('click', showUpdates);
 $('btn-map-menu').addEventListener('click', openMap);
 $('btn-codex-menu').addEventListener('click', () => openCodex());
+$('btn-expansion-menu').addEventListener('click', () => showExpansion());
 $('btn-levels-back').addEventListener('click', showMenu);
 $('btn-credits-back').addEventListener('click', showMenu);
 $('btn-updates-back').addEventListener('click', showMenu);
+$('btn-expansion-back').addEventListener('click', showMenu);
+$('expansion-tabs').addEventListener('click', (event) => {
+  const tab = event.target.closest('[data-tab]');
+  if (!tab) return;
+  expansionTab = tab.dataset.tab;
+  buildExpansionScreen();
+});
+$('expansion-body').addEventListener('click', (event) => {
+  const target = event.target.closest('[data-action]');
+  if (!target) return;
+  event.preventDefault();
+  handleExpansionAction(target);
+});
 $('btn-settings-back').addEventListener('click', closeSettings);
 $('btn-peek-back').addEventListener('click', stopSpectate);
 $('btn-map-close').addEventListener('click', closeMap);
@@ -2202,6 +3392,7 @@ function syncScreens() {
   $('credits-screen').classList.toggle('hidden', menuView !== 'credits' || covered);
   $('updates-screen').classList.toggle('hidden', menuView !== 'updates' || covered);
   $('character-screen').classList.toggle('hidden', menuView !== 'character' || covered);
+  $('expansion-screen').classList.toggle('hidden', menuView !== 'expansion' || covered);
   $('prologue-screen').classList.toggle('hidden', !prologueActive);
   $('spectate-ui').classList.toggle('hidden', !spectating);
   $('map-screen').classList.toggle('hidden', !mapOpen);
@@ -2325,11 +3516,32 @@ function drainEvents() {
     const activeRun = started && !spectating && menuView === 'none';
     if (activeRun && !paused) audio.play(ev);
     if (activeRun) {
-      if (ev.type === 'gatePass') markCleared(ev.from, ev.to);
-      else if (ev.type === 'bossDown') markCleared(ev.room, ev.next);
+      if (activeRunKind === 'expansion') {
+        if (ev.type === 'gatePass') {
+          const from = ev.from - EXPANSION_ROOM_START;
+          const to = ev.to - EXPANSION_ROOM_START;
+          if (Number.isInteger(from) && from >= 0 && from < TOTAL_LEVELS) markExpansionCleared(from);
+          if (Number.isInteger(to) && to >= 0 && to < TOTAL_LEVELS) activeExpansionIndex = to;
+        } else if (ev.type === 'bossDown') {
+          const local = ev.room - EXPANSION_ROOM_START;
+          if (Number.isInteger(local) && local >= 0 && local < TOTAL_LEVELS) handleExpansionBoss(local, ev);
+        } else if (ev.type === 'collectible') {
+          handleExpansionCollectible(ev);
+        } else if (ev.type === 'echoGain') {
+          handleExpansionEcho(ev);
+        } else if (ev.type === 'campaignComplete') {
+          handleExpansionCampaignComplete();
+        }
+      } else {
+        if (ev.type === 'gatePass') markCleared(ev.from, ev.to);
+        else if (ev.type === 'bossDown') markCleared(ev.room, ev.next);
+      }
     }
     if (!started) continue;
     if (ev.type === 'roomEnter') {
+      if (activeRunKind === 'expansion' && ev.room >= EXPANSION_ROOM_START && ev.room < EXPANSION_ROOM_START + TOTAL_LEVELS) {
+        activeExpansionIndex = ev.room - EXPANSION_ROOM_START;
+      }
       discoverCurrentRoom(ev.room);
       showBanner(ev.name, ev.subtitle);
     } else if (ev.type === 'bossSpawn') showToast(`⚔ ${ev.name} — ${ev.title}`, 2400);
@@ -2358,6 +3570,8 @@ function drainEvents() {
         || 'Shuriken';
       showToast(`${label} habis — beli di Warung Abu.`, 2100);
     } else if (ev.type === 'weaponSwitch') showToast(`Senjata: ${ev.name}`, 1200);
+    else if (ev.type === 'roomCondition' && ev.condition) showToast(`${ev.weather ? `${ev.weather} · ` : ''}${ev.condition}`, 2600);
+    else if (ev.type === 'echoGain' && activeRunKind === 'expansion') showToast(`✦ +${ev.amount} Gema · total ${ev.total}`, 1400);
   }
 }
 
@@ -2522,6 +3736,9 @@ window.__ashen = {
   get progress() {
     return progress;
   },
+  get expansion() {
+    return expState();
+  },
   get settings() {
     return {
       audio: { ...settings.audio },
@@ -2580,7 +3797,18 @@ window.__ashen = {
   retry: retryRun,
   showMenu,
   showLevels,
+  showExpansion,
   showCredits,
+  buildExpansionScreen,
+  startExpansionLevel,
+  startExpansionMode,
+  startExpansionTrial,
+  claimQuest,
+  buyHavenUpgrade,
+  equipSkin,
+  claimEventMission,
+  claimEventTier,
+  buyEventShop,
   startSpectate,
   stopSpectate,
   openShop,
@@ -2627,6 +3855,7 @@ window.__ashen = {
     saveProgress();
     updateMenuProgress();
     buildLevelCards();
+    buildExpansionScreen();
   },
   togglePause,
   step(seconds = 0.1, input = {}) {
@@ -2689,6 +3918,16 @@ window.__ashen = {
       progress: {
         unlocked: progress.unlocked,
         cleared: [...progress.cleared],
+      },
+      expansion: {
+        tab: expansionTab,
+        chapter: expansionChapter,
+        cleared: progress.expansion?.cleared?.filter(Boolean).length || 0,
+        echoes: progress.expansion?.echoes || 0,
+        difficulty: progress.expansion?.difficulty || 'normal',
+        ngPlus: progress.expansion?.ngPlus || 0,
+        collectibles: progress.expansion?.collectibles?.length || 0,
+        cosmetics: progress.expansion?.cosmetics?.length || 0,
       },
     };
   },

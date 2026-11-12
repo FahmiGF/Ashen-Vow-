@@ -2,7 +2,8 @@
 // A room belongs to a zone; a zone owns its palette, particle mood, map colour
 // and music track IDs. Adding a zone here (plus rooms in core.js) never
 // requires touching the audio or map code.
-import { ROOMS } from './core.js';
+import { ALL_ROOMS, ROOMS } from './core.js';
+import { BIOMES } from './expansion.js';
 
 export const ZONES = {
   ashen: {
@@ -92,6 +93,22 @@ export const ZONES = {
   },
 };
 
+// The ten campaign biomes reuse the zone contract so map, music and palette
+// lookup keep working without special cases.
+for (const biome of Object.values(BIOMES)) {
+  ZONES[biome.id] = {
+    id: biome.id,
+    name: biome.subtitle,
+    subtitle: biome.name,
+    color: biome.accent,
+    mapColor: biome.accent,
+    music: biome.music,
+    bossMusic: 'boss',
+    particle: biome.particle,
+    palette: { ...biome.palette },
+  };
+}
+
 export const ZONE_IDS = Object.keys(ZONES);
 export const ZONE_LIST = Object.values(ZONES);
 
@@ -116,6 +133,8 @@ export const ROOM_ZONES = [
 ];
 
 export function zoneIdForRoom(index) {
+  const room = ALL_ROOMS[index];
+  if (room?.zone && ZONES[room.zone]) return room.zone;
   return ROOM_ZONES[index] || 'ashen';
 }
 

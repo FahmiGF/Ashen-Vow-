@@ -1,7 +1,7 @@
 # ASHEN VOW — MASTER PLAN
 
 > **Version 2.0 — v1.0 roadmap + post-launch expansion.**
-> Status snapshot: **Milestones A (v0.0.8) and B (v0.1.0) complete, plus content update v0.2.0 (Sigil & Ritual)** · Milestones C–F planned · Expansion design draft.
+> Status snapshot: **Milestones A (v0.0.8) and B (v0.1.0) complete, plus content update v0.2.0 (Sigil & Ritual) and the v0.3.0 Echoes of the Forgotten World expansion** · Milestones C–F remain future work.
 > The full game stays a zero-build, dependency-free HTML5 Canvas + ES-module project.
 
 ## Document map
@@ -29,7 +29,7 @@
 
 ## Part 0 — v1.0 Roadmap (Milestones A–F)
 
-> This part is the shipping roadmap. The expansion begins after v1.0 and must not delay Milestones C–F.
+> This part is the shipping roadmap. Version labels below are planning targets, not release promises: v0.2.0 shipped as **Sigil & Ritual** and v0.3.0 shipped as **Echoes of the Forgotten World**. Milestones C–F remain future work; the five-zone v1.0 map and story/ending milestones are still open.
 
 ### Guiding rules for v1.0
 
@@ -40,7 +40,7 @@
 5. **Pure simulation.** `src/core.js` never touches the DOM or audio. Every mechanic gets a deterministic Node test; browser flows are verified through `window.__ashen` and CDP.
 6. **`npm test` green before every commit**, on desktop and portrait mobile.
 
-### Current state — v0.2.0 / Milestones A + B + Sigil & Ritual
+### Current state — v0.3.0 / Milestones A + B + Sigil & Ritual + Echoes of the Forgotten World
 
 | Area | Shipped |
 | --- | --- |
@@ -49,12 +49,27 @@
 | Persistence | Settings stored separately; v0.0.7 progress saves migrate into the map model; 14-room progress arrays extend without reindexing |
 | Interactive map | Fog of war, zone colours, player/boss markers, tooltips, legend, pan/zoom/recenter, 10 persistent pins, 14-node layout |
 | Zones | Five zone definitions (`ashen`, `mycelial`, `cistern`, `frostglass`, `cinder`) with palette, particle, map colour, music IDs |
-| Content | 14 rooms, 6 bosses, 10 playable characters, 3 weapons, 7 codex enemies, codex, prologue, 18-item shop, checkpoints, Mycelial Hollow branch |
+| Content | 14 legacy rooms + 100 expansion levels, 6 legacy bosses + 30 expansion bosses, 10 playable characters, 3 weapons, 7 legacy codex enemies, codex, prologue, 18-item shop, checkpoints, Mycelial Hollow branch |
 | Items | 4 permanent Sigils, 4 Ritual items, 6 consumables, quick-item cycling, in-run inventory, Whetstone damage buff |
-| Meta UI | In-game Update Log backed by `src/updates.js`, inventory overlay, HUD quick-item badge |
-| Tests | 93 Node tests + browser smoke coverage for gates, trampoline, climb, secret wall, boss phases, flask reward, persistence, shop, inventory, and update log |
+| Expansion | 10 chapters × 10 levels, 10 biomes, 100 enemy types / 300 variants, 20 mini-bosses + 10 major bosses, 5 difficulties, 6 modifiers, 5 NG+ tiers, 8 repeatable modes, 4 endgame trials |
+| Settlements | Thornveil Haven + 7 outposts, 52 NPCs, 8 permanent upgrades, 12 quests, 8 settlements |
+| Events & cosmetics | 6 seasonal Ashen Chronicle events, 32 visual-only skins, 12-category / 120-entry collection journal |
+| Meta UI | In-game Update Log backed by `src/updates.js`, inventory overlay, HUD quick-item badge, expansion hub (campaign / haven / chronicle / wardrobe) |
+| Tests | 103 Node tests + browser smoke coverage for gates, trampoline, climb, secret wall, boss phases, flask reward, persistence, shop, inventory, update log, and expansion data/migration/events |
 
-Known gaps after v0.2.0: Tidewrought Cistern, Frostglass Cathedral, and Cinder Maw have zone configuration but no playable rooms; no trailer; no branching story or endings; no fast travel. Sigil & Ritual is a content update, not Milestone C.
+Known gaps after v0.3.0: Tidewrought Cistern, Frostglass Cathedral, and Cinder Maw still have zone configuration but no playable legacy rooms; no branching story or multiple endings; no fast travel. The Echoes expansion is a content layer, not Milestone C.
+
+### Shipped expansion — v0.3.0: Echoes of the Forgotten World — COMPLETE
+
+**Goal:** turn the 14-room campaign into a 100-level world with a permanent settlement, seasonal events, and endgame progression without breaking legacy saves.
+
+**Shipped:**
+- `src/expansion.js`: 10 chapters/biomes, 100 deterministic levels, 100 enemy types + 300 variants, 20 mini-bosses, 10 major bosses, 52 NPCs, 8 settlements, 12 quests, 8 haven upgrades, 6 events, 32 skins, 8 repeatable modes, 5 NG+ tiers, 4 endgame trials, 12 collectible categories / 120 entries.
+- Global room indices 14–113 via `ALL_ROOMS`; legacy `ROOMS` stays at 14 and `ROOM_ZONES` at 14. `ZONES` gains 10 biome zones, `TRACKS` gains 10 biome tracks.
+- Core integration: challenge modifiers, biome hazards, collectibles, room conditions, echo currency, generic echo-boss AI (slam/volley/ring/charge/summon/rain), expansion enemy behavior dispatch, boss dialogue, and campaign completion.
+- Expansion hub in `src/main.js`: campaign chapter/level grid, difficulty/modifier/NG+ controls, repeatable modes, trials, Thornveil Haven dialogue/upgrades/quests, Ashen Chronicle missions/reward tracks/shop, wardrobe equip, and collection journal.
+- Save migration: `progress.expansion` under the existing `ashen-vow-progress-v1`; old saves keep progress, bosses, equipment, map projects, skill points, achievements, and NPC flags. Claimed event rewards and cosmetics persist forever.
+- Acceptance verified: 103/103 Node tests pass; expansion rooms, bosses, unlocks, event months, and migration are deterministic; browser smoke covers the hub tabs, a campaign level, a repeatable mode, haven upgrade/quest, chronicle claim, wardrobe equip, and save reload.
 
 ### Milestone B — v0.1.0: Mycelial Hollow — COMPLETE
 

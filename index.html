@@ -4,10 +4,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#0b0807" />
-    <title>Ashen Vow — v0.2.0</title>
+    <title>Ashen Vow — v0.3.0</title>
     <meta
       name="description"
-      content="Ashen Vow adalah simulasi metroidvania medieval 2D dengan combat pedang real-time, empat belas ruang, enam boss, peta, dan indeks sumpah."
+      content="Ashen Vow adalah metroidvania medieval 2D dengan combat pedang real-time, 114 ruang, 36 boss, 100 level ekspansi, Thornveil Haven, peta, dan indeks sumpah."
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -94,7 +94,7 @@
         <!-- ══ MAIN MENU ══ -->
         <section id="title-screen" class="screen title-screen">
           <div class="screen-inner title-inner">
-            <p class="eyebrow">SEBUAH SUMPAH DI ANTARA ABU · v0.2.0</p>
+            <p class="eyebrow">SEBUAH SUMPAH DI ANTARA ABU · v0.3.0</p>
             <h1 class="game-title">ASHEN<span>VOW</span></h1>
             <div class="title-rule"><i></i><b>✦</b><i></i></div>
             <p class="lede">
@@ -127,13 +127,17 @@
                 <span>INDEKS SUMPAH</span>
                 <em>Musuh · senjata · boss · barang · I</em>
               </button>
+              <button id="btn-expansion-menu" class="btn btn-ghost menu-btn expansion-menu-btn" type="button">
+                <span>ECHOES OF THE FORGOTTEN WORLD</span>
+                <em>100 level · Thornveil Haven · Chronicle · v0.3.0</em>
+              </button>
               <button id="btn-credits" class="btn btn-ghost menu-btn" type="button">
                 <span>CREDITS</span>
                 <em>SealiusHQ &amp; Contributors</em>
               </button>
               <button id="btn-updates" class="btn btn-ghost menu-btn" type="button">
                 <span>CATATAN UPDATE</span>
-                <em>Riwayat rilis · v0.2.0 · Sigil &amp; Ritual</em>
+                <em>Riwayat rilis · v0.3.0 · Echoes of the Forgotten World</em>
               </button>
             </nav>
 
@@ -142,6 +146,7 @@
               <i>✦</i>
               <span>Progres tersimpan otomatis</span>
             </div>
+            <p id="menu-expansion-progress" class="menu-expansion-progress">ECHOES · 0/100 LEVEL · BAB 1/10 · 0 GEMA</p>
 
             <p class="menu-controls">
               <kbd>A</kbd><kbd>D</kbd> gerak · <kbd>SPACE</kbd> lompat · <kbd>J</kbd> serang ·
@@ -208,7 +213,7 @@
               </div>
             </div>
 
-            <p class="credit-version">ASHEN VOW · v0.2.0 · 10 PENJAGA · 6 BOSS · 14 RUANG</p>
+            <p class="credit-version">ASHEN VOW · v0.3.0 · 10 PENJAGA · 36 BOSS · 114 RUANG</p>
             <div class="screen-links">
               <button id="btn-credits-back" class="link-btn" type="button">← KEMBALI KE MENU</button>
             </div>
@@ -225,7 +230,7 @@
               Catatan ini ikut tersimpan di dalam game.
             </p>
             <div class="updates-meta">
-              <span id="updates-version">VERSI SAAT INI · v0.2.0</span>
+              <span id="updates-version">VERSI SAAT INI · v0.3.0</span>
               <span>DIPERBARUI 11 NOVEMBER 2026</span>
             </div>
             <div id="update-log" class="update-log"></div>
@@ -235,6 +240,30 @@
               </button>
             </div>
             <p class="micro">Semua catatan dirangkum dari sesi pengembangan yang tersimpan.</p>
+          </div>
+        </section>
+
+        <!-- ══ EXPANSION HUB ══ -->
+        <section id="expansion-screen" class="screen hidden">
+          <div class="screen-inner expansion-inner">
+            <p class="eyebrow">ECHOES OF THE FORGOTTEN WORLD · v0.3.0</p>
+            <h2 class="screen-title">GEMA DUNIA TERLUPAKAN</h2>
+            <p class="screen-sub">
+              Seratus level, sepuluh bab, satu permukiman yang tumbuh bersama setiap sumpah.
+              Thornveil Haven mencatat namamu; Ashen Chronicle menyimpan hadiah yang tidak pernah hilang.
+            </p>
+            <div id="expansion-summary" class="exp-summary"></div>
+            <nav id="expansion-tabs" class="exp-tabs" aria-label="Bagian ekspansi">
+              <button class="exp-tab active" type="button" data-tab="campaign">KAMPANYE</button>
+              <button class="exp-tab" type="button" data-tab="haven">THORNVEIL HAVEN</button>
+              <button class="exp-tab" type="button" data-tab="chronicle">ASHEN CHRONICLE</button>
+              <button class="exp-tab" type="button" data-tab="wardrobe">LEMARI &amp; JURNAL</button>
+            </nav>
+            <div id="expansion-body" class="exp-body"></div>
+            <div class="screen-links">
+              <button id="btn-expansion-back" class="link-btn" type="button">← KEMBALI KE MENU</button>
+            </div>
+            <p class="micro">Semua progres ekspansi tersimpan di browser ini. Kulit tidak pernah memberi keuntungan tempur.</p>
           </div>
         </section>
 
@@ -320,7 +349,7 @@
               <button id="btn-victory-levels" class="link-btn" type="button">PILIH LEVEL</button>
               <button id="btn-victory-menu" class="link-btn" type="button">MENU UTAMA</button>
             </div>
-            <p class="micro">Terima kasih telah memainkan Ashen Vow v0.2.0</p>
+            <p class="micro">Terima kasih telah memainkan Ashen Vow v0.3.0</p>
           </div>
         </section>
 
@@ -571,7 +600,7 @@
       </div>
 
       <footer class="footer">
-        <span>ASHEN VOW · v0.2.0</span>
+        <span>ASHEN VOW · v0.3.0</span>
         <span class="dot">✦</span>
         <span>Metroidvania medieval 2D · 14 ruang · 6 boss · dibuat dengan Canvas</span>
       </footer>

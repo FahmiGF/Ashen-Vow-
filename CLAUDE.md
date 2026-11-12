@@ -1,7 +1,7 @@
 # Ashen Vow — Claude Master Plan
 
-> Compressed handoff for continuing **Ashen Vow v0.2.0**.
-> Status: **playable, browser-verified, Milestones A and B plus the Sigil & Ritual content update complete**.
+> Compressed handoff for continuing **Ashen Vow v0.3.0**.
+> Status: **playable, browser-verified, Milestones A and B plus Sigil & Ritual and the Echoes of the Forgotten World expansion complete**.
 > Roadmap: [`MASTERPLAN.md`](MASTERPLAN.md).
 > Repo: `https://github.com/FahmiGF/Ashen-Vow-` · branch `main` · push account `isshinAshinaSeal`.
 
@@ -33,6 +33,8 @@ Non-negotiable v0.1.0 requirements (v0.0.7/v0.0.8 scope preserved):
 19. **Five zone definitions** in `src/zones.js`; the current 14 rooms map across four playable zones (`mycelial` rooms 8–13 shipped in v0.1.0) so future biomes do not touch audio or map code.
 20. **Mycelial Hollow branch** — entered from room 2 after the Warden falls; 6 rooms, spore trampolines, climbable mycelium, Sporeling/Stalker/Brood Mother, The Sporebound, optional Root of the First Vow behind a 120-HP breakable wall, and a return gate to room 2.
 21. **Sigil & Ritual (v0.2.0)** — 4 permanent Sigils, 4 counted Ritual items, 6 consumables, quick-item cycling (`R`), an in-run Inventory overlay (`I`), a Whetstone damage buff, and an in-game Update Log (`src/updates.js`) reachable from the main menu.
+22. **Echoes of the Forgotten World (v0.3.0)** — 100 expansion levels in 10 chapters (7 standard + 1 environmental + 1 elite mini-boss + 1 major boss each), 10 biomes, 100 enemy base types with 300 variants, 20 mini-bosses, 10 major bosses, 5 difficulties, 6 modifiers, 5 NG+ tiers, 8 repeatable modes, 4 endgame trials, Thornveil Haven with 10 fixed NPCs / 8 upgrades / 12 quests, 8 settlements, 52 NPCs, 6 seasonal events, 32 visual-only skins, 12 collectible categories with 120 entries, and save-compatible progress under `progress.expansion`.
+23. **Expansion hub** (`X` or the main-menu button) with four tabs: **Kampanye**, **Thornveil Haven**, **Ashen Chronicle**, and **Lemari & Jurnal**. All expansion content is real playable data, not documentation-only.
 
 ## 2. Stack and constraints
 
@@ -60,11 +62,13 @@ Do **not** add a framework, bundler, or asset pipeline unless the product scope 
 | `src/audio.js` | Procedural SFX plus master/music/SFX gain buses and `applyVolumes()` |
 | `src/music.js` | Procedural `TRACKS` and `MusicManager`: play/crossfade, combat layer, stop, volume, `mycelialBoss` |
 | `src/settings.js` | Settings model, two-slot bindings, conflict swap/reset, gamepad mapping, sanitize/load/save |
-| `src/zones.js` | Five `ZONES`, `ROOM_ZONES` (14 entries), and `zoneForRoom` / `zoneMusicForRoom` |
+| `src/expansion.js` | Expansion data and generators: 10 chapters/biomes, 100 levels, enemies/variants, 30 bosses, 52 NPCs, settlements, quests, events, skins, modes, trials, collectibles, progression helpers |
+| `src/zones.js` | Legacy `ZONES` + 10 biome zones, `ROOM_ZONES` (14 legacy entries), and `zoneForRoom` / `zoneMusicForRoom` |
 | `src/map.js` | Map model (fog, adjacency, pins, stats, 14-node layout) + `MapView` canvas renderer |
 | `src/prologue.js` | 12-beat, 60-second prologue timeline plus procedural cutscene art (`drawPrologue`) |
 | `src/main.js` | Menus, character customization, prologue playback, progress, settings UI, music sync, map/shop/codex/dialogue UI, fixed-step loop, input, HUD, debug hooks |
 | `tests/core.test.js` | 64 deterministic Node tests |
+| `tests/expansion.test.js` | 10 tests for expansion data counts, room/boss lookups, unlocks, save migration, quests, events, haven bonuses, modifiers, collectibles |
 | `tests/foundations.test.js` | 15 tests for settings, bindings, persistence, gamepad, map fog/pins/stats, zones, music safety |
 | `server.js` | Static server on port 4300 |
 | `docs/` | Committed screenshots |
@@ -88,6 +92,10 @@ Do **not** add a framework, bundler, or asset pipeline unless the product scope 
   - `wallHit`, `wallBroken` — the mycelial secret wall absorbs damage or shatters.
   - `flaskReward { maxFlasks }` — Root of the First Vow grants a permanent flask charge.
   - `bounce`, `spore`, `sporeCloud` — spore trampolines and spore attacks.
+  - `roomCondition { room, weather, condition }` — expansion biome weather/condition on room entry.
+  - `collectible { id, name, category }` — expansion collectible picked up.
+  - `echoGain { amount, total }` — expansion currency gained.
+  - `campaignComplete { room, chapter }` — final expansion boss defeated.
 - Never let core code touch `window`, `document`, canvas, or audio.
 
 ## 5. Content model
@@ -179,6 +187,35 @@ Non-final bosses grant a blessing and open the next gate. `oathbreaker` has `rew
 | Mycelial Stalker | 76 | 16 | Burrows (immune to contact/projectiles/melee), emerges under the player, then lunges. |
 | Brood Mother | 150 | 15 | Ground controller that spawns Sporeling adds during the fight. |
 
+### Echoes of the Forgotten World — expansion content
+
+`src/expansion.js` is the single source of truth. `EXPANSION_ROOMS` are generated deterministically and appended as `ALL_ROOMS = [...ROOMS, ...EXPANSION_ROOMS]`; global indices are **14–113**. Legacy `ROOMS` stays at 14 and `ROOM_ZONES` stays at 14 so map/level-select/tests keep their original contract. `ZONES` gains 10 biome zones appended from `BIOMES`.
+
+| Area | Content |
+| --- | --- |
+| Chapters | 10 × 10 levels: 7 `standard`, 1 `special` (environmental/puzzle + mini-boss), 1 `elite` (mini-boss), 1 `boss` (major boss) |
+| Biomes | Hutan Abu, Rawa Tulang, Kawah Gema, Kota Terkubur, Gua Kristal, Padang Badai, Kuil Akar, Lautan Kabut, Menara Waktu, Singgasana Terlupakan |
+| Enemies | 100 base types mapped to `chaser`, `lunge`, `ranged`, `slam`, `burrower`, `spawner`, `hopper`; 300 variants |
+| Bosses | 20 mini-bosses (`mini_*`, patterns slam/volley/ring/charge/summon/rain) + 10 chapter bosses (`echo_boss_*`, `major: true`); final boss reward `victory` |
+| Difficulty | Cerita, Normal, Veteran, Mimpi Buruk, Master Abu; reward multiplier per mode |
+| Modifiers | Kulit Besi, Bilah Kaca, Paceklik, Buruan, Rapuh, Buta Kabut |
+| NG+ | 5 tiers; tier 0 is the first journey, tiers 1–4 unlock after campaign completion |
+| Modes | Ujian Gema, Boss Rush, Gelombang Abu, Gauntlet, Buruan Besar, Perburuan Relik, Cermin Sumpah, Tanpa Akhir |
+| Trials | Gema Tanpa Akhir, Ruang Kenangan, Nama Terakhir, Pertahanan Thornveil |
+| Haven | Thornveil Haven + 7 outposts; 10 fixed haven NPCs, 52 NPCs total; 8 upgrades, 12 quests |
+| Events | 6 seasonal themes (local month check), missions, reward tracks, shops, 20+ event skins; claimed rewards never expire |
+| Collection | 12 categories × 10 items = 120 collectibles; 32 skins total, all visual-only |
+
+Expansion progress lives at `progress.expansion` inside the existing `ashen-vow-progress-v1` save. `sanitizeExpansionProgress()` fills defaults, clamps numbers, filters unknown IDs, preserves unknown top-level fields and `__mission_*` counters, and never deletes earned cosmetics, claimed event rewards, quests, stash, modes, flags, or stats.
+
+Expansion run wiring in `src/main.js`:
+
+- `startExpansionLevel(localIndex, options)` sets `activeRunKind = 'expansion'`, applies difficulty/modifiers/NG+/skin, provisions echo-based ash, and transfers the event stash into run consumables.
+- `startExpansionMode()` / `startExpansionTrial()` start at the mode's `startIndex` and force the mode's modifiers.
+- `drainEvents()` routes `gatePass`, `bossDown`, `collectible`, `echoGain`, and `campaignComplete` to expansion handlers only when `activeRunKind === 'expansion'`.
+- `handleExpansionBoss()` marks clears, advances quests/events, grants skins on chapter milestones, unlocks the next chapter, and handles the final campaign completion.
+- `handleExpansionCollectible()` persists the ID and advances `collectibles`/category quests and events.
+
 ### Weapons and consumables
 
 `WEAPONS` is exported from `src/core.js`. The player starts with `sword`; purchased weapons are appended to `player.weapons`.
@@ -239,7 +276,8 @@ Boss rooms 2, 3, 5, 7, and 13, plus mycelial rooms 8 and 10, define `checkpoint`
 
 `src/main.js` state:
 
-- `menuView`: `title | levels | credits | character | none`
+- `menuView`: `title | levels | credits | updates | character | expansion | none`
+- `expansionTab`: `campaign | haven | chronicle | wardrobe`; `expansionChapter`, `chronicleEventId`, `havenNpcId`, `wardrobeFilter`
 - `started`, `paused`, `spectating`, `shopOpen`
 - `mapOpen`, `codexOpen`, `codexTab`, `dialogueOpen`, `dialogueLines`, `dialogueIndex`, `dialogueMeta`
 - `settingsOpen`, `settingsTab` (`audio | controls | gameplay`), `settingsCapture`, `settingsConflict`
@@ -255,7 +293,8 @@ Rules:
 - `PILIH PENJAGA` → `showCharacter()`; roster, race, armor, skin, and outfit buttons call `setCharacter()`, which sanitizes, saves, and applies the appearance to the live game player.
 - `startRun()` always applies the saved character after `game.reset()`; Level Select and retry call `startRun()` directly, so they never replay the prologue.
 - While `prologueActive`: game simulation is frozen, HUD/touch are hidden, the cutscene canvas renders every frame, and each beat auto-advances after 5 s. `Space`/`Enter` advances, `Esc` skips, `N` toggles voice. Subtitles are DOM text and work without speech synthesis.
-- `PILIH LEVEL` → cards for all 14 rooms; room 12 renders as a hidden `???` card until discovered.
+- `PILIH LEVEL` → cards for all 14 legacy rooms; room 12 renders as a hidden `???` card until discovered.
+- `ECHOES OF THE FORGOTTEN WORLD` (menu button or `X`) → `showExpansion(tab)` → `#expansion-screen` with four tabs. `Esc` returns to the title. Campaign tab selects chapters/levels, difficulty, modifiers, NG+, modes, and trials; Haven handles NPC dialogue, upgrades, and quest claims; Chronicle handles event missions/reward tracks/shop; Wardrobe handles skin equip and the collection journal.
 - Locked card: **no `MAINKAN` button**, only `SNEAK PEEK`.
 - Unlocked card: `MAINKAN` + `SNEAK PEEK`.
 - `SNEAK PEEK` → `startSpectate(index)`, hides HUD/title, shows `#spectate-ui`.
@@ -282,7 +321,7 @@ Rules:
 npm test
 ```
 
-Current result: **79/79 passing**. Coverage includes:
+Current result: **103/103 passing**. Coverage includes:
 
 - gravity, floor landing, movement and world bounds;
 - single jump vs double jump after relic;
@@ -334,6 +373,14 @@ Current result: **79/79 passing**. Coverage includes:
 - **pins are sanitized, capped at 10, and removable**;
 - **every room maps to a known zone with its own track, palette, and particle mood**;
 - **MusicManager is safe without an AudioContext**;
+- **expansion data targets: 100 levels, 10 chapters with 7+1+1+1 composition, 10 biomes, 100 enemies, 300 variants, 20 mini-bosses, 10 major bosses, 52 NPCs, 8 settlements, 8 upgrades, 12 quests, 6 events, 32 skins, 12 categories / 120 collectibles, 8 modes, 5 NG+ tiers, 4 trials**;
+- **legacy `ROOMS` stays at 14 and `CODEX` at 7 enemies / 6 bosses while `ALL_ROOMS` reaches 114 and `ALL_BOSS_INFO` 36**;
+- **expansion rooms connect 14→113 and the final boss uses reward `victory`**;
+- **level unlock gates, boss lookups, and mini/major boss classification**;
+- **save migration preserves sparse clears, quests, upgrades, event claims, stash, modes, flags, stats, and unknown fields**;
+- **quest progress matches objective types and freezes completed quests**;
+- **event progress only advances active months; claimed missions/tiers/shop items and cosmetics survive expiry**;
+- **haven bonuses stack, modifiers multiply, collectible counts group by category, and save summaries report correctly**;
 - death freezes the simulation.
 
 New tests added for v0.0.5–v0.1.0 menus, character customization, prologue, settings, map, zones, music, codex, dialogue, and Mycelial Hollow are partly browser-level; the pure model layers have Node tests.
@@ -346,6 +393,24 @@ Run the server and Chrome with remote debugging:
 npm start
 chrome --remote-debugging-port=9333 --user-data-dir=<temp> http://127.0.0.1:4300/
 ```
+
+Verified through Chrome DevTools Protocol (v0.3.0 Echoes of the Forgotten World smoke, **15/15 checks, no console errors**):
+
+- boot reports v0.3.0 on the title screen with clean expansion progress;
+- campaign tab renders 10 chapters, 10 levels, and progression controls;
+- Thornveil Haven renders 10 NPCs, 8 upgrades, 12 quests, and 8 settlements;
+- Ashen Chronicle shows 6 events with the November festival active;
+- wardrobe renders 32 skins and a 12-category collection journal;
+- starting level 1 enters expansion room 14 with enemies and challenge state;
+- starting Ujian Gema uses its expansion start room and mode modifier;
+- a haven upgrade and quest claim spend/earn echoes and persist flags;
+- chronicle mission and tier claims persist and grant rewards;
+- equipping an event skin updates the active run and save;
+- expansion progress, event rewards, haven upgrade, and skin survive reload;
+- the expansion hub reopens with the saved summary after reload;
+- defeating a chapter boss clears the level, grants echoes, and opens a blessing;
+- the final chapter boss completes the campaign and unlocks New Game Plus;
+- no runtime exceptions or console errors during the flow.
 
 Verified through Chrome DevTools Protocol (v0.1.0 Mycelial Hollow smoke, 36/36 checks, no console errors):
 
@@ -386,8 +451,9 @@ Verified through Chrome DevTools Protocol (v0.0.7):
 
 `window.__ashen` exists for smoke tests:
 
-- Getters: `game`, `renderer`, `started`, `paused`, `spectating`, `menuView`, `progress`, `settings`, `musicTrack`, `audioState`, `mapData`, `shopOpen`, `mapOpen`, `codexOpen`, `dialogueOpen`, `prologueActive`, `prologueIndex`, `prologueBeat`, `prologueVoice`, `character`.
-- Navigation: `start`, `restart`, `retry`, `showMenu`, `showLevels`, `showCredits`, `showSettings`, `closeSettings`, `showCharacter`, `closeCharacter`, `enterRoom`, `clearProgress`.
+- Getters: `game`, `renderer`, `started`, `paused`, `spectating`, `menuView`, `progress`, `expansion`, `settings`, `musicTrack`, `audioState`, `mapData`, `shopOpen`, `mapOpen`, `codexOpen`, `dialogueOpen`, `prologueActive`, `prologueIndex`, `prologueBeat`, `prologueVoice`, `character`.
+- Navigation: `start`, `restart`, `retry`, `showMenu`, `showLevels`, `showExpansion`, `showCredits`, `showSettings`, `closeSettings`, `showCharacter`, `closeCharacter`, `enterRoom`, `clearProgress`.
+- Expansion: `buildExpansionScreen`, `startExpansionLevel`, `startExpansionMode`, `startExpansionTrial`, `claimQuest`, `buyHavenUpgrade`, `equipSkin`, `claimEventMission`, `claimEventTier`, `buyEventShop`.
 - Settings: `buildSettings`, `applySettings`.
 - Character/prologue: `buildCharacterScreen`, `setCharacter`, `setCharacterField`, `saveCharacter`, `beginJourney`, `startPrologue`, `advancePrologue`, `finishPrologue`, `togglePrologueVoice`.
 - Overlays: `openMap`, `closeMap`, `toggleMap`, `openCodex`, `closeCodex`, `advanceDialogue`.
@@ -401,7 +467,9 @@ Verified through Chrome DevTools Protocol (v0.0.7):
 - No save-slot UI; single browser profile progress only.
 - Ash is run-scoped and is not persisted with level progress; weapons are re-earned each run.
 - Sneak Peek has no touch pan control; camera auto-drifts.
-- No new game plus, difficulty selection, or per-action gamepad rebinding yet (gamepad buttons are fixed to the standard layout).
+- Per-action gamepad rebinding is not available (gamepad buttons are fixed to the standard layout); difficulty, modifiers, NG+, repeatable modes, and endgame trials exist in the expansion hub.
+- Expansion enemies reuse seven AI archetypes rather than 100 bespoke scripts; boss patterns reuse six configurable families. Content is data-driven and real, but not every enemy/boss is hand-animated.
+- Seasonal events use the local clock and are intentionally offline/local; there is no server-authoritative event verification.
 - Audio is procedural only; no recorded music or voice files. Tracks are short patterns, so long sessions may notice looping. Prologue narration depends on browser speech-synthesis voices, but subtitles always carry the story.
 - Art is procedural; no sprite/tileset pipeline.
 - Only four of the five configured zones have playable rooms; Tidewrought Cistern exists only as configuration until Milestone C.
@@ -427,3 +495,8 @@ Verified through Chrome DevTools Protocol (v0.0.7):
 13. New rooms must add a `MAP_LAYOUT` node with two-way exits and a `ROOM_ZONES` entry; the map is generated, never hand-written.
 14. New zones must define palette, particle, map colour, and track IDs in `ZONES`, plus a track in `TRACKS`. Do not special-case zone names in `main.js`.
 15. Keep `window.__ashen` in sync with new UI state so CDP smoke tests can drive real flows.
+16. Preserve the expansion invariants: legacy `ROOMS` 14 entries, `ROOM_ZONES` 14 entries, `CODEX` 7 enemies / 6 bosses, and save keys `ashen-vow-progress-v1` / `ashen-vow-character-v1` / `ashen-vow-settings-v1`.
+17. Expansion levels use global indices 14–113 through `ALL_ROOMS`; never renumber legacy rooms.
+18. Cosmetics are visual-only. Never add combat stats to `COSMETIC_SKINS`, event rewards, or wardrobe items.
+19. Event rewards that were already claimed must survive event expiry and save reloads; test this whenever event logic changes.
+20. New expansion data belongs in `src/expansion.js`; keep `src/core.js` free of hardcoded chapter tables.

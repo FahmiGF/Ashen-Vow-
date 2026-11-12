@@ -1,9 +1,9 @@
 {
   "name": "ashen-vow",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
-  "description": "Ashen Vow - medieval 2D metroidvania combat simulation with ten selectable characters, sigils, rituals, consumables, an in-run inventory, an in-game update log, appearance customization, a one-minute prologue, fourteen rooms, six bosses, the Mycelial Hollow biome, procedural zone music, rebindable controls, settings, an interactive map, and a codex",
+  "description": "Ashen Vow - medieval 2D metroidvania combat simulation with ten selectable characters, sigils, rituals, consumables, an in-run inventory, an in-game update log, appearance customization, a one-minute prologue, fourteen legacy rooms, six legacy bosses, and the Echoes of the Forgotten World expansion: 100 levels, 10 chapters, Thornveil Haven, Ashen Chronicle events, 20+ cosmetics, repeatable modes, New Game Plus, and endgame trials",
   "scripts": {
     "start": "node server.js",
     "test": "node --test tests/*.test.js"

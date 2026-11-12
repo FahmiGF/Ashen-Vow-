@@ -28,11 +28,13 @@ test('update log is complete and ordered newest first', () => {
   }
 });
 
-test('the latest update documents the Sigil & Ritual content', () => {
+test('the latest update documents the Echoes of the Forgotten World expansion', () => {
   const latest = LATEST_UPDATE;
+  assert.equal(latest.version, '0.3.0');
   const text = [latest.summary, ...latest.highlights, ...(latest.fixes || [])].join(' ');
-  assert.match(text, /Sigil/i);
-  assert.match(text, /Ritual/i);
-  assert.match(text, /Inventaris/i);
-  assert.match(text, /Gladiator/i);
+  assert.match(text, /100 level/i);
+  assert.match(text, /Thornveil Haven/i);
+  assert.match(text, /Ashen Chronicle/i);
+  assert.match(text, /Jurnal Koleksi/i);
+  assert.match(text, /New Game Plus/i);
 });
