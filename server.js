@@ -43,5 +43,5 @@ const server = createServer(async (req, res) => {
 });
 
 server.listen(PORT, '127.0.0.1', () => {
-  console.log(`Ashen Vow v0.0.5 running at http://127.0.0.1:${PORT}`);
+  console.log(`Ashen Vow v0.2.0 running at http://127.0.0.1:${PORT}`);
 });

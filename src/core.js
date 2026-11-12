@@ -78,6 +78,45 @@ export const ENEMY_INFO = {
     desc: 'Gumpalan bara yang dipaksa berdiri. Ayunannya lambat, tetapi setiap hentakan membelah lantai.',
     where: 'Jembatan Tulang · Menara Lonceng',
   },
+  sporeling: {
+    name: 'Sporeling',
+    title: 'Anak Spora',
+    hp: 30,
+    dmg: 9,
+    speed: 96,
+    w: 36,
+    h: 30,
+    reward: 10,
+    danger: 'RENDAH',
+    desc: 'Tunas miselium yang berjalan dengan kaki akar. Saat mati, tubuhnya pecah menjadi awan spora yang lambat membubarkan diri.',
+    where: 'Rongga Miselium',
+  },
+  stalker: {
+    name: 'Mycelial Stalker',
+    title: 'Pemburu Miselium',
+    hp: 76,
+    dmg: 16,
+    speed: 110,
+    w: 48,
+    h: 46,
+    reward: 20,
+    danger: 'TINGGI',
+    desc: 'Pemburu berkulit akar yang menggali ke dalam tanah, lalu muncul kembali tepat di bawah langkahmu.',
+    where: 'Taman Spora · Jembatan Gantung',
+  },
+  broodmother: {
+    name: 'Brood Mother',
+    title: 'Rahim Spora',
+    hp: 150,
+    dmg: 15,
+    speed: 42,
+    w: 70,
+    h: 58,
+    reward: 32,
+    danger: 'TINGGI',
+    desc: 'Gumpalan induk yang menetas tanpa henti. Setiap kali ia berdenyut, seekor Sporeling merangkak keluar dari tubuhnya.',
+    where: 'Sarang Induk',
+  },
 };
 
 // ── characters and appearance ─────────────────────────────────────────────
@@ -272,6 +311,111 @@ export const CHARACTERS = {
       desc: 'Memicu pusaran 8 bola api bara melingkar yang membakar musuh di sekitar dan melenyapkan proyektil lawan.',
     },
   },
+  gladiator: {
+    id: 'gladiator',
+    name: 'Varek the Unbroken',
+    title: 'The Gladiator',
+    className: 'Gladiator',
+    glyph: '⚔',
+    desc: 'Juara arena yang tidak pernah berhenti menyerang. Menerjang lurus menembus barisan musuh dengan perisai dan bilah.',
+    maxHp: 115,
+    speed: 1.02,
+    damage: 1.06,
+    dash: 0.9,
+    build: 1.05,
+    appearance: { race: 'human', skin: '#a9714c', outfit: '#7a4a24', armor: 'tribal' },
+    ability: {
+      id: 'arena_charge',
+      name: 'Terjangan Arena',
+      key: 'U / V',
+      cooldown: 6,
+      desc: 'Menerjang ke depan sejauh 160 unit, meremukkan semua musuh di lintasan, dan memberi i-frame singkat.',
+    },
+  },
+  retiarius: {
+    id: 'retiarius',
+    name: 'Neris of the Net',
+    title: 'The Retiarius',
+    className: 'Netfighter',
+    glyph: '⌗',
+    desc: 'Pemburu yang bertarung dengan jaring dan trisula. Mengunci langkah musuh sebelum menusuk dari jarak aman.',
+    maxHp: 90,
+    speed: 1.06,
+    damage: 1.02,
+    dash: 0.82,
+    build: 0.95,
+    appearance: { race: 'elf', skin: '#d8a97f', outfit: '#2f4a5c', armor: 'modern' },
+    ability: {
+      id: 'net_cast',
+      name: 'Jaring Penjaga',
+      key: 'U / V',
+      cooldown: 5.2,
+      desc: 'Melempar jaring yang menembus musuh, memberi damage, dan menahan gerak mereka selama 2,4 detik.',
+    },
+  },
+  stormcaller: {
+    id: 'stormcaller',
+    name: 'Astra Stormcaller',
+    title: 'The Stormcaller',
+    className: 'Stormcaller',
+    glyph: 'ϟ',
+    desc: 'Perantara badai yang menyalurkan murka langit. Petirnya melompat dari satu tubuh ke tubuh lain.',
+    maxHp: 84,
+    speed: 1,
+    damage: 1.14,
+    dash: 0.94,
+    build: 0.94,
+    appearance: { race: 'devil', skin: '#a8503f', outfit: '#5b2f6b', armor: 'royal' },
+    ability: {
+      id: 'chain_lightning',
+      name: 'Rantai Badai',
+      key: 'U / V',
+      cooldown: 6.4,
+      desc: 'Menyambar hingga 4 musuh terdekat dengan petir berantai; setiap lompatan berikutnya sedikit melemah.',
+    },
+  },
+  sentinel: {
+    id: 'sentinel',
+    name: 'Bram Ironward',
+    title: 'The Sentinel',
+    className: 'Sentinel',
+    glyph: '⛨',
+    desc: 'Penjaga gerbang terakhir Opus. Berdiri seperti tembok dan menghukum siapa pun yang berani mendekat.',
+    maxHp: 120,
+    speed: 0.94,
+    damage: 1,
+    dash: 0.95,
+    build: 1.1,
+    appearance: { race: 'orc', skin: '#7f8f5c', outfit: '#4a4440', armor: 'ashen' },
+    ability: {
+      id: 'aegis_pulse',
+      name: 'Denyut Aegis',
+      key: 'U / V',
+      cooldown: 7,
+      desc: 'Memancarkan gelombang perisai yang memukul mundur musuh di sekitar dan memberi 3,2 detik kebal.',
+    },
+  },
+  warden: {
+    id: 'warden',
+    name: 'Maera Thornward',
+    title: 'The Warden',
+    className: 'Warden',
+    glyph: '❧',
+    desc: 'Penjaga akar pertama. Duri-duri Opus tumbuh dari tanah untuk membalas setiap langkah musuh.',
+    maxHp: 98,
+    speed: 1.03,
+    damage: 1.03,
+    dash: 0.88,
+    build: 1,
+    appearance: { race: 'goblin', skin: '#8fb06a', outfit: '#3b4a2f', armor: 'tribal' },
+    ability: {
+      id: 'thorn_volley',
+      name: 'Voli Duri',
+      key: 'U / V',
+      cooldown: 5.5,
+      desc: 'Menembakkan lima duri akar dalam kipas ke arah hadap. Setiap duri menusuk dan memperlambat langkah.',
+    },
+  },
 };
 
 export const DEFAULT_APPEARANCE = { race: 'human', skin: '#c98f6a', outfit: '#6d2323', armor: 'medieval' };
@@ -305,6 +449,8 @@ export const SHOP_ITEMS = [
     desc: 'Senjata jarak jauh. Jangkauan 118, ayunan lambat, damage besar.',
     cost: 35,
     type: 'weapon',
+    glyph: '⟋',
+    effect: 'Senjata jarak menengah',
   },
   {
     id: 'bow',
@@ -312,6 +458,80 @@ export const SHOP_ITEMS = [
     desc: 'Senjata jarak jauh. Menembak anak panah; amunisi terbatas.',
     cost: 55,
     type: 'weapon',
+    glyph: '➶',
+    effect: 'Senjata jarak jauh',
+  },
+  {
+    id: 'sigil_ember',
+    name: 'Sigil Bara',
+    desc: 'Sigil permanen. Seluruh damage serangan meningkat 18% sampai run berakhir.',
+    cost: 45,
+    type: 'sigil',
+    glyph: '✹',
+    effect: '+18% damage',
+  },
+  {
+    id: 'sigil_iron',
+    name: 'Sigil Besi',
+    desc: 'Sigil permanen. Menambah 25 HP maksimum dan langsung memulihkan 25 HP.',
+    cost: 40,
+    type: 'sigil',
+    glyph: '⛊',
+    effect: '+25 HP maksimum',
+  },
+  {
+    id: 'sigil_wind',
+    name: 'Sigil Angin',
+    desc: 'Sigil permanen. Gerak 8% lebih cepat dan cooldown dash 12% lebih singkat.',
+    cost: 40,
+    type: 'sigil',
+    glyph: '≋',
+    effect: '+8% kecepatan',
+  },
+  {
+    id: 'sigil_vow',
+    name: 'Sigil Sumpah',
+    desc: 'Sigil permanen. Menambah satu charge flask dan mengisi ulang seluruh flask.',
+    cost: 60,
+    type: 'sigil',
+    glyph: '✧',
+    effect: '+1 flask maksimum',
+  },
+  {
+    id: 'ritual_purge',
+    name: 'Ritus Penyucian',
+    desc: 'Item ritual. Memberi 60 damage ke semua musuh dan melenyapkan proyektil lawan di ruangan.',
+    cost: 50,
+    type: 'ritual',
+    glyph: '☼',
+    effect: 'Damage area 60',
+  },
+  {
+    id: 'ritual_ward',
+    name: 'Ritus Penjagaan',
+    desc: 'Item ritual. Memberi kebal selama 6 detik dan memulihkan 15 HP.',
+    cost: 40,
+    type: 'ritual',
+    glyph: '☩',
+    effect: 'Kebal 6 detik',
+  },
+  {
+    id: 'ritual_ember',
+    name: 'Ritus Bara',
+    desc: 'Item ritual. Melepaskan 12 bola api ke segala arah untuk membakar musuh di sekitar.',
+    cost: 45,
+    type: 'ritual',
+    glyph: '✺',
+    effect: '12 bola api',
+  },
+  {
+    id: 'ritual_mend',
+    name: 'Ritus Pemulihan',
+    desc: 'Item ritual. Memulihkan 50 HP dan menambah satu charge flask.',
+    cost: 35,
+    type: 'ritual',
+    glyph: '❈',
+    effect: 'Heal 50 + flask',
   },
   {
     id: 'shuriken',
@@ -319,6 +539,59 @@ export const SHOP_ITEMS = [
     desc: 'Konsumabel. Tekan C untuk melempar. Damage ringan, cepat.',
     cost: 14,
     type: 'consumable',
+    glyph: '✦',
+    shortName: 'SHURIKEN',
+    effect: 'Lemparan cepat',
+  },
+  {
+    id: 'knives',
+    name: 'Pisau Lempar ×5',
+    desc: 'Konsumabel. Pisau terbang lebih cepat dan lebih tajam daripada shuriken.',
+    cost: 18,
+    type: 'consumable',
+    glyph: '⌁',
+    shortName: 'PISAU',
+    effect: '5 lemparan tajam',
+  },
+  {
+    id: 'bomb',
+    name: 'Bom Bara ×2',
+    desc: 'Konsumabel. Bom meledak saat menghantam musuh atau tanah, membakar area di sekitarnya.',
+    cost: 24,
+    type: 'consumable',
+    glyph: '◉',
+    shortName: 'BOM',
+    effect: 'Ledakan area',
+  },
+  {
+    id: 'tonic',
+    name: 'Tonik Abu',
+    desc: 'Konsumabel. Langsung memulihkan 30 HP tanpa memakai charge flask.',
+    cost: 16,
+    type: 'consumable',
+    glyph: '✚',
+    shortName: 'TONIK',
+    effect: 'Heal 30 instan',
+  },
+  {
+    id: 'smoke',
+    name: 'Vial Asap',
+    desc: 'Konsumabel. Menyelimuti tubuh dengan asap dan memberi kebal selama 2,5 detik.',
+    cost: 20,
+    type: 'consumable',
+    glyph: '☁',
+    shortName: 'ASAP',
+    effect: 'Kebal 2,5 detik',
+  },
+  {
+    id: 'whetstone',
+    name: 'Batu Asah',
+    desc: 'Konsumabel. Menajamkan senjata: damage +30% selama 25 detik.',
+    cost: 22,
+    type: 'consumable',
+    glyph: '▰',
+    shortName: 'BATU ASAH',
+    effect: '+30% damage 25 dtk',
   },
   {
     id: 'arrows',
@@ -326,6 +599,8 @@ export const SHOP_ITEMS = [
     desc: 'Amunisi Busur Abu. Hanya bisa dibeli setelah memiliki busur.',
     cost: 12,
     type: 'ammo',
+    glyph: '➳',
+    effect: 'Amunisi busur',
   },
   {
     id: 'flask',
@@ -333,8 +608,21 @@ export const SHOP_ITEMS = [
     desc: 'Mengembalikan semua charge flask.',
     cost: 10,
     type: 'flask',
+    glyph: '✚',
+    effect: 'Isi ulang flask',
   },
 ];
+
+export const ITEM_TYPE_LABEL = {
+  weapon: 'Senjata',
+  consumable: 'Konsumabel',
+  ammo: 'Amunisi',
+  flask: 'Bekal',
+  sigil: 'Sigil',
+  ritual: 'Ritual',
+};
+
+export const SHOP_ITEM_BY_ID = Object.fromEntries(SHOP_ITEMS.map((item) => [item.id, item]));
 
 export const ROOMS = [
   {
@@ -398,8 +686,11 @@ export const ROOMS = [
     enemies: [],
     relic: null,
     boss: 'warden',
-    gate: { x: 1362, y: 286, w: 34, h: 184, requires: 'boss' },
-    hint: 'Sir Mordrake, Penjaga yang Gugur, menanti di tengah bara.',
+    gates: [
+      { x: 1362, y: 286, w: 34, h: 184, requires: 'boss', next: 3, name: 'Menara Lonceng' },
+      { x: 26, y: 286, w: 34, h: 184, requires: 'boss', next: 8, name: 'Rongga Miselium' },
+    ],
+    hint: 'Sir Mordrake, Penjaga yang Gugur, menanti di tengah bara. Setelah ia gugur, celah miselium di barat terbuka.',
   },
   {
     id: 3,
@@ -517,6 +808,160 @@ export const ROOMS = [
     gate: null,
     hint: 'The Oathbreaker menanti di atas semua sumpah yang pernah kau ucapkan.',
   },
+  // ── v0.1.0: Mycelial Hollow ─────────────────────────────────────────────
+  {
+    id: 8,
+    name: 'Lubang Masuk',
+    subtitle: 'The Entry Shaft',
+    accent: '#a86bd8',
+    spawn: { x: 90, y: FLOOR_Y - 46 },
+    checkpoint: { x: 64, y: FLOOR_Y - 78, w: 38, h: 78, name: 'Warung Abu' },
+    merchant: { x: 144, y: FLOOR_Y - 96, w: 46, h: 96 },
+    platforms: [
+      { x: 0, y: 470, w: 1400, h: 70 },
+      { x: 210, y: 386, w: 190, h: 18 },
+      { x: 500, y: 318, w: 170, h: 18 },
+      { x: 780, y: 250, w: 190, h: 18 },
+      { x: 1080, y: 336, w: 190, h: 18 },
+    ],
+    enemies: [
+      { type: 'sporeling', x: 520, minX: 300, maxX: 700 },
+      { type: 'sporeling', x: 1160, minX: 1000, maxX: 1320 },
+    ],
+    relic: null,
+    boss: null,
+    bounce: [{ x: 430, y: 462, w: 90, h: 16, power: 980 }],
+    climbs: [{ x: 940, y: 230, w: 24, h: 240 }],
+    gate: { x: 1362, y: 286, w: 34, h: 184, requires: 'clear', next: 9, name: 'Taman Spora' },
+    hint: 'Panjat miselium dan lompat di atas topi spora. Bersihkan lubang masuk.',
+  },
+  {
+    id: 9,
+    name: 'Taman Spora',
+    subtitle: 'Spore Gardens',
+    accent: '#b07be8',
+    spawn: { x: 90, y: FLOOR_Y - 46 },
+    platforms: [
+      { x: 0, y: 470, w: 520, h: 70 },
+      { x: 930, y: 470, w: 470, h: 70 },
+      { x: 560, y: 392, w: 140, h: 18 },
+      { x: 760, y: 392, w: 140, h: 18 },
+      { x: 300, y: 360, w: 170, h: 18 },
+      { x: 1000, y: 330, w: 180, h: 18 },
+    ],
+    enemies: [
+      { type: 'sporeling', x: 330, minX: 180, maxX: 470 },
+      { type: 'sporeling', x: 1020, minX: 960, maxX: 1160 },
+      { type: 'sporeling', x: 1240, minX: 1160, maxX: 1330 },
+      { type: 'stalker', x: 1140, minX: 960, maxX: 1320 },
+    ],
+    relic: null,
+    boss: null,
+    bounce: [{ x: 460, y: 462, w: 86, h: 16, power: 1050 }],
+    climbs: [{ x: 900, y: 330, w: 22, h: 140 }],
+    gate: { x: 1362, y: 286, w: 34, h: 184, requires: 'clear', next: 10, name: 'Jembatan Gantung' },
+    hint: 'Lompat dari topi spora ke jembatan akar. Awan spora melukai perlahan.',
+  },
+  {
+    id: 10,
+    name: 'Jembatan Gantung',
+    subtitle: 'Hanging Bridges',
+    accent: '#9b6ac7',
+    spawn: { x: 90, y: FLOOR_Y - 46 },
+    checkpoint: { x: 64, y: FLOOR_Y - 78, w: 38, h: 78, name: 'Warung Abu' },
+    merchant: { x: 144, y: FLOOR_Y - 96, w: 46, h: 96 },
+    platforms: [
+      { x: 0, y: 470, w: 380, h: 70 },
+      { x: 1040, y: 470, w: 360, h: 70 },
+      { x: 420, y: 404, w: 180, h: 18 },
+      { x: 650, y: 336, w: 180, h: 18 },
+      { x: 860, y: 404, w: 140, h: 18 },
+      { x: 1120, y: 340, w: 190, h: 18 },
+    ],
+    enemies: [
+      { type: 'stalker', x: 250, minX: 140, maxX: 340 },
+      { type: 'sporeling', x: 1120, minX: 1060, maxX: 1220 },
+      { type: 'sporeling', x: 1270, minX: 1220, maxX: 1340 },
+      { type: 'stalker', x: 1180, minX: 1060, maxX: 1330 },
+    ],
+    relic: null,
+    boss: null,
+    bounce: [{ x: 300, y: 462, w: 86, h: 16, power: 1080 }],
+    climbs: [{ x: 1000, y: 340, w: 22, h: 130 }],
+    gate: { x: 1362, y: 286, w: 34, h: 184, requires: 'clear', next: 11, name: 'Sarang Induk' },
+    hint: 'Jembatan akar rapuh di atas jurang. Stalker menggali dari bawah pijakanmu.',
+  },
+  {
+    id: 11,
+    name: 'Sarang Induk',
+    subtitle: 'Brood Nest',
+    accent: '#c084e0',
+    spawn: { x: 120, y: FLOOR_Y - 46 },
+    platforms: [
+      { x: 0, y: 470, w: 1400, h: 70 },
+      { x: 250, y: 372, w: 210, h: 18 },
+      { x: 600, y: 292, w: 190, h: 18 },
+      { x: 920, y: 342, w: 220, h: 18 },
+    ],
+    enemies: [
+      { type: 'broodmother', x: 980, minX: 820, maxX: 1160 },
+      { type: 'sporeling', x: 430, minX: 320, maxX: 560 },
+      { type: 'sporeling', x: 1250, minX: 1170, maxX: 1340 },
+      { type: 'stalker', x: 720, minX: 600, maxX: 820 },
+    ],
+    relic: null,
+    boss: null,
+    secretWall: { x: 10, y: 0, w: 60, h: 470, hp: 120, name: 'Dinding Miselium', next: 12 },
+    gates: [
+      { x: 1362, y: 286, w: 34, h: 184, requires: 'clear', next: 13, name: 'Altar Spora' },
+      { x: 6, y: 286, w: 34, h: 184, requires: 'wall', next: 12, secret: true, name: 'Relung Tersembunyi' },
+    ],
+    hint: 'Brood Mother menetas tanpa henti. Dinding barat berdenyut seperti jantung.',
+  },
+  {
+    id: 12,
+    name: 'Relung Tersembunyi',
+    subtitle: 'The Hidden Alcove',
+    accent: '#d8a35c',
+    spawn: { x: 120, y: FLOOR_Y - 46 },
+    platforms: [
+      { x: 0, y: 470, w: 1400, h: 70 },
+      { x: 180, y: 360, w: 200, h: 18 },
+      { x: 560, y: 300, w: 180, h: 18 },
+      { x: 1020, y: 356, w: 200, h: 18 },
+    ],
+    enemies: [],
+    relic: null,
+    boss: 'root',
+    gate: { x: 1362, y: 286, w: 34, h: 184, requires: 'boss', next: 11, name: 'Sarang Induk' },
+    hint: 'Root of the First Vow tertanam di relung yang tidak pernah masuk peta. Hadiahnya bertahan sampai akhir run.',
+  },
+  {
+    id: 13,
+    name: 'Altar Spora',
+    subtitle: 'The Spore Altar',
+    accent: '#8f5bcf',
+    spawn: { x: 250, y: FLOOR_Y - 46 },
+    checkpoint: { x: 88, y: FLOOR_Y - 78, w: 38, h: 78, name: 'Warung Abu' },
+    merchant: { x: 168, y: FLOOR_Y - 96, w: 46, h: 96 },
+    platforms: [
+      { x: 0, y: 470, w: 1400, h: 70 },
+      { x: 120, y: 352, w: 190, h: 18 },
+      { x: 1090, y: 352, w: 190, h: 18 },
+      { x: 600, y: 318, w: 200, h: 18 },
+      { x: 340, y: 238, w: 150, h: 18 },
+      { x: 930, y: 238, w: 150, h: 18 },
+    ],
+    enemies: [],
+    relic: null,
+    boss: 'sporebound',
+    bounce: [
+      { x: 430, y: 462, w: 84, h: 16, power: 1030 },
+      { x: 930, y: 462, w: 84, h: 16, power: 1030 },
+    ],
+    gate: { x: 1362, y: 286, w: 34, h: 184, requires: 'boss', next: 2, name: 'Singgasana Bara' },
+    hint: 'The Sporebound menumbuhkan tubuhnya dari altar. Awan spora menutup setiap arah.',
+  },
 ];
 
 const BOSS_INFO = {
@@ -629,14 +1074,80 @@ const BOSS_INFO = {
       ],
     },
   },
+  sporebound: {
+    name: 'The Sporebound',
+    title: 'Ikatan Spora',
+    maxHp: 780,
+    w: 110,
+    h: 126,
+    contact: 15,
+    ashReward: 150,
+    reward: 'blessing',
+    maxPhases: 3,
+    phaseThresholds: [0.66, 0.33],
+    spawn: { x: 760, y: FLOOR_Y - 126 },
+    dialogue: {
+      intro: [
+        { speaker: 'The Sporebound', text: 'Setiap napas yang kau hirup di sini adalah milikku.' },
+        { speaker: 'The Oathbound', text: 'Maka aku akan berhenti bernapas sebentar.' },
+        { speaker: 'The Sporebound', text: 'Tidak ada yang berhenti. Semua hanya berubah menjadi tanah.' },
+      ],
+      phase2: [
+        { speaker: 'The Sporebound', text: 'Kau memotong tubuhku? Tubuhku adalah seluruh rongga ini.' },
+      ],
+      phase3: [
+        { speaker: 'The Sporebound', text: 'Lihatlah. Bahkan luka-lukamu mulai berbunga.' },
+        { speaker: 'The Oathbound', text: 'Bunga yang tumbuh dari sumpahku tidak akan pernah layu.' },
+      ],
+      defeat: [
+        { speaker: 'The Sporebound', text: 'Akhirnya... tanah ini bisa beristirahat...' },
+        { speaker: 'The Oathbound', text: 'Tidurlah. Aku akan menjaga tamanmu.' },
+      ],
+    },
+  },
+  root: {
+    name: 'Root of the First Vow',
+    title: 'Akar Sumpah Pertama',
+    maxHp: 360,
+    w: 120,
+    h: 96,
+    contact: 13,
+    ashReward: 80,
+    reward: 'flask',
+    maxPhases: 2,
+    phaseThresholds: [0.5],
+    spawn: { x: 780, y: FLOOR_Y - 96 },
+    dialogue: {
+      intro: [
+        { speaker: 'Root of the First Vow', text: 'Sebelum kau, sebelum aku, sudah ada janji yang mengikat batu ini.' },
+        { speaker: 'The Oathbound', text: 'Aku tidak datang untuk memutusnya.' },
+        { speaker: 'Root of the First Vow', text: 'Semua yang membawa pedang mengatakan itu.' },
+      ],
+      phase2: [
+        { speaker: 'Root of the First Vow', text: 'Kau masih berdiri. Baik. Akar ini belum lupa cara berdarah.' },
+      ],
+      defeat: [
+        { speaker: 'Root of the First Vow', text: 'Simpan... satu tegukan lagi... untuk jalan yang lebih panjang.' },
+        { speaker: 'The Oathbound', text: 'Aku akan mengingat akarmu.' },
+      ],
+    },
+  },
 };
 
 export const CODEX = {
-  enemies: Object.values(ENEMY_INFO).map((enemy, i) => ({
-    id: `enemy-${i}`,
+  enemies: Object.entries(ENEMY_INFO).map(([kind, enemy]) => ({
+    id: `enemy-${kind}`,
     name: enemy.name,
     subtitle: enemy.title,
-    glyph: ['◈', '⛨', '◌', '⬢'][i] || '◈',
+    glyph: {
+      crawler: '◈',
+      sentinel: '⛨',
+      wraith: '◌',
+      brute: '⬢',
+      sporeling: '❋',
+      stalker: '⌇',
+      broodmother: '♛',
+    }[kind] || '◈',
     danger: enemy.danger,
     desc: enemy.desc,
     meta: [
@@ -682,7 +1193,7 @@ export const CODEX = {
     id: kind,
     name: boss.name,
     subtitle: boss.title,
-    glyph: { warden: '♜', wyrm: 'ϟ', choir: '♱', oathbreaker: '✠' }[kind] || '♜',
+    glyph: { warden: '♜', wyrm: 'ϟ', choir: '♱', oathbreaker: '✠', sporebound: '✺', root: '⍋' }[kind] || '♜',
     danger: `${boss.maxPhases || 2} FASE`,
     desc: boss.dialogue?.intro?.[0]?.text || '',
     meta: [
@@ -697,11 +1208,15 @@ export const CODEX = {
     ...SHOP_ITEMS.map((item) => ({
       id: item.id,
       name: item.name,
-      subtitle: { weapon: 'Senjata', consumable: 'Konsumabel', ammo: 'Amunisi', flask: 'Bekal' }[item.type] || 'Barang',
-      glyph: { pike: '⟋', bow: '➶', shuriken: '✦', arrows: '➳', flask: '✚' }[item.id] || '✦',
+      subtitle: ITEM_TYPE_LABEL[item.type] || 'Barang',
+      glyph: item.glyph || '✦',
       danger: `✦ ${item.cost}`,
       desc: item.desc,
-      meta: [['TIPE', item.type.toUpperCase()], ['HARGA', `${item.cost} ABU`], ['SUMBER', 'WARUNG ABU']],
+      meta: [
+        ['TIPE', (ITEM_TYPE_LABEL[item.type] || 'BARANG').toUpperCase()],
+        ['EFEK', (item.effect || '-').toUpperCase()],
+        ['HARGA', `${item.cost} ABU`],
+      ],
       where: 'Warung Abu',
     })),
     {
@@ -734,6 +1249,16 @@ export const CODEX = {
       meta: [['TIPE', 'BERKAH'], ['PILIHAN', '3'], ['DURASI', 'SATU RUN']],
       where: 'Setelah setiap boss',
     },
+    {
+      id: 'mycelial-flask',
+      name: 'Tegukan Akar',
+      subtitle: 'Hadiah mini-boss · charge flask permanen',
+      glyph: '✚',
+      danger: 'HADIAH RAHASIA',
+      desc: 'Getah akar pertama yang mengeras menjadi kristal. Menambah satu charge flask untuk sisa perjalanan.',
+      meta: [['TIPE', 'BEKAL'], ['EFEK', '+1 FLASK'], ['SUMBER', 'RELUNG TERSEMBUNYI']],
+      where: 'Root of the First Vow',
+    },
   ],
 };
 
@@ -747,6 +1272,20 @@ export function rectsOverlap(a, b) {
 
 function rectHitsRect(a, b) {
   return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+}
+
+// Rooms may publish one gate (`gate`) or a small set (`gates`). Keeping both
+// shapes lets older rooms and saves stay untouched while branch rooms expose a
+// main exit and a secret one.
+export function roomGateDefs(room) {
+  if (!room) return [];
+  if (Array.isArray(room.gates) && room.gates.length) return room.gates;
+  return room.gate ? [room.gate] : [];
+}
+
+export function primaryGateDef(room) {
+  const gates = roomGateDefs(room);
+  return gates.find((gate) => !gate.secret) || gates[0] || null;
 }
 
 export class AshenGame {
@@ -765,6 +1304,9 @@ export class AshenGame {
     this.kills = 0;
     this.ash = 0;
     this.bossDefeated = {};
+    this.brokenWalls = {};
+    this.wallHp = {};
+    this.wallHitFlash = 0;
     this.checkpoint = null;
     this.checkpointRoom = null;
     this.awaitingBlessing = false;
@@ -775,6 +1317,7 @@ export class AshenGame {
     this.boss = null;
     this.bossIntro = 0;
     this.deathTimer = 0;
+    this.gateLock = 0;
     this.prevInput = {};
 
     this.player = {
@@ -814,11 +1357,18 @@ export class AshenGame {
       abilityCooldown: 0,
       hitFlash: 0,
       pitGrace: false,
+      climbing: false,
       weapon: 'sword',
       weapons: ['sword'],
       arrows: 0,
       shurikens: 0,
       consumeCooldown: 0,
+      sigils: [],
+      rituals: {},
+      consumables: {},
+      quickItem: 'shuriken',
+      damageBuff: 1,
+      damageBuffTimer: 0,
     };
 
     this.loadRoom(0, true);
@@ -887,6 +1437,7 @@ export class AshenGame {
     p.consumeCooldown = 0;
     p.invuln = Math.max(p.invuln, 0.35);
     p.pitGrace = false;
+    p.climbing = false;
     this.shake = 0;
 
     for (const def of room.enemies) this.spawnEnemy(def);
@@ -926,6 +1477,11 @@ export class AshenGame {
       onGround: true,
       jumpCooldown: 0,
       homeX: def.x,
+      burrowed: false,
+      burrowCooldown: 1.6,
+      burrowTimer: 0,
+      targetX: def.x,
+      hopTimer: 0.5 + Math.random() * 0.8,
     };
     const info = ENEMY_INFO[def.type] || ENEMY_INFO.crawler;
     const e = {
@@ -938,9 +1494,11 @@ export class AshenGame {
       speed: info.speed,
       flying: def.type === 'wraith',
       castCooldown: 0.8,
+      spawnCooldown: def.type === 'broodmother' ? 2.4 : 0,
     };
     e.y = e.flying ? FLOOR_Y - 148 : FLOOR_Y - e.h;
     this.enemies.push(e);
+    return e;
   }
 
   spawnBoss(kind) {
@@ -952,6 +1510,7 @@ export class AshenGame {
       title: info.title,
       x: spawn.x,
       y: spawn.y,
+      homeX: spawn.x,
       w: info.w,
       h: info.h,
       vx: 0,
@@ -1039,24 +1598,79 @@ export class AshenGame {
     return { x: this.player.x + this.player.w / 2, y: this.player.y + this.player.h / 2 };
   }
 
+  get gates() {
+    return roomGateDefs(this.room).map((gate) => {
+      const requires = gate.requires;
+      let open = true;
+      let reason = '';
+      if (requires === 'clear') {
+        open = this.enemies.length === 0;
+        reason = open ? '' : `Sisa abu: ${this.enemies.length}. Bersihkan dulu.`;
+      } else if (requires === 'relic') {
+        open = this.player.relic;
+        reason = open ? '' : 'Segel kuno. Butuh Relik Bulu Bara.';
+      } else if (requires === 'boss') {
+        open = !!this.bossDefeated[this.roomIndex] && !this.awaitingBlessing;
+        const bossName = this.room.boss ? BOSS_INFO[this.room.boss]?.name : 'Penjaga Agung';
+        reason = open ? '' : this.awaitingBlessing ? 'Pilih berkahmu dahulu.' : `Kalahkan ${bossName}.`;
+      } else if (requires === 'wall') {
+        open = !!this.brokenWalls[this.roomIndex];
+        reason = open ? '' : 'Dinding Miselium masih utuh. Tebas sampai retak.';
+      }
+      return {
+        ...gate,
+        next: Number.isInteger(gate.next) ? gate.next : this.roomIndex + 1,
+        open,
+        reason,
+      };
+    });
+  }
+
   get gate() {
-    const g = this.room.gate;
-    if (!g) return null;
-    const requires = g.requires;
-    let open = false;
-    let reason = '';
-    if (requires === 'clear') {
-      open = this.enemies.length === 0;
-      reason = open ? '' : `Sisa abu: ${this.enemies.length}. Bersihkan dulu.`;
-    } else if (requires === 'relic') {
-      open = this.player.relic;
-      reason = open ? '' : 'Segel kuno. Butuh Relik Bulu Bara.';
-    } else if (requires === 'boss') {
-      open = !!this.bossDefeated[this.roomIndex] && !this.awaitingBlessing;
-      const bossName = this.room.boss ? BOSS_INFO[this.room.boss]?.name : 'Penjaga Agung';
-      reason = open ? '' : this.awaitingBlessing ? 'Pilih berkahmu dahulu.' : `Kalahkan ${bossName}.`;
+    const gates = this.gates;
+    if (!gates.length) return null;
+    const cx = this.player.x + this.player.w / 2;
+    let best = gates[0];
+    let bestDist = Math.abs(cx - (best.x + best.w / 2));
+    for (const gate of gates.slice(1)) {
+      const dist = Math.abs(cx - (gate.x + gate.w / 2));
+      if (dist < bestDist) {
+        best = gate;
+        bestDist = dist;
+      }
     }
-    return { ...g, open, reason };
+    return best;
+  }
+
+  activeWall(index = this.roomIndex) {
+    const wall = ROOMS[index]?.secretWall;
+    if (!wall || this.brokenWalls[index]) return null;
+    return {
+      ...wall,
+      hp: this.wallHp[index] ?? wall.hp,
+      maxHp: wall.hp,
+      hitFlash: this.wallHitFlash,
+    };
+  }
+
+  damageWall(amount) {
+    const wall = this.activeWall();
+    if (!wall || amount <= 0) return false;
+    const index = this.roomIndex;
+    const hp = Math.max(0, wall.hp - amount);
+    this.wallHp[index] = hp;
+    this.wallHitFlash = 0.14;
+    this.shake = Math.max(this.shake, 0.16);
+    this.hitstop = Math.max(this.hitstop, 0.03);
+    this.emit({ type: 'wallHit', hp, maxHp: wall.maxHp });
+    this.burst(wall.x + wall.w - 8, this.player.y + this.player.h / 2, 8, '#b07be8', 150);
+    if (hp <= 0) {
+      this.brokenWalls[index] = true;
+      this.emit({ type: 'wallBroken', room: index, name: wall.name, next: wall.next });
+      this.burst(wall.x + wall.w / 2, wall.y + wall.h / 2, 30, '#c9a0f0', 280);
+      this.shake = 0.5;
+    }
+    return true;
   }
 
   get bossActive() {
@@ -1083,6 +1697,8 @@ export class AshenGame {
       } else {
         this.player.invuln = Math.max(0, this.player.invuln - dt);
         this.player.hitFlash = Math.max(0, this.player.hitFlash - dt);
+        this.wallHitFlash = Math.max(0, this.wallHitFlash - dt);
+        if (this.gateLock > 0) this.gateLock = Math.max(0, this.gateLock - dt);
         this.shake = Math.max(0, this.shake - dt * 2.2);
         this.updatePlayer(dt, input, pressed);
         this.updateEnemies(dt);
@@ -1112,6 +1728,14 @@ export class AshenGame {
     if (p.coyote > 0) p.coyote -= dt;
     if (p.consumeCooldown > 0) p.consumeCooldown -= dt;
     if (p.abilityCooldown > 0) p.abilityCooldown = Math.max(0, p.abilityCooldown - dt);
+    if (p.damageBuffTimer > 0) {
+      p.damageBuffTimer -= dt;
+      if (p.damageBuffTimer <= 0) {
+        p.damageBuffTimer = 0;
+        p.damageBuff = 1;
+        this.emit({ type: 'buffEnd', buff: 'damage' });
+      }
+    }
 
     if (p.healing > 0) {
       p.healing -= dt;
@@ -1165,6 +1789,7 @@ export class AshenGame {
 
     // weapon swap + consumables
     if (pressed('swap') && !p.attack && p.dashTimer <= 0) this.cycleWeapon();
+    if (pressed('cycleItem') && !p.attack && p.dashTimer <= 0) this.cycleItem();
     if (
       pressed('consume') &&
       p.consumeCooldown <= 0 &&
@@ -1202,43 +1827,86 @@ export class AshenGame {
       else p.vx -= sign(p.vx) * fric;
     }
 
-    // jump
-    if (pressed('jump')) p.jumpBuffer = 0.13;
-    if (p.jumpBuffer > 0 && p.healing <= 0) {
-      if (p.onGround || p.coyote > 0) {
-        p.vy = -720;
-        p.onGround = false;
-        p.coyote = 0;
-        p.jumpsUsed = 1;
-        p.jumpBuffer = 0;
-        this.emit({ type: 'jump' });
-        this.spawnFx('dust', p.x + p.w / 2, p.y + p.h, { life: 0.3, size: 9, color: '#8a7a63' });
-      } else if (p.relic && p.jumpsUsed < 2) {
-        p.vy = -660;
-        p.jumpsUsed = 2;
-        p.jumpBuffer = 0;
-        this.emit({ type: 'doubleJump' });
-        this.burst(p.x + p.w / 2, p.y + p.h, 8, '#e8b46a', 90);
+    // Mycelial climbing: stand inside a vine strip and hold jump to ascend.
+    // Letting go drops the player back into normal gravity so they can leave.
+    const climbZone = (this.room.climbs || []).find((zone) => rectHitsRect(p, zone));
+    const climbing =
+      !!climbZone &&
+      p.dashTimer <= 0 &&
+      p.healing <= 0 &&
+      (input.jump || p.vy < -10);
+    p.climbing = climbing;
+
+    if (climbing) {
+      p.onGround = false;
+      p.coyote = 0;
+      p.jumpsUsed = 0;
+      p.jumpBuffer = 0;
+      p.vy = input.jump ? -190 : 0;
+    } else {
+      // jump
+      if (pressed('jump')) p.jumpBuffer = 0.13;
+      if (p.jumpBuffer > 0 && p.healing <= 0) {
+        if (p.onGround || p.coyote > 0) {
+          p.vy = -720;
+          p.onGround = false;
+          p.coyote = 0;
+          p.jumpsUsed = 1;
+          p.jumpBuffer = 0;
+          this.emit({ type: 'jump' });
+          this.spawnFx('dust', p.x + p.w / 2, p.y + p.h, { life: 0.3, size: 9, color: '#8a7a63' });
+        } else if (p.relic && p.jumpsUsed < 2) {
+          p.vy = -660;
+          p.jumpsUsed = 2;
+          p.jumpBuffer = 0;
+          this.emit({ type: 'doubleJump' });
+          this.burst(p.x + p.w / 2, p.y + p.h, 8, '#e8b46a', 90);
+        }
       }
+      // variable jump height
+      if (!input.jump && p.vy < -220) p.vy += GRAVITY * 1.9 * dt;
     }
-    // variable jump height
-    if (!input.jump && p.vy < -220) p.vy += GRAVITY * 1.9 * dt;
 
     // integrate
     const wasGround = p.onGround;
     p.x += p.vx * dt;
     p.x = clamp(p.x, 0, WORLD_W - p.w);
+    const wall = this.activeWall();
+    if (wall && rectHitsRect(p, wall)) {
+      p.x = p.x + p.w / 2 > wall.x + wall.w / 2 ? wall.x + wall.w : wall.x - p.w;
+    }
     const prevBottom = p.y + p.h;
-    p.vy += GRAVITY * dt;
+    if (!climbing) p.vy += GRAVITY * dt;
     p.y += p.vy * dt;
 
     p.onGround = false;
-    for (const plat of this.room.platforms) {
-      if (p.x + p.w <= plat.x || p.x >= plat.x + plat.w) continue;
-      if (p.vy >= 0 && prevBottom <= plat.y + 4 && p.y + p.h >= plat.y) {
-        p.y = plat.y - p.h;
-        p.vy = 0;
-        p.onGround = true;
+    let bounced = false;
+    if (!climbing) {
+      for (const pad of this.room.bounce || []) {
+        if (p.x + p.w <= pad.x || p.x >= pad.x + pad.w) continue;
+        if (p.vy >= 0 && prevBottom <= pad.y + 8 && p.y + p.h >= pad.y) {
+          p.y = pad.y - p.h;
+          p.vy = -pad.power;
+          p.onGround = false;
+          p.climbing = false;
+          p.jumpsUsed = 0;
+          p.pitGrace = false;
+          bounced = true;
+          this.emit({ type: 'bounce', x: pad.x + pad.w / 2, y: pad.y });
+          this.burst(pad.x + pad.w / 2, pad.y, 12, '#c9a0f0', 170);
+          this.spawnFx('dust', pad.x + pad.w / 2, pad.y, { life: 0.42, size: 16, color: '#a86bd8' });
+          break;
+        }
+      }
+    }
+    if (!bounced) {
+      for (const plat of this.room.platforms) {
+        if (p.x + p.w <= plat.x || p.x >= plat.x + plat.w) continue;
+        if (p.vy >= 0 && prevBottom <= plat.y + 4 && p.y + p.h >= plat.y) {
+          p.y = plat.y - p.h;
+          p.vy = 0;
+          p.onGround = true;
+        }
       }
     }
     if (p.onGround) {
@@ -1336,7 +2004,7 @@ export class AshenGame {
         }
       }
       if (this.boss && !this.boss.dying && rectHitsRect(slashBox, this.boss)) {
-        this.hurtBoss(48 * p.damageMult, 140, p.facing, false);
+        this.hurtBoss(48 * p.damageMult * (p.damageBuff || 1), 140, p.facing, false);
         this.burst(this.boss.x + this.boss.w / 2, this.boss.y + this.boss.h / 2, 14, '#9d4edd', 180);
       }
 
@@ -1367,7 +2035,7 @@ export class AshenGame {
         }
       }
       if (this.boss && !this.boss.dying && rectHitsRect(slamBox, this.boss)) {
-        this.hurtBoss(54 * p.damageMult, 260, p.facing, true);
+        this.hurtBoss(54 * p.damageMult * (p.damageBuff || 1), 260, p.facing, true);
       }
       this.spawnPlayerProjectile('shockwave', {
         x: p.x - 10,
@@ -1426,6 +2094,153 @@ export class AshenGame {
           }
         }
       }
+      this.emit({ type: 'ability', ability: abilityId, name: p.ability.name });
+      return true;
+    }
+
+    if (abilityId === 'arena_charge') {
+      // The Gladiator: shield-first line charge.
+      const oldX = p.x;
+      const targetX = clamp(p.x + p.facing * 160, 10, WORLD_W - p.w - 10);
+      const minX = Math.min(oldX, targetX);
+      const maxX = Math.max(oldX + p.w, targetX + p.w);
+      const chargeBox = { x: minX, y: p.y - 8, w: maxX - minX, h: p.h + 16 };
+      for (const e of this.enemies) {
+        if (e.dead) continue;
+        if (rectHitsRect(chargeBox, e)) {
+          this.hurtEnemy(e, { dmg: 40, knock: 360, name: 'arena_charge' }, p.facing);
+          this.burst(e.x + e.w / 2, e.y + e.h / 2, 12, '#f0b45a', 170);
+        }
+      }
+      if (this.boss && !this.boss.dying && rectHitsRect(chargeBox, this.boss)) {
+        this.hurtBoss(40 * p.damageMult * (p.damageBuff || 1), 280, p.facing, false);
+        this.burst(this.boss.x + this.boss.w / 2, this.boss.y + this.boss.h / 2, 14, '#f0b45a', 190);
+      }
+      for (let sx = minX; sx <= maxX; sx += 22) {
+        this.spawnFx('dust', sx, p.y + p.h * 0.55, {
+          life: 0.32,
+          size: 12,
+          color: '#b57a4a',
+        });
+      }
+      p.x = targetX;
+      p.invuln = Math.max(p.invuln, 0.32);
+      this.shake = Math.max(this.shake, 0.24);
+      this.emit({ type: 'ability', ability: abilityId, name: p.ability.name });
+      return true;
+    }
+
+    if (abilityId === 'net_cast') {
+      // The Retiarius: a piercing net that roots what it touches.
+      this.spawnPlayerProjectile('net', {
+        x: p.x + p.w / 2 + p.facing * 18,
+        y: p.y + p.h * 0.44,
+        vx: p.facing * 540,
+        vy: -18,
+        r: 15,
+        dmg: 20,
+        life: 0.95,
+        pierce: true,
+        snare: 2.4,
+      });
+      this.shake = Math.max(this.shake, 0.12);
+      this.burst(p.x + p.w / 2 + p.facing * 18, p.y + p.h * 0.44, 10, '#8fd8d0', 130);
+      this.emit({ type: 'ability', ability: abilityId, name: p.ability.name });
+      return true;
+    }
+
+    if (abilityId === 'chain_lightning') {
+      // The Stormcaller: arcing lightning that jumps between nearby targets.
+      const targets = this.enemies
+        .filter((e) => !e.dead && !e.burrowed)
+        .map((e) => ({
+          e,
+          dist: Math.abs(e.x + e.w / 2 - (p.x + p.w / 2)) + Math.abs(e.y - p.y),
+        }))
+        .filter(({ dist }) => dist < 620)
+        .sort((a, b) => a.dist - b.dist)
+        .slice(0, 4);
+      let damage = 34;
+      let lastX = p.x + p.w / 2;
+      let lastY = p.y + p.h * 0.42;
+      for (const { e } of targets) {
+        const ex = e.x + e.w / 2;
+        const ey = e.y + e.h / 2;
+        this.hurtEnemy(e, { dmg: damage, knock: 70, name: 'chain_lightning' }, sign(ex - lastX) || p.facing);
+        for (let i = 0; i < 5; i++) {
+          this.spawnFx('spark', lastX + (ex - lastX) * (i / 5), lastY + (ey - lastY) * (i / 5), {
+            vx: rand(-30, 30),
+            vy: rand(-30, 30),
+            life: rand(0.15, 0.3),
+            size: rand(2, 4),
+            color: '#a8e6ff',
+          });
+        }
+        lastX = ex;
+        lastY = ey;
+        damage *= 0.82;
+      }
+      if (this.boss && !this.boss.dying) {
+        const b = this.boss;
+        const bd = Math.abs(b.x + b.w / 2 - (p.x + p.w / 2)) + Math.abs(b.y - p.y);
+        if (bd < 620) {
+          this.hurtBoss(damage * p.damageMult * (p.damageBuff || 1), 60, p.facing, false);
+          for (let i = 0; i < 6; i++) {
+            this.spawnFx('spark', b.x + b.w / 2 + rand(-20, 20), b.y + b.h / 2 + rand(-20, 20), {
+              vx: rand(-40, 40),
+              vy: rand(-40, 40),
+              life: rand(0.2, 0.4),
+              size: rand(2, 5),
+              color: '#a8e6ff',
+            });
+          }
+        }
+      }
+      this.shake = Math.max(this.shake, 0.2);
+      this.emit({ type: 'ability', ability: abilityId, name: p.ability.name });
+      return true;
+    }
+
+    if (abilityId === 'aegis_pulse') {
+      // The Sentinel: a defensive nova that buys breathing room.
+      const cx = p.x + p.w / 2;
+      const cy = p.y + p.h / 2;
+      const pulseBox = { x: cx - 140, y: cy - 100, w: 280, h: 200 };
+      for (const e of this.enemies) {
+        if (e.dead) continue;
+        if (rectHitsRect(pulseBox, e)) {
+          this.hurtEnemy(e, { dmg: 26, knock: 420, name: 'aegis_pulse' }, sign(e.x + e.w / 2 - cx) || p.facing);
+          this.burst(e.x + e.w / 2, e.y + e.h / 2, 10, '#c9d8e8', 170);
+        }
+      }
+      if (this.boss && !this.boss.dying && rectHitsRect(pulseBox, this.boss)) {
+        this.hurtBoss(26 * p.damageMult * (p.damageBuff || 1), 300, p.facing, false);
+      }
+      p.invuln = Math.max(p.invuln, 3.2);
+      this.spawnFx('dash', cx, cy, { life: 0.4, size: 64, color: '#c9d8e8' });
+      this.burst(cx, cy, 26, '#dce8f4', 240);
+      this.shake = Math.max(this.shake, 0.28);
+      this.emit({ type: 'ability', ability: abilityId, name: p.ability.name });
+      return true;
+    }
+
+    if (abilityId === 'thorn_volley') {
+      // The Warden: a fan of thorn projectiles.
+      for (let i = 0; i < 5; i++) {
+        const angle = -0.32 + i * 0.16;
+        this.spawnPlayerProjectile('thorn', {
+          x: p.x + p.w / 2 + p.facing * 16,
+          y: p.y + p.h * 0.44,
+          vx: p.facing * Math.cos(angle) * 600,
+          vy: Math.sin(angle) * 600,
+          r: 6,
+          dmg: 18,
+          life: 1.0,
+          snare: 1.1,
+        });
+      }
+      this.shake = Math.max(this.shake, 0.16);
+      this.burst(p.x + p.w / 2 + p.facing * 18, p.y + p.h * 0.44, 12, '#8fbf6a', 150);
       this.emit({ type: 'ability', ability: abilityId, name: p.ability.name });
       return true;
     }
@@ -1489,7 +2304,7 @@ export class AshenGame {
     if (a.t >= def.windup && a.t < def.windup + def.active) {
       const hb = this.playerHitbox();
       for (const e of this.enemies) {
-        if (e.dead || a.hitIds.includes(e.id)) continue;
+        if (e.dead || e.burrowed || a.hitIds.includes(e.id)) continue;
         if (rectHitsRect(hb, e)) {
           a.hitIds.push(e.id);
           a.landed = true;
@@ -1500,16 +2315,23 @@ export class AshenGame {
       if (b && !b.dying && !a.hitIds.includes('boss') && rectHitsRect(hb, b)) {
         a.hitIds.push('boss');
         a.landed = true;
-        this.hurtBoss(def.dmg * p.damageMult, def.knock, p.facing, def.name !== 'slash');
+        this.hurtBoss(def.dmg * p.damageMult * (p.damageBuff || 1), def.knock, p.facing, def.name !== 'slash');
       }
-      // cut down fireballs
+      // A blade can also carve the secret mycelial wall.
+      const wall = this.activeWall();
+      if (wall && !a.hitIds.includes('wall') && rectHitsRect(hb, wall)) {
+        a.hitIds.push('wall');
+        a.landed = true;
+        this.damageWall(def.dmg * p.damageMult * (p.damageBuff || 1));
+      }
+      // cut down fireballs and spores
       for (const pr of this.projectiles) {
-        if (pr.owner !== 'boss' || pr.type !== 'fireball') continue;
+        if (pr.owner !== 'boss' || (pr.type !== 'fireball' && pr.type !== 'spore')) continue;
         if (a.hitIds.includes(pr.id)) continue;
         if (rectHitsRect(hb, { x: pr.x - pr.r, y: pr.y - pr.r, w: pr.r * 2, h: pr.r * 2 })) {
           a.hitIds.push(pr.id);
           pr.dead = true;
-          this.burst(pr.x, pr.y, 8, '#ffb066', 120);
+          this.burst(pr.x, pr.y, 8, pr.type === 'spore' ? '#b07be8' : '#ffb066', 120);
           this.emit({ type: 'deflect', x: pr.x, y: pr.y });
         }
       }
@@ -1565,24 +2387,199 @@ export class AshenGame {
     this.emit({ type: 'weaponSwitch', weapon: p.weapon, name: WEAPONS[p.weapon]?.short || p.weapon });
   }
 
-  throwConsumable() {
+  itemCount(id) {
     const p = this.player;
-    if (p.shurikens <= 0) {
-      this.emit({ type: 'noAmmo', kind: 'shuriken' });
+    if (id === 'shuriken') return p.shurikens || 0;
+    if (p.consumables && p.consumables[id] != null) return p.consumables[id];
+    if (p.rituals && p.rituals[id] != null) return p.rituals[id];
+    return 0;
+  }
+
+  ownedQuickItems() {
+    return ['shuriken', 'knives', 'bomb'].filter((id) => this.itemCount(id) > 0);
+  }
+
+  quickItemInfo() {
+    const p = this.player;
+    const item = SHOP_ITEM_BY_ID[p.quickItem] || SHOP_ITEM_BY_ID.shuriken;
+    return {
+      id: item.id,
+      name: item.shortName || item.name.toUpperCase(),
+      count: this.itemCount(item.id),
+    };
+  }
+
+  cycleItem() {
+    const p = this.player;
+    const owned = this.ownedQuickItems();
+    if (!owned.length) {
+      this.emit({ type: 'noAmmo', kind: 'quick' });
       return false;
     }
-    p.shurikens -= 1;
-    p.consumeCooldown = 0.28;
-    this.spawnPlayerProjectile('shuriken', {
-      x: p.x + p.w / 2 + p.facing * 16,
-      y: p.y + p.h * 0.42,
-      vx: p.facing * 620,
-      vy: -35,
-      r: 7,
-      dmg: 12,
-      life: 1.1,
-    });
+    const current = owned.includes(p.quickItem) ? owned.indexOf(p.quickItem) : -1;
+    p.quickItem = owned[(current + 1) % owned.length];
+    const info = this.quickItemInfo();
+    this.emit({ type: 'quickItem', id: info.id, name: info.name, count: info.count });
     return true;
+  }
+
+  throwConsumable(kind = this.player.quickItem) {
+    const p = this.player;
+    const id = kind === 'knives' || kind === 'bomb' ? kind : 'shuriken';
+    if (this.itemCount(id) <= 0) {
+      this.emit({ type: 'noAmmo', kind: id });
+      return false;
+    }
+    p.quickItem = id;
+    if (id === 'shuriken') {
+      p.shurikens -= 1;
+      p.consumeCooldown = 0.28;
+      this.spawnPlayerProjectile('shuriken', {
+        x: p.x + p.w / 2 + p.facing * 16,
+        y: p.y + p.h * 0.42,
+        vx: p.facing * 620,
+        vy: -35,
+        r: 7,
+        dmg: 12,
+        life: 1.1,
+      });
+    } else if (id === 'knives') {
+      p.consumables.knives -= 1;
+      p.consumeCooldown = 0.18;
+      this.spawnPlayerProjectile('knife', {
+        x: p.x + p.w / 2 + p.facing * 16,
+        y: p.y + p.h * 0.42,
+        vx: p.facing * 760,
+        vy: -18,
+        r: 5,
+        dmg: 16,
+        life: 1.1,
+        snare: 0.6,
+      });
+    } else {
+      p.consumables.bomb -= 1;
+      p.consumeCooldown = 0.5;
+      this.spawnPlayerProjectile('bomb', {
+        x: p.x + p.w / 2 + p.facing * 18,
+        y: p.y + p.h * 0.36,
+        vx: p.facing * 430,
+        vy: -120,
+        r: 10,
+        dmg: 30,
+        life: 1.2,
+        explode: 76,
+      });
+    }
+    return true;
+  }
+
+  explodeBomb(pr) {
+    if (!pr || pr.exploded) return;
+    pr.exploded = true;
+    const radius = pr.explode || 76;
+    const box = { x: pr.x - radius, y: pr.y - radius, w: radius * 2, h: radius * 2 };
+    for (const e of this.enemies) {
+      if (e.dead) continue;
+      if (rectHitsRect(box, e)) {
+        this.hurtEnemy(e, { dmg: pr.dmg, knock: 280, name: 'bomb' }, sign(e.x + e.w / 2 - pr.x) || 1);
+      }
+    }
+    if (this.boss && !this.boss.dying && rectHitsRect(box, this.boss)) {
+      this.hurtBoss(pr.dmg * this.player.damageMult * (this.player.damageBuff || 1), 220, sign(this.boss.x - pr.x) || 1, false);
+    }
+    this.burst(pr.x, pr.y, 30, '#ff9d55', 310);
+    this.shake = Math.max(this.shake, 0.36);
+    this.emit({ type: 'explosion', x: pr.x, y: pr.y });
+  }
+
+  useItem(id) {
+    const item = SHOP_ITEM_BY_ID[id];
+    if (!item) return { ok: false, reason: 'Item tidak ditemukan.' };
+    const p = this.player;
+    if (item.type === 'sigil') return { ok: false, reason: 'Sigil aktif secara pasif.' };
+    if (item.type !== 'ritual' && item.type !== 'consumable') {
+      return { ok: false, reason: 'Item ini tidak bisa dipakai dari inventaris.' };
+    }
+    if (id === 'shuriken' || id === 'knives' || id === 'bomb') {
+      const ok = this.throwConsumable(id);
+      return ok ? { ok: true, item } : { ok: false, reason: 'Item habis.' };
+    }
+    if (this.itemCount(id) <= 0) return { ok: false, reason: 'Item habis.' };
+
+    if (item.type === 'ritual') p.rituals[id] -= 1;
+    else p.consumables[id] -= 1;
+
+    if (id === 'tonic') {
+      p.hp = Math.min(p.maxHp, p.hp + 30);
+      this.burst(p.x + p.w / 2, p.y + p.h / 2, 14, '#8fd98a', 150);
+    } else if (id === 'smoke') {
+      p.invuln = Math.max(p.invuln, 2.5);
+      this.spawnFx('dash', p.x + p.w / 2, p.y + p.h / 2, { life: 0.5, size: 46, color: '#9fb0c0' });
+      this.burst(p.x + p.w / 2, p.y + p.h / 2, 18, '#b8c6d4', 160);
+    } else if (id === 'whetstone') {
+      p.damageBuff = 1.3;
+      p.damageBuffTimer = 25;
+      this.burst(p.x + p.w / 2, p.y + p.h / 2, 16, '#e0c58a', 150);
+    } else if (id === 'ritual_purge') {
+      for (const e of this.enemies) {
+        if (e.dead) continue;
+        this.hurtEnemy(e, { dmg: 60, knock: 160, name: 'ritual_purge' }, sign(e.x - p.x) || 1);
+        this.burst(e.x + e.w / 2, e.y + e.h / 2, 14, '#f4e2a0', 190);
+      }
+      if (this.boss && !this.boss.dying) {
+        this.hurtBoss(60 * p.damageMult * (p.damageBuff || 1), 120, p.facing, false);
+      }
+      this.projectiles = this.projectiles.filter((pr) => {
+        if (pr.owner !== 'boss') return true;
+        this.burst(pr.x, pr.y, 6, '#f4e2a0', 100);
+        return false;
+      });
+      this.shake = Math.max(this.shake, 0.34);
+    } else if (id === 'ritual_ward') {
+      p.invuln = Math.max(p.invuln, 6);
+      p.hp = Math.min(p.maxHp, p.hp + 15);
+      this.spawnFx('dash', p.x + p.w / 2, p.y + p.h / 2, { life: 0.55, size: 54, color: '#e8d28a' });
+      this.burst(p.x + p.w / 2, p.y + p.h / 2, 20, '#f0dc9a', 180);
+    } else if (id === 'ritual_ember') {
+      const cx = p.x + p.w / 2;
+      const cy = p.y + p.h / 2;
+      for (let i = 0; i < 12; i++) {
+        const ang = (i / 12) * Math.PI * 2;
+        this.spawnPlayerProjectile('flame_orb', {
+          x: cx,
+          y: cy,
+          vx: Math.cos(ang) * 420,
+          vy: Math.sin(ang) * 420,
+          r: 8,
+          dmg: 24,
+          life: 0.85,
+        });
+      }
+      this.shake = Math.max(this.shake, 0.26);
+    } else if (id === 'ritual_mend') {
+      p.hp = Math.min(p.maxHp, p.hp + 50);
+      p.flasks = Math.min(p.maxFlasks, p.flasks + 1);
+      this.burst(p.x + p.w / 2, p.y + p.h / 2, 22, '#8fd98a', 180);
+    }
+
+    this.emit({ type: 'itemUse', id: item.id, name: item.name });
+    return { ok: true, item };
+  }
+
+  applySigil(id) {
+    const p = this.player;
+    if (id === 'sigil_ember') {
+      p.damageMult *= 1.18;
+    } else if (id === 'sigil_iron') {
+      p.maxHp += 25;
+      p.hp = Math.min(p.maxHp, p.hp + 25);
+    } else if (id === 'sigil_wind') {
+      p.speedMult *= 1.08;
+      p.dashCooldownMax *= 0.88;
+    } else if (id === 'sigil_vow') {
+      p.maxFlasks += 1;
+      p.flasks = p.maxFlasks;
+    }
   }
 
   canShop() {
@@ -1603,6 +2600,9 @@ export class AshenGame {
     if (item.type === 'weapon' && p.weapons.includes(item.id)) {
       return { ok: false, reason: 'Sudah dimiliki.' };
     }
+    if (item.type === 'sigil' && p.sigils.includes(item.id)) {
+      return { ok: false, reason: 'Sigil sudah aktif.' };
+    }
     if (item.type === 'ammo' && !p.weapons.includes('bow')) {
       return { ok: false, reason: 'Butuh Busur Abu dulu.' };
     }
@@ -1615,8 +2615,22 @@ export class AshenGame {
       p.weapons.push(item.id);
       p.weapon = item.id;
       if (item.id === 'bow') p.arrows += 8;
+    } else if (item.type === 'sigil') {
+      p.sigils.push(item.id);
+      this.applySigil(item.id);
+    } else if (item.type === 'ritual') {
+      p.rituals[item.id] = (p.rituals[item.id] || 0) + 1;
     } else if (item.id === 'shuriken') {
       p.shurikens += 3;
+      p.quickItem = 'shuriken';
+    } else if (item.id === 'knives') {
+      p.consumables.knives = (p.consumables.knives || 0) + 5;
+      p.quickItem = 'knives';
+    } else if (item.id === 'bomb') {
+      p.consumables.bomb = (p.consumables.bomb || 0) + 2;
+      p.quickItem = 'bomb';
+    } else if (item.type === 'consumable') {
+      p.consumables[item.id] = (p.consumables[item.id] || 0) + 1;
     } else if (item.id === 'arrows') {
       p.arrows += 6;
     } else if (item.type === 'flask') {
@@ -1645,8 +2659,9 @@ export class AshenGame {
   }
 
   hurtEnemy(e, def, dir) {
+    if (e.burrowed) return;
     const p = this.player;
-    e.hp -= def.dmg * p.damageMult;
+    e.hp -= def.dmg * p.damageMult * (p.damageBuff || 1);
     e.hitFlash = 0.12;
     e.x = clamp(e.x + dir * def.knock * 0.12, 20, WORLD_W - e.w - 20);
     e.state = 'hurt';
@@ -1660,7 +2675,18 @@ export class AshenGame {
       this.kills += 1;
       const reward = ENEMY_INFO[e.type]?.reward ?? 8;
       this.ash += reward;
-      this.burst(e.x + e.w / 2, e.y + e.h / 2, 16, '#c96a3a', 220);
+      this.burst(e.x + e.w / 2, e.y + e.h / 2, 16, e.type === 'sporeling' || e.type === 'stalker' || e.type === 'broodmother' ? '#b07be8' : '#c96a3a', 220);
+      if (e.type === 'sporeling') {
+        for (let i = 0; i < 6; i++) {
+          this.spawnFx('spark', e.x + e.w / 2, e.y + e.h / 2, {
+            vx: rand(-40, 40),
+            vy: rand(-90, -20),
+            life: rand(0.5, 1.1),
+            size: rand(2, 5),
+            color: '#c9a0f0',
+          });
+        }
+      }
       this.emit({ type: 'enemyDown' });
       this.emit({ type: 'ashGain', amount: reward, total: this.ash });
     }
@@ -1798,6 +2824,12 @@ export class AshenGame {
       if (e.timer > 0) e.timer -= dt;
       if (e.cooldown > 0) e.cooldown -= dt;
       if (e.jumpCooldown > 0) e.jumpCooldown -= dt;
+      if (e.snared > 0) {
+        e.snared = Math.max(0, e.snared - dt);
+        e.vx *= Math.pow(0.001, dt);
+        this.integrateEnemy(e, dt);
+        continue;
+      }
       const pcx = p.x + p.w / 2;
       const ecx = e.x + e.w / 2;
       const distX = pcx - ecx;
@@ -1809,6 +2841,14 @@ export class AshenGame {
         this.updateWraith(e, dt, aggro, distX);
         continue;
       }
+      if (e.type === 'stalker') {
+        this.updateStalker(e, dt, aggro, distX, dy);
+        continue;
+      }
+      if (e.type === 'broodmother') {
+        this.updateBroodmother(e, dt, aggro, distX);
+        continue;
+      }
 
       if (e.state === 'hurt') {
         e.vx = 0;
@@ -1817,7 +2857,38 @@ export class AshenGame {
         continue;
       }
 
-      if (e.type === 'crawler') {
+      if (e.type === 'sporeling') {
+        if (e.hopTimer > 0) e.hopTimer -= dt;
+        if (aggro) {
+          e.state = 'chase';
+          const dir = Math.abs(distX) > 18 ? sign(distX) : 0;
+          e.facing = dir || e.facing;
+          if (e.onGround && e.hopTimer <= 0) {
+            e.vy = -430;
+            e.vx = dir * 175;
+            e.onGround = false;
+            e.hopTimer = 0.62 + Math.random() * 0.34;
+            this.emit({ type: 'enemyHop' });
+          } else if (!e.onGround) {
+            e.vx += clamp(dir * 150 - e.vx, -260 * dt, 260 * dt);
+          } else {
+            e.vx *= Math.pow(0.002, dt);
+          }
+        } else {
+          e.state = 'patrol';
+          if (e.x <= e.minX) e.patrolDir = 1;
+          if (e.x + e.w >= e.maxX) e.patrolDir = -1;
+          e.facing = e.patrolDir;
+          if (e.onGround && e.hopTimer <= 0) {
+            e.vy = -310;
+            e.vx = e.patrolDir * 110;
+            e.onGround = false;
+            e.hopTimer = 1.1 + Math.random() * 0.7;
+          }
+        }
+        this.integrateEnemy(e, dt);
+        e.x = clamp(e.x, Math.min(e.minX, e.maxX - e.w), Math.max(e.minX, e.maxX - e.w));
+      } else if (e.type === 'crawler') {
         if (aggro) {
           e.state = 'chase';
           const dir = Math.abs(distX) > 10 ? sign(distX) : 0;
@@ -1919,6 +2990,135 @@ export class AshenGame {
     }
   }
 
+  updateStalker(e, dt, aggro, distX, dy) {
+    const p = this.player;
+    if (e.state === 'hurt') {
+      e.vx = 0;
+      this.integrateEnemy(e, dt);
+      if (e.timer <= 0) e.state = 'chase';
+      return;
+    }
+    if (e.burrowCooldown > 0) e.burrowCooldown -= dt;
+    if (e.burrowTimer > 0) e.burrowTimer -= dt;
+    e.facing = distX < 0 ? -1 : 1;
+
+    if (e.burrowed) {
+      // Slither under the arena toward the player's last position, then erupt.
+      e.x += clamp(p.x + p.w / 2 - (e.x + e.w / 2), -230 * dt, 230 * dt);
+      e.x = clamp(e.x, Math.max(20, e.minX), Math.min(WORLD_W - e.w - 20, e.maxX - e.w));
+      e.y = FLOOR_Y + 14;
+      e.vx = 0;
+      e.vy = 0;
+      if (e.burrowTimer <= 0) {
+        e.burrowed = false;
+        e.y = FLOOR_Y - e.h;
+        e.state = 'emergeWind';
+        e.timer = 0.3;
+        e.attackLanded = false;
+        this.emit({ type: 'enemyEmerge', x: e.x + e.w / 2, y: FLOOR_Y });
+        this.burst(e.x + e.w / 2, FLOOR_Y - 4, 12, '#9a6ac0', 150);
+        this.shake = Math.max(this.shake, 0.18);
+      }
+      return;
+    }
+
+    if (e.state === 'burrowWind') {
+      e.vx = 0;
+      e.burrowTimer -= dt;
+      e.y += 40 * dt;
+      if (e.burrowTimer <= 0) {
+        e.burrowed = true;
+        e.state = 'burrowed';
+        e.burrowTimer = 0.72;
+      }
+      return;
+    }
+    if (e.state === 'emergeWind') {
+      if (e.timer <= 0) {
+        e.state = 'lunge';
+        e.timer = 0.34;
+        e.vx = e.facing * 390;
+        this.emit({ type: 'enemyLunge' });
+      }
+      return;
+    }
+    if (e.state === 'lunge') {
+      this.integrateEnemy(e, dt);
+      if (!e.attackLanded && rectHitsRect(e, p)) {
+        e.attackLanded = true;
+        this.damagePlayer(e.dmg, e.x + e.w / 2);
+      }
+      if (e.timer <= 0) {
+        e.state = 'recover';
+        e.timer = 0.6;
+        e.vx = 0;
+        e.burrowCooldown = 2.8;
+      }
+      return;
+    }
+    if (e.state === 'recover') {
+      e.vx = 0;
+      this.integrateEnemy(e, dt);
+      if (e.timer <= 0) e.state = 'chase';
+      return;
+    }
+
+    if (aggro) {
+      e.state = 'chase';
+      if (e.burrowCooldown <= 0 && Math.abs(dy) < 120) {
+        e.state = 'burrowWind';
+        e.burrowTimer = 0.42;
+        e.vx = 0;
+        this.emit({ type: 'enemyTelegraph' });
+        return;
+      }
+      const dir = Math.abs(distX) > 20 ? sign(distX) : 0;
+      this.moveEnemy(e, dt, dir, e.speed, true);
+    } else {
+      e.state = 'patrol';
+      if (e.x <= e.minX) e.patrolDir = 1;
+      if (e.x + e.w >= e.maxX) e.patrolDir = -1;
+      this.moveEnemy(e, dt, e.patrolDir, e.speed * 0.5, false);
+      e.x = clamp(e.x, e.minX, Math.max(e.minX, e.maxX - e.w));
+    }
+  }
+
+  updateBroodmother(e, dt, aggro, distX) {
+    if (e.state === 'hurt') {
+      e.vx = 0;
+      this.integrateEnemy(e, dt);
+      if (e.timer <= 0) e.state = 'chase';
+      return;
+    }
+    if (e.spawnCooldown > 0) e.spawnCooldown -= dt;
+    if (!aggro) {
+      e.state = 'patrol';
+      if (e.x <= e.minX) e.patrolDir = 1;
+      if (e.x + e.w >= e.maxX) e.patrolDir = -1;
+      this.moveEnemy(e, dt, e.patrolDir, e.speed * 0.5, false);
+      e.x = clamp(e.x, e.minX, Math.max(e.minX, e.maxX - e.w));
+      return;
+    }
+    e.state = 'chase';
+    e.facing = distX < 0 ? -1 : 1;
+    this.moveEnemy(e, dt, Math.abs(distX) > 90 ? sign(distX) : 0, e.speed, true);
+    if (e.spawnCooldown <= 0 && this.enemies.filter((x) => !x.dead).length < 11) {
+      const spawnX = clamp(e.x + (e.facing > 0 ? -34 : e.w + 10), e.minX, e.maxX - 36);
+      const child = this.spawnEnemy({
+        type: 'sporeling',
+        x: spawnX,
+        minX: e.minX,
+        maxX: e.maxX,
+      });
+      child.y = e.y + e.h - child.h;
+      child.vy = -180;
+      child.vx = e.facing * 120;
+      e.spawnCooldown = 4.2;
+      this.emit({ type: 'enemySpawn', kind: 'sporeling' });
+      this.burst(e.x + e.w / 2, e.y + e.h * 0.7, 12, '#b07be8', 160);
+    }
+  }
+
   updateWraith(e, dt, aggro, distX) {
     const p = this.player;
     const targetY = FLOOR_Y - e.h - 76 + Math.sin(this.time * 1.8 + e.homeX * 0.02) * 24;
@@ -2017,6 +3217,8 @@ export class AshenGame {
     else if (b.kind === 'wyrm') this.updateWyrm(b, dt);
     else if (b.kind === 'choir') this.updateChoir(b, dt);
     else if (b.kind === 'oathbreaker') this.updateOathbreaker(b, dt);
+    else if (b.kind === 'sporebound') this.updateSporebound(b, dt);
+    else if (b.kind === 'root') this.updateRoot(b, dt);
   }
 
   onBossPhase(b) {
@@ -2028,6 +3230,24 @@ export class AshenGame {
       for (let i = 0; i < 3; i++) {
         this.spawnFireball(b, this.player.x + this.player.w / 2 + (i - 1) * 90, this.player.y + 20);
       }
+    } else if (b.kind === 'sporebound') {
+      this.spawnSporeRing(b, 8 + b.phase * 2, 235);
+      if (b.phase >= 2) {
+        for (const dir of [-1, 1]) {
+          const child = this.spawnEnemy({
+            type: 'sporeling',
+            x: clamp(b.x + b.w / 2 + dir * 90, 40, WORLD_W - 80),
+            minX: 40,
+            maxX: WORLD_W - 80,
+          });
+          child.y = FLOOR_Y - child.h;
+          this.burst(child.x + child.w / 2, FLOOR_Y - 8, 8, '#b07be8', 140);
+        }
+        this.emit({ type: 'bossSummon', kind: 'sporeling' });
+      }
+    } else if (b.kind === 'root') {
+      this.spawnShockwaves(b);
+      this.spawnSporeRing(b, 6, 200);
     }
   }
 
@@ -2552,6 +3772,247 @@ export class AshenGame {
     b.x = clamp(b.x, 20, WORLD_W - b.w - 20);
   }
 
+  updateSporebound(b, dt) {
+    const p = this.player;
+    const pcx = p.x + p.w / 2;
+    const bcx = b.x + b.w / 2;
+    const dist = Math.abs(pcx - bcx);
+    const dir = sign(pcx - bcx) || b.facing;
+    if (b.timer > 0) b.timer -= dt;
+    if (b.cooldown > 0) b.cooldown -= dt;
+    b.y = FLOOR_Y - b.h;
+
+    switch (b.state) {
+      case 'chase': {
+        b.facing = dir;
+        if (b.cooldown <= 0) {
+          b.pattern = (b.pattern + 1) % 3;
+          if (dist < 190) {
+            b.state = 'swipeWind';
+            b.timer = b.phase >= 3 ? 0.3 : 0.46;
+            b.attackLanded = false;
+            this.emit({ type: 'bossTelegraph', kind: 'slash' });
+          } else if (b.phase >= 2 && b.pattern === 2) {
+            b.state = 'summonWind';
+            b.timer = 0.62;
+            this.emit({ type: 'bossTelegraph', kind: 'summon' });
+          } else {
+            b.state = 'volleyWind';
+            b.timer = b.phase >= 3 ? 0.4 : 0.58;
+            this.emit({ type: 'bossTelegraph', kind: 'volley' });
+          }
+        } else {
+          const spd = 40 + b.phase * 16;
+          if (dist > 90) b.x += dir * spd * dt;
+        }
+        break;
+      }
+      case 'swipeWind': {
+        b.facing = dir;
+        if (b.timer <= 0) {
+          b.state = 'swipe';
+          b.timer = 0.18;
+          b.attackLanded = false;
+          this.emit({ type: 'bossSlash' });
+          this.shake = Math.max(this.shake, 0.22);
+        }
+        break;
+      }
+      case 'swipe': {
+        if (!b.attackLanded) {
+          const hb = {
+            x: b.facing > 0 ? b.x + b.w - 10 : b.x - 152,
+            y: b.y + 14,
+            w: 162,
+            h: b.h - 10,
+          };
+          if (rectHitsRect(hb, p)) {
+            b.attackLanded = true;
+            this.damagePlayer(18 + b.phase * 4, bcx);
+          }
+        }
+        if (b.timer <= 0) {
+          b.state = 'recover';
+          b.timer = 0.5;
+          b.cooldown = Math.max(0.7, 1.35 - b.phase * 0.14);
+        }
+        break;
+      }
+      case 'volleyWind': {
+        if (b.timer <= 0) {
+          this.spawnSporeVolley(b, b.phase >= 3 ? 7 : 5, 0.9, 220 + b.phase * 30);
+          b.state = 'recover';
+          b.timer = 0.55;
+          b.cooldown = Math.max(0.65, 1.4 - b.phase * 0.16);
+        }
+        break;
+      }
+      case 'summonWind': {
+        if (b.timer <= 0) {
+          for (let i = 0; i < 2; i++) {
+            const child = this.spawnEnemy({
+              type: 'sporeling',
+              x: clamp(b.x + b.w / 2 + (i === 0 ? -110 : 110), 40, WORLD_W - 80),
+              minX: 40,
+              maxX: WORLD_W - 80,
+            });
+            child.y = FLOOR_Y - child.h;
+            child.vy = -260;
+            this.burst(child.x + child.w / 2, FLOOR_Y - 8, 9, '#b07be8', 150);
+          }
+          this.emit({ type: 'bossSummon', kind: 'sporeling' });
+          b.state = 'recover';
+          b.timer = 0.6;
+          b.cooldown = 1.5;
+        }
+        break;
+      }
+      case 'recover': {
+        if (b.timer <= 0) b.state = 'chase';
+        break;
+      }
+      default:
+        b.state = 'chase';
+    }
+    b.x = clamp(b.x, 40, WORLD_W - b.w - 40);
+  }
+
+  updateRoot(b, dt) {
+    const p = this.player;
+    const pcx = p.x + p.w / 2;
+    const bcx = b.x + b.w / 2;
+    const dist = Math.abs(pcx - bcx);
+    const dir = sign(pcx - bcx) || b.facing;
+    if (b.timer > 0) b.timer -= dt;
+    if (b.cooldown > 0) b.cooldown -= dt;
+    b.y = FLOOR_Y - b.h;
+    b.facing = dir;
+
+    switch (b.state) {
+      case 'chase': {
+        const sway = Math.sin(this.time * 1.1) * 26;
+        b.x += (b.homeX + sway - b.x) * Math.min(1, dt * 1.6);
+        if (b.cooldown <= 0) {
+          b.pattern = (b.pattern + 1) % 2;
+          if (dist < 230 || b.pattern === 0) {
+            b.state = 'sweepWind';
+            b.timer = b.phase >= 2 ? 0.46 : 0.64;
+            b.attackLanded = false;
+            this.emit({ type: 'bossTelegraph', kind: 'sweep' });
+          } else {
+            b.state = 'volleyWind';
+            b.timer = 0.55;
+            this.emit({ type: 'bossTelegraph', kind: 'volley' });
+          }
+        }
+        break;
+      }
+      case 'sweepWind': {
+        if (b.timer <= 0) {
+          b.state = 'sweep';
+          b.timer = 0.3;
+          b.attackLanded = false;
+          this.emit({ type: 'bossSlam' });
+          this.shake = Math.max(this.shake, 0.3);
+        }
+        break;
+      }
+      case 'sweep': {
+        if (!b.attackLanded) {
+          const hb = { x: b.x - 210, y: FLOOR_Y - 78, w: b.w + 420, h: 78 };
+          if (rectHitsRect(hb, p)) {
+            b.attackLanded = true;
+            this.damagePlayer(b.phase >= 2 ? 24 : 17, bcx);
+          }
+        }
+        if (b.timer <= 0) {
+          b.state = 'recover';
+          b.timer = 0.72;
+          b.cooldown = b.phase >= 2 ? 1.15 : 1.7;
+          if (b.phase >= 2) this.spawnShockwaves(b);
+        }
+        break;
+      }
+      case 'volleyWind': {
+        if (b.timer <= 0) {
+          this.spawnSporeRing(b, b.phase >= 2 ? 10 : 7, 190);
+          b.state = 'recover';
+          b.timer = 0.62;
+          b.cooldown = 1.5;
+        }
+        break;
+      }
+      case 'recover': {
+        if (b.timer <= 0) b.state = 'chase';
+        break;
+      }
+      default:
+        b.state = 'chase';
+    }
+  }
+
+  spawnSporeAt(x, y, vx, vy, dmg = 9) {
+    this.projectiles.push({
+      id: `spore_${this.time}_${Math.random().toString(36).slice(2, 7)}`,
+      owner: 'boss',
+      type: 'spore',
+      x,
+      y,
+      vx,
+      vy,
+      r: 7,
+      dmg,
+      life: 3.6,
+      warmup: 0,
+      w: 14,
+      h: 14,
+    });
+    this.emit({ type: 'spore' });
+  }
+
+  spawnSporeVolley(b, count, spread, speed) {
+    const p = this.player;
+    const sx = b.x + b.w / 2;
+    const sy = b.y + b.h * 0.4;
+    const base = Math.atan2(p.y + p.h / 2 - sy, p.x + p.w / 2 - sx);
+    for (let i = 0; i < count; i++) {
+      const t = count === 1 ? 0 : i / (count - 1) - 0.5;
+      const angle = base + t * spread;
+      this.spawnSporeAt(sx, sy, Math.cos(angle) * speed, Math.sin(angle) * speed, 8 + b.phase * 2);
+    }
+    this.shake = Math.max(this.shake, 0.16);
+  }
+
+  spawnSporeRing(b, count, speed) {
+    const sx = b.x + b.w / 2;
+    const sy = b.y + b.h * 0.45;
+    for (let i = 0; i < count; i++) {
+      const angle = (Math.PI * 2 * i) / count;
+      this.spawnSporeAt(sx, sy, Math.cos(angle) * speed, Math.sin(angle) * speed, 7 + b.phase * 2);
+    }
+    this.shake = Math.max(this.shake, 0.24);
+  }
+
+  spawnSporeCloud(x, y, dmg = 6, life = 2.6, drift = 0) {
+    const cloud = {
+      id: `cloud_${this.time}_${Math.random().toString(36).slice(2, 7)}`,
+      owner: 'boss',
+      type: 'sporeCloud',
+      x,
+      y,
+      vx: drift,
+      vy: -10,
+      r: 46,
+      dmg,
+      life,
+      warmup: 0,
+      w: 92,
+      h: 92,
+    };
+    this.projectiles.push(cloud);
+    return cloud;
+  }
+
   spawnFireball(b, tx, ty) {
     const sx = b.x + b.w / 2 + (b.facing > 0 ? 34 : -34);
     const sy = b.y + b.h * 0.55;
@@ -2599,6 +4060,7 @@ export class AshenGame {
     if (!b) return;
     const info = BOSS_INFO[b.kind];
     const room = this.roomIndex;
+    const next = primaryGateDef(ROOMS[room])?.next ?? (room + 1 < ROOMS.length ? room + 1 : null);
     this.bossDefeated[room] = true;
     this.boss = null;
     this.projectiles = [];
@@ -2607,6 +4069,13 @@ export class AshenGame {
       this.state = 'victory';
       this.deathTimer = 0;
       this.emit({ type: 'victory' });
+    } else if (info?.reward === 'flask') {
+      const p = this.player;
+      p.maxFlasks += 1;
+      p.flasks = p.maxFlasks;
+      this.state = 'playing';
+      this.emit({ type: 'flaskReward', charges: p.maxFlasks, item: 'mycelial-flask' });
+      this.burst(p.x + p.w / 2, p.y + p.h / 2, 22, '#b07be8', 200);
     } else {
       this.awaitingBlessing = true;
       this.blessingChoices = BLESSINGS.map((x) => ({ ...x }));
@@ -2616,7 +4085,7 @@ export class AshenGame {
     const reward = info?.ashReward ?? 60;
     this.ash += reward;
     this.emit({ type: 'ashGain', amount: reward, total: this.ash });
-    this.emit({ type: 'bossDown', room, kind: b.kind, name: b.name });
+    this.emit({ type: 'bossDown', room, kind: b.kind, name: b.name, next, reward: info?.reward });
     this.shake = 0.9;
   }
 
@@ -2654,6 +4123,15 @@ export class AshenGame {
       } else {
         pr.x += pr.vx * dt;
         pr.y += pr.vy * dt;
+        if (pr.type === 'bomb') {
+          pr.vy += 620 * dt;
+          if (pr.y >= FLOOR_Y - pr.r * 0.4) {
+            pr.y = FLOOR_Y - pr.r * 0.4;
+            this.explodeBomb(pr);
+            pr.dead = true;
+            continue;
+          }
+        }
         if (pr.type === 'shockwave') {
           if (Math.random() < 0.7) {
             this.spawnFx('dust', pr.x + rand(0, pr.w), FLOOR_Y - 4, {
@@ -2674,15 +4152,26 @@ export class AshenGame {
             color: '#ff9d55',
           });
         }
+        if ((pr.type === 'spore' || pr.type === 'sporeCloud') && Math.random() < 0.5) {
+          this.spawnFx('spark', pr.x + rand(-pr.r * 0.5, pr.r * 0.5), pr.y + rand(-pr.r * 0.5, pr.r * 0.5), {
+            vx: rand(-18, 18),
+            vy: rand(-26, -4),
+            life: rand(0.4, 0.9),
+            size: rand(2, 5),
+            color: '#c9a0f0',
+          });
+        }
       }
       if (pr.x < -80 || pr.x > WORLD_W + 80 || (pr.life <= 0)) {
+        if (pr.type === 'bomb') this.explodeBomb(pr);
         pr.dead = true;
         continue;
       }
       if (pr.owner === 'player' && pr.life > 0) {
+        const mult = p.damageMult * (p.damageBuff || 1);
         const box = { x: pr.x - pr.r, y: pr.y - pr.r, w: pr.r * 2, h: pr.r * 2 };
         for (const e of this.enemies) {
-          if (e.dead || pr.dead) continue;
+          if (e.dead || e.burrowed || pr.dead) continue;
           if (rectHitsRect(box, e)) {
             if (pr.pierce) {
               pr.hitIds = pr.hitIds || [];
@@ -2692,6 +4181,8 @@ export class AshenGame {
               pr.dead = true;
             }
             this.hurtEnemy(e, { dmg: pr.dmg, knock: 120, name: pr.type }, sign(pr.vx) || p.facing);
+            if (pr.snare) e.snared = Math.max(e.snared || 0, pr.snare);
+            if (pr.type === 'bomb') this.explodeBomb(pr);
             this.burst(pr.x, pr.y, 7, '#d8c08a', 130);
           }
         }
@@ -2701,14 +4192,30 @@ export class AshenGame {
             pr.hitIds = pr.hitIds || [];
             if (!pr.hitIds.includes('boss')) {
               pr.hitIds.push('boss');
-              this.hurtBoss(pr.dmg * p.damageMult, 90, sign(pr.vx) || p.facing, false);
+              this.hurtBoss(pr.dmg * mult, 90, sign(pr.vx) || p.facing, false);
+              if (pr.type === 'bomb') this.explodeBomb(pr);
               this.burst(pr.x, pr.y, 8, '#d8c08a', 140);
             }
           } else {
             pr.dead = true;
-            this.hurtBoss(pr.dmg * p.damageMult, 90, sign(pr.vx) || p.facing, false);
+            this.hurtBoss(pr.dmg * mult, 90, sign(pr.vx) || p.facing, false);
+            if (pr.type === 'bomb') this.explodeBomb(pr);
             this.burst(pr.x, pr.y, 8, '#d8c08a', 140);
           }
+        }
+        const wall = this.activeWall();
+        if (!pr.dead && wall && rectHitsRect(box, wall)) {
+          if (pr.pierce) {
+            pr.hitIds = pr.hitIds || [];
+            if (!pr.hitIds.includes('wall')) {
+              pr.hitIds.push('wall');
+              this.damageWall(pr.dmg * mult);
+            }
+          } else {
+            pr.dead = true;
+            this.damageWall(pr.dmg * mult);
+          }
+          if (pr.type === 'bomb') this.explodeBomb(pr);
         }
       }
       if (pr.owner === 'boss' && pr.life > 0) {
@@ -2730,7 +4237,7 @@ export class AshenGame {
   checkContacts() {
     const p = this.player;
     for (const e of this.enemies) {
-      if (e.dead) continue;
+      if (e.dead || e.burrowed) continue;
       if (rectHitsRect(e, p)) {
         const dmg = e.type === 'sentinel' && e.state === 'lunge'
           ? 18
@@ -2763,14 +4270,18 @@ export class AshenGame {
   }
 
   updateGate() {
-    const g = this.gate;
-    if (!g || !g.open) return;
+    if ((this.gateLock || 0) > 0) return;
     const p = this.player;
-    if (p.x + p.w > g.x + 6 && p.x < g.x + g.w + 20) {
-      const next = this.roomIndex + 1;
-      if (next < ROOMS.length) {
-        this.emit({ type: 'gatePass', from: this.roomIndex, to: next });
-        this.loadRoom(next);
+    for (const g of this.gates) {
+      if (!g.open) continue;
+      if (p.x + p.w > g.x + 6 && p.x < g.x + g.w + 20) {
+        const next = g.next;
+        if (next != null && next !== this.roomIndex && ROOMS[next]) {
+          this.emit({ type: 'gatePass', from: this.roomIndex, to: next, secret: !!g.secret });
+          this.loadRoom(next);
+          this.gateLock = 0.6;
+        }
+        return;
       }
     }
   }

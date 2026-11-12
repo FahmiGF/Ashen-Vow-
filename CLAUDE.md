@@ -1,7 +1,8 @@
 # Ashen Vow — Claude Master Plan
 
-> Compressed handoff for continuing **Ashen Vow v0.0.7**.
-> Status: **playable, browser-verified, pushed to GitHub**.
+> Compressed handoff for continuing **Ashen Vow v0.2.0**.
+> Status: **playable, browser-verified, Milestones A and B plus the Sigil & Ritual content update complete**.
+> Roadmap: [`MASTERPLAN.md`](MASTERPLAN.md).
 > Repo: `https://github.com/FahmiGF/Ashen-Vow-` · branch `main` · push account `isshinAshinaSeal`.
 
 ## 1. Product definition
@@ -9,23 +10,29 @@
 **Ashen Vow** is a 2D medieval metroidvania / roguelike-lite played in the browser.
 The UI is Indonesian; the tone is dark-fantasy ash and oath imagery.
 
-Non-negotiable v0.0.7 requirements:
+Non-negotiable v0.1.0 requirements (v0.0.7/v0.0.8 scope preserved):
 
 1. Boot into a **startup menu**, never directly into gameplay.
-2. **8 rooms and 4 bosses**; every boss has at least 2 phases and The Oathbreaker has 3.
+2. **14 rooms and 6 bosses**; every boss has at least 2 phases and The Oathbreaker and The Sporebound have 3.
 3. Every boss speaks at fight start, at each phase, and on defeat.
-4. **Level Select** shows all 8 rooms; unfinished rooms are **locked**.
+4. **Level Select** shows all 14 rooms; unfinished rooms are **locked**; room 12 stays hidden until discovered.
 5. Locked rooms expose **Sneak Peek**: spectate-only, no player, no HUD.
 6. The **map** (`M`) opens from the menu, pause screen, or mid-stage.
-7. The **codex** (`I`) indexes enemies, weapons, bosses, and items/consumables.
+7. The **codex** (`O`) indexes enemies, weapons, bosses, and items/consumables. `I` is the in-run inventory.
 8. Credits must contain: **“Made by SealiusHQ with a lot of support from Contributors”**.
 9. Progress persists across reloads.
 10. Combat must be real and testable, not a mock.
 11. Every boss room keeps a **Warung Abu checkpoint** at its entrance.
 12. Weapons, ammunition, and consumables are bought with run-scoped **ash**; keep `SHOP_ITEMS`, `WEAPONS`, `BOSS_INFO`, `ENEMY_INFO`, and `CODEX` data-driven.
-13. **Five selectable characters/classes** at the menu: Knight (Sera), Elf Archer (Lyna), Assassin (Kael), Brawler (Karn), Mage (Ignis) with unique active abilities.
+13. **Ten selectable characters/classes** at the menu: Knight (Sera), Elf Archer (Lyna), Assassin (Kael), Brawler (Karn), Mage (Ignis), Gladiator (Varek), Netfighter (Neris), Stormcaller (Astra), Sentinel (Bram), and Warden (Maera), each with a unique active ability.
 14. **Character customization** before starting: race (human, elf, goblin, orc, devil), 5 armor styles, skin color, and outfit color, with a live Canvas preview featuring runic altar, sparkling glitter stars, and transition pulse VFX.
 15. A **60-second narrative prologue** plays before the first stage on a new journey, with voice-over and always-visible subtitles; it is skippable and never replays from Level Select.
+16. **Procedural zone music** with a shared engine, per-zone tracks, boss theme, victory theme, crossfade, and a combat layer; no audio files.
+17. **Settings** for audio, one or two rebindable slots per action with conflict resolution, gamepad, and accessibility; stored under `ashen-vow-settings-v1`, independent of progress.
+18. **Interactive map v1** with fog of war, zone colours, markers, legend, pan/zoom/recenter, and up to 10 persistent pins.
+19. **Five zone definitions** in `src/zones.js`; the current 14 rooms map across four playable zones (`mycelial` rooms 8–13 shipped in v0.1.0) so future biomes do not touch audio or map code.
+20. **Mycelial Hollow branch** — entered from room 2 after the Warden falls; 6 rooms, spore trampolines, climbable mycelium, Sporeling/Stalker/Brood Mother, The Sporebound, optional Root of the First Vow behind a 120-HP breakable wall, and a return gate to room 2.
+21. **Sigil & Ritual (v0.2.0)** — 4 permanent Sigils, 4 counted Ritual items, 6 consumables, quick-item cycling (`R`), an in-run Inventory overlay (`I`), a Whetstone damage buff, and an in-game Update Log (`src/updates.js`) reachable from the main menu.
 
 ## 2. Stack and constraints
 
@@ -35,9 +42,10 @@ Non-negotiable v0.0.7 requirements:
 | Server | `server.js`, static files, `http://127.0.0.1:4300` |
 | Dependencies | None at runtime, none at test time |
 | Simulation | Deterministic fixed timestep, `1 / 120 s`, no DOM |
-| Tests | `node --test`, pure Node against `src/core.js` |
-| Audio | Procedural WebAudio, no audio files |
+| Tests | `node --test`, pure Node against `src/core.js` + foundation modules; CDP smoke for browser flows |
+| Audio | Procedural WebAudio SFX (`src/audio.js`) and music (`src/music.js`), no audio files |
 | Visuals | Procedural Canvas drawing, no image assets |
+| Persistence | Progress `ashen-vow-progress-v1`; settings `ashen-vow-settings-v1`; character `ashen-vow-character-v1` |
 
 Do **not** add a framework, bundler, or asset pipeline unless the product scope changes.
 
@@ -48,11 +56,16 @@ Do **not** add a framework, bundler, or asset pipeline unless the product scope 
 | `index.html` | Canvas shell, HUD, main menu, character screen, prologue screen, level select, credits, map, codex, boss dialogue, Sneak Peek UI, Warung Abu, overlays |
 | `styles.css` | Medieval theme, responsive layout, portrait menu fix, touch controls, shop/map/codex/dialogue cards |
 | `src/core.js` | Pure simulation: player, characters/appearance, enemies, bosses, dialogue, codex, weapons, projectiles, ash, shop, checkpoints, gates, blessings, events |
-| `src/render.js` | Canvas renderer; supports `render(game, { spectate, cameraX })` and all four bosses |
-| `src/audio.js` | Procedural SFX, prologue score, and mute toggle |
+| `src/render.js` | Canvas renderer; supports `render(game, { spectate, cameraX })` and all six bosses plus mycelial traversal art |
+| `src/audio.js` | Procedural SFX plus master/music/SFX gain buses and `applyVolumes()` |
+| `src/music.js` | Procedural `TRACKS` and `MusicManager`: play/crossfade, combat layer, stop, volume, `mycelialBoss` |
+| `src/settings.js` | Settings model, two-slot bindings, conflict swap/reset, gamepad mapping, sanitize/load/save |
+| `src/zones.js` | Five `ZONES`, `ROOM_ZONES` (14 entries), and `zoneForRoom` / `zoneMusicForRoom` |
+| `src/map.js` | Map model (fog, adjacency, pins, stats, 14-node layout) + `MapView` canvas renderer |
 | `src/prologue.js` | 12-beat, 60-second prologue timeline plus procedural cutscene art (`drawPrologue`) |
-| `src/main.js` | Menus, character customization, prologue playback, progress, spectate camera, fixed-step loop, input, HUD, shop/map/codex/dialogue UI, debug hooks |
-| `tests/core.test.js` | 51 deterministic Node tests |
+| `src/main.js` | Menus, character customization, prologue playback, progress, settings UI, music sync, map/shop/codex/dialogue UI, fixed-step loop, input, HUD, debug hooks |
+| `tests/core.test.js` | 64 deterministic Node tests |
+| `tests/foundations.test.js` | 15 tests for settings, bindings, persistence, gamepad, map fog/pins/stats, zones, music safety |
 | `server.js` | Static server on port 4300 |
 | `docs/` | Committed screenshots |
 
@@ -72,6 +85,9 @@ Do **not** add a framework, bundler, or asset pipeline unless the product scope 
   - `checkpoint { room, name }`, `checkpointRespawn { room }` — boss-room checkpoints.
   - `ashGain { amount, total }`, `shopBuy { id, name, cost }` — currency and shop.
   - `weaponSwitch`, `arrowShot`, `shurikenThrow`, `noAmmo` — weapons and consumables.
+  - `wallHit`, `wallBroken` — the mycelial secret wall absorbs damage or shatters.
+  - `flaskReward { maxFlasks }` — Root of the First Vow grants a permanent flask charge.
+  - `bounce`, `spore`, `sporeCloud` — spore trampolines and spore attacks.
 - Never let core code touch `window`, `document`, canvas, or audio.
 
 ## 5. Content model
@@ -88,17 +104,40 @@ Do **not** add a framework, bundler, or asset pipeline unless the product scope 
 | 5 | Katedral Sunyi | The Silent Cathedral | Boss gate | The Hollow Choir |
 | 6 | Menara Lonceng | The Bell Tower | Clear sentinel + wraith + brute | — |
 | 7 | Puncak Sumpah | Summit of the Vow | Final boss, no gate | The Oathbreaker |
+| 8 | Lubang Masuk | The Entry Shaft | Clear sporelings; gate east to 9 | — |
+| 9 | Taman Spora | Spore Gardens | Clear sporelings/stalker; gate east to 10 | — |
+| 10 | Jembatan Gantung | Hanging Bridges | Clear stalkers; gate east to 11 | — |
+| 11 | Sarang Induk | Brood Nest | East gate to 13 (clear); west secret gate to 12 (wall) | — |
+| 12 | Relung Tersembunyi | Hidden Alcove | Boss gate back to 11; hidden card until discovered | Root of the First Vow |
+| 13 | Altar Spora | Spore Altar | Boss gate back to 2 | The Sporebound |
 
-Clearing room `i` marks `cleared[i] = true` and sets `unlocked = min(8, i + 2)`.
-Progress shape:
+Room 2 publishes two gates: east to room 3 and west to room 8, both requiring `boss`. Clearing room `i` marks `cleared[i] = true` and raises `unlocked` using both `index + 2` and the actual `nextIndex + 1`, so branch destinations never under-unlock the level select. Progress shape:
 
 ```js
-{ unlocked: 1, cleared: [false, false, false, false, false, false, false, false] }
+{
+  version: 1,
+  unlocked: 1,
+  cleared: [false, false, false, false, false, false, false, false, false, false, false, false, false, false],
+  map: {
+    discovered: [true, false, false, false, false, false, false, false, false, false, false, false, false, false],
+    pins: [] // { x, y, type: 'note'|'water'|'key'|'return', room }
+  }
+}
 ```
 
-Stored in `localStorage` key **`ashen-vow-progress-v1`**.
+Stored in `localStorage` key **`ashen-vow-progress-v1`**. A v0.0.7 save (no `map`) migrates by marking every cleared room and room 0 as discovered. Settings live in **`ashen-vow-settings-v1`** and must never be cleared by `clearProgress()`.
 
-### Bosses — four bosses, up to three phases
+### Zones
+
+`src/zones.js` owns five zones: `ashen`, `mycelial`, `cistern`, `frostglass`, `cinder`. Each defines a palette, particle mood, map colour, and music/boss-music IDs. Current mapping:
+
+```js
+ROOM_ZONES = ['ashen', 'ashen', 'ashen', 'cinder', 'ashen', 'frostglass', 'frostglass', 'cinder', 'mycelial', 'mycelial', 'mycelial', 'mycelial', 'mycelial', 'mycelial'];
+```
+
+Adding a zone or room must not touch `src/audio.js`, `src/music.js`, or `src/map.js`; extend `ZONES`, `ROOM_ZONES`, and `MAP_LAYOUT` instead.
+
+### Bosses — six bosses, up to three phases
 
 | Boss | Kind | HP | Phases | Notes |
 | --- | --- | --- | --- | --- |
@@ -106,6 +145,8 @@ Stored in `localStorage` key **`ashen-vow-progress-v1`**.
 | **Vhael, The Ashen Wyrm** | `wyrm` | 480 | 2 | Hover, fireball volley, dive. Phase II adds **fire pillars**. |
 | **The Hollow Choir** | `choir` | 560 | 2 | Flying spectral choir; spiral **note** projectiles and vertical **beam**; phase II adds echo patterns. |
 | **The Oathbreaker** | `oathbreaker` | 720 | 3 | Final boss; slash, dash, volley, nova. Phase III unlocks the full pattern set; defeat ends the run. |
+| **The Sporebound** | `sporebound` | 780 | 3 | Mycelial boss; spore projectiles, spore clouds, brood adds. Phase II/III at 66%/33% HP accelerate patterns. |
+| **Root of the First Vow** | `root` | 360 | 2 | Optional mini-boss behind the room-11 breakable wall; grants `+1 max flask` and a full refill, then opens the gate back to room 11. |
 
 Generic phase transition code lives in `hurtBoss()`:
 
@@ -120,7 +161,7 @@ while (b.phase < b.maxPhases && b.hp <= b.maxHp * (b.phaseThresholds[b.phase - 1
 
 `BOSS_INFO[kind].phaseThresholds` defines the HP fraction for each next phase. `BOSS_INFO[kind].dialogue` holds `intro`, `phase2`, `phase3`, and `defeat` lines. Spawning a boss emits `bossDialogue` for `intro`; `finishBoss()` emits `defeat` before granting the blessing or victory.
 
-Non-final bosses grant a blessing and open the next gate. `oathbreaker` has `reward: 'victory'`.
+Non-final bosses grant a blessing and open the next gate. `oathbreaker` has `reward: 'victory'`. `root` has `reward: 'flask'`: `finishBoss()` increments `player.maxFlasks`, refills `player.flasks`, emits `flaskReward`, leaves `state = 'playing'` (no blessing), and opens the gate back to room 11; the extra flask is run-scoped, not persisted to meta-progress.
 
 **Bug fixed during v0.0.5 verification:** Wyrm `dive` was clamped to `FLOOR_Y - b.h - 20`, so it never reached its rise threshold and looped in `dive` forever. Clamp is now `FLOOR_Y - b.h`. Do not reintroduce a floor offset above the dive landing threshold.
 
@@ -134,6 +175,9 @@ Non-final bosses grant a blessing and open the next gate. `oathbreaker` has `rew
 | Sentinel | 64 | 14 | Telegraphed lunge. |
 | Hollow Wraith | 48 | 10 | Hovering; keeps distance; fires `wisp` projectiles. |
 | Cinder Brute | 120 | 18 | Slow; telegraphed floor slam spawns shockwaves. |
+| Sporeling | 30 | 9 | Hops toward the player and emits a slow spore cloud on death. |
+| Mycelial Stalker | 76 | 16 | Burrows (immune to contact/projectiles/melee), emerges under the player, then lunges. |
+| Brood Mother | 150 | 15 | Ground controller that spawns Sporeling adds during the fight. |
 
 ### Weapons and consumables
 
@@ -151,7 +195,7 @@ Non-final bosses grant a blessing and open the next gate. `oathbreaker` has `rew
 
 ### Ash and Warung Abu
 
-`game.ash` is run-scoped currency. Rewards: crawler `8`, sentinel `15`, wraith `16`, brute `22`, Warden `60`, Wyrm `90`, Choir `110`, Oathbreaker `160`. Each kill emits `ashGain`.
+`game.ash` is run-scoped currency. Rewards: crawler `8`, sentinel `15`, wraith `16`, brute `22`, sporeling `10`, stalker `20`, brood mother `32`, Warden `60`, Wyrm `90`, Choir `110`, Sporebound `150`, Root `80`, Oathbreaker `160`. Each kill emits `ashGain`.
 
 `SHOP_ITEMS` (exported) drives both the shop UI and `game.buyShopItem(id)`:
 
@@ -163,11 +207,19 @@ Non-final bosses grant a blessing and open the next gate. `oathbreaker` has `rew
 | Anak Panah ×6 | 12 | ammo | Requires `bow`; adds 6 arrows. |
 | Isi Ulang Flask | 10 | flask | Restores all flask charges. |
 
-`canShop()` requires a checkpoint in the current room and proximity (`<110 px` horizontally, `<150 px` vertically) to `room.merchant`. Shop is opened with `F` or the pause button. Purchases are run-scoped; ash is not persisted across full runs. Starting a run directly from Level Select grants a scaled stipend (rooms 2–8: 45, 90, 120, 155, 190, 240) so the shop is usable without replaying earlier rooms.
+`canShop()` requires a checkpoint in the current room and proximity (`<110 px` horizontally, `<150 px` vertically) to `room.merchant`. Shop is opened with `F` or the pause button. Purchases are run-scoped; ash is not persisted across full runs. Starting a run directly from Level Select grants a scaled stipend (rooms 2–14: 45, 90, 120, 155, 190, 240) so the shop is usable without replaying earlier rooms.
+
+### Mycelial traversal, gates, and the secret wall
+
+- `bounce` pads: landing on a pad sets `vy = -power` and emits `bounce`; rooms 8 and 9 use them to cross gaps.
+- `climbs`: while overlapping a strip and holding jump, the player ascends and sets `player.climbing`; releasing jump drops normally.
+- `secretWall { x, y, w, h, hp }` in room 11: melee and player projectiles damage it through `damageWall()`; hits emit `wallHit` and the break emits `wallBroken`. Its west gate uses `requires: 'wall'`.
+- `roomGateDefs(room)` returns `room.gates` when present, otherwise `[room.gate]`; `primaryGateDef(room)` picks the first non-secret gate. `updateGate()` iterates all gates, passes the real `next` destination, and sets a 0.6 s `gateLock` after `loadRoom` to prevent double transitions.
+- Room 12 is marked `LEVEL_META[12].secret`; its Level Select card shows `???` until `progress.map.discovered[12]` is true.
 
 ### Checkpoints
 
-Boss rooms 2, 3, 5, and 7 define `checkpoint` and `merchant` at the entrance. `loadRoom()` sets `checkpoint` / `checkpointRoom` and emits `checkpoint`. `retryRun()` in `src/main.js` calls `game.respawnAtCheckpoint()` when available:
+Boss rooms 2, 3, 5, 7, and 13, plus mycelial rooms 8 and 10, define `checkpoint` and `merchant` at the entrance. `loadRoom()` sets `checkpoint` / `checkpointRoom` and emits `checkpoint`. `retryRun()` in `src/main.js` calls `game.respawnAtCheckpoint()` when available:
 
 - reloads the boss room and respawns the boss,
 - restores HP and flasks,
@@ -190,6 +242,8 @@ Boss rooms 2, 3, 5, and 7 define `checkpoint` and `merchant` at the entrance. `l
 - `menuView`: `title | levels | credits | character | none`
 - `started`, `paused`, `spectating`, `shopOpen`
 - `mapOpen`, `codexOpen`, `codexTab`, `dialogueOpen`, `dialogueLines`, `dialogueIndex`, `dialogueMeta`
+- `settingsOpen`, `settingsTab` (`audio | controls | gameplay`), `settingsCapture`, `settingsConflict`
+- `settings` (`audio`, `gameplay`, `bindings`), loaded from `ashen-vow-settings-v1`; `desiredMusic`, `audioUnlocked`, `padHeld`, `mapView`, `mapPinType`, `mapDrag`
 - `character` (`characterId`, `race`, `armor`, `skin`, `outfit`), persisted in `localStorage` key `ashen-vow-character-v1`
 - `prologueActive`, `prologueIndex`, `prologueTimer`, `prologueTotal`, `prologueVoice`; `prologueDone` is the deferred start callback
 - `spectateGame` is a separate `AshenGame` instance, never the live run.
@@ -201,7 +255,7 @@ Rules:
 - `PILIH PENJAGA` → `showCharacter()`; roster, race, armor, skin, and outfit buttons call `setCharacter()`, which sanitizes, saves, and applies the appearance to the live game player.
 - `startRun()` always applies the saved character after `game.reset()`; Level Select and retry call `startRun()` directly, so they never replay the prologue.
 - While `prologueActive`: game simulation is frozen, HUD/touch are hidden, the cutscene canvas renders every frame, and each beat auto-advances after 5 s. `Space`/`Enter` advances, `Esc` skips, `N` toggles voice. Subtitles are DOM text and work without speech synthesis.
-- `PILIH LEVEL` → cards for all 8 rooms.
+- `PILIH LEVEL` → cards for all 14 rooms; room 12 renders as a hidden `???` card until discovered.
 - Locked card: **no `MAINKAN` button**, only `SNEAK PEEK`.
 - Unlocked card: `MAINKAN` + `SNEAK PEEK`.
 - `SNEAK PEEK` → `startSpectate(index)`, hides HUD/title, shows `#spectate-ui`.
@@ -209,10 +263,13 @@ Rules:
   - `spectate: true` skips `drawPlayer`, shake, low-HP vignette, and gate chevrons.
 - Spectate input: `←/→` or `A/D` pan; `Esc` / `Backspace` / `Q` returns to level select.
 - Pause/death/victory screens link back to Level Select and Main Menu.
-- Shop is a full-screen overlay (`#shop-screen`); while `shopOpen`, the simulation pauses, HUD/touch are hidden, and `Esc`/`F` closes it.
-- Shop is available only when `game.checkpointRoom === game.roomIndex`; proximity to the merchant is required for `F`, while the pause button passes `force = true`.
-- `M` opens/closes `#map-screen` from the title, pause, or mid-run; `I` opens `#codex-screen`. Both swap with each other (`btn-map-codex`, `btn-codex-map`).
-- While `mapOpen`, `codexOpen`, or `dialogueOpen`, the fixed-step loop does not advance and HUD/touch are hidden.
+- Shop is a full-screen overlay (`#shop-screen`); while `shopOpen`, the simulation pauses, HUD/touch are hidden, and `Esc`/`F` (or the rebound `interact` key) closes it.
+- Shop is available only when `game.checkpointRoom === game.roomIndex`; proximity to the merchant is required for `interact`, while the pause button passes `force = true`.
+- `M`/`Tab` (rebindable action `map`) opens/closes `#map-screen` from the title, pause, or mid-run; `I` opens `#codex-screen`. Both swap with each other (`btn-map-codex`, `btn-codex-map`).
+- While `mapOpen`, `codexOpen`, `settingsOpen`, or `dialogueOpen`, the fixed-step loop does not advance and HUD/touch are hidden.
+- Settings open from the title (`btn-settings-menu`) or pause (`btn-pause-settings`). Every change persists immediately. Rebinding captures the next key; `Esc` cancels; a used key offers **TUKAR** (swap with the other action) or **BATAL**.
+- Music selection: `desiredTrack()` returns `victory`, the zone's boss track (`boss`, or `mycelialBoss` in Mycelial Hollow) while a live boss is present, otherwise the current room's zone track, and `menu` outside a run. `syncMusic()` crossfades and fades the combat layer in when enemies are near. Music only starts after the first user gesture (`audioUnlocked`).
+- Map discovery: entering a room and clearing it both call `discoverCurrentRoom()`; fog reveals direct neighbours as outlines. Pins are placed by clicking the map, removed by right-clicking near one, and capped at 10. The room-12 card stays hidden until the room is discovered.
 - `bossDialogue` events call `queueDialogue()`; `Space`/`Enter`/`Esc` or the **LANJUT** button advances lines. Closing the last line resets `lastTime`/`accumulator`.
 - Death retry uses checkpoint respawn when possible, preserving run inventory; otherwise it restarts the current room.
 - Portrait phones: `.screen` overlays become fixed full-viewport scroll layers so menus are not clipped by the 16:9 game frame.
@@ -225,7 +282,7 @@ Rules:
 npm test
 ```
 
-Current result: **56/56 passing**. Coverage includes:
+Current result: **79/79 passing**. Coverage includes:
 
 - gravity, floor landing, movement and world bounds;
 - single jump vs double jump after relic;
@@ -250,20 +307,36 @@ Current result: **56/56 passing**. Coverage includes:
 - Wyrm dive/rise cycle and fireballs;
 - **Wyrm phase transition and pillar attack**;
 - **Wyrm defeat grants a blessing and unlocks chapter V**;
-- **8 rooms and 4 bosses (`warden`, `wyrm`, `choir`, `oathbreaker`)**;
-- **every boss has intro/phase/defeat dialogue; Oathbreaker adds phase III**;
+- **14 rooms and 6 bosses (`warden`, `wyrm`, `choir`, `oathbreaker`, `sporebound`, `root`)**;
+- **every boss has intro/phase/defeat dialogue; Oathbreaker and Sporebound add phase III**;
 - **wraith hover/wisp and brute slam/shockwave behaviour**;
+- **sporeling hop, stalker burrow/emerge/lunge, and brood mother add spawning**;
+- **spore trampolines launch the player and mycelium climbing raises them**;
+- **the secret mycelial wall takes 120 damage from melee/projectiles, opens its gate, and room 12 stays secret until discovered**;
+- **room 2 west gate enters Mycelial Hollow after the Warden falls; the Sporebound's final gate returns to room 2**;
+- **Sporebound phase II/III transitions, defeat blessing, and room 2 persistence**;
+- **Root of the First Vow grants `+1 max flask`, refills charges, and stays `playing`**;
+- **mycelial room discovery and clear state extend the 14-slot progress arrays**;
 - **Hollow Choir notes/beams and gate unlock**;
 - **Oathbreaker three-phase transition and final victory**;
-- **codex entries for enemies, weapons, bosses, and items**;
+- **codex entries for 7 enemies, 3 weapons, 6 bosses, and items**;
 - **boss gates resolve against the current room, not a hardcoded index**;
-- **two characters expose valid stats and default appearances; applyCharacter swaps HP/damage/speed and falls back to Sera**;
+- **five characters expose valid stats and default appearances; applyCharacter swaps HP/damage/speed and falls back to Sera**;
 - **setAppearance sanitizes race, armor, skin, and outfit while preserving custom colors**;
 - **character speed multiplier changes movement without changing the 30×46 hitbox**;
 - **prologue has exactly 12 beats summing to 60 seconds, each with a label and subtitle line**;
+- **default settings define two unique bindings per action; sanitize clamps audio/gameplay and repairs broken bindings**;
+- **settings persist under their own key and survive reload/corrupt JSON**;
+- **rebinding swaps with the conflicting action and never leaves duplicate keys**;
+- **gamepad mapping respects standard buttons and axis deadzones**;
+- **map layout covers every room with two-way valid exits**;
+- **fog of war reveals neighbours, and map stats count discovery/bosses/relics/pins**;
+- **pins are sanitized, capped at 10, and removable**;
+- **every room maps to a known zone with its own track, palette, and particle mood**;
+- **MusicManager is safe without an AudioContext**;
 - death freezes the simulation.
 
-New tests added for v0.0.5–v0.0.7 menus, character customization, prologue, map, codex, and dialogue are browser-level, not all Node-level.
+New tests added for v0.0.5–v0.1.0 menus, character customization, prologue, settings, map, zones, music, codex, dialogue, and Mycelial Hollow are partly browser-level; the pure model layers have Node tests.
 
 ### Browser smoke tests
 
@@ -273,6 +346,27 @@ Run the server and Chrome with remote debugging:
 npm start
 chrome --remote-debugging-port=9333 --user-data-dir=<temp> http://127.0.0.1:4300/
 ```
+
+Verified through Chrome DevTools Protocol (v0.1.0 Mycelial Hollow smoke, 36/36 checks, no console errors):
+
+- boot exposes `window.__ashen`, 14 level cards, and starts in Ashen Hall (room 2);
+- the Warden spawns, defeat offers a blessing, and the west gate opens only after choosing one;
+- walking through the west gate enters room 8, discovers it in memory and localStorage, and the spore trampoline launches the player;
+- holding jump inside the mycelium strip climbs; clearing rooms 8→9→10→11 transitions through the real east gates;
+- sword swings deal 120 damage to the secret wall, the west secret gate enters room 12, and discovery persists;
+- Root spawns at 360 HP, dies to `damageBoss`, grants `+1 max flask` plus a full refill, marks room 12 cleared, and opens the return gate;
+- the brood nest east gate enters room 13; the Sporebound spawns at 780 HP, reaches phase II/III, offers a blessing, and its gate returns to room 2 with the Warden still defeated;
+- all six mycelial rooms are discovered and cleared in progress and localStorage; reload preserves discovered/cleared/unlocked state and reveals the room-12 card.
+
+Verified through Chrome DevTools Protocol (v0.0.8):
+
+- boot has `window.__ashen`, title visible, settings button, map canvas, FPS badge;
+- settings open from the title, render 3 tabs / 3 audio sliders / 24 bind buttons / 3 gameplay selects, then close;
+- changing the music slider persists `31` to `ashen-vow-settings-v1` while progress stays in its own key;
+- rebinding Jump to `KeyL` detects the Dash conflict, swaps to `jump: [KeyL, KeyW]` / `dash: [ShiftLeft, Space]`, and reset-all restores defaults;
+- audio unlocks on a pointer event, creates an AudioContext, starts `menu`, then crossfades to `ashen` after starting room 0;
+- clicking the map places a pin, saves it to `ashen-vow-progress-v1`, and renders 6 stat cells;
+- start/step, pause, shop, codex, and map overlays all open and close without page exceptions or console errors.
 
 Verified through Chrome DevTools Protocol (v0.0.7):
 
@@ -292,8 +386,9 @@ Verified through Chrome DevTools Protocol (v0.0.7):
 
 `window.__ashen` exists for smoke tests:
 
-- Getters: `game`, `renderer`, `started`, `paused`, `spectating`, `menuView`, `progress`, `shopOpen`, `mapOpen`, `codexOpen`, `dialogueOpen`, `prologueActive`, `prologueIndex`, `prologueBeat`, `prologueVoice`, `character`.
-- Navigation: `start`, `restart`, `retry`, `showMenu`, `showLevels`, `showCredits`, `showCharacter`, `closeCharacter`, `enterRoom`, `clearProgress`.
+- Getters: `game`, `renderer`, `started`, `paused`, `spectating`, `menuView`, `progress`, `settings`, `musicTrack`, `audioState`, `mapData`, `shopOpen`, `mapOpen`, `codexOpen`, `dialogueOpen`, `prologueActive`, `prologueIndex`, `prologueBeat`, `prologueVoice`, `character`.
+- Navigation: `start`, `restart`, `retry`, `showMenu`, `showLevels`, `showCredits`, `showSettings`, `closeSettings`, `showCharacter`, `closeCharacter`, `enterRoom`, `clearProgress`.
+- Settings: `buildSettings`, `applySettings`.
 - Character/prologue: `buildCharacterScreen`, `setCharacter`, `setCharacterField`, `saveCharacter`, `beginJourney`, `startPrologue`, `advancePrologue`, `finishPrologue`, `togglePrologueVoice`.
 - Overlays: `openMap`, `closeMap`, `toggleMap`, `openCodex`, `closeCodex`, `advanceDialogue`.
 - Spectate: `startSpectate`, `stopSpectate`.
@@ -306,9 +401,11 @@ Verified through Chrome DevTools Protocol (v0.0.7):
 - No save-slot UI; single browser profile progress only.
 - Ash is run-scoped and is not persisted with level progress; weapons are re-earned each run.
 - Sneak Peek has no touch pan control; camera auto-drifts.
-- No new game plus, no difficulty selection, no controller mapping screen.
-- Audio is procedural only; no recorded music or voice files. Prologue narration depends on the browser speech-synthesis voices, but subtitles always carry the story.
+- No new game plus, difficulty selection, or per-action gamepad rebinding yet (gamepad buttons are fixed to the standard layout).
+- Audio is procedural only; no recorded music or voice files. Tracks are short patterns, so long sessions may notice looping. Prologue narration depends on browser speech-synthesis voices, but subtitles always carry the story.
 - Art is procedural; no sprite/tileset pipeline.
+- Only four of the five configured zones have playable rooms; Tidewrought Cistern exists only as configuration until Milestone C.
+- No fast travel, trailer, branching story, or multiple endings yet (Milestones D–E).
 - Boss tuning lives in constants inside `src/core.js`; the data tables (`BOSS_INFO`, `ENEMY_INFO`, `CODEX`) are the extension point.
 - Enemy AI is platform-aware but not a full navmesh; complex multi-level layouts may still need hand-tuned jumps.
 - Codex screens are informational; no unlock tracking or per-entry discovery gating yet.
@@ -326,3 +423,7 @@ Verified through Chrome DevTools Protocol (v0.0.7):
 9. Checkpoint retry must never erase ash, owned weapons, ammo, shuriken, or blessings.
 10. New purchasable items must be added to `SHOP_ITEMS` (and `CODEX.items`) and validated in `buyShopItem()` with a Node test.
 11. Every boss must ship with `intro`, one `phaseN` entry per extra phase, and `defeat` dialogue; `emitBossDialogue()` handles the rest.
+12. Settings and keybindings must stay in `ashen-vow-settings-v1`; clearing progress must never clear them. Add a clamp/sanitize test for every new setting.
+13. New rooms must add a `MAP_LAYOUT` node with two-way exits and a `ROOM_ZONES` entry; the map is generated, never hand-written.
+14. New zones must define palette, particle, map colour, and track IDs in `ZONES`, plus a track in `TRACKS`. Do not special-case zone names in `main.js`.
+15. Keep `window.__ashen` in sync with new UI state so CDP smoke tests can drive real flows.

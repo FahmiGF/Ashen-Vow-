@@ -1,9 +1,9 @@
 {
   "name": "ashen-vow",
-  "version": "0.0.7",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
-  "description": "Ashen Vow - medieval 2D metroidvania combat simulation with two selectable characters, appearance customization, a one-minute prologue, eight rooms, four bosses, a map, and a codex",
+  "description": "Ashen Vow - medieval 2D metroidvania combat simulation with ten selectable characters, sigils, rituals, consumables, an in-run inventory, an in-game update log, appearance customization, a one-minute prologue, fourteen rooms, six bosses, the Mycelial Hollow biome, procedural zone music, rebindable controls, settings, an interactive map, and a codex",
   "scripts": {
     "start": "node server.js",
     "test": "node --test tests/*.test.js"

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { AshenGame, FLOOR_Y, ROOMS, ATTACKS, BOSS_INFO, CODEX, CHARACTERS, RACES, OUTFITS, SKIN_TONES, OUTFIT_COLORS, DEFAULT_APPEARANCE } from '../src/core.js';
+import { AshenGame, FLOOR_Y, ROOMS, ATTACKS, BOSS_INFO, CODEX, CHARACTERS, RACES, OUTFITS, SKIN_TONES, OUTFIT_COLORS, DEFAULT_APPEARANCE, SHOP_ITEMS } from '../src/core.js';
 import { PROLOGUE_BEATS, PROLOGUE_TOTAL } from '../src/prologue.js';
 
 const DT = 1 / 120;
@@ -36,7 +36,7 @@ test('starts in room 0 with full health and two enemies', () => {
   assert.equal(g.player.hp, 100);
   assert.equal(g.player.maxHp, 100);
   assert.equal(g.enemies.length, 2);
-  assert.equal(ROOMS.length, 8);
+  assert.equal(ROOMS.length, 14);
 });
 
 test('gravity and one-way platforms land the player on the floor', () => {
@@ -635,12 +635,21 @@ test('boss spawn emits intro dialogue and phase transitions emit phase dialogue'
   assert.ok(g.events.some((e) => e.type === 'bossDialogue' && e.phase === 'phase2' && e.kind === 'warden'));
 });
 
-test('the expanded campaign has eight rooms and four bosses', () => {
-  assert.equal(ROOMS.length, 8);
+test('the expanded campaign has fourteen rooms and six bosses', () => {
+  assert.equal(ROOMS.length, 14);
   const bossRooms = ROOMS.filter((room) => room.boss);
-  assert.equal(bossRooms.length, 4);
-  assert.deepEqual(bossRooms.map((room) => room.boss), ['warden', 'wyrm', 'choir', 'oathbreaker']);
+  assert.equal(bossRooms.length, 6);
+  assert.deepEqual(bossRooms.map((room) => room.boss), [
+    'warden',
+    'wyrm',
+    'choir',
+    'oathbreaker',
+    'root',
+    'sporebound',
+  ]);
   assert.equal(BOSS_INFO.oathbreaker.maxPhases, 3);
+  assert.equal(BOSS_INFO.sporebound.maxPhases, 3);
+  assert.equal(BOSS_INFO.root.reward, 'flask');
 });
 
 test('chapter V introduces wraith and brute enemies', () => {
@@ -727,9 +736,9 @@ test('the Oathbreaker advances through three phases and wins the run', () => {
 });
 
 test('the codex catalogues enemies, weapons, bosses, and items', () => {
-  assert.equal(CODEX.enemies.length, 4);
+  assert.equal(CODEX.enemies.length, 7);
   assert.equal(CODEX.weapons.length, 3);
-  assert.equal(CODEX.bosses.length, 4);
+  assert.equal(CODEX.bosses.length, 6);
   assert.ok(CODEX.items.length >= 7);
   for (const entry of Object.values(CODEX).flat()) {
     assert.ok(entry.name, 'codex entry needs a name');
@@ -748,10 +757,163 @@ test('boss gates reference the current room instead of a hardcoded room', () => 
   assert.equal(g.gate.open, true);
 });
 
+test('mycelial trampoline launches the player upward', () => {
+  const g = fresh();
+  g.enterRoom(8);
+  g.enemies.forEach((e) => (e.dead = true));
+  const p = g.player;
+  p.x = 455;
+  p.y = 340;
+  p.vx = 0;
+  p.vy = 200;
+  p.onGround = false;
+  let sawBounce = false;
+  let peakRise = 0;
+  for (let i = 0; i < 180; i++) {
+    g.update(DT, {});
+    peakRise = Math.min(peakRise, p.vy);
+    if (g.events.some((e) => e.type === 'bounce')) sawBounce = true;
+    if (sawBounce && i > 30) break;
+  }
+  assert.equal(sawBounce, true);
+  assert.ok(peakRise <= -900, `expected a strong launch, got vy ${peakRise}`);
+});
+
+test('mycelial climb strips raise the player while jump is held', () => {
+  const g = fresh();
+  g.enterRoom(8);
+  g.enemies.forEach((e) => (e.dead = true));
+  const p = g.player;
+  p.x = 940;
+  p.y = 390;
+  p.vx = 0;
+  p.vy = 0;
+  g.update(DT, { jump: true });
+  assert.equal(p.climbing, true);
+  stepN(g, 0.6, { jump: true });
+  assert.ok(p.y < 300, `expected to climb upward, y=${p.y}`);
+  assert.equal(p.climbing, true);
+});
+
+test('the secret wall blocks the alcove, breaks from attacks, and opens its gate', () => {
+  const g = fresh();
+  g.enterRoom(11);
+  g.enemies.forEach((e) => (e.dead = true));
+  g.player.invuln = 999;
+  g.player.x = 100;
+  g.player.y = FLOOR_Y - g.player.h;
+  g.player.facing = -1;
+  assert.ok(g.activeWall(), 'wall should start intact');
+  const west = g.gates.find((gate) => gate.next === 12);
+  assert.equal(west.open, false);
+  autoAttack(g, 3.2);
+  assert.ok(g.events.some((e) => e.type === 'wallBroken'), 'wall should break');
+  assert.equal(g.activeWall(), null);
+  assert.equal(g.gates.find((gate) => gate.next === 12).open, true);
+
+  g.player.x = 20;
+  stepN(g, 0.2);
+  assert.equal(g.roomIndex, 12);
+});
+
+test('mycelial stalkers burrow and erupt beneath the player', () => {
+  const g = fresh();
+  g.enterRoom(9);
+  const stalker = g.enemies.find((e) => e.type === 'stalker');
+  assert.ok(stalker, 'room 9 should contain a stalker');
+  for (const e of g.enemies) if (e !== stalker) e.dead = true;
+  const p = g.player;
+  p.invuln = 999;
+  p.x = stalker.x - 120;
+  p.y = FLOOR_Y - p.h;
+  stalker.burrowCooldown = 0;
+  let sawBurrow = false;
+  let sawEmerge = false;
+  for (let i = 0; i < 420; i++) {
+    g.update(DT, {});
+    if (stalker.burrowed) sawBurrow = true;
+    if (g.events.some((e) => e.type === 'enemyEmerge')) sawEmerge = true;
+    if (sawEmerge && !stalker.burrowed) break;
+  }
+  assert.equal(sawBurrow, true, 'stalker should burrow underground');
+  assert.equal(sawEmerge, true, 'stalker should erupt to attack');
+});
+
+test('the brood mother spawns sporelings while it lives', () => {
+  const g = fresh();
+  g.enterRoom(11);
+  const brood = g.enemies.find((e) => e.type === 'broodmother');
+  assert.ok(brood, 'room 11 should contain a brood mother');
+  for (const e of g.enemies) if (e !== brood) e.dead = true;
+  g.player.invuln = 999;
+  g.player.x = brood.x - 130;
+  g.player.y = FLOOR_Y - g.player.h;
+  brood.spawnCooldown = 0;
+  stepN(g, 0.3);
+  assert.ok(g.events.some((e) => e.type === 'enemySpawn' && e.kind === 'sporeling'));
+  assert.ok(g.enemies.some((e) => e.type === 'sporeling' && !e.dead));
+});
+
+test('sporebound crosses both phase thresholds and fills the arena with spores', () => {
+  const g = fresh();
+  g.enterRoom(13);
+  assert.ok(g.boss && g.boss.kind === 'sporebound');
+  assert.equal(g.boss.phase, 1);
+  g.player.invuln = 999;
+  g.damageBoss(300);
+  assert.equal(g.boss.phase, 2);
+  assert.ok(g.projectiles.some((p) => p.type === 'spore'), 'phase II emits spores');
+  stepN(g, 0.5);
+  g.damageBoss(260);
+  assert.equal(g.boss.phase, 3);
+  assert.ok(g.enemies.some((e) => e.type === 'sporeling'), 'phase transitions summon sporelings');
+});
+
+test('root of the first vow grants a permanent flask charge for the run', () => {
+  const g = fresh();
+  g.enterRoom(12);
+  const p = g.player;
+  p.invuln = 999;
+  p.maxFlasks = 3;
+  p.flasks = 1;
+  assert.equal(g.boss.kind, 'root');
+  g.damageBoss(9999);
+  stepN(g, 2.7);
+  assert.equal(g.boss, null);
+  assert.equal(p.maxFlasks, 4);
+  assert.equal(p.flasks, 4);
+  assert.ok(g.events.some((e) => e.type === 'flaskReward' && e.charges === 4));
+  const down = g.events.find((e) => e.type === 'bossDown');
+  assert.equal(down.next, 11);
+  assert.equal(g.gates[0].open, true);
+  assert.equal(g.state, 'playing');
+});
+
+test('room 2 opens its western mycelial gate after the warden falls', () => {
+  const g = fresh();
+  g.enterRoom(2);
+  const west = g.gates.find((gate) => gate.next === 8);
+  assert.ok(west, 'room 2 should expose the mycelial gate');
+  assert.equal(west.open, false);
+  g.damageBoss(9999);
+  stepN(g, 2.6);
+  assert.equal(g.state, 'blessing');
+  g.chooseBlessing(0);
+  assert.equal(g.gates.find((gate) => gate.next === 8).open, true);
+  assert.equal(g.gates.find((gate) => gate.next === 3).open, true);
+  g.player.x = 40;
+  g.player.y = FLOOR_Y - g.player.h;
+  stepN(g, 0.2);
+  assert.equal(g.roomIndex, 8);
+});
+
 test('selectable characters expose balanced stats, valid appearances, and unique abilities', () => {
   const ids = Object.keys(CHARACTERS);
-  assert.equal(ids.length, 5);
-  assert.deepEqual(ids.sort(), ['ignis', 'kael', 'karn', 'lyna', 'sera']);
+  assert.equal(ids.length, 10);
+  assert.deepEqual(ids.sort(), [
+    'gladiator', 'ignis', 'kael', 'karn', 'lyna',
+    'retiarius', 'sentinel', 'sera', 'stormcaller', 'warden',
+  ]);
   for (const c of Object.values(CHARACTERS)) {
     assert.ok(c.name && c.title && c.desc && c.glyph);
     assert.ok(c.maxHp > 0 && c.speed > 0 && c.damage > 0);
@@ -916,4 +1078,226 @@ test('the default appearance stays valid', () => {
   assert.ok(OUTFITS[DEFAULT_APPEARANCE.armor]);
   assert.ok(SKIN_TONES.includes(DEFAULT_APPEARANCE.skin));
   assert.ok(OUTFIT_COLORS.includes(DEFAULT_APPEARANCE.outfit));
+});
+
+// ── v0.2.0: new classes, sigils, rituals, and consumables ────────────────
+test('the five new classes expose their signature abilities', () => {
+  const g = fresh();
+  const expected = {
+    gladiator: 'arena_charge',
+    retiarius: 'net_cast',
+    stormcaller: 'chain_lightning',
+    sentinel: 'aegis_pulse',
+    warden: 'thorn_volley',
+  };
+  for (const [id, ability] of Object.entries(expected)) {
+    g.applyCharacter(id);
+    assert.equal(g.player.characterId, id);
+    assert.equal(g.player.ability.id, ability);
+  }
+});
+
+test('gladiator ability (arena_charge) charges forward and hits enemies in the path', () => {
+  const g = fresh();
+  g.applyCharacter('gladiator');
+  const p = g.player;
+  const enemy = g.enemies[0];
+  enemy.x = p.x + 70;
+  enemy.y = p.y;
+  const startX = p.x;
+  const hp = enemy.hp;
+
+  g.update(DT, { ability: true });
+  assert.ok(p.x > startX + 100, `expected a long charge, moved ${p.x - startX}`);
+  assert.ok(enemy.hp < hp || enemy.dead, 'enemy in the charge path should be hit');
+  assert.ok(p.invuln > 0, 'the charge should grant i-frames');
+});
+
+test('retiarius ability (net_cast) launches a piercing snare', () => {
+  const g = fresh();
+  g.applyCharacter('retiarius');
+  g.update(DT, { ability: true });
+  const net = g.projectiles.find((pr) => pr.type === 'net');
+  assert.ok(net, 'a net projectile should exist');
+  assert.equal(net.snare, 2.4);
+  assert.equal(net.pierce, true);
+});
+
+test('stormcaller ability (chain_lightning) arcs between nearby enemies', () => {
+  const g = fresh();
+  g.applyCharacter('stormcaller');
+  const p = g.player;
+  const targets = g.enemies.slice(0, 2);
+  targets.forEach((e, i) => {
+    e.x = p.x + 80 + i * 50;
+    e.y = p.y;
+    e.hp = 200;
+  });
+  const hp = targets.map((e) => e.hp);
+
+  g.update(DT, { ability: true });
+  targets.forEach((e, i) => assert.ok(e.hp < hp[i], `enemy ${i} should be struck by the chain`));
+});
+
+test('sentinel ability (aegis_pulse) grants invulnerability and knocks enemies back', () => {
+  const g = fresh();
+  g.applyCharacter('sentinel');
+  const p = g.player;
+  const enemy = g.enemies[0];
+  enemy.x = p.x + 50;
+  enemy.y = p.y;
+  const hp = enemy.hp;
+
+  g.update(DT, { ability: true });
+  assert.ok(p.invuln > 3.1, `expected a long shield, got ${p.invuln}`);
+  assert.ok(enemy.hp < hp || enemy.dead, 'nearby enemy should be hit');
+});
+
+test('warden ability (thorn_volley) fires a fan of five snaring thorns', () => {
+  const g = fresh();
+  g.applyCharacter('warden');
+  g.update(DT, { ability: true });
+  const thorns = g.projectiles.filter((pr) => pr.type === 'thorn');
+  assert.equal(thorns.length, 5);
+  assert.ok(thorns.every((pr) => pr.snare > 0));
+});
+
+test('Sigils are permanent one-time shop upgrades', () => {
+  const g = fresh();
+  const p = g.player;
+  g.ash = 500;
+
+  const baseDamage = p.damageMult;
+  assert.equal(g.buyShopItem('sigil_ember').ok, true);
+  assert.ok(p.sigils.includes('sigil_ember'));
+  assert.ok(p.damageMult > baseDamage);
+  assert.equal(g.buyShopItem('sigil_ember').ok, false, 'a sigil cannot be bought twice');
+
+  const baseHp = p.maxHp;
+  assert.equal(g.buyShopItem('sigil_iron').ok, true);
+  assert.equal(p.maxHp, baseHp + 25);
+
+  const baseSpeed = p.speedMult;
+  const baseDash = p.dashCooldownMax;
+  assert.equal(g.buyShopItem('sigil_wind').ok, true);
+  assert.ok(p.speedMult > baseSpeed);
+  assert.ok(p.dashCooldownMax < baseDash);
+
+  const baseFlasks = p.maxFlasks;
+  assert.equal(g.buyShopItem('sigil_vow').ok, true);
+  assert.equal(p.maxFlasks, baseFlasks + 1);
+  assert.equal(p.flasks, p.maxFlasks);
+});
+
+test('Ritual items are counted, consumed on use, and apply their effects', () => {
+  const g = fresh();
+  const p = g.player;
+  g.ash = 300;
+
+  assert.equal(g.buyShopItem('ritual_purge').ok, true);
+  assert.equal(g.itemCount('ritual_purge'), 1);
+  const enemies = g.enemies.filter((e) => !e.dead);
+  const hp = enemies.map((e) => e.hp);
+  const purge = g.useItem('ritual_purge');
+  assert.equal(purge.ok, true);
+  assert.equal(g.itemCount('ritual_purge'), 0);
+  enemies.forEach((e, i) => assert.ok(e.hp < hp[i], `enemy ${i} should take purge damage`));
+  assert.equal(g.useItem('ritual_purge').ok, false, 'an empty ritual cannot be used');
+
+  assert.equal(g.buyShopItem('ritual_ward').ok, true);
+  p.invuln = 0;
+  assert.equal(g.useItem('ritual_ward').ok, true);
+  assert.ok(p.invuln >= 6);
+  assert.equal(g.itemCount('ritual_ward'), 0);
+
+  assert.equal(g.buyShopItem('ritual_mend').ok, true);
+  p.hp = 10;
+  p.flasks = 0;
+  const flasks = p.flasks;
+  assert.equal(g.useItem('ritual_mend').ok, true);
+  assert.equal(p.hp, 60);
+  assert.equal(p.flasks, flasks + 1);
+});
+
+test('quick items cycle, throw knives, and launch bombs', () => {
+  const g = fresh();
+  const p = g.player;
+  g.ash = 300;
+
+  assert.equal(g.buyShopItem('knives').ok, true);
+  assert.equal(g.buyShopItem('bomb').ok, true);
+  assert.equal(g.buyShopItem('shuriken').ok, true);
+  assert.deepEqual(g.ownedQuickItems(), ['shuriken', 'knives', 'bomb']);
+
+  p.quickItem = 'shuriken';
+  g.cycleItem();
+  assert.equal(p.quickItem, 'knives');
+  g.cycleItem();
+  assert.equal(p.quickItem, 'bomb');
+  g.cycleItem();
+  assert.equal(p.quickItem, 'shuriken');
+
+  assert.equal(g.throwConsumable('knives'), true);
+  assert.equal(g.itemCount('knives'), 4);
+  assert.ok(g.projectiles.some((pr) => pr.type === 'knife'));
+  assert.equal(g.throwConsumable('bomb'), true);
+  assert.equal(g.itemCount('bomb'), 1);
+  assert.ok(g.projectiles.some((pr) => pr.type === 'bomb'));
+});
+
+test('bombs explode and damage nearby enemies', () => {
+  const g = fresh();
+  const p = g.player;
+  g.ash = 100;
+  assert.equal(g.buyShopItem('bomb').ok, true);
+
+  const enemy = g.enemies[0];
+  enemy.x = p.x + 60;
+  enemy.y = p.y;
+  const hp = enemy.hp;
+  p.quickItem = 'bomb';
+  assert.equal(g.throwConsumable('bomb'), true);
+  assert.ok(g.projectiles.some((pr) => pr.type === 'bomb'));
+
+  stepN(g, 1.2);
+  assert.ok(g.projectiles.every((pr) => pr.type !== 'bomb'), 'the bomb should detonate');
+  assert.ok(enemy.hp < hp || enemy.dead, 'the blast should damage the nearby enemy');
+});
+
+test('tonic, smoke, and whetstone apply their consumable effects', () => {
+  const g = fresh();
+  const p = g.player;
+  g.ash = 200;
+
+  assert.equal(g.buyShopItem('tonic').ok, true);
+  p.hp = 20;
+  assert.equal(g.useItem('tonic').ok, true);
+  assert.equal(p.hp, 50);
+  assert.equal(g.itemCount('tonic'), 0);
+
+  assert.equal(g.buyShopItem('smoke').ok, true);
+  p.invuln = 0;
+  assert.equal(g.useItem('smoke').ok, true);
+  assert.ok(p.invuln >= 2.5);
+
+  assert.equal(g.buyShopItem('whetstone').ok, true);
+  p.damageBuff = 1;
+  assert.equal(g.useItem('whetstone').ok, true);
+  assert.ok(p.damageBuff > 1);
+  assert.ok(p.damageBuffTimer > 0);
+  p.damageBuffTimer = 0.05;
+  stepN(g, 0.2);
+  assert.equal(p.damageBuff, 1, 'the whetstone buff should expire');
+  assert.equal(p.damageBuffTimer, 0);
+});
+
+test('the Warung Abu catalogue includes sigils, rituals, and the expanded consumables', () => {
+  assert.equal(SHOP_ITEMS.length, 18);
+  for (const type of ['weapon', 'sigil', 'ritual', 'consumable', 'ammo', 'flask']) {
+    assert.ok(SHOP_ITEMS.some((item) => item.type === type), `catalogue is missing ${type}`);
+  }
+  assert.equal(new Set(SHOP_ITEMS.map((item) => item.id)).size, SHOP_ITEMS.length);
+  assert.ok(SHOP_ITEMS.every((item) => item.cost > 0 && item.glyph && item.effect));
+  const codexItems = CODEX.items.filter((entry) => SHOP_ITEMS.some((item) => item.id === entry.id));
+  assert.equal(codexItems.length, SHOP_ITEMS.length, 'every shop item should appear in the codex');
 });

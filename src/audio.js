@@ -3,9 +3,12 @@ export class SoundKit {
   constructor() {
     this.ctx = null;
     this.master = null;
+    this.music = null;
+    this.sfx = null;
     this.ambient = null;
     this.muted = false;
     this.noiseBuffer = null;
+    this.channels = { master: 0.8, music: 0.55, sfx: 0.8 };
   }
 
   init() {
@@ -18,12 +21,41 @@ export class SoundKit {
     try {
       this.ctx = new AC();
       this.master = this.ctx.createGain();
-      this.master.gain.value = this.muted ? 0 : 0.5;
+      this.master.gain.value = this.muted ? 0 : this.channels.master;
       this.master.connect(this.ctx.destination);
+      this.music = this.ctx.createGain();
+      this.music.gain.value = this.channels.music;
+      this.music.connect(this.master);
+      this.sfx = this.ctx.createGain();
+      this.sfx.gain.value = this.channels.sfx;
+      this.sfx.connect(this.master);
       this.noiseBuffer = this.makeNoise();
       this.startAmbient();
     } catch {
       this.ctx = null;
+    }
+  }
+
+  // Applies the Settings audio panel. Master is a 0..1 gain, music/SFX are
+  // independent child buses so the HUD mute never destroys their levels.
+  applyVolumes({ master, music, sfx, muted } = {}) {
+    if (master !== undefined) this.channels.master = Math.max(0, Math.min(1, Number(master) || 0));
+    if (music !== undefined) this.channels.music = Math.max(0, Math.min(1, Number(music) || 0));
+    if (sfx !== undefined) this.channels.sfx = Math.max(0, Math.min(1, Number(sfx) || 0));
+    if (muted !== undefined) this.muted = Boolean(muted);
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+    if (this.master) {
+      this.master.gain.cancelScheduledValues(now);
+      this.master.gain.linearRampToValueAtTime(this.muted ? 0 : this.channels.master, now + 0.12);
+    }
+    if (this.music) {
+      this.music.gain.cancelScheduledValues(now);
+      this.music.gain.linearRampToValueAtTime(this.channels.music, now + 0.12);
+    }
+    if (this.sfx) {
+      this.sfx.gain.cancelScheduledValues(now);
+      this.sfx.gain.linearRampToValueAtTime(this.channels.sfx, now + 0.12);
     }
   }
 
@@ -40,7 +72,7 @@ export class SoundKit {
     const ctx = this.ctx;
     const g = ctx.createGain();
     g.gain.value = 0.0;
-    g.connect(this.master);
+    g.connect(this.music || this.master);
     const filter = ctx.createBiquadFilter();
     filter.type = 'lowpass';
     filter.frequency.value = 240;
@@ -80,7 +112,7 @@ export class SoundKit {
     const now = ctx.currentTime;
     const g = ctx.createGain();
     g.gain.value = 0.0001;
-    g.connect(this.master);
+    g.connect(this.music || this.master);
     const filter = ctx.createBiquadFilter();
     filter.type = 'lowpass';
     filter.frequency.setValueAtTime(220, now);
@@ -157,7 +189,7 @@ export class SoundKit {
     if (this.master) {
       const now = this.ctx.currentTime;
       this.master.gain.cancelScheduledValues(now);
-      this.master.gain.linearRampToValueAtTime(m ? 0 : 0.5, now + 0.15);
+      this.master.gain.linearRampToValueAtTime(m ? 0 : this.channels.master, now + 0.15);
     }
   }
 
@@ -187,7 +219,7 @@ export class SoundKit {
       node.connect(f);
       node = f;
     }
-    node.connect(g).connect(this.master);
+    node.connect(g).connect(this.sfx || this.master);
     osc.start(t0);
     osc.stop(t0 + dur + 0.02);
   }
@@ -206,7 +238,7 @@ export class SoundKit {
     const g = ctx.createGain();
     g.gain.setValueAtTime(Math.max(0.0005, gain), t0);
     g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-    src.connect(f).connect(g).connect(this.master);
+    src.connect(f).connect(g).connect(this.sfx || this.master);
     src.start(t0);
     src.stop(t0 + dur + 0.02);
   }
