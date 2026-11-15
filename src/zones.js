@@ -4,6 +4,8 @@
 // requires touching the audio or map code.
 import { ALL_ROOMS, ROOMS } from './core.js';
 import { BIOMES } from './expansion.js';
+import { COURT_ZONES } from './court.js';
+import { FAIRY_ZONE } from './fairy.js';
 
 export const ZONES = {
   ashen: {
@@ -108,6 +110,35 @@ for (const biome of Object.values(BIOMES)) {
     palette: { ...biome.palette },
   };
 }
+
+// The Hollow Court's three zones reuse the same contract so music, palette
+// and zone lookup work without touching the renderer or audio engine.
+for (const zone of COURT_ZONES) {
+  ZONES[zone.id] = {
+    id: zone.id,
+    name: zone.name,
+    subtitle: zone.localName,
+    color: zone.color,
+    mapColor: zone.color,
+    music: zone.music,
+    bossMusic: zone.bossMusic,
+    particle: zone.particle,
+    palette: { ...zone.palette },
+  };
+}
+
+// Faewood is a single biome zone; the 10 stages and both boss arenas share it.
+ZONES[FAIRY_ZONE.id] = {
+  id: FAIRY_ZONE.id,
+  name: FAIRY_ZONE.name,
+  subtitle: FAIRY_ZONE.localName,
+  color: FAIRY_ZONE.color,
+  mapColor: FAIRY_ZONE.color,
+  music: FAIRY_ZONE.music,
+  bossMusic: FAIRY_ZONE.bossMusic,
+  particle: FAIRY_ZONE.particle,
+  palette: { ...FAIRY_ZONE.palette },
+};
 
 export const ZONE_IDS = Object.keys(ZONES);
 export const ZONE_LIST = Object.values(ZONES);

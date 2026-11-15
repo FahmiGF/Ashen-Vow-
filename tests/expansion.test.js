@@ -50,6 +50,9 @@ import {
   expansionSaveSummary,
 } from '../src/expansion.js';
 import { ROOMS, ALL_ROOMS, ENEMY_INFO, ALL_ENEMY_INFO, BOSS_INFO, ALL_BOSS_INFO, CODEX } from '../src/core.js';
+import { PACK_BOSS_INFO } from '../src/bosspack.js';
+import { COURT_ROOM_COUNT, COURT_ENEMY_INFO, COURT_BOSS_INFO } from '../src/court.js';
+import { ATLAS_ROOM_COUNT, ATLAS_ENEMY_INFO, ATLAS_BOSS_INFO } from '../src/atlas.js';
 
 const NOV = new Date('2026-11-12T12:00:00');
 const JUN = new Date('2026-06-15T12:00:00');
@@ -116,13 +119,16 @@ test('every chapter follows the 7 + special + elite + boss structure', () => {
 
 test('expansion rooms connect from the legacy campaign and end with a boss victory', () => {
   assert.equal(ROOMS.length, 14, 'legacy campaign must stay untouched');
-  assert.equal(ALL_ROOMS.length, 14 + TOTAL_LEVELS);
+  assert.equal(ALL_ROOMS.length, 14 + TOTAL_LEVELS + ATLAS_ROOM_COUNT + COURT_ROOM_COUNT + 12);
   assert.equal(CODEX.enemies.length, 7);
   assert.equal(CODEX.bosses.length, 6);
   assert.equal(Object.keys(ENEMY_INFO).length, 7);
   assert.equal(Object.keys(BOSS_INFO).length, 6);
-  assert.equal(Object.keys(ALL_ENEMY_INFO).length, 7 + 100);
-  assert.equal(Object.keys(ALL_BOSS_INFO).length, 6 + 30);
+  assert.equal(Object.keys(ALL_ENEMY_INFO).length, 7 + 100 + Object.keys(ATLAS_ENEMY_INFO).length + Object.keys(COURT_ENEMY_INFO).length + 10);
+  assert.equal(
+    Object.keys(ALL_BOSS_INFO).length,
+    6 + 30 + Object.keys(ATLAS_BOSS_INFO).length + Object.keys(COURT_BOSS_INFO).length + Object.keys(PACK_BOSS_INFO).length + 2,
+  );
 
   EXPANSION_LEVELS.forEach((level, i) => {
     assert.equal(level.globalIndex, EXPANSION_ROOM_START + i);

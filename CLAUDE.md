@@ -1,9 +1,52 @@
 # Ashen Vow — Claude Master Plan
 
-> Compressed handoff for continuing **Ashen Vow v0.4.0**.
-> Status: **playable, browser-verified, Milestones A and B plus Sigil & Ritual, Echoes of the Forgotten World, and Infinite Frontiers (Beyond the Veil) complete**.
+> Compressed handoff for continuing **Ashen Vow v0.10.0**.
+> Status: **playable, browser-verified; Milestones A and B plus Sigil & Ritual, Echoes of the Forgotten World, Infinite Frontiers, Overdrive, The Sundered Atlas, Infinite Labyrinth co-op, Hearthfall (The Hollow Court), Skill Points + Panggung Abadi, and Taman Peri (Faewood) complete**.
 > Roadmap: [`MASTERPLAN.md`](MASTERPLAN.md).
 > Repo: `https://github.com/FahmiGF/Ashen-Vow-` · branch `main` · push account `isshinAshinaSeal`.
+
+## 0.1 v0.10.0 — Taman Peri (Faewood)
+
+- `src/fairy.js` — pure fairy-biome content: `FAIRY_ZONE` (faewood), 10 sequential stages at global rooms **414–423**, 2 boss arenas (424–425), 10 `FAIRY_ENEMY_INFO` mobs (Tiny Cap, Puff Spore, Glow Midge, Thorn Pixie, Myconid Guard *elite*, Shroom Brute, Fae Duelist, Lantern Moth, Magma Blob, Elder Spore *spawner*), 4 tiny NPCs (Pipp, Nia, Moss, Wick), `FAIRY_BOSS_INFO` with **Gelora, Slime Magma** (4 phases, 1600 HP) and **Sylvara, Peri Naga Spektral** (4 phases, 2600 HP, `reward: 'victory'`), `DRAGON_FORMS` (phase 3 = heaven **Sylvara, Seraph of the Woven Sky**, phase 4 = hell **Vharos, Demon Lord of the Last Vow**), `fairyBossUnlocked`, progress helpers and a `progress.fairy` sanitizer.
+- `src/core.js` — `FAIRY_ROOMS` appended to `ALL_ROOMS` (**426** rooms total), `FAIRY_ENEMY_INFO`/`FAIRY_BOSS_INFO` merged into `ALL_ENEMY_INFO`/`ALL_BOSS_INFO` (**72** bosses). `hurtBoss()` applies `forms` inside the existing phase loop: it rewrites boss name/title/colour, sets `formMusic`, sets `game.arenaTheme`, and emits `bossForm`. `loadRoom()` clears `arenaTheme` and emits `npcHello`; `finishBoss()`/`reset()` clear the arena theme. No legacy room, gate, or CODEX entry changed.
+- `src/cutscene.js` — `BOSS_CUTSCENE` (20 s, 5 beats) and `POST_CREDIT` (30 s epilogue about the fallen Demon Lord and Opus freed), plus `cutsceneFor`, `cutsceneBeatAt` and the procedural `drawCutscene` renderer.
+- `src/music.js` — `faewood`, `magmaBoss`, `fairyBoss` and `celebration` tracks; `BOSS_TRACKS` maps both fairy bosses, and `desiredTrack()` uses `celebration` when a Faewood run reaches `victory`.
+- `src/render.js` — `game.arenaTheme.palette` / `.particle` override the room palette and particle mood without mutating room data, and `drawFairies()` draws the tiny NPCs.
+- `src/main.js` — `progress.fairy` sanitisation, hub (`menuView = 'fairy'`, `showFairy`, `buildFairyScreen`, `startFairyStage`, `startFairyBoss`), `activeRunKind = 'fairy'` run flow, `handleFairyBoss`, event routing for `gatePass`/`roomEnter`/`bossDown`/`npcHello`/`bossForm`, retry branch, cutscene playback (`startCutscene`/`finishCutscene`/`playFinalBossCutscene`/`queuePostCredit`), a 2.4 s post-victory delay before the epilogue, and HUD phase numerals IV/V plus form banners. Debug hooks: `fairy`, `showFairy`, `startFairyStage`, `startFairyBoss`, `cutscene`, `startCutscene`, `finishCutscene`, `runKind`.
+- `index.html` / `styles.css` — **TAMAN PERI — FAEWOOD** menu entry, `#fairy-screen` hub, `#cutscene-screen` (canvas + subtitles + skip), fairy/cutscene styles, and v0.10.0 version strings (`72 BOSS`, `426 RUANG`).
+- Tests: `tests/fairy.test.js` (12 deterministic tests: content, chain, boss seal, progress sanitizer, forms/`arenaTheme`, cutscene durations, real core fights for both bosses) plus updated count assertions in `tests/court.test.js`/`tests/expansion.test.js` and the 0.10.0 update-log check. Total suite **264/264**. Browser smoke `node tools/fairy-smoke.mjs` passes **57 checks** (hub, ten-stage chain through the real gates, boss seal, cutscene, heaven/hell forms, `celebration`, 30 s epilogue, reload persistence, no console errors). Portrait-phone layout smoke `node tools/fairy-mobile.mjs` (390×844 touch, `npm run smoke:fairy:mobile`) checks the title menu, the Faewood hub, the in-game Update Log (Faewood entry, form/epilogue copy, 15 November 2026 date) and the cutscene screen for horizontal overflow; the cutscene screen is forced to `position: fixed` in the portrait media query so cinematics escape the 16:9 frame.
+
+## 0.25 v0.9.0 — Skill Point & Panggung Abadi
+
+- `src/skills.js` — pure Skill Point model: two branches, 6 nodes, 23 ranks (`ult_damage` +15%/rank, `ult_cooldown` −6%/rank, `ult_crit` +5%/rank at ×1.75, `vow_vigor` +12 HP, `ash_harvest` +10%, `flask_bearer` +1 flask), `skillBonuses`, `spendSkillPoint`, `resetSkillRanks`, `grantSkillPoints`, `grantBossSkillPoints` (2 first kill, 1 every third repeat), `skillSummary`, and `sanitizeSkillState` under **`progress.skills`**.
+- `src/bosspack.js` — Panggung Abadi: 6 new bosses (Malveth the Ash King, Ilyra the Glass Warden, Abbot Vurn the Hollow, Valkyr of the Ninth Storm, Seraph of the Last Dawn, The Oath Eater) with 3–5 phases, descending `phaseThresholds`, full intro/phase/defeat dialogue, one echo-boss pattern each, `music` ids, and sequential progress helpers under **`progress.pack`**.
+- `src/core.js` — imports `PACK_BOSS_INFO` into `ALL_BOSS_INFO` (70 bosses total, no new rooms); `skillBonuses` + `applySkillBonuses()` apply HP/flask deltas and ash/damage multipliers; `useAbility()` now wraps `performAbility()` so one scale (`ultDamage × crit`) applies to `hurtEnemy`, `hurtBoss` and ability projectiles; `emit({ type: 'ultimate' })`; skill ash multiplies enemy/boss rewards. `reset()`/`applyCharacter()` clear stale skill deltas so re-applying after a reset never loses the bonus.
+- `src/music.js` — six new boss tracks (`bossAsh`, `bossGlass`, `bossAbbot`, `bossStorm`, `bossDawn`, `bossJudge`), `BOSS_TRACKS` + `bossTrackFor(kind, fallback)`, and `setBossPhase(phase, maxPhases)` / `clearBossPhase()` for filter opening, low pulse layer and stronger percussion per phase.
+- `src/main.js` — `progress.skills` / `progress.pack` sanitization, `applyCharacterToGame()` also applies skill bonuses, `awardBossSkillPoints()` on every `bossDown` / `labyrinthBossDown`, character-screen Skill Point panel (`buildSkillPanel`, `spendSkillPointAt`, `resetSkills`), Panggung Abadi hub section (`packSection`, `startPackRun`, `handlePackBoss`, `activeRunKind = 'pack'`), boss music selection in `desiredTrack()`, and per-phase music in `syncMusic()`. Debug hooks: `skills`, `pack`, `skillSummary`, `spendSkill`, `resetSkills`, `applySkills`, `awardBossSkillPoints`, `startPackRun`, `bossMusicFor`, `runKind`.
+- `index.html` / `styles.css` — Skill Point panel markup/styles and pack card grid; version strings now v0.9.0.
+- Optimization: `AshenGame.compactRemoved()` replaces `Array#filter` in projectile/fx/enemy hot loops; `tools/sim-bench.mjs` measures **1.27×** step throughput (25,091 vs 19,683 steps/s at 120 Hz).
+- Tests: `tests/skills.test.js` (12 deterministic tests: model, economy, core ultimate scaling, reset re-apply, pack metadata/dialogue/music, pack progress, MusicManager safety) + 2 updated count assertions. Total suite **251/251**. Browser smoke `node tools/skill-smoke.mjs` passes 18 checks (v0.9.0 boot, 6-node panel, spend/persist, 6 pack cards, locked progression, boss theme, full gauntlet, reload persistence, no console errors).
+
+## 0. v0.7.0 — Infinite Labyrinth & Co-op
+
+- `src/labyrinth.js` — pure, deterministic Cursed Realms data and logic: 20 zones, 40 named enemies, 30 bosses (3–7 phases, Common–Mythic rarity, phase dialogue), 40 cursed/ritual/corrupted items across 8 categories, 8 rituals, 6 Forbidden Synergies, 11 cycle modifiers, 10 modes, 10 elite tiers, reward chambers, checkpoint serialization, local leaderboard, mastery and save sanitizer (under `progress.labyrinth`).
+- `src/coop.js` — transport-agnostic co-op: lobby (room code/password/ready/leader), party scaling, downed/revive rules, quantized snapshot codec, delta frames, interest management, interpolation buffer, movement validation, rate limits, fair personal loot, session registry and reconnect tokens.
+- `server.js` — adds a zero-dependency RFC 6455 WebSocket relay at `/ws` (room grouping, sender tagging, spoof stripping, 24 KB cap, rate limit, host migration). Set `HOST=0.0.0.0` for LAN co-op; the static server still binds loopback by default.
+- `src/core.js` — additive APIs: `loadArena`, scaled/elite `spawnEnemy`, `spawnBoss(kind, overrides)`, `setAllies`/`setAllyInput`/`updateAllies`, `labyrinthBossDown` finish branch, per-boss dialogue overrides, incoming/heal multipliers and crit chance. Legacy rooms, gates, blessings and side content are untouched.
+- UI: main menu **MULTIPLAYER — CO-OP** opens the shared lobby with **Kampanye / Hearthfall / Labyrinth** mode buttons; the Labyrinth hub keeps its own co-op tab. Guest snapshots carry `scene`, `roomIndex`, player IDs and boss metadata, so each guest controls its own avatar while the host remains authoritative. Debug hooks: `__ashen.showLabyrinth`, `showCoop`, `startLabyrinth`, `labyrinth`, `chooseLabReward`, `finishLabRun`, `labHostCoop`, `labJoinCoop`, `labStartCoopSession`, `startCoopGuestForTest`, `applyCoopTestSnapshot`.
+- Tests: `tests/labyrinth.test.js` + `tests/coop.test.js` + `tests/coop-relay.test.js` (determinism, wave director, items/rituals/synergies, loadout, save, checkpoint, real core arena/boss/allies, snapshot/delta/interp, lobby/revive/loot/session, relay spoofing/targeting/capacity/bad JSON/host migration). `tools/lab-smoke.mjs` drives the real browser + live WebSocket co-op, including campaign host and guest avatar application.
+
+## 0.5 v0.8.0 — Hearthfall: The Hollow Court
+
+- `src/court.js` — pure content + progression layer: 6 zones / 60 rooms at global indices **354–413**, 24 enemies, 12 bosses (mini-bosses 3 phases, zone bosses 4 phases, full dialogue), 8 data-driven weapons, 12 tools, 6 house rooms / 24 furnishings / 8 NPC residents with affinity + 3-step quests, 2 replayable trials (the boss rush spans all twelve bosses), court NG+ 0–4, and `progress.court` sanitization. It has no imports, so core can depend on it without a cycle.
+- `src/core.js` — additive wiring: `ALL_ROOMS` = legacy + expansion + Atlas + court (414 rooms), `ALL_ENEMY_INFO` / `ALL_BOSS_INFO` include court entries, `WEAPONS` merges `COURT_WEAPON_META`, and melee/projectile attacks now support court profiles (`attacks[]`, `projectile`, `lifesteal`, `shockwave`) without changing sword/pike/bow behaviour. Court bosses also exercise the generic phase loop through phase IV, including the echo-boss escalation branches.
+- `src/core.js` — the roster now has 13 classes; the three court-native classes are Ashwright (`cinder_rush`), Hearthkeeper (`warmth_ward`), and Glassblade (`mirror_lance`), each with a real active ability rather than a stat-only variant.
+- `src/music.js` — seven procedural court tracks: `hearthfall`, `glassorchard`, `hollowcourt`, `cinderworks`, `lastvigil`, `courtBoss`, `hearth`.
+- `src/zones.js` — the five court zones are registered through the existing zone contract; `zoneIdForRoom` already prefers `room.zone`.
+- `src/main.js` — hub (`menuView = 'court'`) with four tabs (journey / house / residents / arsenal), court run flow (`activeRunKind = 'court'`), boss/clear recording, house and NPC actions, boss-rush/gauntlet trial flow, NG+ controls, debug hooks (`showCourt`, `startCourtRoom`, `startCourtTrial`, `courtAction`, `court`).
+- `index.html` / `styles-court.css` — **HEARTHFALL — THE HOLLOW COURT** menu entry and responsive hub.
+- `tools/court-bench.mjs` — measured hot paths. On the dev machine: room lookup **5.82×** faster than `Array.find`, cached house bonus aggregate **7.85×** faster than the cold path, resident lookup roughly equal (0.98×) because the roster is only eight entries.
+- Tests: `tests/court.test.js` has 22 deterministic tests (content counts, room validator, boss 3–4 phases/dialogue, phase-IV transition, zone gates, zones/music, enemy/boss integration, weapons, house economy/cache, tools, NPC dialogue/quests, trials/NG+, mark pacing, save sanitizer, loadout, real simulation). Total suite **237/237**. Browser smoke `npm run smoke:court` passes the real 60-room/12-boss hub, house/NPC actions, room 354 run, clear + save, reload persistence, and the first two bosses of the twelve-boss rush with no console errors.
 
 ## 1. Product definition
 
@@ -64,13 +107,19 @@ Do **not** add a framework, bundler, or asset pipeline unless the product scope 
 | `src/music.js` | Procedural `TRACKS` and `MusicManager`: play/crossfade, combat layer, stop, volume, `mycelialBoss` |
 | `src/settings.js` | Settings model, two-slot bindings, conflict swap/reset, gamepad mapping, sanitize/load/save |
 | `src/expansion.js` | Expansion data and generators: 10 chapters/biomes, 100 levels, enemies/variants, 30 bosses, 52 NPCs, settlements, quests, events, skins, modes, trials, collectibles, progression helpers |
-| `src/zones.js` | Legacy `ZONES` + 10 biome zones, `ROOM_ZONES` (14 legacy entries), and `zoneForRoom` / `zoneMusicForRoom` |
+| `src/zones.js` | Legacy `ZONES` + 10 biome zones + 5 court zones, `ROOM_ZONES` (14 legacy entries), and `zoneForRoom` / `zoneMusicForRoom` |
+| `src/court.js` | Hearthfall: 6 zones / 60 court rooms, 24 enemies, 12 bosses (3–4 phases), 8 weapons + profiles, 12 tools, 6 house rooms, 24 furnishings, 8 NPC residents, `progress.court` save logic |
+| `src/fairy.js` | Faewood finale: 10 sequential stages + 2 boss arenas at rooms 414–425, 10 enemies, 4 tiny NPCs, 2 four-phase bosses, dragon heaven/hell forms, `progress.fairy` |
+| `src/cutscene.js` | 20-second final-boss portrait and 30-second post-credit epilogue timelines plus procedural `drawCutscene` art |
 | `src/map.js` | Map model (fog, adjacency, pins, stats, 14-node layout) + `MapView` canvas renderer |
 | `src/prologue.js` | 12-beat, 60-second prologue timeline plus procedural cutscene art (`drawPrologue`) |
 | `src/main.js` | Menus, character customization, prologue playback, progress, settings UI, music sync, map/shop/codex/dialogue UI, fixed-step loop, input, HUD, debug hooks |
-| `tests/core.test.js` | 64 deterministic Node tests |
+| `tests/core.test.js` | 65 deterministic Node tests |
 | `tests/expansion.test.js` | 10 tests for expansion data counts, room/boss lookups, unlocks, save migration, quests, events, haven bonuses, modifiers, collectibles |
 | `tests/foundations.test.js` | 15 tests for settings, bindings, persistence, gamepad, map fog/pins/stats, zones, music safety |
+| `tests/fairy.test.js` | 12 tests for Faewood content, stage chain, boss seal, progress sanitizer, heaven/hell forms, cutscene timing and real core boss fights |
+| `tests/court.test.js` | 22 tests for Hearthfall content, rooms, bosses/phases, zone gates, weapons, house, tools, classes, NPC quests, save, pacing, loadout and simulation |
+| `tools/court-bench.mjs` | Measured room/resident lookup and house-bonus cache benchmark |
 | `server.js` | Static server on port 4300 |
 | `docs/` | Committed screenshots |
 
@@ -322,7 +371,20 @@ Rules:
 npm test
 ```
 
-Current result: **103/103 passing**. Coverage includes:
+Current result: **264/264 passing** across the legacy, expansion, Atlas, Overdrive, Hearthfall, Skill Point, Faewood, labyrinth/co-op and update-log suites. Coverage includes:
+
+- **court: 60 rooms / 24 enemies / 12 bosses (3–4 phases) / 8 weapons / 12 tools / 13 selectable classes / 6 house rooms / 24 furnishings / 8 NPCs**;
+- **stage timing: `progress.stageTimes` records best/last/clear count per stage; live clock and timer in the top-right; inventory shows loadout and active keybinds; graphics settings control AA, FOV, render distance, particle density, and quality bias**;
+- **court pacing: cheapest tool within four rooms, cheapest weapon within six, and a full clear funds every weapon/tool without buying the whole house**;
+- **court phase IV transition and the three court-native abilities (`cinder_rush`, `warmth_ward`, `mirror_lance`)**;
+- **court boss phases, dialogue, zones, music, weapon combos/projectiles/lifesteal/shockwave, house bonuses and cache, tools by slot, NPC gifts/quests, save sanitization, and a live room-clear simulation**;
+- **Faewood: 10 stages + 2 boss arenas at rooms 414–425, the stage chain arrives in order, and both bosses stay sealed until all ten stages are cleared**;
+- **fairy mobs cover tiny swarmers, one elite (Myconid Guard) and a spawner (Elder Spore); every stage can spawn its own roster**;
+- **both fairy bosses have descending phase thresholds, full intro/phase/defeat dialogue and their own music ids**;
+- **the spectral dragon rewrites name/title/colour and swaps `game.arenaTheme` to heaven at phase 3 and hell at phase 4, then ends the run with `victory`**;
+- **`progress.fairy` sanitizes impossible states while keeping valid clears, and the summary reports stages, bosses, runs, best time and completion percent**;
+- **the boss portrait runs 20 s and the post-credit epilogue 30 s, both built from beats that sum to the declared duration**;
+- **faewood registers a zone entry plus `faewood`, `magmaBoss`, `fairyBoss` and `celebration` tracks, and `MusicManager` stays safe without an AudioContext**;
 
 - gravity, floor landing, movement and world bounds;
 - single jump vs double jump after relic;
@@ -452,7 +514,8 @@ Verified through Chrome DevTools Protocol (v0.0.7):
 
 `window.__ashen` exists for smoke tests:
 
-- Getters: `game`, `renderer`, `started`, `paused`, `spectating`, `menuView`, `progress`, `expansion`, `settings`, `musicTrack`, `audioState`, `mapData`, `shopOpen`, `mapOpen`, `codexOpen`, `dialogueOpen`, `prologueActive`, `prologueIndex`, `prologueBeat`, `prologueVoice`, `character`.
+- Getters: `game`, `renderer`, `started`, `paused`, `spectating`, `menuView`, `progress`, `expansion`, `atlas`, `labyrinth`, `court`, `settings`, `musicTrack`, `audioState`, `mapData`, `shopOpen`, `mapOpen`, `codexOpen`, `dialogueOpen`, `prologueActive`, `prologueIndex`, `prologueBeat`, `prologueVoice`, `character`.
+- Hearthfall: `showCourt`, `closeCourt`, `buildCourtScreen`, `startCourtRoom`, `startCourtTrial`, `courtAction(action, data)`.
 - Navigation: `start`, `restart`, `retry`, `showMenu`, `showLevels`, `showExpansion`, `showCredits`, `showSettings`, `closeSettings`, `showCharacter`, `closeCharacter`, `enterRoom`, `clearProgress`.
 - Expansion: `buildExpansionScreen`, `startExpansionLevel`, `startExpansionMode`, `startExpansionTrial`, `claimQuest`, `buyHavenUpgrade`, `equipSkin`, `claimEventMission`, `claimEventTier`, `buyEventShop`.
 - Settings: `buildSettings`, `applySettings`.

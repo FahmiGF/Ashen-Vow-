@@ -1639,6 +1639,159 @@ kbd {
   color: #8f8069;
 }
 
+/* ── Live clock, run timers, and expanded inventory ─────────────── */
+.live-clock {
+  position: fixed;
+  top: 14px;
+  right: 18px;
+  z-index: 80;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  padding: 7px 11px 6px;
+  border: 1px solid rgba(201, 162, 92, 0.35);
+  background: rgba(8, 6, 4, 0.78);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+  font-family: var(--font-mono, monospace);
+  font-variant-numeric: tabular-nums;
+}
+
+.live-clock span {
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  color: #f1dfbc;
+}
+
+.live-clock em {
+  font-style: normal;
+  font-size: 7px;
+  letter-spacing: 0.14em;
+  color: #a68d68;
+}
+
+.run-times,
+.credits-times {
+  margin: 12px auto 14px;
+  width: min(720px, 100%);
+  text-align: left;
+}
+
+.run-times > h3,
+.credits-times > h3 {
+  font-family: var(--font-display);
+  font-size: 9px;
+  letter-spacing: 0.24em;
+  color: #d8b87a;
+  margin: 0 0 7px;
+}
+
+.run-time-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 5px;
+}
+
+.run-time-card {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 1px solid rgba(201, 162, 92, 0.18);
+  background: rgba(12, 9, 6, 0.6);
+  font-size: 8px;
+  color: #a99270;
+}
+
+.run-time-card b {
+  color: #f0d8a8;
+  font-weight: 600;
+}
+
+.run-time-card em {
+  font-style: normal;
+  color: #ffb95e;
+}
+
+.inventory-loadout,
+.inventory-bindings {
+  margin: 0 0 14px;
+  text-align: left;
+  border: 1px solid rgba(201, 162, 92, 0.2);
+  background: rgba(12, 9, 6, 0.52);
+  padding: 9px 11px;
+}
+
+.inventory-loadout h3,
+.inventory-bindings h3 {
+  margin: 0 0 7px;
+  font-family: var(--font-display);
+  font-size: 8px;
+  letter-spacing: 0.22em;
+  color: #d8b87a;
+}
+
+.loadout-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(155px, 1fr));
+  gap: 6px;
+}
+
+.loadout-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 8px;
+  border-left: 2px solid rgba(201, 162, 92, 0.35);
+  font-size: 8px;
+  color: #a99270;
+}
+
+.loadout-cell b { color: #f0d8a8; font-weight: 600; }
+.loadout-cell em { font-style: normal; color: #7f8f6a; font-size: 7px; }
+
+.binding-mini-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 3px 12px;
+}
+
+.binding-mini-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 8px;
+  color: #9f8968;
+  border-bottom: 1px dotted rgba(201, 162, 92, 0.12);
+  padding: 3px 0;
+}
+
+.binding-mini-row kbd {
+  color: #e8c78e;
+  background: rgba(201, 162, 92, 0.08);
+  border: 1px solid rgba(201, 162, 92, 0.24);
+  padding: 0 4px;
+  font-size: 7px;
+}
+
+.inventory-bindings .btn { margin-top: 8px; }
+
+.graphics-bias-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 6px;
+  letter-spacing: 0.14em;
+  color: #806b50;
+  margin: -2px 0 8px 30%;
+}
+
+@media (max-width: 720px) {
+  .live-clock { top: 8px; right: 8px; padding: 5px 7px; }
+  .live-clock span { font-size: 9px; }
+  .live-clock em { font-size: 6px; }
+}
+
 /* ── Inventory ─────────────────────────────────────────────────── */
 .inventory-inner {
   width: min(920px, 95%);
@@ -5290,4 +5443,940 @@ html.colorblind .map-pin-btn[data-pin='key'] {
 .dye-chip:hover {
   transform: scale(1.15);
   border-color: #ffd166;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   THE SUNDERED ATLAS — PARTS V–VII (v0.6.0)
+   ══════════════════════════════════════════════════════════════════════════════ */
+.atlas-menu-btn {
+  border-left: 3px solid #62e8d8;
+  background: linear-gradient(90deg, rgba(98, 232, 216, 0.14), transparent);
+}
+.atlas-menu-btn:hover {
+  background: linear-gradient(90deg, rgba(98, 232, 216, 0.26), rgba(98, 232, 216, 0.05));
+  border-left-color: #ffd166;
+}
+
+.atlas-inner {
+  width: min(1240px, 97%);
+}
+
+.atlas-title {
+  text-shadow: 0 0 28px rgba(98, 232, 216, 0.24);
+}
+
+.atlas-summary {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.atlas-body {
+  max-height: 58vh;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.atlas-zone-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.atlas-zone-card {
+  border: 1px solid rgba(201, 162, 92, 0.22);
+  background: linear-gradient(160deg, rgba(20, 16, 10, 0.9), rgba(8, 7, 5, 0.72));
+  padding: 12px;
+  position: relative;
+  overflow: hidden;
+}
+
+.atlas-zone-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 2px;
+  background: var(--zone-color, var(--gold));
+  opacity: 0.85;
+}
+
+.atlas-zone-card.locked {
+  opacity: 0.56;
+}
+
+.atlas-zone-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.atlas-zone-head h3 {
+  margin: 0;
+  color: var(--parchment);
+  font-family: var(--font-display);
+  font-size: clamp(12px, 1.15vw, 16px);
+  letter-spacing: 0.12em;
+}
+
+.atlas-zone-head span {
+  display: block;
+  color: #8f7c60;
+  font-size: 10px;
+}
+
+.atlas-zone-tier {
+  border: 1px solid rgba(201, 162, 92, 0.28);
+  color: var(--gold-bright);
+  font-family: var(--font-display);
+  font-size: 8px;
+  letter-spacing: 0.14em;
+  padding: 4px 7px;
+  white-space: nowrap;
+}
+
+.atlas-zone-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  color: #9d8868;
+  font-size: 10px;
+  margin: 6px 0 10px;
+}
+
+.atlas-zone-meta b {
+  color: var(--gold-bright);
+  font-weight: 600;
+}
+
+.atlas-room-grid {
+  display: grid;
+  grid-template-columns: repeat(10, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.atlas-room-btn {
+  aspect-ratio: 1;
+  border: 1px solid rgba(201, 162, 92, 0.18);
+  background: rgba(12, 9, 6, 0.82);
+  color: #7e6c52;
+  cursor: pointer;
+  font-family: var(--font-display);
+  font-size: 8px;
+  padding: 0;
+  position: relative;
+  transition: transform 0.12s, border-color 0.12s, color 0.12s;
+}
+
+.atlas-room-btn:hover:not(:disabled) {
+  border-color: var(--gold);
+  color: var(--gold-bright);
+  transform: translateY(-1px);
+}
+
+.atlas-room-btn.cleared {
+  background: rgba(82, 183, 136, 0.14);
+  border-color: rgba(82, 183, 136, 0.5);
+  color: #8fe0b4;
+}
+
+.atlas-room-btn.boss {
+  border-color: rgba(196, 90, 58, 0.6);
+  color: #e08a6a;
+}
+
+.atlas-room-btn.locked {
+  opacity: 0.34;
+  cursor: not-allowed;
+}
+
+.atlas-room-btn.available {
+  box-shadow: inset 0 0 0 1px rgba(224, 196, 106, 0.38);
+}
+
+.atlas-room-btn em {
+  position: absolute;
+  top: 1px;
+  right: 2px;
+  font-size: 6px;
+  font-style: normal;
+}
+
+.atlas-zone-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.atlas-zone-actions span {
+  color: #8f7c60;
+  font-size: 9px;
+}
+
+.atlas-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.atlas-chip {
+  background: rgba(20, 14, 9, 0.7);
+  border: 1px solid rgba(201, 162, 92, 0.22);
+  color: #a08c6b;
+  cursor: pointer;
+  font-family: var(--font-display);
+  font-size: 8px;
+  letter-spacing: 0.12em;
+  padding: 6px 10px;
+  text-transform: uppercase;
+}
+
+.atlas-chip:hover,
+.atlas-chip.active {
+  background: rgba(201, 162, 92, 0.14);
+  border-color: var(--gold);
+  color: var(--gold-bright);
+}
+
+.atlas-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.atlas-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border: 1px solid rgba(201, 162, 92, 0.14);
+  background: rgba(13, 10, 6, 0.62);
+  padding: 8px 10px;
+}
+
+.atlas-row-main {
+  min-width: 0;
+  flex: 1;
+}
+
+.atlas-row-main strong {
+  display: block;
+  color: var(--parchment);
+  font-family: var(--font-display);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+}
+
+.atlas-row-main span,
+.atlas-row-main p {
+  display: block;
+  margin: 2px 0 0;
+  color: #8f7c60;
+  font-size: 9.5px;
+}
+
+.atlas-row-side {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.atlas-price {
+  color: var(--gold-bright);
+  font-family: var(--font-display);
+  font-size: 9px;
+  white-space: nowrap;
+}
+
+.atlas-btn {
+  border: 1px solid rgba(201, 162, 92, 0.34);
+  background: rgba(30, 21, 12, 0.82);
+  color: var(--gold-bright);
+  cursor: pointer;
+  font-family: var(--font-display);
+  font-size: 8px;
+  letter-spacing: 0.1em;
+  padding: 6px 9px;
+  text-transform: uppercase;
+}
+
+.atlas-btn:hover:not(:disabled) {
+  border-color: var(--gold-bright);
+  background: rgba(201, 162, 92, 0.18);
+}
+
+.atlas-btn.primary {
+  border-color: rgba(82, 183, 136, 0.6);
+  color: #9fe8c0;
+}
+
+.atlas-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.atlas-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.atlas-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.atlas-card {
+  border: 1px solid rgba(201, 162, 92, 0.18);
+  background: rgba(12, 9, 6, 0.7);
+  padding: 10px;
+}
+
+.atlas-card h4 {
+  margin: 0 0 4px;
+  color: var(--parchment);
+  font-family: var(--font-display);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+}
+
+.atlas-card p {
+  margin: 4px 0 0;
+  color: #8f7c60;
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.atlas-card .atlas-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px 10px;
+  margin-top: 6px;
+  color: #9d8868;
+  font-size: 9px;
+}
+
+.atlas-lore-entry {
+  border: 1px solid rgba(201, 162, 92, 0.16);
+  background: rgba(12, 9, 6, 0.68);
+  padding: 9px 10px;
+}
+
+.atlas-lore-entry header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.atlas-lore-entry h4 {
+  margin: 0;
+  color: var(--parchment);
+  font-family: var(--font-display);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+}
+
+.atlas-lore-entry h4 b {
+  color: var(--lore-color, var(--gold));
+  margin-right: 5px;
+}
+
+.atlas-lore-tier {
+  border-left: 2px solid rgba(201, 162, 92, 0.24);
+  margin: 6px 0 0 6px;
+  padding: 2px 0 2px 8px;
+  color: #a99472;
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.atlas-lore-tier.locked {
+  color: #5f5342;
+  font-style: italic;
+}
+
+.atlas-lore-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 7px;
+}
+
+.atlas-lore-search {
+  background: rgba(12, 9, 6, 0.86);
+  border: 1px solid rgba(201, 162, 92, 0.3);
+  color: var(--parchment);
+  font-family: var(--font-body);
+  font-size: 11px;
+  padding: 7px 9px;
+  width: min(280px, 100%);
+}
+
+.atlas-progress-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.atlas-progress-line .exp-bar {
+  flex: 1;
+}
+
+.atlas-diag {
+  border: 1px solid rgba(98, 232, 216, 0.28);
+  background: rgba(6, 18, 18, 0.7);
+  color: #9fe8dc;
+  font-family: var(--font-mono, monospace);
+  font-size: 10px;
+  line-height: 1.5;
+  padding: 9px 10px;
+  white-space: pre-wrap;
+}
+
+.atlas-quickbar {
+  display: flex;
+  gap: 5px;
+  margin-top: 6px;
+}
+
+.atlas-quickbar.hidden {
+  display: none;
+}
+
+.atlas-quick-slot {
+  align-items: center;
+  background: rgba(12, 9, 6, 0.82);
+  border: 1px solid rgba(201, 162, 92, 0.28);
+  color: #a99472;
+  cursor: pointer;
+  display: flex;
+  gap: 4px;
+  padding: 3px 6px;
+  min-width: 0;
+  transition: border-color 0.12s, background 0.12s;
+}
+
+.atlas-quick-slot:hover:not(:disabled) {
+  border-color: var(--gold-bright);
+  background: rgba(201, 162, 92, 0.16);
+}
+
+.atlas-quick-slot.empty {
+  opacity: 0.45;
+}
+
+.atlas-quick-slot b {
+  color: var(--gold-bright);
+  font-family: var(--font-display);
+  font-size: 7px;
+}
+
+.atlas-quick-slot span {
+  color: var(--parchment);
+  font-family: var(--font-display);
+  font-size: 7px;
+  letter-spacing: 0.06em;
+  max-width: 76px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.atlas-quick-slot em {
+  color: #8f7c60;
+  font-size: 7px;
+  font-style: normal;
+}
+
+@media (max-width: 980px) {
+  .atlas-summary {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .atlas-zone-grid,
+  .atlas-grid-2,
+  .atlas-grid-3 {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 680px) {
+  .atlas-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .atlas-room-grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+  .atlas-body {
+    max-height: 62vh;
+  }
+}
+
+/* ── skill points ─────────────────────────────────────────────────────── */
+.skill-panel {
+  margin: 18px 0 4px;
+  padding: 16px 18px 14px;
+  border: 1px solid rgba(201, 162, 92, 0.28);
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(32, 24, 17, 0.92), rgba(16, 12, 9, 0.92));
+}
+
+.skill-panel-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.skill-points {
+  font-family: var(--font-display);
+  font-size: 15px;
+  letter-spacing: 0.08em;
+  color: var(--gold-bright);
+  padding: 3px 10px;
+  border: 1px solid rgba(201, 162, 92, 0.4);
+  border-radius: 999px;
+  background: rgba(201, 162, 92, 0.08);
+}
+
+.skill-panel-head .link-btn {
+  margin-left: auto;
+}
+
+.skill-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.skill-node {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(201, 162, 92, 0.2);
+  border-left: 3px solid var(--skill-color, #c9a25c);
+  border-radius: 10px;
+  background: rgba(12, 9, 7, 0.7);
+}
+
+.skill-node.maxed {
+  border-left-color: var(--gold-bright);
+  background: rgba(201, 162, 92, 0.08);
+}
+
+.skill-glyph {
+  font-size: 20px;
+  line-height: 1;
+  color: var(--skill-color, #c9a25c);
+  margin-top: 2px;
+}
+
+.skill-copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.skill-copy strong {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  color: #e8d3ac;
+}
+
+.skill-copy em {
+  display: block;
+  font-style: normal;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: #9b8663;
+  margin: 2px 0 4px;
+}
+
+.skill-copy p {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: #a3906f;
+}
+
+.skill-node .btn {
+  flex: 0 0 auto;
+  min-width: 92px;
+}
+
+.skill-summary {
+  margin: 10px 0 0;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  color: #9b8663;
+}
+
+/* ── Eternal Stage boss pack ──────────────────────────────────────────── */
+.pack-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.pack-card {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 14px;
+  border: 1px solid rgba(201, 162, 92, 0.22);
+  border-left: 3px solid var(--pack-color, #e0553b);
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(28, 20, 15, 0.92), rgba(12, 9, 7, 0.92));
+}
+
+.pack-card.locked {
+  opacity: 0.55;
+}
+
+.pack-glyph {
+  font-size: 26px;
+  line-height: 1;
+  color: var(--pack-color, #e0553b);
+}
+
+.pack-copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.pack-copy h4 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 14px;
+  letter-spacing: 0.04em;
+  color: #ecd7b1;
+}
+
+.pack-copy em {
+  display: block;
+  font-style: normal;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: #9b8663;
+  margin: 2px 0 4px;
+}
+
+.pack-copy p {
+  margin: 0 0 6px;
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: #a3906f;
+}
+
+.pack-meta {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  color: #8f7a5d;
+}
+
+.pack-meta b {
+  color: #e8d3ac;
+  margin-left: 4px;
+}
+
+.pack-card .btn {
+  align-self: center;
+  min-width: 88px;
+}
+
+/* ── Faewood: the fairy biome ─────────────────────────────────────────── */
+.fairy-inner {
+  --fairy-color: #9be8c8;
+}
+
+.fairy-summary,
+.fairy-body {
+  --accent: #9be8c8;
+}
+
+.fairy-menu-btn {
+  border-left: 3px solid #9be8c8;
+}
+
+.fairy-stage-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.fairy-stage-card {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 14px;
+  border: 1px solid rgba(155, 232, 200, 0.22);
+  border-left: 3px solid var(--fairy-color, #9be8c8);
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(10, 26, 22, 0.94), rgba(6, 14, 12, 0.94));
+}
+
+.fairy-stage-card.cleared {
+  border-color: rgba(155, 232, 200, 0.45);
+  background: linear-gradient(180deg, rgba(18, 40, 33, 0.94), rgba(8, 18, 15, 0.94));
+}
+
+.fairy-stage-card.locked {
+  opacity: 0.5;
+}
+
+.fairy-stage-glyph {
+  font-size: 24px;
+  line-height: 1;
+  color: var(--fairy-color, #9be8c8);
+  text-shadow: 0 0 14px rgba(155, 232, 200, 0.45);
+}
+
+.fairy-stage-copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.fairy-stage-copy h4 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 14px;
+  letter-spacing: 0.04em;
+  color: #d8f4e6;
+}
+
+.fairy-stage-copy em {
+  display: block;
+  font-style: normal;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: #77a48f;
+  margin: 2px 0 4px;
+}
+
+.fairy-stage-copy p {
+  margin: 0 0 6px;
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: #8fb3a1;
+}
+
+.fairy-meta {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  color: #6f9384;
+}
+
+.fairy-meta b {
+  color: #c8ecda;
+  margin-left: 4px;
+}
+
+.fairy-stage-card .btn {
+  align-self: center;
+  min-width: 88px;
+}
+
+.fairy-boss-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 14px;
+  margin-top: 10px;
+}
+
+.fairy-boss-card {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 16px;
+  border: 1px solid rgba(240, 200, 255, 0.24);
+  border-left: 3px solid var(--boss-color, #f0c8ff);
+  border-radius: 12px;
+  background:
+    radial-gradient(circle at 12% 20%, rgba(240, 200, 255, 0.12), transparent 60%),
+    linear-gradient(180deg, rgba(20, 14, 28, 0.94), rgba(8, 7, 12, 0.94));
+}
+
+.fairy-boss-card.locked {
+  opacity: 0.55;
+}
+
+.fairy-boss-glyph {
+  font-size: 30px;
+  line-height: 1;
+  color: var(--boss-color, #f0c8ff);
+  text-shadow: 0 0 18px rgba(240, 200, 255, 0.5);
+}
+
+.fairy-boss-card h4 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 15px;
+  letter-spacing: 0.04em;
+  color: #f2e4ff;
+}
+
+.fairy-boss-card em {
+  display: block;
+  font-style: normal;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: #a58cb8;
+  margin: 2px 0 5px;
+}
+
+.fairy-boss-card p {
+  margin: 0 0 8px;
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: #9c8aad;
+}
+
+.fairy-boss-card .btn {
+  align-self: center;
+  min-width: 92px;
+}
+
+@media (max-width: 720px) {
+  .fairy-stage-card,
+  .fairy-boss-card {
+    flex-wrap: wrap;
+  }
+
+  .fairy-stage-card .btn,
+  .fairy-boss-card .btn {
+    width: 100%;
+  }
+}
+
+/* ── cinematic cutscenes: final boss portrait + post-credit ───────────── */
+.cutscene-screen {
+  position: absolute;
+  inset: 0;
+  z-index: 45;
+  background: #04060a;
+  overflow: hidden;
+}
+
+.cutscene-screen canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.cutscene-top {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: clamp(14px, 3vh, 30px) clamp(16px, 4vw, 46px);
+  background: linear-gradient(180deg, rgba(4, 6, 10, 0.85), rgba(4, 6, 10, 0));
+}
+
+.cutscene-eyebrow {
+  font-family: var(--font-display);
+  font-size: clamp(9px, 1vw, 12px);
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: #e0c8ff;
+  text-shadow: 0 2px 12px #000;
+}
+
+.cutscene-subtitle {
+  position: absolute;
+  left: 50%;
+  bottom: clamp(18px, 5vh, 52px);
+  transform: translateX(-50%);
+  width: min(880px, 90%);
+  padding: 16px 20px 12px;
+  text-align: center;
+  background: linear-gradient(180deg, rgba(4, 6, 10, 0.35), rgba(4, 6, 10, 0.86));
+  border-top: 1px solid rgba(224, 200, 255, 0.28);
+  border-bottom: 1px solid rgba(224, 200, 255, 0.1);
+  backdrop-filter: blur(2px);
+}
+
+.cutscene-title {
+  margin: 0 0 2px;
+  font-family: var(--font-display);
+  font-size: clamp(16px, 2.4vw, 26px);
+  letter-spacing: 0.16em;
+  color: #f6ecff;
+  text-shadow: 0 0 26px rgba(224, 200, 255, 0.55), 0 2px 12px #000;
+}
+
+.cutscene-label {
+  display: block;
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #9be8c8;
+  margin-bottom: 6px;
+}
+
+.cutscene-line {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: clamp(14px, 1.9vw, 21px);
+  line-height: 1.42;
+  color: #f0e6d2;
+  text-shadow: 0 2px 14px #000, 0 0 30px rgba(0, 0, 0, 0.6);
+}
+
+@media (max-width: 640px) {
+  .cutscene-subtitle {
+    width: 94%;
+    padding: 10px 12px;
+  }
+
+  .cutscene-top {
+    padding: 12px 14px;
+  }
+}
+
+/* Portrait phones keep the game frame 16:9, so cinematics must escape it and
+   fill the viewport like the regular `.screen` overlays. Declared last so it
+   wins over the base `.cutscene-screen` rules above. */
+@media (max-width: 760px) and (orientation: portrait) {
+  .cutscene-screen {
+    position: fixed;
+    inset: 0 auto auto 0;
+    width: 100vw;
+    height: 100dvh;
+    max-height: 100dvh;
+    z-index: 46;
+  }
+
+  .cutscene-subtitle {
+    width: 94%;
+    bottom: max(14px, env(safe-area-inset-bottom));
+    padding: 10px 12px 8px;
+  }
+
+  .cutscene-line {
+    font-size: 15px;
+    line-height: 1.4;
+  }
 }

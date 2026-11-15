@@ -46,12 +46,19 @@ export class Renderer {
       reduceFlashing: false,
       highContrast: false,
       colorblind: false,
+      antiAliasing: true,
+      fov: 100,
+      renderDistance: 100,
+      qualityBias: 55,
+      particleScale: 1,
     };
     this.resize();
   }
 
   resize() {
-    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const bias = clamp(Number(this.options?.qualityBias ?? 55), 0, 100);
+    const cap = bias < 25 ? 1 : bias < 65 ? 1.5 : 2;
+    const dpr = Math.min(cap, window.devicePixelRatio || 1);
     this.dpr = dpr;
     this.canvas.width = Math.round(VIEW_W * dpr);
     this.canvas.height = Math.round(VIEW_H * dpr);
@@ -62,12 +69,18 @@ export class Renderer {
     const dpr = this.dpr;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, VIEW_W, VIEW_H);
-    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingEnabled = this.options?.antiAliasing !== false;
 
     const spectate = !!opts.spectate;
     const t = game.time;
     const room = game.room || ROOMS[game.roomIndex];
-    const pal = room.palette || PALETTES[game.roomIndex] || PALETTES[0];
+    // Boss phase arenas (Faewood's heaven and hell forms) override the room
+    // palette without touching the room data itself.
+    const pal = {
+      ...(PALETTES[game.roomIndex] || PALETTES[0]),
+      ...(room.palette || {}),
+      ...(game.arenaTheme?.palette || {}),
+    };
     const p = game.player;
     const followCam = clamp(p.x + p.w / 2 - VIEW_W / 2, 0, WORLD_W - VIEW_W);
     const targetCam =
@@ -79,12 +92,20 @@ export class Renderer {
     this.drawBackground(ctx, room, pal, targetCam, t, game);
 
     ctx.save();
+    const fov = clamp(Number(this.options?.fov ?? 100), 80, 120);
+    const zoom = 1 + (fov - 100) / 220;
+    if (zoom !== 1) {
+      ctx.translate(VIEW_W / 2, VIEW_H / 2);
+      ctx.scale(zoom, zoom);
+      ctx.translate(-VIEW_W / 2, -VIEW_H / 2);
+    }
     ctx.translate(-targetCam + sx, sy);
     this.drawGate(ctx, game, t);
     this.drawCheckpoint(ctx, game, t);
     this.drawRelic(ctx, game, t);
     this.drawPlatforms(ctx, room, pal, t);
     this.drawRoomProps(ctx, game, room, t);
+    this.drawFairies(ctx, game, t);
     this.drawHazards(ctx, game, t);
     this.drawCollectibles(ctx, game, t);
     this.drawProjectiles(ctx, game, t);
@@ -94,10 +115,28 @@ export class Renderer {
     this.drawEnemies(ctx, game, t);
     this.drawBoss(ctx, game, t);
     if (!spectate) this.drawPlayer(ctx, game, t);
+    if (!spectate && Array.isArray(game.allies)) {
+      for (const ally of game.allies) this.drawAlly(ctx, ally, t);
+    }
     this.drawFx(ctx, game);
     ctx.restore();
 
     this.drawForeground(ctx, game, pal, t, targetCam, spectate);
+
+    const distance = clamp(Number(this.options?.renderDistance ?? 100), 50, 100);
+    if (distance < 100) {
+      const fog = (100 - distance) / 100;
+      const left = ctx.createLinearGradient(0, 0, VIEW_W * 0.35, 0);
+      left.addColorStop(0, `rgba(4,4,6,${0.18 + fog * 0.4})`);
+      left.addColorStop(1, 'rgba(4,4,6,0)');
+      ctx.fillStyle = left;
+      ctx.fillRect(0, 0, VIEW_W * 0.35, VIEW_H);
+      const right = ctx.createLinearGradient(VIEW_W, 0, VIEW_W * 0.65, 0);
+      right.addColorStop(0, `rgba(4,4,6,${0.18 + fog * 0.4})`);
+      right.addColorStop(1, 'rgba(4,4,6,0)');
+      ctx.fillStyle = right;
+      ctx.fillRect(VIEW_W * 0.65, 0, VIEW_W * 0.35, VIEW_H);
+    }
   }
 
   // ── background ───────────────────────────────────────────────────────────
@@ -853,8 +892,9 @@ export class Renderer {
 
   drawExpansionEnemy(ctx, game, e, t) {
     const accents = ['#d07a35', '#8fae6a', '#e0553b', '#c9a25c', '#7fc9e8', '#6fa8dc', '#a86bd8', '#8ba8a0', '#d6ac66', '#e8b46a'];
-    const chapter = clamp(Number((e.species || '').split('_')[1] || 1) - 1, 0, accents.length - 1);
-    const accent = accents[chapter];
+    const parsed = Number((e.species || '').split('_')[1]) - 1;
+    const chapter = clamp(Number.isFinite(e.chapter) ? e.chapter - 1 : parsed, 0, accents.length - 1);
+    const accent = e.color || accents[Number.isFinite(chapter) ? chapter : 0];
     const cx = e.x + e.w / 2;
     const feet = e.y + e.h;
     const flash = e.hitFlash > 0;
@@ -1062,7 +1102,7 @@ export class Renderer {
   drawEchoBoss(ctx, game, b, t, cx, feet) {
     const accents = ['#d07a35', '#8fae6a', '#e0553b', '#c9a25c', '#7fc9e8', '#6fa8dc', '#a86bd8', '#8ba8a0', '#d6ac66', '#e8b46a'];
     const chapter = clamp(b.chapter || 0, 0, accents.length - 1);
-    const accent = accents[chapter];
+    const accent = b.color || accents[chapter];
     const flash = b.hitFlash > 0;
     const phase2 = b.phase >= 2;
     const scale = b.w / 92;
@@ -1220,9 +1260,13 @@ export class Renderer {
   }
 
   drawWeather(ctx, game, pal, t, camX) {
-    const particle = game.room?.particle;
+    const particle = game.arenaTheme?.particle || game.room?.particle;
     if (!particle) return;
-    const count = 52;
+    const scale = Number(this.options?.particleScale ?? 1)
+      * (0.55 + (Number(this.options?.qualityBias ?? 55) / 100) * 0.65)
+      * (Number(this.options?.renderDistance ?? 100) / 100);
+    const count = Math.max(0, Math.round(52 * scale));
+    if (!count) return;
     ctx.save();
     for (let i = 0; i < count; i++) {
       const seed = i * 97.3;
@@ -1486,6 +1530,10 @@ export class Renderer {
   }
 
   drawRoomProps(ctx, game, room, t) {
+    if (room.ocean) {
+      this.drawOceanProps(ctx, game, room, t);
+      return;
+    }
     if (room.biome) {
       this.drawExpansionProps(ctx, game, room, t);
       return;
@@ -1584,6 +1632,329 @@ export class Renderer {
         ctx.lineTo(wall.x + wall.w - 10, y + 3);
         ctx.stroke();
       }
+    }
+  }
+
+  // ── Ocean Odyssey props ──────────────────────────────────────────────────
+  drawOceanProps(ctx, game, room, t) {
+    const ocean = game.ocean;
+    const glow = room.palette?.glow || '#62c4d8';
+    // Hull / deck.
+    const deck = ctx.createLinearGradient(0, 470, 0, 540);
+    deck.addColorStop(0, '#3a2a1c');
+    deck.addColorStop(0.25, '#2a1d14');
+    deck.addColorStop(1, '#140d09');
+    ctx.fillStyle = deck;
+    ctx.fillRect(0, 470, 1400, 70);
+    ctx.strokeStyle = 'rgba(210,170,120,0.18)';
+    ctx.lineWidth = 1;
+    for (let x = 0; x < 1400; x += 46) {
+      ctx.beginPath();
+      ctx.moveTo(x, 470);
+      ctx.lineTo(x + 18, 540);
+      ctx.stroke();
+    }
+    ctx.fillStyle = 'rgba(0,0,0,0.28)';
+    ctx.fillRect(0, 468, 1400, 5);
+    // Gunwale and rails.
+    ctx.strokeStyle = 'rgba(180,140,95,0.5)';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(0, 462);
+    ctx.lineTo(1400, 462);
+    ctx.stroke();
+    for (let x = 30; x < 1400; x += 120) {
+      ctx.fillStyle = '#241a12';
+      ctx.fillRect(x, 436, 7, 32);
+    }
+    // Masts and rigging.
+    for (const mast of [{ x: 640, h: 300 }, { x: 1120, h: 220 }]) {
+      const sway = Math.sin(t * 0.7 + mast.x) * 3;
+      ctx.fillStyle = '#2c2016';
+      ctx.fillRect(mast.x, 470 - mast.h, 12, mast.h);
+      ctx.fillStyle = 'rgba(220,190,150,0.18)';
+      ctx.fillRect(mast.x + 3, 470 - mast.h, 3, mast.h);
+      ctx.strokeStyle = 'rgba(210,180,140,0.2)';
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.moveTo(mast.x + 6, 470 - mast.h + 16);
+      ctx.quadraticCurveTo(mast.x + 90 + sway, 280, mast.x + 170, 300);
+      ctx.stroke();
+      // sail
+      ctx.fillStyle = this.alpha(room.palette?.fog || '#245060', 0.42);
+      ctx.beginPath();
+      ctx.moveTo(mast.x + 10, 470 - mast.h + 30);
+      ctx.quadraticCurveTo(mast.x + 110 + sway, 300, mast.x + 10, 330);
+      ctx.closePath();
+      ctx.fill();
+    }
+    // Bow lantern.
+    const lanternX = 1320;
+    const flick = 0.7 + Math.sin(t * 7) * 0.16;
+    const lantern = ctx.createRadialGradient(lanternX, 400, 3, lanternX, 400, 90 * flick);
+    lantern.addColorStop(0, this.alpha('#ffd08a', 0.55));
+    lantern.addColorStop(1, this.alpha('#ffd08a', 0));
+    ctx.fillStyle = lantern;
+    ctx.beginPath();
+    ctx.arc(lanternX, 400, 90 * flick, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#ffcf7a';
+    ctx.beginPath();
+    ctx.arc(lanternX, 400, 5, 0, Math.PI * 2);
+    ctx.fill();
+
+    if (ocean) {
+      for (const cannon of ocean.cannons) this.drawOceanCannon(ctx, cannon, t);
+      for (const spot of ocean.fishing) this.drawFishingSpot(ctx, spot, t, glow);
+      if (ocean.creature && !ocean.creature.dead) this.drawOceanCreature(ctx, ocean.creature, t);
+    }
+  }
+
+  drawOceanCannon(ctx, cannon, t) {
+    const recoil = cannon.recoil > 0 ? cannon.recoil / 0.22 : 0;
+    const cx = cannon.x + cannon.w / 2;
+    const cy = cannon.y + cannon.h * 0.6;
+    const angle = cannon.side > 0 ? -0.5 : -Math.PI + 0.5;
+    ctx.save();
+    ctx.translate(cx - cannon.side * recoil * 10, cy);
+    // base
+    ctx.fillStyle = '#2a2018';
+    ctx.fillRect(-20, 0, 40, 18);
+    ctx.fillStyle = '#4a3522';
+    ctx.fillRect(-14, -4, 28, 8);
+    ctx.rotate(angle);
+    // barrel
+    const barrel = ctx.createLinearGradient(0, -8, 34, 8);
+    barrel.addColorStop(0, '#5a4430');
+    barrel.addColorStop(0.5, '#8a6a45');
+    barrel.addColorStop(1, '#2a2018');
+    ctx.fillStyle = barrel;
+    ctx.fillRect(0, -7, 36, 14);
+    ctx.fillStyle = '#1a1410';
+    ctx.beginPath();
+    ctx.arc(36, 0, 7, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(230,200,150,0.4)';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(2, -7, 30, 14);
+    if (cannon.flash > 0) {
+      const a = cannon.flash / 0.16;
+      const flash = ctx.createRadialGradient(42, 0, 2, 42, 0, 34 * a);
+      flash.addColorStop(0, 'rgba(255,245,210,0.95)');
+      flash.addColorStop(0.4, 'rgba(255,180,90,0.6)');
+      flash.addColorStop(1, 'rgba(255,120,40,0)');
+      ctx.fillStyle = flash;
+      ctx.beginPath();
+      ctx.arc(42, 0, 34 * a, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+    // ready lamp
+    const ready = cannon.cooldown <= 0;
+    ctx.fillStyle = ready ? 'rgba(120,240,190,0.9)' : 'rgba(200,120,80,0.5)';
+    ctx.beginPath();
+    ctx.arc(cx, cy - 18, 3 + Math.sin(t * 6 + cannon.x) * 0.8, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  drawFishingSpot(ctx, spot, t, glow) {
+    const cx = spot.x + spot.w / 2;
+    const cy = spot.y + spot.h;
+    const active = !spot.used;
+    ctx.save();
+    ctx.globalAlpha = active ? 1 : 0.28;
+    for (let i = 0; i < 3; i++) {
+      const r = 14 + i * 12 + Math.sin(t * 2 + i) * 4;
+      ctx.strokeStyle = this.alpha(glow, 0.4 - i * 0.1);
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.ellipse(cx, cy - 4, r, r * 0.32, 0, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.strokeStyle = '#d8c08a';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(cx - 12, cy - 30);
+    ctx.lineTo(cx + 12, cy - 50);
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(220,240,255,0.65)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(cx + 12, cy - 50);
+    ctx.lineTo(cx + 20, cy - 6);
+    ctx.stroke();
+    ctx.fillStyle = this.alpha(glow, 0.85);
+    ctx.beginPath();
+    ctx.arc(cx + 12, cy - 50, 3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  drawOceanCreature(ctx, creature, t) {
+    const c = creature;
+    const cx = c.x + c.w / 2;
+    const cy = c.y + c.h / 2;
+    const pulse = 0.6 + Math.sin(t * 1.8 + c.homeX) * 0.2;
+    const color = c.def.color || '#62c4d8';
+    ctx.save();
+    ctx.globalAlpha = c.state === 'retreat' ? 0.55 : 0.9;
+    const aura = ctx.createRadialGradient(cx, cy, 8, cx, cy, c.w * 0.9);
+    aura.addColorStop(0, this.alpha(color, 0.24 * pulse));
+    aura.addColorStop(1, this.alpha(color, 0));
+    ctx.fillStyle = aura;
+    ctx.beginPath();
+    ctx.arc(cx, cy, c.w * 0.9, 0, Math.PI * 2);
+    ctx.fill();
+    // body
+    const body = ctx.createLinearGradient(0, c.y, 0, c.y + c.h);
+    body.addColorStop(0, this.alpha(color, 0.9));
+    body.addColorStop(1, '#081018');
+    ctx.fillStyle = body;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, c.w * 0.42, c.h * 0.42, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // fins
+    ctx.fillStyle = this.alpha(color, 0.6);
+    for (const dir of [-1, 1]) {
+      ctx.beginPath();
+      ctx.moveTo(cx + dir * c.w * 0.22, cy);
+      ctx.lineTo(cx + dir * c.w * 0.55, cy - c.h * 0.18);
+      ctx.lineTo(cx + dir * c.w * 0.5, cy + c.h * 0.2);
+      ctx.closePath();
+      ctx.fill();
+    }
+    // eye
+    ctx.fillStyle = '#eaffff';
+    ctx.beginPath();
+    ctx.arc(cx + c.facing * c.w * 0.2, cy - c.h * 0.12, 4 + Math.sin(t * 3) * 1, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#081018';
+    ctx.beginPath();
+    ctx.arc(cx + c.facing * c.w * 0.22, cy - c.h * 0.12, 1.8, 0, Math.PI * 2);
+    ctx.fill();
+    // glyph brand
+    ctx.fillStyle = this.alpha('#f0e2ff', 0.75);
+    ctx.font = '700 18px Cinzel, serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(c.def.glyph || '◉', cx, cy + 6);
+    // health
+    if (c.hp < c.maxHp || c.state !== 'roam') {
+      const w = c.w * 0.8;
+      ctx.fillStyle = 'rgba(0,0,0,0.55)';
+      ctx.fillRect(cx - w / 2, c.y - 14, w, 6);
+      ctx.fillStyle = color;
+      ctx.fillRect(cx - w / 2, c.y - 14, w * clamp(c.hp / c.maxHp, 0, 1), 6);
+    }
+    ctx.restore();
+  }
+
+  drawOceanBoss(ctx, game, b, t, cx, feet) {
+    const flash = b.hitFlash > 0;
+    const dying = b.dying;
+    const phase = b.phase || 1;
+    const color = phase >= 3 ? '#ff9a5c' : phase >= 2 ? '#8fe8ff' : '#62c4d8';
+    const vulnerable = b.vulnerable > 0;
+    ctx.save();
+    ctx.globalAlpha = dying ? clamp(b.deathTimer / 1.25, 0, 1) : 1;
+    // aura
+    const aura = ctx.createRadialGradient(cx, b.y + b.h / 2, 10, cx, b.y + b.h / 2, b.w);
+    aura.addColorStop(0, this.alpha(color, vulnerable ? 0.4 : 0.22));
+    aura.addColorStop(1, this.alpha(color, 0));
+    ctx.fillStyle = aura;
+    ctx.beginPath();
+    ctx.arc(cx, b.y + b.h / 2, b.w, 0, Math.PI * 2);
+    ctx.fill();
+    // tail
+    ctx.strokeStyle = this.alpha(color, 0.55);
+    ctx.lineWidth = 18;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(cx - b.facing * b.w * 0.1, b.y + b.h * 0.65);
+    ctx.bezierCurveTo(
+      cx - b.facing * b.w * 0.8, b.y + b.h * 0.9,
+      cx - b.facing * b.w * 1.1, b.y + b.h * 0.2,
+      cx - b.facing * b.w * 1.25, b.y + b.h * 0.45,
+    );
+    ctx.stroke();
+    ctx.lineWidth = 8;
+    ctx.strokeStyle = this.alpha('#eaffff', 0.3);
+    ctx.stroke();
+    // body
+    const body = ctx.createLinearGradient(0, b.y, 0, b.y + b.h);
+    body.addColorStop(0, flash ? '#ffffff' : this.alpha(color, 0.95));
+    body.addColorStop(0.55, flash ? '#dff8ff' : '#0d2430');
+    body.addColorStop(1, '#061018');
+    ctx.fillStyle = body;
+    ctx.beginPath();
+    ctx.ellipse(cx, b.y + b.h * 0.52, b.w * 0.46, b.h * 0.4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // fins / crown
+    ctx.fillStyle = this.alpha(color, 0.65);
+    for (const dir of [-1, 1]) {
+      ctx.beginPath();
+      ctx.moveTo(cx + dir * b.w * 0.28, b.y + b.h * 0.45);
+      ctx.lineTo(cx + dir * b.w * 0.7, b.y + b.h * 0.18);
+      ctx.lineTo(cx + dir * b.w * 0.58, b.y + b.h * 0.62);
+      ctx.closePath();
+      ctx.fill();
+    }
+    if (b.kind === 'ocean_boss_3' || b.kind === 'ocean_boss_weekly') {
+      ctx.fillStyle = '#e9b949';
+      for (let i = -2; i <= 2; i++) {
+        ctx.beginPath();
+        ctx.moveTo(cx + i * 18 - 6, b.y + 8);
+        ctx.lineTo(cx + i * 18, b.y - 18 - Math.abs(i) * 4);
+        ctx.lineTo(cx + i * 18 + 6, b.y + 8);
+        ctx.closePath();
+        ctx.fill();
+      }
+    }
+    // head + eyes
+    const hx = cx + b.facing * b.w * 0.3;
+    const hy = b.y + b.h * 0.34;
+    ctx.fillStyle = flash ? '#ffffff' : '#0a1a24';
+    ctx.beginPath();
+    ctx.ellipse(hx, hy, b.w * 0.2, b.h * 0.16, 0, 0, Math.PI * 2);
+    ctx.fill();
+    for (const dir of [-1, 1]) {
+      ctx.fillStyle = vulnerable ? '#fff0b8' : color;
+      ctx.beginPath();
+      ctx.arc(hx + dir * 7, hy - 2, vulnerable ? 4.5 : 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#081018';
+      ctx.beginPath();
+      ctx.arc(hx + dir * 7, hy - 2, 1.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // armor / vulnerability ring
+    if (vulnerable) {
+      ctx.strokeStyle = `rgba(255,240,180,${0.55 + Math.sin(t * 10) * 0.25})`;
+      ctx.lineWidth = 3;
+      ctx.setLineDash([10, 7]);
+      ctx.beginPath();
+      ctx.arc(cx, b.y + b.h * 0.5, b.w * 0.58, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = 'rgba(255,240,180,0.85)';
+      ctx.font = '700 10px Cinzel, serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('TARGET TERBUKA', cx, b.y - 12);
+    } else {
+      ctx.strokeStyle = this.alpha(color, 0.35);
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(cx, b.y + b.h * 0.5, b.w * 0.52, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    if (b.state === 'ocBarrageWind' || b.state === 'ocDiveWind' || b.state === 'ocSummonWind') {
+      const a = 1 - Math.min(1, b.timer / 0.85);
+      ctx.strokeStyle = `rgba(255,120,80,${0.25 + a * 0.55})`;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(cx, b.y + b.h / 2, 30 + a * 130, 0, Math.PI * 2);
+      ctx.stroke();
     }
   }
 
@@ -1694,6 +2065,56 @@ export class Renderer {
       ctx.moveTo(x + w / 2 + 8, y + h * 0.46 - 6);
       ctx.lineTo(x + w / 2 - 8, y + h * 0.46 + 6);
       ctx.stroke();
+    }
+  }
+
+  // Tiny ambient NPCs of Faewood: a glowing mote with moth wings and a cap.
+  drawFairies(ctx, game, t) {
+    const npcs = game.room?.npcs;
+    if (!Array.isArray(npcs)) return;
+    for (let i = 0; i < npcs.length; i += 1) {
+      const npc = npcs[i];
+      const bob = Math.sin(t * 2.2 + i * 1.7) * 6;
+      const cx = npc.x + 18;
+      const base = (npc.y ?? FLOOR_Y - 30) + bob;
+      const color = npc.color || '#f0c8ff';
+      ctx.save();
+      const glow = ctx.createRadialGradient(cx, base - 12, 2, cx, base - 12, 56);
+      glow.addColorStop(0, this.alpha(color, 0.35));
+      glow.addColorStop(1, this.alpha(color, 0));
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.arc(cx, base - 12, 56, 0, Math.PI * 2);
+      ctx.fill();
+      // wings
+      const flap = Math.sin(t * 9 + i) * 0.5;
+      ctx.fillStyle = this.alpha(color, 0.55);
+      for (const dir of [-1, 1]) {
+        ctx.beginPath();
+        ctx.ellipse(cx + dir * 8, base - 20, 9, 4 + flap * 2, dir * 0.7, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      // body
+      ctx.fillStyle = '#2b3a30';
+      ctx.beginPath();
+      ctx.ellipse(cx, base - 12, 6, 9, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // mushroom cap
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.ellipse(cx, base - 22, 9, 5, 0, Math.PI, Math.PI * 2);
+      ctx.fill();
+      // eyes
+      ctx.fillStyle = '#0c1410';
+      ctx.fillRect(cx - 3, base - 14, 1.6, 2);
+      ctx.fillRect(cx + 2, base - 14, 1.6, 2);
+      // sparkle
+      const spark = 0.35 + 0.35 * Math.abs(Math.sin(t * 3 + i));
+      ctx.fillStyle = this.alpha('#fff4ff', spark);
+      ctx.beginPath();
+      ctx.arc(cx + 12, base - 28, 1.6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
     }
   }
 
@@ -1846,6 +2267,49 @@ export class Renderer {
         ctx.arc(pr.x, pr.y, pr.r * 0.5, 0, Math.PI * 2);
         ctx.fillStyle = '#fff8e2';
         ctx.fill();
+      } else if (pr.type === 'cannonball') {
+        const color = pr.ammoColor || '#d8c08a';
+        const glow = ctx.createRadialGradient(pr.x, pr.y, 2, pr.x, pr.y, pr.r * 3.4);
+        glow.addColorStop(0, this.alpha(color, 0.85));
+        glow.addColorStop(0.4, this.alpha(color, 0.35));
+        glow.addColorStop(1, this.alpha(color, 0));
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(pr.x - pr.vx * 0.015, pr.y - pr.vy * 0.015, pr.r * 3.4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = this.alpha(color, 0.5);
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(pr.x - pr.vx * 0.03, pr.y - pr.vy * 0.03);
+        ctx.lineTo(pr.x - pr.vx * 0.075, pr.y - pr.vy * 0.075);
+        ctx.stroke();
+        ctx.fillStyle = '#2a2e33';
+        ctx.beginPath();
+        ctx.arc(pr.x, pr.y, pr.r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(pr.x - pr.r * 0.25, pr.y - pr.r * 0.25, pr.r * 0.45, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (pr.type === 'waterbolt') {
+        const color = pr.color || '#62c4d8';
+        const glow = ctx.createRadialGradient(pr.x, pr.y, 1, pr.x, pr.y, pr.r * 3);
+        glow.addColorStop(0, 'rgba(240,255,255,0.95)');
+        glow.addColorStop(0.35, this.alpha(color, 0.7));
+        glow.addColorStop(1, this.alpha(color, 0));
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(pr.x, pr.y, pr.r * 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#eaffff';
+        ctx.beginPath();
+        ctx.arc(pr.x, pr.y, pr.r * 0.55, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = this.alpha(color, 0.55);
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(pr.x, pr.y, pr.r * 1.5 + Math.sin(t * 8 + pr.x) * 2, 0, Math.PI * 2);
+        ctx.stroke();
       } else if (pr.type === 'arrow') {
         ctx.save();
         ctx.translate(pr.x, pr.y);
@@ -2194,6 +2658,46 @@ export class Renderer {
   }
 
   // ── actors ───────────────────────────────────────────────────────────────
+  drawAlly(ctx, ally, t) {
+    if (!ally) return;
+    const cx = ally.x + ally.w / 2;
+    const baseY = ally.y + ally.h;
+    const color = ally.color || '#8ec5fc';
+    ctx.save();
+    ctx.globalAlpha = ally.downed ? 0.4 : 1;
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    ctx.beginPath();
+    ctx.ellipse(cx, baseY + 2, 20, 6, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#1b1a1e';
+    ctx.fillRect(cx - 9, baseY - 30, 18, 30);
+    ctx.fillStyle = color;
+    ctx.fillRect(cx - 11, baseY - 42, 22, 22);
+    ctx.fillStyle = '#0f0e11';
+    ctx.beginPath();
+    ctx.arc(cx, baseY - 47, 8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(cx + (ally.facing || 1) * 11, baseY - 34);
+    ctx.lineTo(cx + (ally.facing || 1) * 27, baseY - 46);
+    ctx.stroke();
+    if (ally.downed) {
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = 'rgba(20,10,14,0.8)';
+      ctx.fillRect(cx - 30, baseY - 68, 60, 6);
+      ctx.fillStyle = '#b07be8';
+      ctx.fillRect(cx - 30, baseY - 68, 60 * Math.min(1, (ally.reviveProgress || 0) / 2.2), 6);
+    }
+    ctx.globalAlpha = 1;
+    ctx.font = '600 10px ui-monospace, monospace';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = ally.downed ? '#c98a8a' : color;
+    ctx.fillText((ally.name || 'ALLY').toUpperCase(), cx, baseY - 58);
+    ctx.restore();
+  }
+
   drawPlayer(ctx, game, t) {
     const p = game.player;
     if (game.state === 'dead' && game.deathTimer > 1.4) return;
@@ -3059,7 +3563,8 @@ export class Renderer {
     const cx = b.x + b.w / 2;
     const feet = b.y + b.h;
 
-    if (b.expansion && b.patternType) this.drawEchoBoss(ctx, game, b, t, cx, feet);
+    if (b.ocean) this.drawOceanBoss(ctx, game, b, t, cx, feet);
+    else if (b.expansion && b.patternType) this.drawEchoBoss(ctx, game, b, t, cx, feet);
     else if (b.kind === 'warden') this.drawWarden(ctx, game, b, t, cx, feet);
     else if (b.kind === 'wyrm') this.drawWyrm(ctx, game, b, t, cx, b.y + b.h / 2);
     else if (b.kind === 'choir') this.drawChoir(ctx, game, b, t, cx, b.y + b.h / 2);

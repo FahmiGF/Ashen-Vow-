@@ -909,9 +909,9 @@ test('room 2 opens its western mycelial gate after the warden falls', () => {
 
 test('selectable characters expose balanced stats, valid appearances, and unique abilities', () => {
   const ids = Object.keys(CHARACTERS);
-  assert.equal(ids.length, 10);
+  assert.equal(ids.length, 13);
   assert.deepEqual(ids.sort(), [
-    'gladiator', 'ignis', 'kael', 'karn', 'lyna',
+    'ashwright', 'gladiator', 'glassblade', 'hearthkeeper', 'ignis', 'kael', 'karn', 'lyna',
     'retiarius', 'sentinel', 'sera', 'stormcaller', 'warden',
   ]);
   for (const c of Object.values(CHARACTERS)) {
@@ -1011,6 +1011,28 @@ test('mage ability (flame_nova) radiates flame orbs in a circle', () => {
 
   const orbs = g.projectiles.filter((p) => p.type === 'flame_orb' && p.owner === 'player');
   assert.equal(orbs.length, 8, 'spawned 8 flame orbs in all directions');
+});
+
+test('court-native classes use their own abilities', () => {
+  const g = fresh();
+  g.applyCharacter('ashwright');
+  assert.equal(g.player.ability.id, 'cinder_rush');
+  const startX = g.player.x;
+  g.update(DT, { ability: true });
+  assert.ok(g.player.x > startX, 'Ashwright charge moves forward');
+  assert.equal(g.projectiles.filter((p) => p.owner === 'player' && p.type === 'shockwave').length, 2);
+
+  g.update(DT);
+  g.applyCharacter('hearthkeeper');
+  g.player.hp = 40;
+  g.update(DT, { ability: true });
+  assert.ok(g.player.hp > 40, 'Hearthkeeper heals');
+  assert.ok(g.player.invuln >= 2, 'Hearthkeeper ward grants i-frames');
+
+  g.update(DT);
+  g.applyCharacter('glassblade');
+  g.update(DT, { ability: true });
+  assert.equal(g.projectiles.filter((p) => p.owner === 'player' && p.type === 'glass_lance').length, 3);
 });
 
 test('applyCharacter switches stats and default appearance', () => {

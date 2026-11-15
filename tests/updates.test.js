@@ -28,15 +28,101 @@ test('update log is complete and ordered newest first', () => {
   }
 });
 
-test('the latest update documents the Infinite Frontiers expansion', () => {
+test('the latest update documents the Faewood stages and its two bosses', () => {
   const latest = LATEST_UPDATE;
-  assert.equal(latest.version, '0.4.0');
+  assert.equal(latest.version, '0.10.0');
   const text = [latest.summary, ...latest.highlights, ...(latest.fixes || [])].join(' ');
+  assert.match(text, /Faewood|Taman Peri/i);
+  assert.match(text, /sepuluh tahap|10 tahap/i);
+  assert.match(text, /Slime Magma/i);
+  assert.match(text, /Naga Peri Spektral/i);
+  assert.match(text, /NPC/i);
+  assert.match(text, /progress\.fairy/i);
+  assert.match(text, /4 fase/i);
+  assert.match(text, /HP 2600/i);
+  assert.match(text, /Seraph of the Woven Sky/i);
+  assert.match(text, /Demon Lord of the Last Vow/i);
+  assert.match(text, /20 detik/i);
+  assert.match(text, /30 detik/i);
+  assert.match(text, /celebration/i);
+  assert.match(text, /264 test/i);
+});
+
+test('the update log still documents Skill Points and the Eternal Stage bosses', () => {
+  const latest = UPDATE_LOG.find((entry) => entry.version === '0.9.0');
+  assert.ok(latest);
+  const text = [latest.summary, ...latest.highlights, ...(latest.fixes || [])].join(' ');
+  assert.match(text, /Skill Point/i);
+  assert.match(text, /ultimate/i);
+  assert.match(text, /enam bos baru|6 bos baru/i);
+  assert.match(text, /Panggung Abadi/i);
+  assert.match(text, /musik bos/i);
+  assert.match(text, /sim-bench|benchmark/i);
+  assert.match(text, /progress\.skills/i);
+});
+
+test('the update log still documents Hearthfall and the player house', () => {
+  const latest = UPDATE_LOG.find((entry) => entry.version === '0.8.0');
+  assert.ok(latest);
+  const text = [latest.summary, ...latest.highlights, ...(latest.fixes || [])].join(' ');
+  assert.match(text, /6 zona/i);
+  assert.match(text, /60 level/i);
+  assert.match(text, /12 bos/i);
+  assert.match(text, /rumah/i);
+  assert.match(text, /8 penghuni/i);
+  assert.match(text, /8 senjata/i);
+  assert.match(text, /12 alat/i);
+  assert.match(text, /13 kelas/i);
+  assert.match(text, /benchmark|terukur/i);
+  assert.match(text, /progress\.court/i);
+});
+
+test('the update log still documents Infinite Labyrinth and co-op', () => {
+  const entry = UPDATE_LOG.find((u) => u.version === '0.7.0');
+  assert.ok(entry);
+  const text = [entry.summary, ...entry.highlights, ...(entry.fixes || [])].join(' ');
+  assert.match(text, /20 zona/i);
+  assert.match(text, /30 bos/i);
+  assert.match(text, /barang terkutuk/i);
+  assert.match(text, /Forbidden Synergy/i);
+  assert.match(text, /co-op 2–4 pemain/i);
+  assert.match(text, /snapshot/i);
+  assert.match(text, /revive/i);
+  assert.match(text, /checkpoint/i);
+  assert.match(text, /WebSocket/i);
+});
+
+test('the update log still documents The Sundered Atlas expansion', () => {
+  const entry = UPDATE_LOG.find((u) => u.version === '0.6.0');
+  assert.ok(entry);
+  const text = [entry.summary, ...entry.highlights, ...(entry.fixes || [])].join(' ');
+  assert.match(text, /240 ruang/i);
+  assert.match(text, /8 zona/i);
+  assert.match(text, /Indeks Sumpah/i);
+  assert.match(text, /A\*/i);
+  assert.match(text, /55 konsumabel/i);
+  assert.match(text, /40 senjata/i);
+  assert.match(text, /15 fase/i);
+});
+
+test('the update log documents the Infinite Frontiers expansion', () => {
+  const entry = UPDATE_LOG.find((u) => u.version === '0.4.0');
+  assert.ok(entry);
+  const text = [entry.summary, ...entry.highlights, ...(entry.fixes || [])].join(' ');
   assert.match(text, /Mode 3D/i);
   assert.match(text, /Thornveil Forest/i);
   assert.match(text, /15 Kelas/i);
   assert.match(text, /Elite Mobs/i);
   assert.match(text, /Map Editor/i);
+});
+
+test('the update log documents the Overdrive foundations', () => {
+  const entry = UPDATE_LOG.find((u) => u.version === '0.5.0');
+  assert.ok(entry);
+  const text = [entry.summary, ...entry.highlights, ...(entry.fixes || [])].join(' ');
+  assert.match(text, /32 mantra/i);
+  assert.match(text, /BossHealthSystem/i);
+  assert.match(text, /DiagnosticProfiler/i);
 });
 
 test('the update log documents the Echoes of the Forgotten World expansion', () => {

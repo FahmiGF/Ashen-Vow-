@@ -10,6 +10,28 @@ import {
   expansionLevelByIndex,
   ENEMY_VARIANTS,
 } from './expansion.js';
+import {
+  ATLAS_ROOMS,
+  ATLAS_ENEMY_INFO,
+  ATLAS_BOSS_INFO,
+  ATLAS_ROOM_START,
+  ATLAS_ABILITY_BY_ID,
+} from './atlas.js';
+import { buildPlatformGraph, BossNavigator } from './boss_pathfinding.js';
+import {
+  COURT_ROOMS,
+  COURT_ENEMY_INFO,
+  COURT_BOSS_INFO,
+  COURT_WEAPON_META,
+  COURT_WEAPON_PROFILES,
+} from './court.js';
+import { PACK_BOSS_INFO } from './bosspack.js';
+import {
+  FAIRY_ROOMS,
+  FAIRY_ENEMY_INFO,
+  FAIRY_BOSS_INFO,
+} from './fairy.js';
+import { DEFAULT_SKILL_BONUSES } from './skills.js';
 
 export const VIEW_W = 960;
 export const VIEW_H = 540;
@@ -32,7 +54,8 @@ const BLESSINGS = [
 export const WEAPONS = {
   sword: { id: 'sword', name: 'Pedang Sumpah', short: 'PEDANG' },
   pike: { id: 'pike', name: 'Pike Penjaga', short: 'PIKE' },
-  bow: { id: 'bow', name: 'Busur Abu', short: 'BUSUR' },
+  bow: { id: 'bow', name: 'Busur Abu', short: 'BUSUR', ammo: 'arrows' },
+  ...COURT_WEAPON_META,
 };
 
 export const ENEMY_INFO = {
@@ -426,6 +449,69 @@ export const CHARACTERS = {
       desc: 'Menembakkan lima duri akar dalam kipas ke arah hadap. Setiap duri menusuk dan memperlambat langkah.',
     },
   },
+  ashwright: {
+    id: 'ashwright',
+    name: 'Nara Ashwright',
+    title: 'The Cinder Smith',
+    className: 'Ashwright',
+    glyph: '⚒',
+    desc: 'Pandai tempa dari Pabrik Abu. Menutup jarak dengan terjangan bara dan meninggalkan gelombang kejut di kedua sisi.',
+    maxHp: 104,
+    speed: 0.99,
+    damage: 1.06,
+    dash: 0.92,
+    build: 1.04,
+    appearance: { race: 'human', skin: '#a9714c', outfit: '#7a4a24', armor: 'medieval' },
+    ability: {
+      id: 'cinder_rush',
+      name: 'Terjangan Tempa',
+      key: 'U / V',
+      cooldown: 5.8,
+      desc: 'Menerjang 130 unit ke depan, meremukkan musuh di lintasan, lalu memancarkan dua gelombang kejut dari lantai.',
+    },
+  },
+  hearthkeeper: {
+    id: 'hearthkeeper',
+    name: 'Elowen Hearthkeeper',
+    title: 'The Hearth Warden',
+    className: 'Hearthkeeper',
+    glyph: '☼',
+    desc: 'Penjaga perapian yang memilih menyembuhkan daripada membalas. Panas rumahnya membakar musuh yang terlalu dekat.',
+    maxHp: 112,
+    speed: 0.97,
+    damage: 0.98,
+    dash: 0.94,
+    build: 1.08,
+    appearance: { race: 'elf', skin: '#d8a97f', outfit: '#8b6a1f', armor: 'royal' },
+    ability: {
+      id: 'warmth_ward',
+      name: 'Lingkar Kehangatan',
+      key: 'U / V',
+      cooldown: 7.4,
+      desc: 'Memulihkan 28% HP, memberi 2,2 detik kebal, dan membakar musuh dalam radius 150.',
+    },
+  },
+  glassblade: {
+    id: 'glassblade',
+    name: 'Ione Glassblade',
+    title: 'The Mirror Duelist',
+    className: 'Glassblade',
+    glyph: '◇',
+    desc: 'Duelis dari Kebun Kaca. Setiap serangannya memecah cahaya menjadi tiga bilah yang menembus barisan musuh.',
+    maxHp: 84,
+    speed: 1.12,
+    damage: 1.1,
+    dash: 0.78,
+    build: 0.94,
+    appearance: { race: 'elf', skin: '#c98f6a', outfit: '#2f4a5c', armor: 'modern' },
+    ability: {
+      id: 'mirror_lance',
+      name: 'Tombak Cermin',
+      key: 'U / V',
+      cooldown: 5.1,
+      desc: 'Menembakkan tiga bilah kaca yang menembus musuh, masing-masing 24 damage, dengan i-frame singkat.',
+    },
+  },
 };
 
 export const DEFAULT_APPEARANCE = { race: 'human', skin: '#c98f6a', outfit: '#6d2323', armor: 'medieval' };
@@ -451,6 +537,7 @@ const BOW_ATTACK = {
   knock: 120,
   name: 'arrow',
 };
+const BOW_PROJECTILE = { type: 'arrow', speed: 640, r: 5, life: 1.3, ammo: 'arrows' };
 
 export const SHOP_ITEMS = [
   {
@@ -976,8 +1063,8 @@ export const ROOMS = [
 
 // Legacy rooms stay exactly as they were so old saves, map layout and tests keep
 // their meaning. The campaign is a second set of rooms appended at indices 14+.
-export const ALL_ROOMS = [...ROOMS, ...EXPANSION_ROOMS];
-export const ALL_ENEMY_INFO = { ...ENEMY_INFO, ...EXPANSION_ENEMY_INFO };
+export const ALL_ROOMS = [...ROOMS, ...EXPANSION_ROOMS, ...ATLAS_ROOMS, ...COURT_ROOMS, ...FAIRY_ROOMS];
+export const ALL_ENEMY_INFO = { ...ENEMY_INFO, ...EXPANSION_ENEMY_INFO, ...ATLAS_ENEMY_INFO, ...COURT_ENEMY_INFO, ...FAIRY_ENEMY_INFO };
 
 const BOSS_INFO = {
   warden: {
@@ -1149,7 +1236,7 @@ const BOSS_INFO = {
   },
 };
 
-export const ALL_BOSS_INFO = { ...BOSS_INFO, ...EXPANSION_BOSS_INFO };
+export const ALL_BOSS_INFO = { ...BOSS_INFO, ...EXPANSION_BOSS_INFO, ...ATLAS_BOSS_INFO, ...COURT_BOSS_INFO, ...PACK_BOSS_INFO, ...FAIRY_BOSS_INFO };
 export const EXPANSION_BOSS_IDS = Object.keys(EXPANSION_BOSS_INFO);
 
 export const CODEX = {
@@ -1342,18 +1429,31 @@ export class AshenGame {
     this._baseMaxHp = null;
     this._baseMaxFlasks = null;
     this._baseDamageMult = null;
+    this.skillBonuses = { ...DEFAULT_SKILL_BONUSES };
+    this._abilityScale = 1;
+    this._abilityCrit = false;
     this.checkpoint = null;
     this.checkpointRoom = null;
     this.awaitingBlessing = false;
     this.blessingChoices = null;
     this.blessings = [];
+    this.skillBonuses = { ...DEFAULT_SKILL_BONUSES };
+    this._abilityScale = 1;
+    this._abilityCrit = false;
     this.projectiles = [];
     this.enemies = [];
     this.boss = null;
+    this.arenaTheme = null;
     this.bossIntro = 0;
+    this.abilities = new Set();
+    this.atlasRun = false;
     this.deathTimer = 0;
     this.gateLock = 0;
     this.prevInput = {};
+    this.labyrinth = false;
+    this.allies = [];
+    this.damageDealt = 0;
+    this.damageReceived = 0;
 
     this.player = {
       x: 0,
@@ -1413,6 +1513,9 @@ export class AshenGame {
   applyCharacter(id) {
     const character = CHARACTERS[id] || CHARACTERS.sera;
     const p = this.player;
+    // Base stats are reset here, so previously applied skill deltas must be
+    // cleared too; the shell re-applies them right after this call.
+    this.skillBonuses = { ...DEFAULT_SKILL_BONUSES };
     this.characterId = character.id;
     p.characterId = character.id;
     p.maxHp = character.maxHp;
@@ -1426,6 +1529,37 @@ export class AshenGame {
     p.appearance = { ...(character.appearance || DEFAULT_APPEARANCE) };
     this.appearance = { ...p.appearance };
     return character;
+  }
+
+  // Skill Points are spent in the browser shell. Core only consumes the final
+  // multipliers so the simulation stays pure and deterministic under tests.
+  applySkillBonuses(raw) {
+    const source = raw && typeof raw === 'object' ? raw : {};
+    const next = { ...DEFAULT_SKILL_BONUSES };
+    const num = (value, fallback) => (Number.isFinite(Number(value)) ? Number(value) : fallback);
+    next.ultDamage = clamp(num(source.ultDamage, 1), 1, 4);
+    next.ultCooldown = clamp(num(source.ultCooldown, 1), 0.4, 1);
+    next.ultCrit = clamp(num(source.ultCrit, 0), 0, 0.75);
+    next.maxHp = Math.max(0, Math.round(num(source.maxHp, 0)));
+    next.ash = clamp(num(source.ash, 1), 1, 5);
+    next.flasks = Math.max(0, Math.round(num(source.flasks, 0)));
+
+    const p = this.player;
+    const previous = this.skillBonuses || DEFAULT_SKILL_BONUSES;
+    if (p) {
+      const hpDelta = next.maxHp - previous.maxHp;
+      if (hpDelta !== 0) {
+        p.maxHp = Math.max(20, p.maxHp + hpDelta);
+        p.hp = Math.min(p.maxHp, Math.max(0, p.hp + Math.max(0, hpDelta)));
+      }
+      const flaskDelta = next.flasks - previous.flasks;
+      if (flaskDelta !== 0) {
+        p.maxFlasks = Math.max(1, p.maxFlasks + flaskDelta);
+        p.flasks = Math.min(p.maxFlasks, Math.max(0, p.flasks + Math.max(0, flaskDelta)));
+      }
+    }
+    this.skillBonuses = next;
+    return next;
   }
 
   setAppearance(appearance = {}) {
@@ -1486,6 +1620,7 @@ export class AshenGame {
     this.projectiles = [];
     this.enemies = [];
     this.boss = null;
+    this.arenaTheme = null;
     this.checkpoint = room.checkpoint ? { ...room.checkpoint, active: true } : null;
     this.checkpointRoom = room.checkpoint ? index : null;
     this.blessingChoices = null;
@@ -1520,14 +1655,58 @@ export class AshenGame {
     if (room.condition) {
       this.emit({ type: 'roomCondition', room: index, weather: room.weather || '', condition: room.condition });
     }
+    const npcLine = room.npcs?.[0];
+    if (npcLine?.line) {
+      this.emit({ type: 'npcHello', name: npcLine.localName || npcLine.name, line: npcLine.line, room: index });
+    }
     if (this.checkpoint) {
       this.emit({ type: 'checkpoint', room: index, name: this.checkpoint.name });
     }
   }
 
+  /** Load a synthetic arena (Infinite Labyrinth) without touching ALL_ROOMS. */
+  loadArena(room) {
+    if (!room || !room.spawn) return null;
+    this.room = room;
+    this.roomIndex = Number.isInteger(room.index) ? room.index : this.roomIndex;
+    this.projectiles = [];
+    this.enemies = [];
+    this.boss = null;
+    this.checkpoint = null;
+    this.checkpointRoom = null;
+    this.blessingChoices = null;
+    this.awaitingBlessing = false;
+    this.bossIntro = 0;
+    this.hazardState = {};
+    this.hazardTime = 0;
+    const p = this.player;
+    p.x = room.spawn.x;
+    p.y = room.spawn.y;
+    p.vx = 0;
+    p.vy = 0;
+    p.onGround = false;
+    p.attack = null;
+    p.attackCooldown = 0;
+    p.comboTimer = 0;
+    p.dashTimer = 0;
+    p.dashCooldown = 0;
+    p.healing = 0;
+    p.consumeCooldown = 0;
+    p.invuln = Math.max(p.invuln, 0.4);
+    p.pitGrace = false;
+    p.climbing = false;
+    this.shake = 0;
+    this.emit({ type: 'roomEnter', room: this.roomIndex, name: room.name, subtitle: room.subtitle });
+    return this.room;
+  }
+
   enterRoom(index) {
     this.state = 'playing';
     this.loadRoom(index);
+  }
+
+  setAbilities(list) {
+    this.abilities = new Set(Array.isArray(list) ? list : []);
   }
 
   spawnEnemy(def) {
@@ -1537,6 +1716,9 @@ export class AshenGame {
     const mods = expansionModifierTotals(this.modifiers);
     const ngScale = 1 + (this.ngPlus || 0) * 0.2;
     const variant = ENEMY_VARIANTS.find((v) => v.id === def.variant) || ENEMY_VARIANTS[1];
+    const hpScale = Math.max(0.1, Number(def.hpScale) || 1);
+    const dmgScale = Math.max(0.1, Number(def.dmgScale) || 1);
+    const speedScale = Math.max(0.4, Number(def.speedScale) || 1);
     const aiMap = {
       chaser: 'crawler',
       lunge: 'sentinel',
@@ -1580,23 +1762,33 @@ export class AshenGame {
       ...base,
       w: info.w,
       h: info.h,
-      hp: Math.max(1, Math.round(info.hp * variant.hp * difficulty.enemyHp * mods.hp * ngScale)),
-      maxHp: Math.max(1, Math.round(info.hp * variant.hp * difficulty.enemyHp * mods.hp * ngScale)),
-      dmg: Math.max(1, Math.round(info.dmg * variant.dmg * difficulty.enemyDmg * mods.incoming * ngScale)),
-      speed: Math.max(20, Math.round(info.speed * variant.speed * difficulty.enemySpeed)),
-      reward: Math.max(1, Math.round(info.reward * variant.reward * difficulty.reward * mods.ash)),
+      name: def.name || info.name,
+      color: info.color || null,
+      chapter: info.chapter ?? null,
+      elite: !!def.elite,
+      eliteRank: def.eliteRank || null,
+      hp: Math.max(1, Math.round(info.hp * variant.hp * difficulty.enemyHp * mods.hp * ngScale * hpScale)),
+      maxHp: Math.max(1, Math.round(info.hp * variant.hp * difficulty.enemyHp * mods.hp * ngScale * hpScale)),
+      dmg: Math.max(1, Math.round(info.dmg * variant.dmg * difficulty.enemyDmg * mods.incoming * ngScale * dmgScale)),
+      speed: Math.max(20, Math.round(info.speed * variant.speed * difficulty.enemySpeed * speedScale)),
+      reward: Math.max(1, Math.round(info.reward * variant.reward * difficulty.reward * mods.ash * (def.elite ? 2.2 : 1))),
       flying: def.type === 'wraith' || !!info.flying || info.behavior === 'ranged',
       castCooldown: 0.8,
       spawnCooldown: info.behavior === 'spawner' || def.type === 'broodmother' ? 2.4 : 0,
-      childType: expansion ? `echo_${info.chapter + 1}_1` : 'sporeling',
+      childType: info.childType || (expansion ? `echo_${info.chapter + 1}_1` : 'sporeling'),
     };
     e.y = e.flying ? FLOOR_Y - 148 : FLOOR_Y - e.h;
     this.enemies.push(e);
     return e;
   }
 
-  spawnBoss(kind) {
-    const info = ALL_BOSS_INFO[kind];
+  spawnBoss(kind, overrides = {}) {
+    const baseInfo = ALL_BOSS_INFO[kind];
+    const info = baseInfo
+      ? { ...baseInfo, ...(overrides && typeof overrides === 'object' ? overrides : {}) }
+      : overrides && typeof overrides === 'object' && overrides.name
+        ? { maxPhases: 2, phaseThresholds: [0.5], w: 120, h: 130, contact: 16, ...overrides }
+        : null;
     if (!info) return null;
     const spawn = info.spawn || { x: 760, y: FLOOR_Y - info.h };
     const difficulty = DIFFICULTY_BY_ID[this.difficulty] || DIFFICULTY_BY_ID.normal;
@@ -1610,6 +1802,7 @@ export class AshenGame {
       kind,
       name: info.name,
       title: info.title,
+      color: info.color || null,
       x: spawn.x,
       y: spawn.y,
       homeX: spawn.x,
@@ -1633,6 +1826,7 @@ export class AshenGame {
       attackLanded: false,
       pattern: 0,
       patternType: info.pattern || null,
+      summonType: info.summonType || null,
       chapter: info.chapter ?? null,
       expansion,
       mini: !!info.mini,
@@ -1645,6 +1839,23 @@ export class AshenGame {
       deathTimer: 0,
       intro: 1.0,
     };
+    if (info.atlas) {
+      b.atlas = true;
+      b.movement = info.movement || 'walker';
+      b.navTimer = 0;
+      b.navigator = new BossNavigator(
+        buildPlatformGraph(this.room?.platforms || [], { movement: b.movement }),
+        {
+          startX: spawn.x,
+          startY: spawn.y,
+          speed: 92 + (info.chapter || 1) * 5,
+          verticalSpeed: 165,
+          arriveRadius: 30,
+        },
+      );
+    }
+    b._info = info;
+    b.dialogueData = info.dialogueData || null;
     this.boss = b;
     this.emit({ type: 'bossSpawn', name: info.name, title: info.title, kind });
     this.emitBossDialogue(b, 'intro');
@@ -1654,7 +1865,7 @@ export class AshenGame {
 
   emitBossDialogue(b, phaseKey) {
     const info = ALL_BOSS_INFO[b.kind];
-    const lines = info?.dialogue?.[phaseKey];
+    const lines = b?.dialogueData?.[phaseKey] || info?.dialogue?.[phaseKey];
     if (!lines || !lines.length) return;
     this.emit({
       type: 'bossDialogue',
@@ -1724,6 +1935,17 @@ export class AshenGame {
       } else if (requires === 'wall') {
         open = !!this.brokenWalls[this.roomIndex];
         reason = open ? '' : 'Dinding Miselium masih utuh. Tebas sampai retak.';
+      }
+      const requiredAbilities = Array.isArray(gate.abilities) ? gate.abilities : [];
+      if (requiredAbilities.length) {
+        const missing = requiredAbilities.filter((id) => !this.abilities?.has(id));
+        if (missing.length) {
+          open = false;
+          if (!reason) {
+            const names = missing.map((id) => ATLAS_ABILITY_BY_ID[id]?.localName || id);
+            reason = `Butuh kemampuan: ${names.join(', ')}.`;
+          }
+        }
       }
       return {
         ...gate,
@@ -1809,6 +2031,7 @@ export class AshenGame {
         if (this.gateLock > 0) this.gateLock = Math.max(0, this.gateLock - dt);
         this.shake = Math.max(0, this.shake - dt * 2.2);
         this.updatePlayer(dt, input, pressed);
+        this.updateAllies(dt);
         this.updateEnemies(dt);
         this.updateBoss(dt);
         this.updateProjectiles(dt);
@@ -1852,7 +2075,7 @@ export class AshenGame {
       p.vx *= Math.pow(0.001, dt);
       if (p.healing <= 0) {
         p.flasks -= 1;
-        p.hp = Math.min(p.maxHp, p.hp + 38 + (this.healBonus || 0));
+        p.hp = Math.min(p.maxHp, p.hp + (38 + (this.healBonus || 0)) * (p.healMult || 1));
         this.emit({ type: 'heal' });
         this.burst(p.x + p.w / 2, p.y + p.h / 2, 10, '#8fd98a', 110);
       }
@@ -2047,6 +2270,8 @@ export class AshenGame {
   currentAttackDef() {
     const p = this.player;
     if (p.attack?.def) return p.attack.def;
+    const court = COURT_WEAPON_PROFILES[p.weapon];
+    if (court) return court.attacks[Math.min(p.attack?.combo || 0, court.attacks.length - 1)];
     if (p.weapon === 'pike') return PIKE_ATTACK;
     if (p.weapon === 'bow') return BOW_ATTACK;
     return ATTACKS[p.attack ? p.attack.combo : 0];
@@ -2055,8 +2280,37 @@ export class AshenGame {
   useAbility() {
     const p = this.player;
     if (!p.ability || p.abilityCooldown > 0) return false;
+    const skills = this.skillBonuses || DEFAULT_SKILL_BONUSES;
+    const crit = (skills.ultCrit || 0) > 0 && Math.random() < skills.ultCrit;
+    const scale = (skills.ultDamage || 1) * (crit ? 1.75 : 1);
+    const prevScale = this._abilityScale;
+    const prevCrit = this._abilityCrit;
+    this._abilityScale = scale;
+    this._abilityCrit = crit;
+    let used = false;
+    try {
+      used = this.performAbility(skills);
+    } finally {
+      this._abilityScale = prevScale;
+      this._abilityCrit = prevCrit;
+    }
+    if (used) {
+      this.emit({
+        type: 'ultimate',
+        ability: p.ability.id,
+        name: p.ability.name,
+        crit,
+        scale: Math.round(scale * 100) / 100,
+        cooldown: Math.round(p.abilityCooldown * 100) / 100,
+      });
+    }
+    return used;
+  }
+
+  performAbility(skills = DEFAULT_SKILL_BONUSES) {
+    const p = this.player;
     const abilityId = p.ability.id;
-    p.abilityCooldown = p.ability.cooldown || 6;
+    p.abilityCooldown = (p.ability.cooldown || 6) * (skills.ultCooldown || 1);
 
     if (abilityId === 'oath_sweep') {
       // The Knight: Ultimate Sweep
@@ -2311,6 +2565,90 @@ export class AshenGame {
       return true;
     }
 
+    if (abilityId === 'cinder_rush') {
+      // The Ashwright: a forging-line charge that ends in twin shockwaves.
+      const oldX = p.x;
+      const targetX = clamp(p.x + p.facing * 130, 10, WORLD_W - p.w - 10);
+      const minX = Math.min(oldX, targetX);
+      const maxX = Math.max(oldX + p.w, targetX + p.w);
+      const rushBox = { x: minX, y: p.y - 8, w: maxX - minX, h: p.h + 16 };
+      for (const e of this.enemies) {
+        if (e.dead) continue;
+        if (rectHitsRect(rushBox, e)) {
+          this.hurtEnemy(e, { dmg: 42, knock: 360, name: 'cinder_rush' }, p.facing);
+          this.burst(e.x + e.w / 2, e.y + e.h / 2, 12, '#ff9a6a', 180);
+        }
+      }
+      if (this.boss && !this.boss.dying && rectHitsRect(rushBox, this.boss)) {
+        this.hurtBoss(42 * p.damageMult * (p.damageBuff || 1), 280, p.facing, false);
+      }
+      p.x = targetX;
+      p.invuln = Math.max(p.invuln, 0.34);
+      for (const dir of [-1, 1]) {
+        this.spawnPlayerProjectile('shockwave', {
+          x: p.x + p.w / 2 + dir * 34,
+          y: FLOOR_Y - 24,
+          vx: dir * 360,
+          vy: 0,
+          w: 26,
+          h: 24,
+          r: 13,
+          dmg: 24,
+          life: 0.8,
+          pierce: true,
+        });
+      }
+      this.shake = Math.max(this.shake, 0.3);
+      this.burst(p.x + p.w / 2, FLOOR_Y - 10, 24, '#ff7a3c', 210);
+      this.emit({ type: 'ability', ability: abilityId, name: p.ability.name });
+      return true;
+    }
+
+    if (abilityId === 'warmth_ward') {
+      // The Hearthkeeper: a healing nova that punishes nearby enemies.
+      const cx = p.x + p.w / 2;
+      const cy = p.y + p.h / 2;
+      const heal = Math.round(p.maxHp * 0.28);
+      p.hp = Math.min(p.maxHp, p.hp + heal);
+      p.invuln = Math.max(p.invuln, 2.2);
+      const wardBox = { x: cx - 150, y: cy - 112, w: 300, h: 224 };
+      for (const e of this.enemies) {
+        if (e.dead) continue;
+        if (rectHitsRect(wardBox, e)) {
+          this.hurtEnemy(e, { dmg: 28, knock: 300, name: 'warmth_ward' }, sign(e.x + e.w / 2 - cx) || p.facing);
+          this.burst(e.x + e.w / 2, e.y + e.h / 2, 10, '#ffd08a', 160);
+        }
+      }
+      if (this.boss && !this.boss.dying && rectHitsRect(wardBox, this.boss)) {
+        this.hurtBoss(28 * p.damageMult * (p.damageBuff || 1), 220, p.facing, false);
+      }
+      this.spawnFx('dash', cx, cy, { life: 0.5, size: 74, color: '#ffd08a' });
+      this.burst(cx, cy, 30, '#ffe0a8', 250);
+      this.emit({ type: 'ability', ability: abilityId, name: p.ability.name });
+      return true;
+    }
+
+    if (abilityId === 'mirror_lance') {
+      // The Glassblade: three piercing shards in a narrow fan.
+      for (let i = -1; i <= 1; i++) {
+        this.spawnPlayerProjectile('glass_lance', {
+          x: p.x + p.w / 2 + p.facing * 16,
+          y: p.y + p.h * 0.44,
+          vx: p.facing * 780,
+          vy: i * 46,
+          r: 7,
+          dmg: 24,
+          life: 1.15,
+          pierce: true,
+        });
+      }
+      p.invuln = Math.max(p.invuln, 0.28);
+      this.shake = Math.max(this.shake, 0.15);
+      this.burst(p.x + p.w / 2 + p.facing * 18, p.y + p.h * 0.44, 14, '#c8f0d8', 170);
+      this.emit({ type: 'ability', ability: abilityId, name: p.ability.name });
+      return true;
+    }
+
     if (abilityId === 'aegis_pulse') {
       // The Sentinel: a defensive nova that buys breathing room.
       const cx = p.x + p.w / 2;
@@ -2360,12 +2698,39 @@ export class AshenGame {
 
   startAttack() {
     const p = this.player;
+    const court = COURT_WEAPON_PROFILES[p.weapon];
+    if (court) {
+      const proj = court.projectile;
+      if (proj?.ammo === 'arrows' && p.arrows <= 0) {
+        this.emit({ type: 'noAmmo', kind: 'arrow' });
+        return false;
+      }
+      const idx = p.comboTimer > 0 ? (p.comboIndex + 1) % court.attacks.length : 0;
+      p.comboIndex = idx;
+      p.attack = {
+        weapon: p.weapon,
+        def: court.attacks[idx],
+        t: 0,
+        combo: idx,
+        shot: false,
+        projectile: proj || null,
+        lifesteal: court.lifesteal || 0,
+        shockwave: !!court.shockwave,
+        hitIds: [],
+        landed: false,
+      };
+      p.x += p.facing * 2;
+      this.emit({ type: 'swing', combo: idx, weapon: p.weapon });
+      if (proj) this.emit({ type: 'bowDraw' });
+      if (court.attacks[idx]?.name === 'heavy') this.shake = Math.max(this.shake, 0.14);
+      return true;
+    }
     if (p.weapon === 'bow') {
       if (p.arrows <= 0) {
         this.emit({ type: 'noAmmo', kind: 'arrow' });
         return false;
       }
-      p.attack = { weapon: 'bow', def: BOW_ATTACK, t: 0, shot: false, hitIds: [], landed: false };
+      p.attack = { weapon: 'bow', def: BOW_ATTACK, t: 0, shot: false, projectile: BOW_PROJECTILE, hitIds: [], landed: false };
       this.emit({ type: 'bowDraw' });
       return true;
     }
@@ -2389,24 +2754,27 @@ export class AshenGame {
     const a = p.attack;
     const def = a.def || this.currentAttackDef();
     a.t += dt;
+    const courtProfile = COURT_WEAPON_PROFILES[a.weapon];
+    const isCombo = a.weapon === 'sword' || (courtProfile && courtProfile.attacks.length > 1);
     if (a.t >= def.windup + def.active + def.recover) {
       p.attack = null;
-      p.comboTimer = a.weapon === 'sword' ? 0.5 : 0;
-      p.attackCooldown = a.weapon === 'sword' ? 0.06 : 0.12;
+      p.comboTimer = isCombo ? 0.5 : 0;
+      p.attackCooldown = isCombo ? 0.06 : 0.12;
       return;
     }
-    if (a.weapon === 'bow') {
+    const projectile = a.projectile || (a.weapon === 'bow' ? BOW_PROJECTILE : null);
+    if (projectile) {
       if (!a.shot && a.t >= def.windup) {
         a.shot = true;
-        p.arrows -= 1;
-        this.spawnPlayerProjectile('arrow', {
+        if (projectile.ammo === 'arrows') p.arrows -= 1;
+        this.spawnPlayerProjectile(projectile.type, {
           x: p.x + p.w / 2 + p.facing * 18,
           y: p.y + p.h * 0.44,
-          vx: p.facing * 640,
+          vx: p.facing * projectile.speed,
           vy: 0,
-          r: 5,
+          r: projectile.r,
           dmg: def.dmg,
-          life: 1.3,
+          life: projectile.life,
         });
       }
       return;
@@ -2445,6 +2813,28 @@ export class AshenGame {
           this.emit({ type: 'deflect', x: pr.x, y: pr.y });
         }
       }
+      if (a.landed && a.lifesteal) {
+        p.hp = Math.min(p.maxHp, p.hp + a.lifesteal);
+        this.emit({ type: 'heal', amount: a.lifesteal });
+      }
+      if (a.landed && a.shockwave && !a.shockwaveDone) {
+        a.shockwaveDone = true;
+        this.shake = Math.max(this.shake, 0.24);
+        for (const dir of [-1, 1]) {
+          this.spawnPlayerProjectile('shockwave', {
+            x: dir > 0 ? p.x + p.w + 10 : p.x - 10,
+            y: FLOOR_Y - 24,
+            vx: dir * 380,
+            vy: 0,
+            w: 26,
+            h: 24,
+            r: 13,
+            dmg: 24,
+            life: 0.85,
+            pierce: true,
+          });
+        }
+      }
     }
   }
 
@@ -2463,6 +2853,9 @@ export class AshenGame {
   }
 
   spawnPlayerProjectile(type, opts) {
+    if (this._abilityScale && this._abilityScale !== 1 && Number(opts.dmg) > 0) {
+      opts = { ...opts, dmg: opts.dmg * this._abilityScale };
+    }
     const r = opts.r ?? 5;
     const pr = {
       id: `p_${type}_${this.time.toFixed(4)}_${this.projectiles.length}`,
@@ -2481,7 +2874,8 @@ export class AshenGame {
       h: (opts.r ?? r) * 2,
     };
     this.projectiles.push(pr);
-    this.emit({ type: type === 'arrow' ? 'arrowShot' : 'shurikenThrow', x: pr.x, y: pr.y });
+    const ranged = type === 'arrow' || type === 'bolt' || type === 'ember';
+    this.emit({ type: ranged ? 'arrowShot' : 'shurikenThrow', x: pr.x, y: pr.y });
     return pr;
   }
 
@@ -2771,19 +3165,26 @@ export class AshenGame {
   hurtEnemy(e, def, dir) {
     if (e.burrowed) return;
     const p = this.player;
-    e.hp -= def.dmg * p.damageMult * (p.damageBuff || 1);
+    const crit = (p.critChance || 0) > 0 && Math.random() < p.critChance;
+    const dealt = def.dmg * p.damageMult * (p.damageBuff || 1) * (crit ? 2 : 1) * (this._abilityScale || 1);
+    e.hp -= dealt;
+    this.damageDealt = (this.damageDealt || 0) + dealt;
     e.hitFlash = 0.12;
     e.x = clamp(e.x + dir * def.knock * 0.12, 20, WORLD_W - e.w - 20);
     e.state = 'hurt';
     e.timer = 0.16;
     this.hitstop = Math.max(this.hitstop, 0.035);
     this.shake = Math.max(this.shake, 0.18);
-    this.emit({ type: 'hit', crit: def.name === 'heavy', x: e.x + e.w / 2, y: e.y + e.h / 2 });
+    this.emit({ type: 'hit', crit: crit || def.name === 'heavy', x: e.x + e.w / 2, y: e.y + e.h / 2 });
     this.burst(e.x + e.w / 2, e.y + e.h / 2, def.name === 'heavy' ? 14 : 8, '#d8b06a', 180);
     if (e.hp <= 0) {
       e.dead = true;
       this.kills += 1;
-      const reward = Math.round((e.reward ?? ALL_ENEMY_INFO[e.type]?.reward ?? 8) * (this.gainBonus || 1));
+      const reward = Math.round(
+        (e.reward ?? ALL_ENEMY_INFO[e.type]?.reward ?? 8) *
+          (this.gainBonus || 1) *
+          (this.skillBonuses?.ash || 1),
+      );
       this.ash += reward;
       this.burst(e.x + e.w / 2, e.y + e.h / 2, 16, e.type === 'sporeling' || e.type === 'stalker' || e.type === 'broodmother' ? '#b07be8' : '#c96a3a', 220);
       if (e.type === 'sporeling') {
@@ -2805,7 +3206,10 @@ export class AshenGame {
   hurtBoss(amount, knock = 0, dir = 1, crit = false) {
     const b = this.boss;
     if (!b || b.dying || b.invuln > 0) return;
+    amount *= this._abilityScale || 1;
+    crit = crit || !!this._abilityCrit;
     b.hp = Math.max(0, b.hp - amount);
+    this.damageDealt = (this.damageDealt || 0) + amount;
     b.hitFlash = 0.1;
     b.x = clamp(b.x + dir * knock * 0.03, 40, WORLD_W - b.w - 40);
     this.hitstop = Math.max(this.hitstop, crit ? 0.07 : 0.035);
@@ -2818,10 +3222,32 @@ export class AshenGame {
     ) {
       b.phase += 1;
       b.invuln = 0.4;
-      this.shake = 0.7;
+      // Some bosses change shape and drag the arena with them (Faewood's
+      // heaven/hell forms). Apply before the dialogue so both agree.
+      const form = ALL_BOSS_INFO[b.kind]?.forms?.[b.phase];
+      if (form) {
+        b.form = b.phase;
+        b.formId = form.id || null;
+        if (form.name) b.name = form.name;
+        if (form.title) b.title = form.title;
+        if (form.color) b.color = form.color;
+        b.formMusic = form.music || null;
+        this.arenaTheme = form.arena ? { ...form.arena } : null;
+        this.shake = 0.9;
+        this.emit({
+          type: 'bossForm',
+          phase: b.phase,
+          name: b.name,
+          title: b.title,
+          arena: form.arena?.id || null,
+          weather: form.arena?.weather || '',
+          condition: form.arena?.condition || '',
+        });
+      }
+      this.shake = Math.max(this.shake, 0.7);
       this.emit({ type: 'bossPhase', name: b.name, phase: b.phase });
       this.emitBossDialogue(b, `phase${b.phase}`);
-      this.burst(b.x + b.w / 2, b.y + b.h / 2, 26, '#ff7b3d', 280);
+      this.burst(b.x + b.w / 2, b.y + b.h / 2, 26, form?.color || '#ff7b3d', 280);
       this.onBossPhase(b);
     }
     if (b.hp <= 0) {
@@ -2841,7 +3267,9 @@ export class AshenGame {
   damagePlayer(amount, sourceX = 0, opts = {}) {
     const p = this.player;
     if (this.state !== 'playing' || p.invuln > 0 || p.dashTimer > 0 || p.hp <= 0) return false;
-    p.hp = Math.max(0, p.hp - amount);
+    const incoming = Math.max(1, Math.round(amount * (p.incomingMult || 1)));
+    p.hp = Math.max(0, p.hp - incoming);
+    this.damageReceived = (this.damageReceived || 0) + incoming;
     p.invuln = 0.75;
     p.hitFlash = 0.25;
     p.attack = null;
@@ -2924,6 +3352,142 @@ export class AshenGame {
       }
     }
     this.integrateEnemy(e, dt);
+  }
+
+  /** Register co-op companions. The host owns their authoritative state. */
+  setAllies(list) {
+    this.allies = (Array.isArray(list) ? list : []).map((ally, index) => ({
+      id: ally.id || `ally${index}`,
+      name: ally.name || 'Penjaga',
+      classId: ally.classId || 'sera',
+      color: ally.color || '#8ec5fc',
+      x: Number(ally.x) || 180 + index * 70,
+      y: Number(ally.y) || FLOOR_Y - 46,
+      w: 30,
+      h: 46,
+      vx: 0,
+      vy: 0,
+      facing: 1,
+      hp: Number(ally.hp) || 100,
+      maxHp: Number(ally.maxHp) || 100,
+      onGround: false,
+      downed: false,
+      bleedout: 0,
+      reviveProgress: 0,
+      invuln: 0,
+      attackCooldown: 0,
+      input: {},
+      power: Number(ally.power) || 0.9,
+      incomingMult: 1,
+      contribution: 0,
+    }));
+    return this.allies;
+  }
+
+  setAllyInput(id, input = {}) {
+    const ally = this.allies.find((entry) => entry.id === id);
+    if (ally) ally.input = { ...input };
+    return !!ally;
+  }
+
+  /** Co-op companions: movement, attacks, contact damage, downed/revive. */
+  updateAllies(dt) {
+    const p = this.player;
+    if (!this.allies?.length) return;
+    for (const ally of this.allies) {
+      ally.invuln = Math.max(0, (ally.invuln || 0) - dt);
+      ally.attackCooldown = Math.max(0, (ally.attackCooldown || 0) - dt);
+      if (ally.downed) {
+        ally.bleedout = Math.max(0, (ally.bleedout || 0) - dt);
+        const near = Math.abs(p.x + p.w / 2 - (ally.x + ally.w / 2)) < 130
+          && Math.abs(p.y + p.h / 2 - (ally.y + ally.h / 2)) < 130;
+        if (near && this.prevInput.interact) {
+          ally.reviveProgress = (ally.reviveProgress || 0) + dt;
+          if (ally.reviveProgress >= 2.2) {
+            ally.downed = false;
+            ally.reviveProgress = 0;
+            ally.hp = Math.max(1, Math.round(ally.maxHp * 0.5));
+            ally.invuln = 1.5;
+            this.emit({ type: 'allyRevived', id: ally.id, name: ally.name });
+          }
+        } else {
+          ally.reviveProgress = Math.max(0, (ally.reviveProgress || 0) - dt * 0.5);
+        }
+        continue;
+      }
+      const input = ally.input || {};
+      const dir = (input.right ? 1 : 0) - (input.left ? 1 : 0);
+      if (dir) ally.facing = dir;
+      ally.vx += (dir * 250 - ally.vx) * Math.min(1, dt * 12);
+      if (input.jump && ally.onGround) {
+        ally.vy = -680;
+        ally.onGround = false;
+      }
+      ally.vy += GRAVITY * dt;
+      ally.x = clamp(ally.x + ally.vx * dt, 20, WORLD_W - ally.w - 20);
+      const prevBottom = ally.y + ally.h;
+      ally.y += ally.vy * dt;
+      ally.onGround = false;
+      for (const plat of this.room.platforms) {
+        if (ally.x + ally.w <= plat.x || ally.x >= plat.x + plat.w) continue;
+        if (ally.vy >= 0 && prevBottom <= plat.y + 4 && ally.y + ally.h >= plat.y) {
+          ally.y = plat.y - ally.h;
+          ally.vy = 0;
+          ally.onGround = true;
+        }
+      }
+      if (ally.y > 650) {
+        ally.x = 140;
+        ally.y = FLOOR_Y - ally.h;
+        ally.vx = 0;
+        ally.vy = 0;
+        ally.onGround = true;
+      }
+      if (input.attack && ally.attackCooldown <= 0) {
+        ally.attackCooldown = 0.44;
+        const hitbox = {
+          x: ally.facing > 0 ? ally.x + ally.w : ally.x - 74,
+          y: ally.y - 8,
+          w: 74,
+          h: 56,
+        };
+        for (const e of this.enemies) {
+          if (e.dead || !rectHitsRect(hitbox, e)) continue;
+          this.hurtEnemy(
+            e,
+            { dmg: (11 * ally.power) / Math.max(0.2, p.damageMult), knock: 80, name: 'ally' },
+            ally.facing,
+          );
+          ally.contribution += 11;
+        }
+        if (this.boss && !this.boss.dying && rectHitsRect(hitbox, this.boss)) {
+          this.hurtBoss(10 * ally.power, 20, ally.facing, false);
+          ally.contribution += 10;
+        }
+      }
+      for (const e of this.enemies) {
+        if (e.dead || e.burrowed || ally.invuln > 0 || !rectHitsRect(e, ally)) continue;
+        ally.hp = Math.max(0, ally.hp - Math.max(1, Math.round(e.dmg * 0.8 * (ally.incomingMult || 1))));
+        ally.invuln = 0.9;
+        this.emit({ type: 'allyHurt', id: ally.id, name: ally.name });
+        if (ally.hp <= 0) {
+          ally.downed = true;
+          ally.bleedout = 20;
+          ally.reviveProgress = 0;
+          this.emit({ type: 'allyDown', id: ally.id, name: ally.name });
+        }
+      }
+      if (this.boss && !this.boss.dying && this.boss.intro <= 0 && ally.invuln <= 0 && rectHitsRect(this.boss, ally)) {
+        ally.hp = Math.max(0, ally.hp - Math.max(1, Math.round(this.boss.contact * 0.7 * (ally.incomingMult || 1))));
+        ally.invuln = 1.1;
+        if (ally.hp <= 0) {
+          ally.downed = true;
+          ally.bleedout = 20;
+          ally.reviveProgress = 0;
+          this.emit({ type: 'allyDown', id: ally.id, name: ally.name });
+        }
+      }
+    }
   }
 
   updateEnemies(dt) {
@@ -3213,7 +3777,9 @@ export class AshenGame {
     e.state = 'chase';
     e.facing = distX < 0 ? -1 : 1;
     this.moveEnemy(e, dt, Math.abs(distX) > 90 ? sign(distX) : 0, e.speed, true);
-    if (e.spawnCooldown <= 0 && this.enemies.filter((x) => !x.dead).length < 11) {
+    let liveEnemies = 0;
+    for (const x of this.enemies) if (!x.dead) liveEnemies += 1;
+    if (e.spawnCooldown <= 0 && liveEnemies < 11) {
       const spawnX = clamp(e.x + (e.facing > 0 ? -34 : e.w + 10), e.minX, e.maxX - 36);
       const childType = e.childType || 'sporeling';
       const child = this.spawnEnemy({
@@ -3363,8 +3929,8 @@ export class AshenGame {
       this.spawnSporeRing(b, 6, 200);
     } else if (b.patternType) {
       this.spawnShockwaves(b);
-      this.spawnEchoRing(b, b.phase >= 3 ? 16 : b.phase >= 2 ? 12 : 9, 210 + b.phase * 18);
-      if (b.patternType === 'summon') this.spawnEchoMinions(b, 2);
+      this.spawnEchoRing(b, b.phase >= 4 ? 20 : b.phase >= 3 ? 16 : b.phase >= 2 ? 12 : 9, 210 + b.phase * 18);
+      if (b.patternType === 'summon') this.spawnEchoMinions(b, b.phase >= 4 ? 4 : 2);
       this.emit({ type: 'bossPhaseFx', kind: b.patternType });
     }
   }
@@ -4078,18 +4644,34 @@ export class AshenGame {
     const chapter = b.chapter || 0;
     if (b.timer > 0) b.timer -= dt;
     if (b.cooldown > 0) b.cooldown -= dt;
-    if (!b.flying) b.y = FLOOR_Y - b.h;
+    if (!b.flying && !b.atlas) b.y = FLOOR_Y - b.h;
     b.facing = dir;
 
     switch (b.state) {
       case 'idle':
       case 'chase': {
-        if (b.flying) {
+        if (b.flying && !b.atlas) {
           const targetY = 150 + Math.sin(this.time * 1.5) * 36;
           b.y += (targetY - b.y) * Math.min(1, dt * 1.8);
         }
-        if (dist > 150) {
-          const speed = (82 + chapter * 4) * (b.phase >= 2 ? 1.2 : 1);
+        if (b.atlas && b.navigator) {
+          b.navTimer = (b.navTimer || 0) - dt;
+          if (b.navTimer <= 0) {
+            b.navigator.setGoal(pcx, p.y + p.h / 2);
+            b.navTimer = 0.45;
+          }
+          const intent = b.navigator.update(b, p, dt);
+          b.x = clamp(b.x + intent.vx * dt, 40, WORLD_W - b.w - 40);
+          if (b.movement === 'flyer' || b.movement === 'swimmer') {
+            b.y = clamp(b.y + intent.vy * dt, 110, FLOOR_Y - b.h);
+          } else if (intent.vy !== 0) {
+            b.y = clamp(b.y + intent.vy * dt, 170, FLOOR_Y - b.h);
+          } else {
+            const goal = b.navigator.graph.nodes.get(b.navigator.goalNodeId);
+            if (goal) b.y += ((goal.y - b.h) - b.y) * Math.min(1, dt * 2.2);
+          }
+        } else if (dist > 150) {
+          const speed = (82 + chapter * 4) * (1 + (b.phase - 1) * 0.12);
           b.x += dir * speed * dt;
         }
         if (b.cooldown <= 0) {
@@ -4133,7 +4715,7 @@ export class AshenGame {
           this.shake = Math.max(this.shake, 0.45);
           this.emit({ type: 'bossSlam' });
           if (dist < 220 && Math.abs(p.y + p.h - (b.y + b.h)) < 120) {
-            this.damagePlayer(16 + chapter * 2 + (b.phase >= 2 ? 6 : 0), bcx);
+            this.damagePlayer(16 + chapter * 2 + (b.phase >= 4 ? 12 : b.phase >= 2 ? 6 : 0), bcx);
           }
         }
         break;
@@ -4142,14 +4724,14 @@ export class AshenGame {
         if (b.timer <= 0) {
           b.state = 'recover';
           b.timer = 0.7;
-          b.cooldown = Math.max(0.8, 2.2 - b.phase * 0.25 - chapter * 0.04);
+          b.cooldown = Math.max(0.62, 2.2 - b.phase * 0.3 - chapter * 0.04);
         }
         break;
       }
       case 'echoVolleyWind': {
         b.vx = 0;
         if (b.timer <= 0) {
-          const count = b.phase >= 3 ? 7 : b.phase >= 2 ? 5 : 3;
+          const count = b.phase >= 4 ? 9 : b.phase >= 3 ? 7 : b.phase >= 2 ? 5 : 3;
           for (let i = 0; i < count; i++) {
             this.spawnFireball(
               b,
@@ -4167,7 +4749,7 @@ export class AshenGame {
       case 'echoRingWind': {
         b.vx = 0;
         if (b.timer <= 0) {
-          this.spawnEchoRing(b, b.phase >= 3 ? 16 : b.phase >= 2 ? 12 : 9, 220);
+          this.spawnEchoRing(b, b.phase >= 4 ? 20 : b.phase >= 3 ? 16 : b.phase >= 2 ? 12 : 9, 220);
           b.state = 'recover';
           b.timer = 0.7;
           b.cooldown = 2.0;
@@ -4202,7 +4784,7 @@ export class AshenGame {
       case 'echoSummonWind': {
         b.vx = 0;
         if (b.timer <= 0) {
-          this.spawnEchoMinions(b, b.phase >= 2 ? 3 : 2);
+          this.spawnEchoMinions(b, b.phase >= 4 ? 4 : b.phase >= 2 ? 3 : 2);
           b.state = 'recover';
           b.timer = 0.8;
           b.cooldown = 2.4;
@@ -4212,7 +4794,7 @@ export class AshenGame {
       case 'echoRainWind': {
         b.vx = 0;
         if (b.timer <= 0) {
-          const count = b.phase >= 2 ? 7 : 4;
+          const count = b.phase >= 4 ? 9 : b.phase >= 2 ? 7 : 4;
           for (let i = 0; i < count; i++) {
             const x = clamp(pcx + rand(-220, 220), 60, WORLD_W - 60);
             this.spawnEnemyProjectile({
@@ -4269,7 +4851,7 @@ export class AshenGame {
 
   spawnEchoMinions(b, count) {
     const chapter = b.chapter || 0;
-    const baseType = `echo_${chapter + 1}_1`;
+    const baseType = b.summonType || `echo_${chapter + 1}_1`;
     for (let i = 0; i < count; i++) {
       const x = clamp(b.x + (i - (count - 1) / 2) * 90, 60, WORLD_W - 100);
       const child = this.spawnEnemy({ type: baseType, variant: 'young', x, minX: 40, maxX: WORLD_W - 80 });
@@ -4386,18 +4968,37 @@ export class AshenGame {
   finishBoss() {
     const b = this.boss;
     if (!b) return;
-    const info = ALL_BOSS_INFO[b.kind];
+    const info = ALL_BOSS_INFO[b.kind] || b._info;
     const room = this.roomIndex;
+    if (this.labyrinth) {
+      this.boss = null;
+      this.projectiles = [];
+      this.emitBossDialogue(b, 'defeat');
+      const reward = Math.round((info?.ashReward ?? 60) * (this.skillBonuses?.ash || 1));
+      this.ash += reward;
+      this.emit({ type: 'ashGain', amount: reward, total: this.ash });
+      this.emit({
+        type: 'labyrinthBossDown',
+        kind: b.kind,
+        id: info?.labBossId || null,
+        name: b.name,
+        rarity: info?.labRarity || 'common',
+        echoes: info?.echoReward || 0,
+      });
+      this.shake = 0.9;
+      return;
+    }
     const next = primaryGateDef(ALL_ROOMS[room])?.next ?? (room + 1 < ALL_ROOMS.length ? room + 1 : null);
     this.bossDefeated[room] = true;
     this.boss = null;
+    this.arenaTheme = null;
     this.projectiles = [];
     this.emitBossDialogue(b, 'defeat');
     if (info?.reward === 'victory') {
       this.state = 'victory';
       this.deathTimer = 0;
       this.emit({ type: 'victory' });
-      if (room >= 14) this.emit({ type: 'campaignComplete', room, chapter: Math.floor((room - 14) / 10) });
+      if (room >= 14 && room < ATLAS_ROOM_START) this.emit({ type: 'campaignComplete', room, chapter: Math.floor((room - 14) / 10) });
     } else if (info?.reward === 'flask') {
       const p = this.player;
       p.maxFlasks += 1;
@@ -4411,7 +5012,7 @@ export class AshenGame {
       this.state = 'blessing';
       this.emit({ type: 'blessingOpen' });
     }
-    const reward = info?.ashReward ?? 60;
+    const reward = Math.round((info?.ashReward ?? 60) * (this.skillBonuses?.ash || 1));
     this.ash += reward;
     this.emit({ type: 'ashGain', amount: reward, total: this.ash });
     const echoReward = Math.round((info?.echoReward || 0) * (DIFFICULTY_BY_ID[this.difficulty]?.reward || 1) * expansionModifierTotals(this.modifiers).echo * (this.echoBonus || 1));
@@ -4568,7 +5169,7 @@ export class AshenGame {
         }
       }
     }
-    this.projectiles = this.projectiles.filter((pr) => !pr.dead);
+    this.compactRemoved(this.projectiles, 'dead');
   }
 
   checkContacts() {
@@ -4697,9 +5298,22 @@ export class AshenGame {
     }
   }
 
+  // In-place compaction: the simulation runs at 120 Hz, so replacing hot lists
+  // with Array#filter allocated a fresh array (and closure) every step.
+  compactRemoved(list, field) {
+    let write = 0;
+    for (let read = 0; read < list.length; read += 1) {
+      const item = list[read];
+      const alive = field === 'life' ? item.life > 0 : !item.dead;
+      if (alive) list[write++] = item;
+    }
+    list.length = write;
+    return list;
+  }
+
   cleanup() {
-    this.enemies = this.enemies.filter((e) => !e.dead);
-    this.fx = this.fx.filter((f) => f.life > 0);
+    this.compactRemoved(this.enemies, 'dead');
+    this.compactRemoved(this.fx, 'life');
   }
 
   updateFx(dt) {
@@ -4714,7 +5328,7 @@ export class AshenGame {
         f.vy *= 0.92;
       }
     }
-    this.fx = this.fx.filter((f) => f.life > 0);
+    this.compactRemoved(this.fx, 'life');
     if (this.state === 'dead' || this.state === 'victory') this.deathTimer += dt;
   }
 

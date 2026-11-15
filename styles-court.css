@@ -1,0 +1,828 @@
+/* Ashen Vow v0.8.0 — Hearthfall hub styles. */
+
+.court-inner {
+  max-width: 1180px;
+}
+
+.court-menu-btn {
+  border-color: rgba(224, 138, 74, 0.42);
+  box-shadow: inset 0 0 24px rgba(224, 138, 74, 0.08);
+}
+
+.court-menu-btn span::before {
+  content: '⌂ ';
+  color: #e08a4a;
+}
+
+.court-summary {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.court-trial-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.court-trial-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--trial-color) 36%, transparent);
+  background:
+    linear-gradient(145deg, color-mix(in srgb, var(--trial-color) 10%, transparent), transparent 55%),
+    rgba(10, 8, 7, 0.82);
+}
+
+.court-trial-card.locked {
+  filter: grayscale(0.6);
+  opacity: 0.58;
+}
+
+.court-trial-glyph {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  border-radius: 50%;
+  border: 1px solid color-mix(in srgb, var(--trial-color) 55%, transparent);
+  background: color-mix(in srgb, var(--trial-color) 12%, transparent);
+  color: var(--trial-color);
+  font-size: 1.2rem;
+}
+
+.court-trial-copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.court-trial-copy h4 {
+  margin: 0;
+  color: #f3e2c7;
+  font-size: 0.98rem;
+}
+
+.court-trial-copy > em {
+  display: block;
+  margin: 3px 0 6px;
+  font-style: normal;
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  color: var(--trial-color);
+}
+
+.court-trial-copy p {
+  margin: 0;
+  color: #a99a84;
+  font-size: 0.76rem;
+  line-height: 1.5;
+}
+
+.court-trial-card > .btn {
+  align-self: center;
+  flex: 0 0 auto;
+}
+
+.court-trial-result {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--trial-color) 48%, transparent);
+  background: color-mix(in srgb, var(--trial-color) 12%, transparent);
+}
+
+.court-trial-result > span {
+  color: var(--trial-color);
+  font-size: 1.3rem;
+}
+
+.court-trial-result b {
+  display: block;
+  color: #f3e2c7;
+  font-size: 0.88rem;
+}
+
+.court-trial-result em {
+  display: block;
+  margin-top: 3px;
+  font-style: normal;
+  font-size: 0.7rem;
+  color: #cbb89a;
+}
+
+.court-ngplus {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 14px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(178, 143, 216, 0.3);
+  background: rgba(178, 143, 216, 0.07);
+}
+
+.court-ngplus span {
+  display: block;
+  font-size: 0.62rem;
+  letter-spacing: 0.12em;
+  color: #b9a6d6;
+}
+
+.court-ngplus strong {
+  display: block;
+  margin: 2px 0 3px;
+  font-size: 1.05rem;
+  color: #e0c8ff;
+}
+
+.court-ngplus em {
+  font-style: normal;
+  font-size: 0.72rem;
+  color: #9d8f7b;
+}
+
+.court-ngplus-actions {
+  display: flex;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+@media (max-width: 820px) {
+  .court-trial-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .court-trial-card {
+    flex-wrap: wrap;
+  }
+
+  .court-ngplus {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+.court-zone-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 18px;
+}
+
+.court-zone-card {
+  position: relative;
+  border: 1px solid color-mix(in srgb, var(--zone-color) 42%, transparent);
+  background:
+    linear-gradient(140deg, color-mix(in srgb, var(--zone-color) 10%, transparent), rgba(12, 10, 9, 0.92) 48%),
+    rgba(10, 8, 7, 0.88);
+  border-radius: 14px;
+  padding: 18px 20px 16px;
+  overflow: hidden;
+}
+
+.court-zone-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: var(--zone-color);
+  opacity: 0.8;
+}
+
+.court-zone-card.locked {
+  filter: grayscale(0.55);
+  opacity: 0.62;
+}
+
+.court-zone-card > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.court-zone-card h3 {
+  margin: 0;
+  font-family: inherit;
+  letter-spacing: 0.08em;
+  font-size: 1.15rem;
+  color: #f3e2c7;
+}
+
+.court-zone-card header span {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--zone-color) 72%, #cbb89a);
+}
+
+.court-zone-card header b {
+  font-size: 0.86rem;
+  color: var(--zone-color);
+  white-space: nowrap;
+}
+
+.court-zone-card > p {
+  margin: 10px 0 12px;
+  max-width: 72ch;
+  color: #b9aa94;
+  font-size: 0.86rem;
+  line-height: 1.55;
+}
+
+.court-zone-bosses {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.court-zone-bosses span {
+  padding: 4px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  font-size: 0.66rem;
+  letter-spacing: 0.1em;
+  color: #9d8f7b;
+}
+
+.court-zone-bosses b {
+  color: #e8d6b8;
+  font-weight: 600;
+}
+
+.court-room-grid {
+  display: grid;
+  grid-template-columns: repeat(10, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.court-room {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 4px 6px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+  color: #cbb89a;
+  cursor: pointer;
+  transition: transform 0.14s ease, border-color 0.14s ease, background 0.14s ease;
+}
+
+.court-room span {
+  font-size: 0.9rem;
+  color: var(--zone-color);
+  line-height: 1;
+}
+
+.court-room b {
+  font-size: 0.78rem;
+}
+
+.court-room em {
+  font-style: normal;
+  font-size: 0.52rem;
+  letter-spacing: 0.08em;
+  color: #8c7e6b;
+}
+
+.court-room.cleared {
+  border-color: color-mix(in srgb, var(--zone-color) 60%, transparent);
+  background: color-mix(in srgb, var(--zone-color) 12%, transparent);
+}
+
+.court-room.available:hover {
+  transform: translateY(-2px);
+  border-color: var(--zone-color);
+  background: color-mix(in srgb, var(--zone-color) 18%, transparent);
+}
+
+.court-room.locked {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+
+.court-zone-foot {
+  margin-top: 12px;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 0.66rem;
+  letter-spacing: 0.08em;
+  color: #8c7e6b;
+}
+
+.court-zone-foot em {
+  font-style: normal;
+  color: var(--zone-color);
+}
+
+.court-boss-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.court-boss-card {
+  display: flex;
+  gap: 14px;
+  padding: 14px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--boss-color) 30%, transparent);
+  background: rgba(10, 8, 7, 0.7);
+}
+
+.court-boss-glyph {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  border-radius: 50%;
+  border: 1px solid color-mix(in srgb, var(--boss-color) 55%, transparent);
+  color: var(--boss-color);
+  font-size: 1.15rem;
+  background: color-mix(in srgb, var(--boss-color) 10%, transparent);
+}
+
+.court-boss-card h4 {
+  margin: 0;
+  font-size: 0.92rem;
+  color: #f0e0c4;
+}
+
+.court-boss-card em {
+  display: block;
+  margin: 2px 0 4px;
+  font-style: normal;
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  color: var(--boss-color);
+}
+
+.court-boss-card p {
+  margin: 0;
+  font-size: 0.7rem;
+  color: #9d8f7b;
+}
+
+.court-boss-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 7px;
+  font-size: 0.62rem;
+  letter-spacing: 0.06em;
+  color: #8c7e6b;
+}
+
+.court-boss-meta b {
+  color: #e8d6b8;
+}
+
+.court-bonus-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.court-bonus-strip span {
+  padding: 5px 11px;
+  border-radius: 999px;
+  border: 1px solid rgba(224, 138, 74, 0.3);
+  background: rgba(224, 138, 74, 0.08);
+  color: #f0c89c;
+  font-size: 0.7rem;
+  letter-spacing: 0.05em;
+}
+
+.court-house-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.court-house-card {
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  background:
+    linear-gradient(150deg, color-mix(in srgb, var(--room-color) 8%, transparent), transparent 55%),
+    rgba(9, 7, 6, 0.72);
+}
+
+.court-house-card > header {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.court-house-card > header > span {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--room-color) 45%, transparent);
+  color: var(--room-color);
+  background: color-mix(in srgb, var(--room-color) 10%, transparent);
+}
+
+.court-house-card h4 {
+  margin: 0;
+  font-size: 0.92rem;
+  color: #f0e0c4;
+}
+
+.court-house-card header em {
+  display: block;
+  margin-top: 4px;
+  font-style: normal;
+  font-size: 0.72rem;
+  line-height: 1.45;
+  color: #9d8f7b;
+}
+
+.court-level-pips {
+  display: flex;
+  gap: 5px;
+  margin: 12px 0 10px;
+}
+
+.court-level-pips i {
+  flex: 1;
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.court-level-pips i.on {
+  background: var(--room-color);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--room-color) 55%, transparent);
+}
+
+.court-room-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 0.7rem;
+  color: #9d8f7b;
+}
+
+.court-furnishings {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.court-furnishing {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+  color: #b9aa94;
+  font-size: 0.66rem;
+  cursor: pointer;
+}
+
+.court-furnishing em {
+  font-style: normal;
+  color: #d8a35c;
+}
+
+.court-furnishing.owned {
+  border-color: rgba(143, 201, 168, 0.35);
+  color: #bfe3cd;
+  background: rgba(143, 201, 168, 0.08);
+  cursor: default;
+}
+
+.court-furnishing:disabled:not(.owned) {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.court-resident-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 9px;
+  margin-bottom: 16px;
+}
+
+.court-resident-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  background: rgba(255, 255, 255, 0.025);
+  color: #cbb89a;
+  cursor: pointer;
+  text-align: left;
+}
+
+.court-resident-chip > span {
+  font-size: 1.05rem;
+  color: var(--npc-color);
+}
+
+.court-resident-chip b {
+  font-size: 0.84rem;
+  color: #f0e0c4;
+}
+
+.court-resident-chip em {
+  font-style: normal;
+  font-size: 0.62rem;
+  letter-spacing: 0.06em;
+  color: #8c7e6b;
+}
+
+.court-resident-chip.active {
+  border-color: var(--npc-color);
+  background: color-mix(in srgb, var(--npc-color) 10%, transparent);
+}
+
+.court-resident-chip.locked {
+  opacity: 0.42;
+  filter: grayscale(0.6);
+}
+
+.court-resident-detail {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 18px;
+  padding: 18px;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--npc-color) 30%, transparent);
+  background:
+    radial-gradient(circle at 12% 22%, color-mix(in srgb, var(--npc-color) 12%, transparent), transparent 46%),
+    rgba(9, 7, 6, 0.75);
+}
+
+.court-resident-portrait {
+  display: grid;
+  place-items: center;
+  width: 120px;
+  height: 150px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--npc-color) 45%, transparent);
+  color: var(--npc-color);
+  font-size: 3rem;
+  background: color-mix(in srgb, var(--npc-color) 8%, transparent);
+}
+
+.court-resident-copy h3 {
+  margin: 0;
+  color: #f3e2c7;
+  font-size: 1.1rem;
+}
+
+.court-resident-copy h3 small {
+  margin-left: 8px;
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  color: var(--npc-color);
+  font-weight: 400;
+}
+
+.court-dialogue {
+  margin: 10px 0 12px;
+  padding-left: 12px;
+  border-left: 2px solid var(--npc-color);
+  color: #cdbda4;
+  font-size: 0.86rem;
+  line-height: 1.55;
+  font-style: italic;
+}
+
+.court-affinity span {
+  font-size: 0.64rem;
+  letter-spacing: 0.09em;
+  color: #9d8f7b;
+}
+
+.court-affinity > div {
+  height: 5px;
+  margin-top: 5px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.court-affinity i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--npc-color), #f3e2c7);
+}
+
+.court-resident-actions {
+  display: flex;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.court-quest {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.court-quest header {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.court-quest header span {
+  font-size: 0.58rem;
+  letter-spacing: 0.12em;
+  color: #8c7e6b;
+}
+
+.court-quest header b {
+  font-size: 0.82rem;
+  color: #e8d6b8;
+}
+
+.court-quest header em {
+  margin-left: auto;
+  font-style: normal;
+  font-size: 0.62rem;
+  color: var(--npc-color);
+}
+
+.court-quest ol {
+  margin: 8px 0 6px;
+  padding-left: 18px;
+  color: #9d8f7b;
+  font-size: 0.74rem;
+  line-height: 1.7;
+}
+
+.court-quest li.done {
+  color: #8fc9a8;
+  text-decoration: line-through;
+}
+
+.court-quest li.current {
+  color: #f0c89c;
+}
+
+.court-quest > p {
+  margin: 0;
+  font-size: 0.68rem;
+  color: #8c7e6b;
+}
+
+.court-weapon-grid,
+.court-tool-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.court-weapon-card,
+.court-tool-card {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(9, 7, 6, 0.7);
+}
+
+.court-weapon-card.owned,
+.court-tool-card.owned {
+  border-color: rgba(224, 138, 74, 0.24);
+}
+
+.court-weapon-card.equipped,
+.court-tool-card.equipped {
+  border-color: #e08a4a;
+  box-shadow: inset 0 0 22px rgba(224, 138, 74, 0.08);
+}
+
+.court-weapon-glyph,
+.court-tool-card > span {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  border-radius: 9px;
+  border: 1px solid rgba(224, 138, 74, 0.35);
+  color: #e08a4a;
+  background: rgba(224, 138, 74, 0.07);
+}
+
+.court-weapon-card h4,
+.court-tool-card h4 {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #f0e0c4;
+}
+
+.court-weapon-card em,
+.court-tool-card em {
+  display: block;
+  margin: 2px 0 5px;
+  font-style: normal;
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  color: #c96a3a;
+}
+
+.court-weapon-card p,
+.court-tool-card p {
+  margin: 0;
+  font-size: 0.72rem;
+  line-height: 1.45;
+  color: #9d8f7b;
+}
+
+.court-weapon-card > div,
+.court-tool-card > div {
+  flex: 1;
+  min-width: 0;
+}
+
+.court-weapon-card > button,
+.court-tool-card > button {
+  align-self: center;
+  white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+  .court-summary {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .court-boss-grid,
+  .court-house-grid,
+  .court-weapon-grid,
+  .court-tool-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .court-room-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .court-resident-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .court-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .court-resident-detail {
+    grid-template-columns: 1fr;
+  }
+
+  .court-resident-portrait {
+    width: 100%;
+    height: 96px;
+  }
+
+  .court-room-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .court-zone-card {
+    padding: 14px;
+  }
+
+  .court-resident-actions {
+    flex-direction: column;
+  }
+}

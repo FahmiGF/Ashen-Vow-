@@ -273,6 +273,294 @@ export const TRACKS = {
     filter: 760,
     color: '#b07be8',
   },
+  hearthfall: {
+    id: 'hearthfall',
+    label: 'Hearthfall — Warm, wounded',
+    bpm: 66,
+    root: 103.83,
+    chord: [0, 3, 7, 10],
+    arp: [0, 3, 7, 10, 12, 10, 7, 3],
+    wave: 'triangle',
+    pad: 0.046,
+    melody: 0.021,
+    bass: true,
+    drums: false,
+    filter: 740,
+    color: '#e08a4a',
+  },
+  glassorchard: {
+    id: 'glassorchard',
+    label: 'Glass Orchard — Brittle, reverent',
+    bpm: 74,
+    root: 123.47,
+    chord: [0, 5, 7, 12],
+    arp: [0, 5, 12, 17, 19, 17, 12, 5],
+    wave: 'sine',
+    pad: 0.044,
+    melody: 0.019,
+    bass: false,
+    drums: false,
+    filter: 1500,
+    color: '#8fc9a8',
+  },
+  hollowcourt: {
+    id: 'hollowcourt',
+    label: 'The Hollow Court — Empty, patient',
+    bpm: 62,
+    root: 92.5,
+    chord: [0, 3, 7, 11],
+    arp: [0, 3, 7, 11, 14, 11, 7, 3],
+    wave: 'triangle',
+    pad: 0.05,
+    melody: 0.017,
+    bass: true,
+    drums: false,
+    filter: 620,
+    color: '#b28fd8',
+  },
+  cinderworks: {
+    id: 'cinderworks',
+    label: 'Cinderworks — Industrial, relentless',
+    bpm: 92,
+    root: 82.41,
+    chord: [0, 3, 6, 10],
+    arp: [0, 3, 6, 10, 12, 10, 6, 3],
+    wave: 'square',
+    pad: 0.035,
+    melody: 0.02,
+    bass: true,
+    drums: true,
+    filter: 640,
+    color: '#d96a4a',
+  },
+  lastvigil: {
+    id: 'lastvigil',
+    label: 'Last Vigil — Cold, watchful',
+    bpm: 58,
+    root: 98,
+    chord: [0, 4, 7, 11],
+    arp: [0, 4, 7, 11, 14, 11, 7, 4],
+    wave: 'sine',
+    pad: 0.05,
+    melody: 0.018,
+    bass: true,
+    drums: false,
+    filter: 1150,
+    color: '#7fa8d8',
+  },
+  reliquary: {
+    id: 'reliquary',
+    label: 'The Ashen Reliquary — Golden, buried',
+    bpm: 54,
+    root: 110,
+    chord: [0, 4, 7, 11],
+    arp: [0, 4, 7, 11, 14, 11, 7, 4],
+    wave: 'sine',
+    pad: 0.052,
+    melody: 0.016,
+    bass: true,
+    drums: false,
+    filter: 980,
+    color: '#d8b45c',
+  },
+  reliquaryBoss: {
+    id: 'reliquaryBoss',
+    label: 'The First Vow — Oath, unbroken',
+    bpm: 142,
+    root: 82.41,
+    chord: [0, 2, 7, 11],
+    arp: [0, 2, 7, 11, 14, 11, 7, 2],
+    wave: 'square',
+    pad: 0.042,
+    melody: 0.03,
+    bass: true,
+    drums: true,
+    filter: 820,
+    color: '#ffe0a0',
+  },
+  courtBoss: {
+    id: 'courtBoss',
+    label: 'Hollow Court Boss — Regal, collapsing',
+    bpm: 138,
+    root: 87.31,
+    chord: [0, 1, 6, 10],
+    arp: [0, 1, 6, 10, 13, 10, 6, 1],
+    wave: 'square',
+    pad: 0.04,
+    melody: 0.029,
+    bass: true,
+    drums: true,
+    filter: 700,
+    color: '#e0c8ff',
+  },
+  hearth: {
+    id: 'hearth',
+    label: 'The Hearth — Home, quiet',
+    bpm: 56,
+    root: 110,
+    chord: [0, 4, 7, 9],
+    arp: [0, 4, 7, 9, 12, 9, 7, 4],
+    wave: 'sine',
+    pad: 0.052,
+    melody: 0.018,
+    bass: true,
+    drums: false,
+    filter: 840,
+    color: '#d8a35c',
+  },
+  // ── Eternal Stage boss tracks ────────────────────────────────────────────
+  // One distinct theme per pack guardian, plus the two shared court extras.
+  bossAsh: {
+    id: 'bossAsh',
+    label: 'Ash King — Colossal, relentless',
+    bpm: 150,
+    root: 87.31,
+    chord: [0, 1, 7, 8],
+    arp: [0, 1, 7, 8, 13, 8, 7, 1, 0, 7, 12, 7, 8, 13, 8, 1],
+    wave: 'sawtooth',
+    pad: 0.05,
+    melody: 0.032,
+    bass: true,
+    drums: true,
+    filter: 720,
+    color: '#e0553b',
+  },
+  bossGlass: {
+    id: 'bossGlass',
+    label: 'Glass Warden — Brittle, shrieking',
+    bpm: 140,
+    root: 98,
+    chord: [0, 5, 7, 11],
+    arp: [0, 5, 7, 11, 12, 17, 19, 17, 12, 11, 7, 5],
+    wave: 'triangle',
+    pad: 0.046,
+    melody: 0.03,
+    bass: true,
+    drums: true,
+    filter: 980,
+    color: '#8fc9a8',
+  },
+  bossAbbot: {
+    id: 'bossAbbot',
+    label: 'Hollow Abbot — Choral dread',
+    bpm: 118,
+    root: 73.42,
+    chord: [0, 3, 7, 10],
+    arp: [0, 3, 10, 7, 12, 10, 3, 0],
+    wave: 'sine',
+    pad: 0.055,
+    melody: 0.026,
+    bass: true,
+    drums: true,
+    filter: 620,
+    color: '#a86bd8',
+  },
+  bossStorm: {
+    id: 'bossStorm',
+    label: 'Storm Valkyr — Thunderous, soaring',
+    bpm: 158,
+    root: 110,
+    chord: [0, 2, 7, 9],
+    arp: [0, 7, 9, 12, 14, 12, 9, 7, 0, 2, 7, 14, 16, 14, 7, 2],
+    wave: 'sawtooth',
+    pad: 0.045,
+    melody: 0.031,
+    bass: true,
+    drums: true,
+    filter: 840,
+    color: '#7fc9e8',
+  },
+  bossDawn: {
+    id: 'bossDawn',
+    label: 'Last Dawn — Radiant, tragic',
+    bpm: 132,
+    root: 123.47,
+    chord: [0, 4, 7, 11],
+    arp: [0, 4, 7, 11, 12, 16, 19, 23, 19, 16, 12, 11],
+    wave: 'triangle',
+    pad: 0.05,
+    melody: 0.028,
+    bass: true,
+    drums: true,
+    filter: 1150,
+    color: '#e8b46a',
+  },
+  bossJudge: {
+    id: 'bossJudge',
+    label: 'Oath Eater — Apocalyptic finale',
+    bpm: 170,
+    root: 92.5,
+    chord: [0, 1, 6, 8],
+    arp: [0, 1, 6, 8, 12, 13, 18, 20, 18, 13, 12, 8, 6, 1],
+    wave: 'sawtooth',
+    pad: 0.052,
+    melody: 0.034,
+    bass: true,
+    drums: true,
+    filter: 700,
+    color: '#d6ac66',
+  },
+  // ── Faewood: mushroom and fairy biome ────────────────────────────────────
+  faewood: {
+    id: 'faewood',
+    label: 'Faewood — Glimmering, watchful',
+    bpm: 88,
+    root: 146.83,
+    chord: [0, 2, 7, 9],
+    arp: [0, 7, 9, 12, 14, 12, 9, 7, 2, 9, 14, 16, 14, 9, 7, 2],
+    wave: 'sine',
+    pad: 0.042,
+    melody: 0.02,
+    bass: false,
+    drums: false,
+    filter: 1650,
+    color: '#9be8c8',
+  },
+  magmaBoss: {
+    id: 'magmaBoss',
+    label: 'Magma Slime — Boiling, heavy',
+    bpm: 146,
+    root: 65.41,
+    chord: [0, 1, 5, 8],
+    arp: [0, 1, 5, 8, 12, 13, 17, 20, 17, 13, 12, 8, 5, 1],
+    wave: 'sawtooth',
+    pad: 0.055,
+    melody: 0.033,
+    bass: true,
+    drums: true,
+    filter: 560,
+    color: '#ff7a3c',
+  },
+  fairyBoss: {
+    id: 'fairyBoss',
+    label: 'Spectral Fairy Dragon — Celestial, furious',
+    bpm: 162,
+    root: 110,
+    chord: [0, 3, 7, 10],
+    arp: [0, 3, 7, 10, 14, 15, 19, 22, 19, 15, 14, 10, 7, 3, 0, 7],
+    wave: 'triangle',
+    pad: 0.05,
+    melody: 0.035,
+    bass: true,
+    drums: true,
+    filter: 1250,
+    color: '#f0c8ff',
+  },
+  celebration: {
+    id: 'celebration',
+    label: 'Celebration — Opus freed, dawn rising',
+    bpm: 104,
+    root: 130.81,
+    chord: [0, 4, 7, 11],
+    arp: [0, 4, 7, 12, 16, 19, 24, 19, 16, 12, 7, 4, 0, 7, 12, 16],
+    wave: 'triangle',
+    pad: 0.055,
+    melody: 0.04,
+    bass: true,
+    drums: true,
+    filter: 2100,
+    color: '#ffe6a8',
+  },
   victory: {
     id: 'victory',
     label: 'Victory — Bittersweet',
@@ -300,6 +588,40 @@ export function isKnownTrack(trackId) {
   return Object.prototype.hasOwnProperty.call(TRACKS, trackId);
 }
 
+// Every boss kind can claim its own theme. Anything unmapped keeps the zone's
+// boss track, so adding a boss never silently drops the music.
+export const BOSS_TRACKS = {
+  warden: 'boss',
+  wyrm: 'boss',
+  choir: 'bossAbbot',
+  oathbreaker: 'bossJudge',
+  sporebound: 'mycelialBoss',
+  root: 'bossGlass',
+  court_boss_hearthmother: 'courtBoss',
+  court_boss_orchardsaint: 'bossGlass',
+  court_boss_nameless: 'bossAbbot',
+  court_boss_forgeking: 'bossAsh',
+  court_boss_lastwatch: 'bossDawn',
+  court_boss_firstvow: 'bossJudge',
+  pack_ashking: 'bossAsh',
+  pack_glasswarden: 'bossGlass',
+  pack_hollowabbot: 'bossAbbot',
+  pack_stormvalkyr: 'bossStorm',
+  pack_dawnseraph: 'bossDawn',
+  pack_oatheater: 'bossJudge',
+  fairy_magma_slime: 'magmaBoss',
+  fairy_spectral_dragon: 'fairyBoss',
+};
+
+export function bossTrackFor(kind, fallback = 'boss') {
+  const track = BOSS_TRACKS[kind];
+  if (track && TRACKS[track]) return track;
+  if (TRACKS[fallback]) return fallback;
+  return 'boss';
+}
+
+const clamp01 = (value) => (value < 0 ? 0 : value > 1 ? 1 : value);
+
 const semitone = (root, semis) => root * Math.pow(2, semis / 12);
 
 export class MusicManager {
@@ -310,7 +632,34 @@ export class MusicManager {
     this.trackId = null;
     this.volume = 1;
     this.layerVolumes = { combat: 0 };
+    this.phaseLevel = 0;
     this.enabled = true;
+  }
+
+  // Boss phase escalation: brighter filter, extra low pulse, louder percussion.
+  setBossPhase(phase = 1, maxPhases = 3) {
+    const max = Math.max(2, Number(maxPhases) || 2);
+    const level = clamp01(((Number(phase) || 1) - 1) / (max - 1));
+    this.phaseLevel = level;
+    const track = this.current;
+    const ctx = this.kit?.ctx;
+    if (!track || !ctx) return level;
+    const now = ctx.currentTime;
+    if (track.phaseGain) {
+      track.phaseGain.gain.cancelScheduledValues(now);
+      track.phaseGain.gain.setValueAtTime(Math.max(0.0001, track.phaseGain.gain.value), now);
+      track.phaseGain.gain.linearRampToValueAtTime(0.0001 + level * 0.9, now + 0.6);
+    }
+    if (track.filter && track.def?.filter) {
+      track.filter.frequency.cancelScheduledValues(now);
+      track.filter.frequency.setValueAtTime(track.filter.frequency.value, now);
+      track.filter.frequency.linearRampToValueAtTime(track.def.filter * (1 + level * 0.85), now + 0.8);
+    }
+    return level;
+  }
+
+  clearBossPhase() {
+    this.setBossPhase(1, 2);
   }
 
   ensureBus() {
@@ -459,11 +808,17 @@ export class MusicManager {
     layerGain.gain.value = this.layerVolumes.combat || 0;
     layerGain.connect(gain);
 
+    const phaseGain = ctx.createGain();
+    phaseGain.gain.value = 0.0001 + (this.phaseLevel || 0) * 0.9;
+    phaseGain.connect(gain);
+
     const track = {
       id: trackId,
       def,
       gain,
+      filter,
       layerGain,
+      phaseGain,
       oscillators,
       interval: 0,
       step: 0,
@@ -504,6 +859,17 @@ export class MusicManager {
           (track.def.melody || 0.02) * 1.15,
           'sine',
           track.gain,
+        );
+      }
+      if ((this.phaseLevel || 0) > 0.01 && step % 2 === 0) {
+        this.note(
+          track,
+          semitone(track.def.root / 2, step % 4 === 0 ? 7 : 0),
+          track.nextTime,
+          stepDur * 1.2,
+          (track.def.melody || 0.02) * (0.4 + this.phaseLevel * 1.1),
+          'square',
+          track.phaseGain,
         );
       }
       if (track.def.drums) {

@@ -1,17 +1,87 @@
-# Ashen Vow — v0.4.0
+# Ashen Vow — v0.10.0
 
-> **Sumpah di antara abu — Infinite Frontiers Update (Beyond the Veil).**
+## Taman Peri — Faewood (v0.10.0)
+
+Sepuluh tahap taman peri, dua bos baru, dan penutup kisah Opus.
+
+- **Jalankan:** menu utama → **TAMAN PERI — FAEWOOD**.
+- **Sepuluh tahap berurutan** — Gerbang Lumut, Lorong Jamur, Kolam Peri, Kapel Spora, Jembatan Akar, Taman Cahaya, Sarang Kunang, Padang Tanduk, Ambang Bara, dan Gerbang Singgasana (indeks ruang global 414–423). Tahap berikutnya terkunci sampai tahap sebelumnya tuntas, dan kedua bos tetap tersegel sampai kesepuluh tahap bersih.
+- **Dua bos baru** — **Gelora, Slime Magma** (arena ruang 424, 4 fase, HP 1600) dan **Sylvara, Peri Naga Spektral** (arena ruang 425, 4 fase, HP 2600, kemenangan menutup bioma).
+- **Sepuluh mob baru** — Tiny Cap, Puff Spore, Glow Midge, Thorn Pixie, Myconid Guard (elite), Shroom Brute, Fae Duelist, Lantern Moth, Magma Blob, dan Elder Spore (spawner). Empat di antaranya bertanda *tiny* dan satu *elite*, jadi kerumunan jamur/peri terasa berbeda dari kroco biasa.
+- **Empat NPC mini** — Pipp si Spora, Nia Lentera, Moss Tua, dan Wick Sayap Abu duduk di tahap-tahap awal; mereka menyapa lewat `npcHello` saat ruang dimuat dan digambar sebagai sprite peri kecil.
+- **Cutscene potret 20 detik** sebelum duel terakhir (`src/cutscene.js`): lima ketukan yang memperkenalkan Sylvara, mahkota sayapnya, dan ancaman yang menutup gerbang Opus. Bisa dilewati dengan `Esc` atau tombol **LEWATI**.
+- **Empat fase dengan dunia yang berubah** — fase 3 mengubah bos menjadi **Sylvara, Seraph of the Woven Sky** dan memindahkan arena ke tema **surga** (cakrawala keemasan, partikel cahaya, musik `magmaBoss`); fase 4 mengubahnya menjadi **Vharos, Demon Lord of the Last Vow** dengan tema **neraka** (langit merah, bara, partikel api). Palet latar, partikel, dan nama/judul bos ikut berubah lewat `arenaTheme` tanpa menyentuh data ruang.
+- **Musik Celebratory** — begitu naga gugur, track `celebration` menggantikan victory theme selama layar kemenangan Taman Peri tampil.
+- **Post-credit 30 detik** — epilog tentang Demon Lord yang tumbang dan kerajaan Opus yang akhirnya bebas dari cengkeramannya, diputar otomatis sesaat setelah layar kemenangan; layar kemenangan tetap ada di belakangnya.
+- **Progres** — `progress.fairy` di `ashen-vow-progress-v1`: tahap yang tuntas, bos yang gugur, rekor waktu terbaik, dan sanitizer yang menolak keadaan mustahil. Menuntaskan kedua bos membuat hub melaporkan 100%.
+- **Test & smoke** — `tests/fairy.test.js` menambah 12 test; total suite **264 test deterministik**. `npm run smoke:fairy` memverifikasi hub, rantai sepuluh tahap lewat gerbang asli, segel bos, cutscene, empat fase surga/neraka, musik `celebration`, epilog post-credit, dan persistensi setelah reload — **57 cek** tanpa error console. `npm run smoke:fairy:mobile` menguji tata letak ponsel portrait 390×844: menu utama, hub Taman Peri, Catatan Update, dan layar sinematik bebas overflow horizontal, dengan layar cutscene ikut melebar penuh seperti overlay lain.
+
+## Skill Point & Panggung Abadi (v0.9.0)
+
+- **Skill Point permanen** — setiap bos yang gugur memberi poin: **2** untuk kemenangan pertama atas jenis bos itu, **1** setiap tiga pengulangan, **5** untuk menuntaskan Panggung Abadi, dan **4** untuk menyelesaikan kampanye Echoes. Poin tersimpan di `progress.skills`.
+- **Enam keahlian, 23 peringkat** — *Tebasan Membara* (+15% damage ultimate/peringkat), *Napas Kedua* (−6% cooldown), *Titik Hancur* (+5% peluang kritik ultimate, ×1.75 damage), *Sumpah Badan* (+12 HP), *Panen Abu* (+10% abu), dan *Pembawa Tegukan* (+1 flask). Respec gratis kapan saja.
+- **Panel di layar karakter** — buka **PILIH PENJAGA** untuk melihat poin, membeli peringkat, dan membaca damage/CD ultimate saat ini. Menaikkan peringkat langsung mengubah ultimate di run berikutnya maupun run yang sedang berjalan.
+- **Panggung Abadi — 6 bos baru** — Malveth the Ash King, Ilyra the Glass Warden, Abbot Vurn the Hollow, Valkyr of the Ninth Storm, Seraph of the Last Dawn, dan The Oath Eater Final Judge. Masing-masing 3–5 fase dengan dialog intro/fase/defeat, pola slam/volley/ring/charge/summon/rain, dan tema musiknya sendiri. Buka dari tab Perjalanan Hearthfall.
+- **Gauntlet berurutan** — penjaga dibuka satu per satu, HP dipulihkan 25% di antara penjaga, rekor waktu disimpan, dan seluruh rangkaian memberi 5 Skill Point tambahan.
+- **Musik bos lebih epik** — enam track baru (`bossAsh`, `bossGlass`, `bossAbbot`, `bossStorm`, `bossDawn`, `bossJudge`), peta `BOSS_TRACKS` untuk setiap bos, dan intensitas yang naik per fase (filter terbuka, pulsa rendah, perkusi menguat).
+- **Optimasi terukur** — kompaksi array in-place di loop 120 Hz. `node tools/sim-bench.mjs` mengukur **1.27×** throughput simulasi (25.091 vs 19.683 langkah/detik pada adegan 10 musuh, 160 proyektil, 220 efek).
+- **Test & smoke** — `tests/skills.test.js` menambah 12 test; total suite **251 test deterministik**. `npm run smoke:skill` memverifikasi panel Skill Point, enam kartu bos, tema musik, seluruh gauntlet, dan persistensi setelah reload tanpa error console.
+
+## Multiplayer Co-op
+
+- **Kampanye · Hearthfall · Labyrinth** — buka **MULTIPLAYER — CO-OP** dari menu utama. Host memilih mode, membuat room, dan membagikan kode 5 karakter; 2–4 penjaga bisa bergabung.
+- **Host authoritative** — host menjalankan simulasi nyata, sedangkan guest mengirim input 20 Hz dan menerima snapshot terkuantisasi. Guest mengikuti avatar-nya sendiri, bukan avatar host.
+- **Jaringan aman** — relay WebSocket menandai pengirim, membuang `_from`/`_role` palsu, membatasi ukuran pesan, menolak frame terfragmentasi, dan memigrasikan host ketika socket host putus.
+- **Join aman** — kata sandi lobby, pemeriksaan kapasitas 4 pemain, penolakan terarah, dan pembersihan companion saat guest keluar.
+- **Verifikasi** — `tests/coop-relay.test.js` menguji spoofing, targeted reply, room penuh, JSON rusak, dan host migration; `npm run smoke:lab` menguji lobby nyata, campaign host, snapshot scene/room, dan avatar guest.
+
+## Hearthfall — The Hollow Court (v0.8.0)
+
+Kampanye rumah terakhir Opus: enam zona baru, enam puluh level, dua belas bos, tiga belas kelas, delapan senjata data-driven, dua belas alat, dan sebuah rumah yang tumbuh dari setiap kemenangan.
+
+- **Jalankan:** menu utama → **HEARTHFALL — THE HOLLOW COURT**.
+- **Enam zona · 60 level** — Pendopo Abu, Kebun Kaca, Istana Rongga, Pabrik Abu, Menara Jaga, dan Relikui Abu (indeks ruang global 354–413). Setiap zona berisi 5 ruang tempur, 1 ruang elite, 1 ruang relik, 1 ruang istirahat, dan 1 arena bos.
+- **Dua belas bos** — Cinder Steward, Mother Hearth, The Pruned Choir, The Orchard Saint, The Hollow Regent, The Nameless Sovereign, The Bellows Captain, The Forge King, The Vigil Captain, The Dawnless Watch, The Relic Sexton, dan The First Vow. Mini-bos punya 3 fase, bos zona 4 fase, dengan dialog di setiap fase.
+- **Dua puluh empat musuh baru** — memakai tujuh arketipe AI yang sudah teruji, lengkap dengan statistik per zona dan varian elite.
+- **Delapan senjata** — Kapak Perapian, Bilah Kembar, Tombak Rongga, Gada Sumpah (gelombang kejut), Busur Ulang (amunisi panah), Tongkat Bara (proyektil tanpa amunisi), Sabit Kabut (lifesteal), dan Bilah Wasiat (kombo + lifesteal).
+- **Dua belas alat** — slot `charm` / `boots` / `relic`, masing-masing menambah HP, flask, damage, kecepatan, abu, atau penyembuhan. Satu alat per slot.
+- **Tiga kelas court-native** — Ashwright, Hearthkeeper, dan Glassblade, masing-masing dengan ability aktif sendiri; roster karakter kini 13 kelas.
+- **Rumah Hearthfall** — 6 ruangan (aula, dapur, tungku, kapel, kebun, gudang) hingga level 3, 24 perabot, dan kehangatan. Bonus rumah hanya berlaku di run Hearthfall.
+- **Delapan penghuni NPC** — dialog berubah mengikuti ikatan, hadiah menaikkan afinitas, dan setiap penghuni punya misi tiga langkah yang memberi Tanda Perapian, senjata, atau alat.
+- **Tantangan & NG+** — **Ronda Para Penjaga** (dua belas bos berurutan, heal 35% di antara penjaga) dan **Jalan Kaca** (10 ruang Kebun Kaca, heal 10% per ruang) menyimpan rekor waktu dan kemenangan. **Sumpah Berulang +0–4** menskalakan HP/damage musuh dan memberi bonus Tanda Perapian pada kemenangan pertama tiap tingkat.
+- **Ekonomi Tanda Perapian yang dipacing** — alat termurah terjangkau setelah 4 ruang, senjata termurah setelah 6 ruang, dan satu clear penuh membiayai semua senjata/alat tanpa langsung membeli seluruh rumah. Kurva ini diuji otomatis.
+- **Sembilan track musik prosedural** — `hearthfall`, `glassorchard`, `hollowcourt`, `cinderworks`, `lastvigil`, `reliquary`, `courtBoss`, `reliquaryBoss`, dan `hearth`, semuanya dari osilator tanpa file audio.
+- **Grafik, inventaris, dan waktu** — menu grafik dengan preset, slider performa↔kualitas, anti-aliasing, FOV, render distance, kepadatan partikel, dan FPS; inventaris menampilkan loadout, amunisi, alat, serta keybind aktif; jam lokal dan timer stage tampil di kanan atas, dan rekor waktu tiap stage muncul di layar kemenangan serta kredit.
+- **Save** — `progress.court` di `ashen-vow-progress-v1`, dengan sanitizer yang membatasi nilai, menyaring ID tak dikenal, menegakkan satu alat per slot, dan mempertahankan field masa depan.
+- **Optimasi terukur** — indeks ruang O(1), cache agregat bonus rumah, dan statistik satu lintasan. Jalankan `npm run bench:court`; pada mesin pengembangan ini lookup ruang **5,82×** lebih cepat dan agregat bonus rumah **7,85×** lebih cepat daripada jalur naive (lookup penghuni setara, 0,98×).
+- **Test & smoke** — `tests/court.test.js` kini berisi 22 test; total suite menjadi **237 test deterministik**. Smoke browser nyata: `npm run smoke:court` (hub, 60 kartu ruang, 12 bos, 12 alat, rumah, hadiah NPC, run room 354, clear + save, dan persistensi setelah reload) lulus tanpa error console.
+
+## Infinite Labyrinth — Cursed Realms (v0.7.0)
+
+Mode bertahan tanpa akhir dengan 20 zona, 30 bos multi-fase, 40 barang terkutuk/ritual, 6 Forbidden Synergy, reward chamber, mastery permanen, dan co-op 2–4 pemain.
+
+- **Jalankan:** menu utama → **INFINITE LABYRINTH — CURSED REALMS**. Pilih salah satu dari 10 mode, lalu bertahan dari gelombang musuh, elite, dan bos. Setiap siklus berakhir di reward chamber.
+- **Kutukan:** hadiah item menampilkan bonus dan kerugian sebelum dipilih. **Cursed Bargain** memberi kekuatan besar dengan harga permanen selama run.
+- **Ritual:** barang ritual aktif saat syaratnya terpenuhi (mis. 10 kill tanpa damage, 2 elite, 1 bos). Progres terlihat di HUD/ringkasan.
+- **Checkpoint:** disimpan setiap 5 siklus. Melanjutkan checkpoint menandai run tidak layak leaderboard.
+- **Co-op:** tab **CO-OP 2–4 PEMAIN**. Host membuat room code (opsional kata sandi), pemain lain memasukkan kode yang sama. Game memakai host authoritative + relay `/ws`; untuk LAN jalankan `HOST=0.0.0.0 npm start`.
+- **Kontrol tambahan:** co-op memakai kontrol yang sama; tahan **INTERACT** di dekat kawan yang tumbang untuk revive. HUD menampilkan siklus, gelombang, party HP, kutukan, dan skor.
+- **Data tersimpan:** `progress.labyrinth` di `ashen-vow-progress-v1` (best cycle, riwayat, mastery, mata uang, discovery). Checkpoint di `ashen-vow-labyrinth-checkpoint-v1`.
+
+Test: `npm test` mencakup 26 test baru untuk labirin/co-op (determinisme, wave director, item/ritual/synergy, save sanitization, snapshot codec, revive, lobby, loot).
+Smoke browser + co-op WebSocket langsung: `npm run smoke:lab` (menyalakan server uji sendiri di port 4312).
+
+> **Sumpah di antara abu — The Sundered Atlas (Parts V–VII).**
 >
-> Mengembangkan Ashen Vow melampaui pengalaman 2D Metroidvania Roguelike aslinya dengan:
-> - **Mode 3D Lengkap**: petualangan metroidvania 3D orang ketiga di Thornveil Forest dengan kamera orbital bebas, lock-on target, kombo 3D, parry, dan pertarungan boss kolosal Elder Yggvar.
-> - **Kampanye Level 101–200 (Total 200 Level)**: 10 bab baru (Bab 11–20) melintasi The Shattered Continent, Forgotten Empire, Abyssal Kingdom, Eternal Desert, Verdant Colossus, Astral Frontier, Hollow Dimension, Celestial Machine, Primordial Lands, hingga The Last Beyond.
-> - **15 Kelas Karakter Baru**: Warden, Arcanist, Shadowblade, Ranger, Templar, Reaver, Beastcaller, Spellbreaker, Gunsmith, Bloodweaver, Chronomancer, Stormcaller, Plague Doctor, Soul Knight, dan Riftwalker (4 jurus & 3 spesialisasi per kelas).
-> - **Sistem Elite Mobs Tingkat Lanjut**: 7 peringkat (E1 Veteran – E7 Worldbreaker), 15 jenis Elite Mob berkemampuan cerdas, dan 10 modifier tempur acak.
-> - **15 Kategori Senjata & Kerajinan Regional**: Greatsword, Twin Daggers, Warhammer, Spear, Scythe, Longbow, Crossbow, Arcane Staff, Rune Blade, Storm Spear, Arcane Pistol, Repeater, Spirit Blade, Chain Whip, dan Battle Gauntlets dengan 8 material regional.
-> - **Pembangun Dunia 2D & 3D**: Map Editor canggih dengan pemahat medan 3D, penempatan prefab modular, peletakan boss, serta visual scripting berbasis node berizin aman.
-> - **Kingdom Defense & Mode Tambahan**: Tower defense 10 jenis menara, Abyssal Gauntlet, Relic Hunt, Boss Rush, Expedition, dan Survival.
-> - **Kustomisasi 12 Lapis Visual**: penyesuaian independen kepala, wajah, dada, pundak, lengan, tangan, pinggang, kaki, sepatu, punggung, senjata, dan aura dengan 10 warna pewarna murni, 10 Mount, dan 10 Companion.
-> - **Prinsip Utama**: Kampanye 2D asli 1–100 tetap utuh dan kompatibel penuh. Mode 3D adalah mode tambahan yang saling melengkapi.
+> Atlas terbelah menjadi delapan halaman dunia, dan setiap halaman menuntut sumpahnya sendiri:
+> - **8 Zona Atlas & 240 Ruang**: Taman Vael, Kandang Emas, Observatorium Bintang Jatuh, Hutan Layu, Gurun Jam Pasir, Katakombe Tanpa Iman, Palung Abyssal, dan Pengecoran Mesin — 30 ruang per zona, 4 world tier, dan 6 gerbang kemampuan.
+> - **Cerita & 4 Akhiran**: linimasa, tokoh, 8 bab, dan akhiran yang ditentukan oleh kemampuan, kelengkapan lore, dan bos yang kau kalahkan.
+> - **Indeks Sumpah**: 11 kategori, 33 entri lore dengan 3 tier pengungkapan, pencarian, filter, fragmen, dan hadiah penyelesaian.
+> - **Bos yang Menavigasi**: platform graph + A*, navigator dengan pemulihan saat tersangkut, pemilihan serangan berbasis skor, dan bot deterministik 100 iterasi per bos.
+> - **Performa & Kualitas**: frame budget, object pooling, frustum culling, AI scheduler, auto-quality, dan 5 preset latar.
+> - **Ekonomi Atlas**: 55 konsumabel dengan quick slot 1–4, 12 resep memasak/merakit, 6 warung NPC, 12 set zirah, 15 jimat, dan 40 senjata dengan mastery serta infusi.
+> - **Warisan Tetap Utuh**: kampanye 14 ruang, ekspansi 100 level, Mode 3D, dan seluruh progres Infinite Frontiers tetap dapat dimainkan dan dimigrasikan.
+> - **Prinsip Utama**: bonus zirah, jimat, dan senjata Atlas hanya berlaku di run Atlas; konten lama tidak direbalance secara paksa.
 
 Ashen Vow adalah game web tanpa build step: HTML5 Canvas + ES Modules murni. Seluruh simulasi combat berjalan deterministik di `src/core.js` dan `src/mode3d.js`, sehingga bisa diuji otomatis dengan Node tanpa browser.
 
@@ -48,7 +118,8 @@ Game **tidak langsung masuk ke gameplay**. Saat dibuka, yang tampil adalah menu 
 - **PETA SUMPAH** — peta interaktif perjalanan dengan kabut perang dan pin, bisa dibuka kapan saja dengan `M`.
 - **INDEKS SUMPAH** — indeks musuh, senjata, boss, dan barang, bisa dibuka dengan `O`.
 - **ECHOES OF THE FORGOTTEN WORLD** — hub ekspansi dengan tab **Kampanye**, **Thornveil Haven**, **Ashen Chronicle**, dan **Lemari & Jurnal**, bisa dibuka dengan `X`.
-- **CATATAN UPDATE** — riwayat rilis di dalam game, dari fondasi pertama sampai **Echoes of the Forgotten World**.
+- **THE SUNDERED ATLAS** — hub Parts V–VII dengan tab **Zona & Ruang**, **Cerita**, **Indeks Sumpah**, **Warung**, **Perlengkapan**, **Barang & Resep**, dan **Sistem**.
+- **CATATAN UPDATE** — riwayat rilis di dalam game, dari fondasi pertama sampai **The Sundered Atlas**.
 - **PENGATURAN** — audio, keybind, gamepad, dan aksesibilitas.
 - **CREDITS** — halaman kredit game.
 
@@ -383,6 +454,18 @@ Smoke test browser dijalankan lewat Chrome DevTools Protocol. Verifikasi v0.3.0 
 - hub ekspansi terbuka kembali dengan ringkasan tersimpan setelah reload,
 - boss bab gugur → level tuntas, Gema bertambah, dan pilihan berkah terbuka,
 - boss terakhir menyelesaikan kampanye dan membuka New Game Plus,
+- tidak ada exception runtime atau error console selama alur smoke.
+
+Smoke test browser v0.6.0 dijalankan lewat Chrome DevTools Protocol pada Chrome headless (**7 tab + 16 pemeriksaan, tanpa error console**):
+
+- tombol **THE SUNDERED ATLAS** membuka hub dan menyembunyikan layar judul,
+- ketujuh tab (Zona, Cerita, Indeks Sumpah, Warung, Perlengkapan, Barang & Resep, Sistem) merender judul yang benar,
+- pembelian Warung Akar memotong Tanda dan menambah konsumabel,
+- penugasan slot cepat, pengungkapan lore tier 1, pemasangan zirah, dan infusi senjata tersimpan,
+- validator 240 ruang melaporkan LULUS dan bot bos 100 iterasi berjalan,
+- ruang Atlas 114 dimulai, quickbar tampil, item slot 1 menyembuhkan pemain, dan retry kembali ke ruang yang sama,
+- bos zona Vael memakai navigator platform, memberikan Sumpah Angin, menandai ruang, dan memberi jimat zona,
+- bos final Prime Engine mencatat akhiran **Pembuat Peta Baru** dan layar kemenangan menampilkan teks akhiran,
 - tidak ada exception runtime atau error console selama alur smoke.
 
 Pemeriksaan legacy tetap dipertahankan:

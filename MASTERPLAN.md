@@ -1,7 +1,7 @@
 # ASHEN VOW — MASTER PLAN
 
 > **Version 2.0 — v1.0 roadmap + post-launch expansion.**
-> Status snapshot: **Milestones A (v0.0.8) and B (v0.1.0) complete, plus content update v0.2.0 (Sigil & Ritual), the v0.3.0 Echoes of the Forgotten World expansion, and the v0.4.0 Infinite Frontiers (Beyond the Veil) expansion** · Milestones C–F remain future work.
+> Status snapshot: **Milestones A (v0.0.8) and B (v0.1.0) complete, plus content update v0.2.0 (Sigil & Ritual), the v0.3.0 Echoes of the Forgotten World expansion, the v0.4.0 Infinite Frontiers (Beyond the Veil) expansion, the v0.5.0 Overdrive foundations, the v0.6.0 The Sundered Atlas expansion, the v0.7.0 Infinite Labyrinth + co-op update, the v0.8.0 Hearthfall: The Hollow Court content pack, and the v0.10.0 Taman Peri (Faewood) finale pack** · Milestones C–F remain future work.
 > The full game stays a zero-build, dependency-free HTML5 Canvas + ES-module project.
 
 ## Document map
@@ -24,6 +24,18 @@
 6. **`npm test` green before every commit**, on desktop and portrait mobile.
 7. **Metroidvania first.** Tower defense, roguelike runs, Alien Mode, and the map editor expand the original identity. They never turn the game into disconnected systems.
 8. **No pay-to-win.** Expansion content is earned in-game. Cosmetics are the only paid layer, and every gameplay system is reachable without paying.
+
+### Current release note — v0.10.0 Taman Peri (Faewood)
+
+v0.10.0 adds a playable fairy-biome finale at global room indices **414–425** (`src/fairy.js`): ten sequential stages (Gerbang Lumut → Gerbang Singgasana) that each unlock only after the previous one is cleared, followed by two sealed boss arenas. The seal is real — both boss cards stay disabled until all ten stages are cleared, and the chain is walked through the same `gatePass` / `roomEnter` events as every other wing. Content: 10 enemies (4 tiny swarmers, 1 elite Myconid Guard, 1 spawner Elder Spore), 4 tiny NPCs with `npcHello` greetings, and 2 bosses — **Gelora, Slime Magma** (4 phases, 1600 HP) and **Sylvara, Peri Naga Spektral** (4 phases, 2600 HP, `reward: 'victory'`). The dragon fights through a new `forms` map in `ALL_BOSS_INFO`: phase 3 becomes **Sylvara, Seraph of the Woven Sky** and swaps the arena to a heaven palette/particle theme, phase 4 becomes **Vharos, Demon Lord of the Last Vow** with a hell theme — applied as `game.arenaTheme` so room data never changes, emitted as `bossForm`, and picked up by the renderer, HUD and music. Two cinematics live in `src/cutscene.js`: a 20-second boss portrait before the duel and a 30-second post-credit epilogue about the fallen Demon Lord and Opus finally freed, both skippable and both procedural Canvas. `celebration` replaces the victory theme when the dragon dies. Saves live under **`progress.fairy`** in `ashen-vow-progress-v1`, with a sanitizer that rejects impossible states. Tests: **264/264**; new browser smoke `npm run smoke:fairy` passes **57 checks** (hub, ten-stage chain through real gates, boss seal, cutscene, heaven/hell forms, celebration, epilogue, reload persistence, no console errors), and `npm run smoke:fairy:mobile` covers the 390×844 portrait layout (title menu, Faewood hub, Update Log, cutscene). Room count is **426**, boss count is **72**; legacy 14 rooms, `ROOM_ZONES`, and `CODEX` are untouched.
+
+### Previous release note — v0.9.0 Skill Point & Panggung Abadi
+
+v0.9.0 adds a permanent **Skill Point** progression layer (`src/skills.js`): bosses pay 2 points on first defeat, 1 every third repeat, 5 for finishing Panggung Abadi, and 4 for completing the Echoes campaign. Points buy 23 ranks across 6 nodes, and the ultimate ability is now genuinely scaled by those ranks — damage, cooldown and critical chance all flow through one multiplier in `core.useAbility()`. **Panggung Abadi** (`src/bosspack.js`) adds 6 new bosses with 3–5 phases and full dialogue, fought as a sequential gauntlet in the Hearthfall hub (25% HP between guardians, per-guardian clears and best time). Each boss now selects its own procedural theme through `BOSS_TRACKS`; six new boss tracks and a per-phase intensity layer (filter, low pulse, percussion) make fights escalate with each phase. The 120 Hz simulation replaces `Array#filter` with in-place compaction in the projectile/fx/enemy loops for a measured **1.27×** step-throughput gain (`npm run bench:sim`). Tests: **251/251**; new browser smoke `npm run smoke:skill` passes 18 checks including the full six-boss gauntlet and save persistence. Boss count is **70**; room count remains **414**.
+
+### Previous release note — v0.8.0 Hearthfall: The Hollow Court
+
+v0.8.0 adds a playable third campaign wing at global room indices **354–413**: 6 zones, 60 rooms, 24 enemies, 12 multi-phase bosses (3–4 phases), 8 data-driven weapons, 12 tools, 13 selectable classes, a 6-room player house with 24 furnishings and 8 NPC residents with affinity/quests, and 9 procedural music tracks. It reuses the established contracts (`ALL_ROOMS`, `ALL_ENEMY_INFO`, `ALL_BOSS_INFO`, `WEAPONS`, `ZONES`, `TRACKS`, `progress.court`) and preserves the legacy 14-room campaign, 100 expansion levels, 240 Atlas rooms, and v0.7.0 labyrinth/co-op. v0.8.0 also adds a real graphics menu (AA, FOV, render distance, quality bias, particles), an inventory loadout/keybind panel, a live local clock with stage timer, and persisted best/last clear times shown on victory and credits. Tests: **237/237** plus `npm run smoke:court`. The mark curve is explicitly tested: a tool is reachable in four rooms, a weapon in six, and one full clear funds all weapons and tools without trivializing the house or trials. Measured hot paths remain: room lookup **5.82×**, cached house bonus aggregate **7.85×**; resident lookup is at parity (0.98×) because the roster has only eight entries.
 
 ---
 
@@ -49,13 +61,13 @@
 | Persistence | Settings stored separately; v0.0.7 progress saves migrate into the map model; 14-room progress arrays extend without reindexing |
 | Interactive map | Fog of war, zone colours, player/boss markers, tooltips, legend, pan/zoom/recenter, 10 persistent pins, 14-node layout |
 | Zones | Five zone definitions (`ashen`, `mycelial`, `cistern`, `frostglass`, `cinder`) with palette, particle, map colour, music IDs |
-| Content | 14 legacy rooms + 100 expansion levels, 6 legacy bosses + 30 expansion bosses, 10 playable characters, 3 weapons, 7 legacy codex enemies, codex, prologue, 18-item shop, checkpoints, Mycelial Hollow branch |
+| Content | 14 legacy rooms + 100 expansion levels + 240 Atlas rooms (354 total), 6 legacy bosses + 30 expansion bosses + 16 Atlas bosses, 10 playable characters, 3 weapons, 7 legacy codex enemies, codex, prologue, 18-item shop, checkpoints, Mycelial Hollow branch, 8 Atlas zones with story/lore/shops/gear |
 | Items | 4 permanent Sigils, 4 Ritual items, 6 consumables, quick-item cycling, in-run inventory, Whetstone damage buff |
 | Expansion | 10 chapters × 10 levels, 10 biomes, 100 enemy types / 300 variants, 20 mini-bosses + 10 major bosses, 5 difficulties, 6 modifiers, 5 NG+ tiers, 8 repeatable modes, 4 endgame trials |
 | Settlements | Thornveil Haven + 7 outposts, 52 NPCs, 8 permanent upgrades, 12 quests, 8 settlements |
 | Events & cosmetics | 6 seasonal Ashen Chronicle events, 32 visual-only skins, 12-category / 120-entry collection journal |
 | Meta UI | In-game Update Log backed by `src/updates.js`, inventory overlay, HUD quick-item badge, expansion hub (campaign / haven / chronicle / wardrobe) |
-| Tests | 103 Node tests + browser smoke coverage for gates, trampoline, climb, secret wall, boss phases, flask reward, persistence, shop, inventory, update log, and expansion data/migration/events |
+| Tests | 186 Node tests + browser smoke coverage for gates, trampoline, climb, secret wall, boss phases, flask reward, persistence, shop, inventory, update log, expansion data/migration/events, Overdrive foundations, and Atlas rooms/lore/shops/gear/pathfinding |
 
 Known gaps after v0.3.0: Tidewrought Cistern, Frostglass Cathedral, and Cinder Maw still have zone configuration but no playable legacy rooms; no branching story or multiple endings; no fast travel. The Echoes expansion is a content layer, not Milestone C.
 
@@ -68,6 +80,27 @@ Known gaps after v0.3.0: Tidewrought Cistern, Frostglass Cathedral, and Cinder M
 - `src/mode3d.js`: Full zero-dependency 3D Metroidvania simulation and Canvas software renderer. Implements third-person follow camera, lock-on targeting, free 3D character movement, jump, double jump, glider descent, air dash, 3D combat combos, parry, stagger/poise, and complete **Thornveil Forest vertical slice** with interactive tribal village, NPCs (Elder Tova, Scout Rian, Shaman Lyra), 3 enemy types, Thornveil Alpha elite, and Elder Yggvar colossal boss.
 - Main menu UI entries for **ASHEN VOW: 3D MODE** and **INFINITE FRONTIERS — BEYOND THE VEIL**.
 - Acceptance verified: 116/116 Node tests pass green.
+
+### Shipped expansion — v0.6.0: The Sundered Atlas (Parts V–VII) — COMPLETE
+
+**Goal:** turn the post-campaign Atlas into a playable, persistent, eight-zone expansion with story, lore, boss navigation, performance presets, and a full gear/economy layer.
+
+**Shipped:**
+- `src/atlas.js`: 8 zones across 4 world tiers, 240 deterministic rooms (global indices 114–353), 6 ability gates, 24 enemies, 8 zone bosses + 8 mini-bosses, 8 chapters with 4 endings, an 11-category / 33-entry lore encyclopedia with 3-tier reveals and completion rewards, 55 consumables, 12 recipes, 6 shops, 12 armor sets, 15 charms, 40 weapons with mastery and 6 infusions, 5 quality presets, a 15-phase handoff plan, and a 28-item release checklist.
+- `src/boss_pathfinding.js`: platform graph construction, A*, reachable-node queries, `BossNavigator` with stuck recovery, attack scoring/selection, and a deterministic 100-run boss bot.
+- Core integration: `ALL_ROOMS` grows to 354; Atlas enemies/bosses join `ALL_ENEMY_INFO` / `ALL_BOSS_INFO`; ability gates are enforced by `roomGateDefs`; Atlas bosses attach a navigator; `finishBoss` only emits legacy `campaignComplete` for rooms 14–113.
+- Atlas hub in `src/main.js`: zones/rooms, story, lore search/filter/reveal, shops with reputation pricing, gear equip/infusion, consumable inventory + quick-slot assignment + cooking/crafting, and systems diagnostics (validator, boss bot, quality presets, phases, checklist).
+- Atlas runs: room access up to `maxClearedLocal + 2`, zone-boss clears grant abilities and zone gear, quick slots 1–4 use Atlas consumables, temporary buffs/regen are ticked deterministically, and final-boss clears record one of four endings.
+- Persistence: `progress.atlas` under the existing `ashen-vow-progress-v1` key; hostile/sparse saves sanitize safely; Atlas gear bonuses apply only while `game.atlasRun` is true.
+- Acceptance verified: 186/186 Node tests pass, including 27 Atlas tests (rooms/validator/lore/shops/gear/progression/loadout/A*/navigator/attack scoring/100-run bot). A real headless-Chrome CDP smoke covers all seven hub tabs, shop purchase, quick-slot assignment/use, lore reveal, gear equip/infusion, validator, boss bot, an Atlas room run/retry, a zone-boss clear with navigator and ability/gear grants, and the final ending with zero console errors.
+
+### Foundations — v0.5.0: Overdrive (The Eternal Realm) — IN PROGRESS
+
+**Shipped foundations:**
+- `src/overdrive.js`: 10 chapters / 100 level specifications (201–300), 8 spell schools × 4 spells, 16 weapon categories and 8 legendary weapons, 50 enemies + 10 elite modifiers, 12 modes, 30 NPCs, 10 story questlines, and progress sanitization.
+- `src/boss_overdrive.js`: `BossHealthSystem` (HP/armor/shield/stagger/enrage/phases/summons) and `BossPhaseController` with arena hazard and enrage escalation.
+- `src/perf.js`: `DiagnosticProfiler`, `FrustumCuller` (2D/3D), `ObjectPool`, `AIScheduler`, `SaveMigrator`, and `BenchmarkRunner`.
+- Overdrive hub/menu entry and 18-item acceptance checklist; full 201–300 campaign integration remains future work.
 
 ### Shipped expansion — v0.3.0: Echoes of the Forgotten World — COMPLETE
 

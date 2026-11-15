@@ -1,9 +1,162 @@
 // Ashen Vow — release history shown in the in-game Update Log.
 // Keep the newest entry first. `GAME_VERSION` is the single source of truth
 // for the version shown by the Update Log screen and the debug hooks.
-export const GAME_VERSION = '0.4.0';
+export const GAME_VERSION = '0.10.0';
 
 export const UPDATE_LOG = [
+  {
+    version: '0.10.0',
+    date: '15 November 2026',
+    title: 'FAEWOOD — TAMAN PERI',
+    tag: '10 TAHAP PERI · 2 BOS BARU · v0.10.0',
+    summary:
+      'Bioma peri baru: sepuluh tahap Taman Peri yang harus dituntaskan berurutan sebelum singgasana bos terbuka. Di baliknya menanti Gelora si Slime Magma dan Sylvara si Naga Peri Spektral, ditemani jamur kecil, peri duri, dan penjaga elit di sepanjang jalan.',
+    highlights: [
+      'Faewood — Taman Peri: satu zona baru dengan sepuluh tahap berurutan (Gerbang Lumut sampai Gerbang Singgasana, indeks global 414–423) dan dua arena bos (424–425); gerbang tiap tahap baru terbuka setelah tahap sebelumnya tuntas, dan kedua bos terkunci sampai seluruh sepuluh tahap selesai.',
+      'Gelora, Slime Magma: bos 4 fase dengan pola summon, HP 1600, serangan hentakan, dan anak-anak slime magma yang lahir setiap fase; hadiah blessing lalu membuka gerbang ke arena naga.',
+      'Sylvara, Peri Naga Spektral: bos terbang 4 fase dengan pola rain, HP 2600, summon kunang peri, dan gelombang cahaya; kemenangannya menuntaskan Taman Peri.',
+      'Naga berubah wujud di fase 3 dan 4: fase 3 menjadi Sylvara, Seraph of the Woven Sky dan membawa arena ke tema surga (cakrawala keemasan, partikel cahaya), fase 4 menjadi Vharos, Demon Lord of the Last Vow dan menenggelamkan arena ke tema neraka (langit merah, bara, partikel api). Palet latar, partikel, nama, judul, dan musik bos ikut berganti lewat arenaTheme tanpa mengubah data ruang.',
+      'Sepuluh mob jamur/peri: Topi Kerdil, Bal Spora, dan Kunang Peri sebagai gerombolan kecil, Peri Duri, Ngengat Lentera, Duelis Sayap, Gumpalan Magma, satu elite — Penjaga Miselium — serta Raksasa Jamur dan Sesepuh Spora yang melahirkan anak kecil.',
+      'Empat NPC peri mungil — Pipp, Nia, Moss, dan Wick — digambar langsung di ruang tahap dan menyapa dengan satu baris dialog saat ruang dimuat.',
+      'Cutscene potret 20 detik sebelum duel terakhir menampilkan Sylvara, mahkota sayapnya, dan ancaman yang menutup gerbang Opus; bisa dilewati dengan Esc atau tombol LEWATI.',
+      'Post-credit 30 detik setelah naga gugur: epilog tentang Demon Lord yang tumbang dan kerajaan Opus yang akhirnya bebas dari cengkeramannya, diputar otomatis di atas layar kemenangan.',
+      'Tiga track musik prosedural baru: faewood untuk eksplorasi, magmaBoss untuk slime, dan fairyBoss untuk naga; setiap bos memakai temanya sendiri plus eskalasi fase yang sudah ada.',
+      'Musik celebration menggantikan victory theme selama layar kemenangan Taman Peri tampil.',
+      'Hub Taman Peri di menu utama menampilkan ringkasan progres, status tiap tahap (tuntas/terbuka/terkunci), dan dua kartu bos dengan HP, fase, pola, serta tombol yang hanya aktif setelah syaratnya terpenuhi.',
+      'Save baru di progress.fairy: status tahap, bos, jumlah run, dan rekor waktu; sanitizer menolak lompatan tahap dan menghapus clear bos yang tidak mungkin.',
+      'Test suite bertambah menjadi 264 test deterministik, termasuk validasi rantai 12 ruang, penguncian bos, sanitasi save, durasi cutscene, perubahan wujud bos, dan pertarungan bos nyata di core.',
+    ],
+    fixes: [
+      'Event roomEnter kini juga memancarkan npcHello untuk ruang yang punya NPC, sehingga dialog ambient tidak perlu loop UI terpisah.',
+      'Zona Faewood terdaftar di ZONES sehingga peta, palet, partikel spora, dan pemilihan musik bekerja tanpa cabang khusus di renderer.',
+      'hurtBoss berhenti lebih awal saat bos masih dalam i-frame fase, sehingga kerusakan saat transisi tidak pernah melewati fase atau memicu dua kali perubahan wujud.',
+      'arenaTheme dibersihkan saat ruang baru dimuat dan saat bos gugur, jadi tema surga/neraka tidak bocor ke run berikutnya.',
+    ],
+  },
+  {
+    version: '0.9.0',
+    date: '15 November 2026',
+    title: 'SKILL POINT — PANGGUNG ABADI',
+    tag: 'SKILL POINT · 6 BOS BARU · v0.9.0',
+    summary:
+      'Skill Point permanen: setiap bos yang gugur memberi poin yang bisa dibelanjakan pada keahlian ultimate, HP, abu, dan flask. Enam penjaga agung baru di Panggung Abadi membawa polish fase 3–5, dialog lengkap, dan tema musik bos sendiri; simulasi 120 Hz juga dipadatkan dengan pengukuran benchmark.',
+    highlights: [
+      'Sistem Skill Point: dua cabang (Sumpah Ultimate, Sumpah Tubuh), enam keahlian, 23 peringkat — Tebasan Membara (+15% damage ultimate per peringkat), Napas Kedua (−6% cooldown), Titik Hancur (+5% kritik ultimate), Sumpah Badan (+12 HP), Panen Abu (+10% abu), dan Pembawa Tegukan (+1 flask).',
+      'Ultimate kini diskalakan oleh poin: damage ultimate di core dikalikan peringkat, peluang kritik ×1.75, dan cooldown dipendekkan; panel Skill Point di layar karakter menampilkan damage/CD ultimate secara langsung serta respec gratis.',
+      'Ekonomi poin: kemenangan pertama atas suatu jenis bos memberi 2 poin, pengulangan setiap tiga kali memberi 1 poin, menuntaskan Panggung Abadi memberi 5 poin, dan menyelesaikan kampanye Echoes memberi 4 poin.',
+      'Panggung Abadi: enam bos baru dengan 3–5 fase dan pola slam/volley/ring/charge/summon/rain — Malveth the Ash King, Ilyra the Glass Warden, Abbot Vurn the Hollow, Valkyr of the Ninth Storm, Seraph of the Last Dawn, dan The Oath Eater Final Judge.',
+      'Gauntlet berurutan dengan hadiah HP 25% antar penjaga, progres per penjaga, rekor waktu, dan Skill Point tambahan saat menuntaskan seluruh rangkaian; dapat dimulai dari tab Perjalanan Hearthfall.',
+      'Enam track musik bos baru (bossAsh, bossGlass, bossAbbot, bossStorm, bossDawn, bossJudge) memakai mesin prosedural yang sama, plus peta BOSS_TRACKS sehingga setiap bos — lama, court, maupun pack — memakai temanya sendiri.',
+      'Musik bos kini naik intensitas per fase: filter dibuka, lapisan pulsa rendah ditambahkan, dan perkusi menguat saat fase naik, lalu kembali tenang setelah bos gugur.',
+      'Optimasi terukur: kompaksi array in-place menggantikan Array#filter pada proyektil, efek, dan musuh di hot loop 120 Hz; tools/sim-bench.mjs mengukur 1.27× throughput langkah simulasi (25.091 vs 19.683 langkah/detik pada adegan 10 musuh, 160 proyektil, 220 efek).',
+      'Save baru di progress.skills dan progress.pack dengan sanitizer yang membatasi peringkat, menyaring ID tak dikenal, dan tetap mempertahankan field masa depan.',
+      'Test suite bertambah menjadi 251 test deterministik: model Skill Point, penskalaan ultimate di core, enam bos pack, progres gauntlet, serta keamanan MusicManager tanpa AudioContext.',
+    ],
+    fixes: [
+      'Ultimate tidak lagi memakai angka tetap per kelas tanpa pengali: semua cabang ability sekarang melewati satu pengali damage ultimate yang sama, termasuk proyektil yang dilahirkan ability.',
+      'Bonus HP dan flask dari Skill Point dihitung sebagai delta, sehingga menaikkan lalu mereset peringkat tidak menumpuk atau menghapus HP secara permanen.',
+      'Setiap bosDown dan labyrinthBossDown memberi poin lewat satu jalur, sehingga bos kampanye, expansion, Atlas, court, labirin, dan pack konsisten.',
+    ],
+  },
+  {
+    version: '0.8.0',
+    date: '14 November 2026',
+    title: 'HEARTHFALL — THE HOLLOW COURT',
+    tag: 'RUMAH · KAMPANYE BARU · v0.8.0',
+    summary:
+      'Perapian terakhir Opus menjadi rumah: 6 zona dan 60 level baru, 12 bos dengan 3–4 fase, 8 senjata data-driven, 12 alat, 13 kelas, 6 ruangan rumah yang bisa ditingkatkan, 24 perabot, 8 penghuni dengan misi pribadi, sembilan track musik prosedural, jam lokal langsung, inventaris dengan keybind, dan kurva ekonomi yang diuji agar tidak terlalu cepat atau terlalu lambat.',
+    highlights: [
+      'Hearthfall: enam zona — Pendopo Abu, Kebun Kaca, Istana Rongga, Pabrik Abu, Menara Jaga, dan Relikui Abu — masing-masing 10 ruang, total 60 level dengan indeks global 354–413 dan gerbang progresif.',
+      'Dua belas bos: Cinder Steward, Mother Hearth, The Pruned Choir, The Orchard Saint, The Hollow Regent, The Nameless Sovereign, The Bellows Captain, The Forge King, The Vigil Captain, The Dawnless Watch, The Relic Sexton, dan The First Vow; mini-bos 3 fase, bos zona 4 fase, pola slam/volley/rain/charge/summon/ring, serta dialog intro, setiap fase, dan defeat.',
+      'Dua puluh empat musuh baru dengan tujuh arketipe AI yang sudah teruji, statistik per zona, dan varian elite.',
+      'Delapan senjata data-driven: kapak, bilah kembar, tombak, gada gelombang kejut, busur ulang, tongkat bara, sabit lifesteal, dan bilah wasiat; kombo serta proyektil ditentukan data, bukan cabang hardcoded.',
+      'Dua belas alat dengan slot charm/boots/relic dan bonus yang dijumlahkan ke run: HP, flask, damage, kecepatan, abu, dan penyembuhan.',
+      'Tiga kelas court-native: Ashwright (terjangan tempa + gelombang kejut), Hearthkeeper (lingkar penyembuhan + kebal), dan Glassblade (tiga tombak cermin menembus); total 13 kelas yang bisa dipilih di menu karakter.',
+      'Rumah Hearthfall: 6 ruangan (aula, dapur, tungku, kapel, kebun, gudang) hingga level 3, 24 perabot, kehangatan, serta bonus permanen yang berlaku di run court.',
+      'Delapan penghuni NPC dengan dialog berdasarkan ikatan, hadiah, dan misi tiga langkah yang memberi Tanda Perapian, senjata, atau alat.',
+      'Tantangan court: Ronda Para Penjaga (dua belas bos berurutan) dan Jalan Kaca (10 ruang tanpa perapian), lengkap dengan rekor waktu dan kemenangan; Sumpah Berulang +0–4 menskalakan HP/damage musuh dan memberi bonus Tanda Perapian.',
+      'Sembilan track musik prosedural baru: hearthfall, glassorchard, hollowcourt, cinderworks, lastvigil, reliquary, courtBoss, reliquaryBoss, dan hearth, memakai mesin musik yang sama tanpa file audio.',
+      'Optimasi terukur: indeks ruang O(1), agregasi bonus rumah yang di-memoize, statistik satu lintasan, dan benchmark tools/court-bench.mjs untuk memverifikasi biaya lookup serta cache.',
+      'Save baru di progress.court dengan sanitizer yang mempertahankan field masa depan, membatasi nilai, menyaring ID tak dikenal, dan menegakkan satu alat per slot.',
+      'Menu grafik nyata: preset, slider performa↔kualitas, anti-aliasing canvas, FOV 80–120°, render distance 50–100%, kepadatan partikel, dan penghitung FPS — semuanya mengubah renderer, bukan hanya tersimpan.',
+      'Jam lokal langsung di kanan atas, timer stage berjalan, inventaris berisi loadout/amunisi/alat dan ringkasan keybind dengan tombol menuju pengaturan kontrol, serta rekor waktu per stage yang tampil di layar kemenangan dan kredit.',
+    ],
+    fixes: [
+      'Logika misi NPC menghitung target per langkah (2 clear, 2 perabot, dan seterusnya) alih-alih memajukan satu langkah per event.',
+      'Senjata court memakai jalur serangan yang sama dengan pedang/busur/pike, sehingga i-frame, hitstop, dinding rahasia, dan defleksi proyektil tetap bekerja.',
+      'Test suite bertambah menjadi 237 test deterministik; kurva Tanda Perapian diuji eksplisit: alat termurah terjangkau dalam 4 ruang, senjata termurah dalam 6 ruang, satu clear penuh membiayai semua senjata/alat tanpa membeli seluruh rumah, dan setiap gerbang bos membuka zona berikutnya setelah berkah. Sanitizer pengaturan kini juga menguji FOV, render distance, bias kualitas, dan anti-aliasing.',
+    ],
+  },
+  {
+    version: '0.7.0',
+    date: '13 November 2026',
+    title: 'INFINITE LABYRINTH — CURSED REALMS',
+    tag: 'ENDLESS MODE · CO-OP · v0.7.0',
+    summary:
+      'Labirin tanpa lantai terakhir: 20 zona, 30 bos multi-fase, 40 barang terkutuk/ritual, tawaran kutukan, reward chamber, mastery permanen, serta co-op 2–4 pemain dengan host authoritative, snapshot terkuantisasi, revive, dan lobby room code.',
+    highlights: [
+      'Infinite Labyrinth: wave manager + encounter director deterministik, 4–7 gelombang per siklus, elite scaling E1–E7, bos setiap siklus, dan penskalaan non-linear hingga siklus 201+ tanpa batas.',
+      '20 zona labirin dengan palet, famili musuh, dan pool bos sendiri; 40 tipe musuh bernama dan 30 bos dengan 3–7 fase, rarity Common–Mythic, serta dialogue intro/fase/defeat.',
+      'Reward chamber: pilih satu dari tiga hadiah (barang, senjata, ritual, heal, flask, berkah, mata uang) dan kadang Cursed Bargain dengan keuntungan serta kerugian yang terlihat sebelum diterima.',
+      'Sistem barang terkutuk/ritual/korup/darah/void/purba/tome/soulbound: 40 barang dengan modifier positif dan negatif, 8 ritual dengan progres aktivasi, dan 6 Forbidden Synergy.',
+      'Mastery permanen: 6 mata uang, 8 jalur mastery, rank 1–10, leaderboard lokal, discovery zona/bos/barang/sinergi, dan checkpoint setiap 5 siklus yang menandai run tidak layak leaderboard.',
+      'Co-op 2–4 pemain: lobby room code + kata sandi, host authoritative, input 20 Hz, snapshot delta terkuantisasi dengan interest management dan interpolasi, scaling party 1.65×/2.2×/2.8× HP, downed state, revival, dan personal loot.',
+      'Relay WebSocket tanpa dependensi di server.js (/ws) dengan handshake RFC 6455, tagging pengirim, batas pesan, rate limit, host migration, dan dukungan LAN lewat HOST=0.0.0.0.',
+      'Performa: encounter dua siklus digenerate di muka, object reuse pada pool musuh/proyektil yang sudah ada, batas partikel, dan simulasi co-op hanya di host — klien tidak menjalankan AI atau fisika musuh.',
+      'Kompatibilitas save: progress.labyrinth disanitasi di key ashen-vow-progress-v1 tanpa menyentuh progress legacy, expansion, atlas, karakter, atau settings.',
+    ],
+    fixes: [
+      'Boss phase transition kini menyimpan dialogue override per-boss sehingga bos labirin memakai intro/fase/defeat sendiri.',
+      'Kerusakan pemain menghormati multiplier masuk dari armor/kutukan, penyembuhan flask menghormati heal multiplier, dan kritikal dari barang bekerja di hurtEnemy.',
+      'Boss labirin tidak lagi membuka blessing/victory kampanye; kematiannya memicu reward chamber labirin dan tidak mengubah gate kampanye.',
+      'Snapshot delta tidak lagi mengirim ulang bos, wave, atau proyektil yang tidak berubah.',
+      'Test suite bertambah 26 test deterministik untuk labirin dan co-op di samping 186 test lama.',
+    ],
+  },
+  {
+    version: '0.6.0',
+    date: '13 November 2026',
+    title: 'THE SUNDERED ATLAS',
+    tag: 'PARTS V–VII · MAJOR EXPANSION',
+    summary:
+      'Atlas terbelah menjadi delapan halaman dunia: 240 ruang baru, empat world tier, gerbang kemampuan, cerita delapan bab dengan empat akhiran, Indeks Sumpah sebelas kategori, pathfinding bos berbasis A*, serta ekonomi konsumabel, warung, zirah, jimat, dan senjata yang menyatu dengan progres lama.',
+    highlights: [
+      '8 zona baru — Taman Vael, Kandang Emas, Observatorium Bintang Jatuh, Hutan Layu, Gurun Jam Pasir, Katakombe Tanpa Iman, Palung Abyssal, dan Pengecoran Mesin — dengan 30 ruang masing-masing (240 total, indeks global 114–353).',
+      '4 world tier (Verdant, Celestial, Sunken, Machine) dan 6 ability gate: Sumpah Angin, Penglihatan Gema, Waktu Melambat, Langkah Kubur, Nafas Palung, dan Pacu Mesin.',
+      'Cerita Atlas: linimasa, tokoh, 8 bab, dan 4 akhiran yang ditentukan oleh ability gate, kelengkapan lore, dan bos yang dikalahkan.',
+      'Indeks Sumpah: 11 kategori, 33 entri lore dengan 3 tier pengungkapan, pencarian, filter kategori, fragmen, dan hadiah penyelesaian.',
+      'Pathfinding bos: platform graph + A*, navigator dengan pemulihan saat tersangkut, pemilihan serangan berbasis skor, dan bot deterministik 100 iterasi per bos.',
+      'Performa: frame budget, object pooling, frustum culling, AI scheduler, auto-quality, dan 5 preset kualitas latar (Low/Medium/High/Ultra/Auto).',
+      '55 konsumabel dengan quick slot 1–4, item wheel, 12 resep memasak/merakit, dan efek heal, buff, regen, lemparan, serta utilitas.',
+      '6 warung NPC dengan stok, harga reputasi, dan anti-eksploit; 12 set zirah, 15 jimat (maksimal 3 terpasang), dan 40 senjata dengan mastery serta 6 infusi.',
+      'Rencana serah terima 15 fase dan checklist rilis 28 butir yang dapat diperiksa langsung dari tab Sistem.',
+    ],
+    fixes: [
+      'Save lama tetap memakai key ashen-vow-progress-v1; progress Atlas berada di progress.atlas dan disanitasi tanpa menghapus data lama.',
+      'Kampanye 14 ruang dan ekspansi 100 level tidak berubah; bonus zirah, jimat, dan senjata Atlas hanya aktif di run Atlas.',
+      'Ruang bos mini tidak lagi menandai zona sebagai tuntas; kemampuan gerbang hanya diberikan oleh bos zona utama.',
+      'Validator ruang menolak platform, gerbang, musuh, atau bos yang tidak valid sebelum konten dimainkan.',
+    ],
+  },
+  {
+    version: '0.5.0',
+    date: '13 November 2026',
+    title: 'OVERDRIVE — THE ETERNAL REALM (FONDASI)',
+    tag: 'CORE SYSTEMS · IN PROGRESS',
+    summary:
+      'Fondasi Overdrive untuk Level 201–300: data 10 bab dan 100 level, 8 sekolah sihir dengan 32 mantra, sistem health/armor/shield/stagger/fase bos, serta lapisan performa dan diagnostik yang dipakai bersama oleh kampanye dan Atlas.',
+    highlights: [
+      '8 sekolah sihir — Storm, Void, Nature, Infernal, Frost, Celestial, Blood, dan Chronomancy — masing-masing 4 mantra (32 total).',
+      'BossHealthSystem dan BossPhaseController: health, armor, shield, stagger, enrage, fase, summon health, dan hazard arena.',
+      'DiagnosticProfiler, FrustumCuller, ObjectPool, AIScheduler, SaveMigrator, dan BenchmarkRunner untuk frame budget dan kestabilan simulasi.',
+      'Data 12 mode Overdrive, 50 musuh, 10 elite modifier, 16 kategori senjata, 8 legendary weapon, 30 NPC, dan 10 story questline.',
+      'Hub Overdrive dan tombol menu utama sudah terpasang; konten kampanye 201–300 akan menyusul di rilis berikutnya.',
+    ],
+    fixes: [
+      'Save migrator membuat backup sebelum menulis dan mencatat error berformat ISO.',
+      'Scheduler AI dan pool objek tidak lagi menduplikasi blok inisialisasi.',
+    ],
+  },
   {
     version: '0.4.0',
     date: '12 November 2026',

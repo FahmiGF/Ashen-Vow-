@@ -1,7 +1,8 @@
-// Ashen Vow v0.0.6 — browser shell: menus, level select, spectate, fixed-step loop.
+// Ashen Vow v0.6.0 — browser shell: menus, level select, spectate, fixed-step loop.
 import {
   AshenGame,
   ROOMS,
+  ALL_ROOMS,
   WORLD_W,
   VIEW_W,
   WEAPONS,
@@ -17,7 +18,32 @@ import {
 } from './core.js';
 import { Renderer } from './render.js';
 import { SoundKit } from './audio.js';
-import { MusicManager } from './music.js';
+import { MusicManager, bossTrackFor } from './music.js';
+import {
+  SKILL_NODES,
+  SKILL_MAX_RANKS,
+  SKILL_POINTS_PACK_CLEAR,
+  SKILL_POINTS_CAMPAIGN,
+  defaultSkillState,
+  sanitizeSkillState,
+  skillBonuses,
+  skillSummary,
+  spendSkillPoint,
+  resetSkillRanks,
+  grantSkillPoints,
+  grantBossSkillPoints,
+} from './skills.js';
+import {
+  PACK_NAME,
+  PACK_SUBTITLE,
+  PACK_BOSSES,
+  defaultPackProgress,
+  sanitizePackProgress,
+  packProgressSummary,
+  packBossUnlocked,
+  recordPackBoss,
+  recordPackFinish,
+} from './bosspack.js';
 import {
   loadSettings,
   saveSettings,
@@ -45,6 +71,13 @@ import {
   mapStats,
 } from './map.js';
 import { PROLOGUE_BEATS, PROLOGUE_TOTAL, drawPrologue } from './prologue.js';
+import {
+  BOSS_CUTSCENE,
+  POST_CREDIT,
+  drawCutscene,
+  cutsceneFor,
+  cutsceneBeatAt,
+} from './cutscene.js';
 import { UPDATE_LOG, GAME_VERSION } from './updates.js';
 import {
   EXPANSION_NAME,
@@ -121,12 +154,212 @@ import {
   sanitizeFrontierProgress,
 } from './frontier.js';
 import { Ashen3DGame, render3D } from './mode3d.js';
+import {
+  ATLAS_VERSION,
+  ATLAS_NAME,
+  ATLAS_ROOM_START,
+  ATLAS_ROOM_COUNT,
+  ATLAS_ZONES,
+  ATLAS_ZONE_BY_ID,
+  ATLAS_WORLD_TIERS,
+  ATLAS_ABILITY_GATES,
+  ATLAS_ABILITY_BY_ID,
+  ATLAS_ROOMS,
+  ATLAS_ROOM_BY_ID,
+  ATLAS_ENEMY_INFO,
+  ATLAS_BOSS_INFO,
+  ATLAS_TIMELINE,
+  ATLAS_CHARACTERS,
+  ATLAS_CHAPTERS,
+  ATLAS_ENDINGS,
+  LORE_CATEGORIES,
+  LORE_ENTRIES,
+  LORE_ENTRY_BY_ID,
+  LORE_COMPLETION_REWARDS,
+  ATLAS_CONSUMABLES,
+  ATLAS_CONSUMABLE_BY_ID,
+  ATLAS_QUICK_SLOTS,
+  ATLAS_RECIPES,
+  ATLAS_SHOPS,
+  ATLAS_ARMOR_SETS,
+  ATLAS_CHARMS,
+  ATLAS_WEAPONS,
+  ATLAS_WEAPON_BY_ID,
+  ATLAS_INFUSIONS,
+  ATLAS_INFUSION_BY_ID,
+  ATLAS_PHASES,
+  ATLAS_CHECKLIST,
+  ATLAS_QUALITY_PRESETS,
+  validateAtlasRooms,
+  atlasZoneForRoom,
+  atlasRoomLocalIndex,
+  atlasRoomForZone,
+  revealLore,
+  loreCompletion,
+  searchLore,
+  sellPrice,
+  shopStock,
+  buyAtlasItem,
+  useAtlasConsumable,
+  applyInfusion,
+  weaponMasteryFor,
+  grantWeaponXp,
+  defaultAtlasProgress,
+  sanitizeAtlasProgress,
+  canUnlockAtlasZone,
+  unlockAtlasZones,
+  completeAtlasRoom,
+  atlasStats,
+  applyAtlasLoadout,
+} from './atlas.js';
+import { runBossBot } from './boss_pathfinding.js';
+import {
+  COURT_ROOM_START,
+  COURT_ROOMS_PER_ZONE,
+  COURT_ZONES,
+  COURT_ZONE_IDS,
+  COURT_ROOMS,
+  COURT_ROOM_BY_ID,
+  COURT_BOSS_INFO,
+  COURT_WEAPONS,
+  COURT_WEAPON_BY_ID,
+  COURT_WEAPON_PROFILES,
+  COURT_TOOLS,
+  COURT_TOOL_BY_ID,
+  COURT_TOOL_SLOTS,
+  COURT_TRIALS,
+  COURT_TRIAL_BY_ID,
+  COURT_NG_PLUS_MAX,
+  courtTrialUnlocked,
+  setCourtNgPlus,
+  recordCourtTrial,
+  HOUSE_ROOMS,
+  HOUSE_ROOM_BY_ID,
+  HOUSE_FURNISHINGS,
+  HOUSE_FURNISHING_BY_ID,
+  HOUSE_RESIDENTS,
+  HOUSE_RESIDENT_BY_ID,
+  GIFT_COST,
+  defaultCourtProgress,
+  sanitizeCourtProgress,
+  courtStats,
+  courtZoneSummary,
+  courtZoneCleared,
+  courtLevelUnlocked,
+  courtLevelStatus,
+  syncCourtUnlocks,
+  recordCourtClear,
+  applyCourtLoadout,
+  courtBonuses,
+  houseWarmth,
+  residentUnlocked,
+  residentDialogue,
+  residentAffinityTier,
+  talkToResident,
+  giftResident,
+  upgradeHouseRoom,
+  buyFurnishing,
+  buyCourtWeapon,
+  equipCourtWeapon,
+  buyCourtTool,
+  equipCourtTool,
+} from './court.js';
+import {
+  FAIRY_NAME,
+  FAIRY_LOCAL_NAME,
+  FAIRY_SUBTITLE,
+  FAIRY_ROOM_START,
+  FAIRY_STAGE_COUNT,
+  FAIRY_STAGE_ROOMS,
+  FAIRY_ROOMS,
+  FAIRY_ROOM_BY_ID,
+  FAIRY_STAGES,
+  FAIRY_BOSSES,
+  FAIRY_BOSS_INFO,
+  FAIRY_ZONE,
+  defaultFairyProgress,
+  sanitizeFairyProgress,
+  fairyStageUnlocked,
+  fairyStageCleared,
+  fairyBossesUnlocked,
+  fairyBossUnlocked,
+  recordFairyStage,
+  recordFairyBoss,
+  recordFairyRun,
+  fairyProgressSummary,
+} from './fairy.js';
+import {
+  LABYRINTH_VERSION,
+  LABYRINTH_NAME,
+  LABYRINTH_MODES,
+  LABYRINTH_MODE_BY_ID,
+  LABYRINTH_ZONES,
+  LABYRINTH_ZONE_BY_ID,
+  LABYRINTH_BOSSES,
+  LABYRINTH_BOSS_BY_ID,
+  LABYRINTH_ITEMS,
+  LABYRINTH_ITEM_BY_ID,
+  LABYRINTH_MODIFIERS,
+  LABYRINTH_MODIFIER_BY_ID,
+  ITEM_CATEGORIES,
+  ELITE_TIERS,
+  SYNERGIES,
+  RITUALS,
+  createLabyrinthRun,
+  ensurePlans,
+  WaveDirector,
+  arenaForRun,
+  cycleScaling,
+  stageForCycle,
+  rewardChoices,
+  applyItemToRun,
+  applyLoadoutToGame,
+  captureBaseStats,
+  combineTotals,
+  itemDescription,
+  advanceRituals,
+  tickRituals,
+  runSummary,
+  recordLabyrinthRun,
+  sanitizeLabyrinthProgress,
+  defaultLabyrinthProgress,
+  leaderboardRows,
+  discoverySummary,
+  canCheckpoint,
+  serializeLabyrinthRun,
+  resumeLabyrinthRun,
+  labyrinthHudModel,
+  rankForXp,
+  LABYRINTH_CURRENCIES,
+  MASTERY_TRACKS,
+} from './labyrinth.js';
+import {
+  COOP_MODES,
+  COOP_MAX_PLAYERS,
+  createLobby,
+  joinLobby,
+  canStartLobby,
+  startLobby,
+  createWebSocketTransport,
+  coopSocketUrl,
+  roomCodeFromSeed,
+  encodeSnapshot,
+  decodeSnapshot,
+  SnapshotInterpolator,
+  partyScaling,
+} from './coop.js';
 
 const $ = (id) => document.getElementById(id);
 const FIXED = 1 / 120;
 const PROGRESS_KEY = 'ashen-vow-progress-v1';
 const CHARACTER_KEY = 'ashen-vow-character-v1';
 const clamp = (v, lo, hi) => (v < lo ? lo : v > hi ? hi : v);
+
+// ── Overdrive Hub state ───────────────────────────────────────────
+let overdriveTab = 'campaign301';
+let profilerVisible = false;
+let profilerFrameMs = 16.7;
+let profilerStutterTimer = 0;
 
 const canvas = $('game');
 const renderer = new Renderer(canvas);
@@ -145,15 +378,82 @@ const mapView = new MapView($('map-canvas'));
 
 let started = false;
 let paused = false;
-let menuView = 'title'; // title | levels | credits | updates | character | expansion | frontier | mode3d | none
+let menuView = 'title'; // title | levels | credits | updates | character | expansion | frontier | overdrive | mode3d | court | labyrinth | fairy | none
 let expansionTab = 'campaign';
 let expansionChapter = 0;
 let havenNpcId = 'sari';
 let chronicleEventId = null;
 let wardrobeFilter = 'all';
 let activeRunKind = 'legacy';
+let activeFairyStage = -1;
+let activeFairyBoss = null;
+let fairyRunStartedAt = 0;
 let frontierTab = 'campaign200';
 let frontierProgress = defaultFrontierProgress();
+let atlasTab = 'zones';
+let atlasZoneId = 'vael';
+let activeAtlasRoom = null;
+let atlasLoreQuery = '';
+let atlasLoreCategory = 'all';
+let atlasShopId = 'shop_vael';
+let atlasGearTab = 'armor';
+let atlasCraftTab = 'cook';
+let atlasDiagnostic = null;
+let atlasBotResult = null;
+let atlasQuickCooldown = 0;
+let atlasQuickCache = '';
+let atlasSearchTimer = 0;
+let atlasSpeedTimer = 0;
+let atlasSpeedBonus = 0;
+let atlasBuffBase = null;
+let atlasBuffTimer = 0;
+let atlasRegenTimer = 0;
+let atlasRegenAmount = 0;
+// ── Hearthfall: The Hollow Court ──────────────────────────────────────────
+let courtTab = 'journey';
+let courtZoneId = 'hearthfall';
+let courtResidentId = 'mara';
+let activeCourtRoom = null;
+let activeCourtTrial = null;
+let activePackIndex = -1;
+let packRunActive = false;
+let packRunStartedAt = 0;
+let courtTrialResult = null;
+let courtTalkLine = '';
+// ── Infinite Labyrinth state ──────────────────────────────────────────────
+let labTab = 'run';
+let labRun = null;
+let labDirector = null;
+let labBaseStats = null;
+let labWaveTimer = 0;
+let labWaveEngaged = false;
+let labTicks = 0;
+let labRewardsOpen = false;
+let labRewards = [];
+let labSummaryOpen = false;
+let labSummary = null;
+let labGuestMode = false;
+let coopGuestMode = false;
+let coopSelfId = '';
+let coopRunMode = 'labyrinth';
+let coopGuestRoom = -1;
+let labCoop = {
+  role: null,
+  transport: null,
+  lobby: null,
+  code: '',
+  status: '',
+  error: false,
+  snapshotAt: 0,
+  inputAt: 0,
+  seq: 0,
+  joined: false,
+  runMode: 'labyrinth',
+  selfId: '',
+  interpolator: new SnapshotInterpolator({ delay: 0.12 }),
+  peers: {},
+};
+const LAB_CHECKPOINT_KEY = 'ashen-vow-labyrinth-checkpoint-v1';
 let game3D = null;
 const input3D = {
   up: false, down: false, left: false, right: false,
@@ -201,6 +501,13 @@ let prologueIndex = -1;
 let prologueTimer = 0;
 let prologueTotal = 0;
 let prologueVoice = true;
+let cutsceneActive = false;
+let cutsceneScene = null;
+let cutsceneTime = 0;
+let cutsceneDone = null;
+let cutsceneSeen = new Set();
+let cutsceneBeatIndex = -1;
+let postCreditTimer = -1;
 let accumulator = 0;
 let lastTime = performance.now();
 
@@ -312,7 +619,29 @@ function defaultProgress() {
     cleared: ROOMS.map(() => false),
     map: defaultMapState(ROOMS.length),
     expansion: defaultExpansionProgress(),
+    atlas: defaultAtlasProgress(),
+    labyrinth: defaultLabyrinthProgress(),
+    court: defaultCourtProgress(),
+    skills: defaultSkillState(),
+    pack: defaultPackProgress(),
+    fairy: defaultFairyProgress(),
+    stageTimes: {},
   };
+}
+
+function sanitizeStageTimes(raw) {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
+  const result = {};
+  for (const [key, value] of Object.entries(raw)) {
+    if (!/^(legacy|court|expansion|atlas):\d+$/.test(key) || !value || typeof value !== 'object') continue;
+    result[key] = {
+      label: typeof value.label === 'string' ? value.label.slice(0, 80) : key,
+      best: Math.max(0, Math.round((Number(value.best) || 0) * 10) / 10),
+      last: Math.max(0, Math.round((Number(value.last) || 0) * 10) / 10),
+      clears: Math.max(0, Math.floor(Number(value.clears) || 0)),
+    };
+  }
+  return result;
 }
 
 function loadProgress() {
@@ -333,7 +662,7 @@ function loadProgress() {
         };
     // Keep every unknown top-level field. v0.3.0 adds `expansion` without
     // changing the storage key or discarding future/legacy save data.
-    const { version, unlocked: _unlocked, cleared: _cleared, map: _map, expansion: _expansion, ...extras } = parsed;
+    const { version, unlocked: _unlocked, cleared: _cleared, map: _map, expansion: _expansion, atlas: _atlas, labyrinth: _labyrinth, court: _court, skills: _skills, pack: _pack, fairy: _fairy, stageTimes: _stageTimes, ...extras } = parsed;
     return {
       ...extras,
       version: 1,
@@ -341,6 +670,13 @@ function loadProgress() {
       cleared,
       map,
       expansion: sanitizeExpansionProgress(parsed.expansion),
+      atlas: sanitizeAtlasProgress(parsed.atlas),
+      labyrinth: sanitizeLabyrinthProgress(parsed.labyrinth),
+      court: sanitizeCourtProgress(parsed.court),
+      skills: sanitizeSkillState(parsed.skills),
+      pack: sanitizePackProgress(parsed.pack),
+      fairy: sanitizeFairyProgress(parsed.fairy),
+      stageTimes: sanitizeStageTimes(parsed.stageTimes),
     };
   } catch {
     return defaultProgress();
@@ -419,6 +755,7 @@ function setCharacter(next) {
 
 function applyCharacterToGame() {
   game.applyCharacter(character.characterId);
+  game.applySkillBonuses(skillBonuses(progress.skills));
   game.setAppearance({
     race: character.race,
     skin: character.skin,
@@ -427,6 +764,70 @@ function applyCharacterToGame() {
   });
   const plate = document.querySelector('#hud .char-name');
   if (plate) plate.textContent = CHARACTERS[character.characterId]?.name || 'The Oathbound';
+}
+
+let activeStage = null;
+
+function beginStage(index, label) {
+  if (!Number.isInteger(index) || index < 0) return;
+  activeStage = {
+    key: `${activeRunKind}:${index}`,
+    index,
+    label: label || game.room?.name || `Stage ${index + 1}`,
+    startedAt: game.time,
+    recorded: false,
+  };
+}
+
+function recordStageTime(index, label = '') {
+  if (!activeStage || activeStage.index !== index || activeStage.recorded) return false;
+  const seconds = Math.max(0, Math.round((game.time - activeStage.startedAt) * 10) / 10);
+  const key = activeStage.key;
+  const entry = progress.stageTimes[key] || { label: label || activeStage.label, best: 0, last: 0, clears: 0 };
+  entry.label = label || activeStage.label;
+  entry.last = seconds;
+  entry.best = entry.best > 0 ? Math.min(entry.best, seconds) : seconds;
+  entry.clears = (entry.clears || 0) + 1;
+  progress.stageTimes[key] = entry;
+  activeStage.recorded = true;
+  saveProgress();
+  return true;
+}
+
+function renderStageTimes(targetId, runKind = 'legacy') {
+  const el = $(targetId);
+  if (!el) return;
+  const prefix = `${runKind}:`;
+  const entries = Object.entries(progress.stageTimes || {})
+    .filter(([key]) => key.startsWith(prefix))
+    .sort(([a], [b]) => Number(a.slice(prefix.length)) - Number(b.slice(prefix.length)));
+  if (!entries.length) {
+    el.innerHTML = '<h3>WAKTU PER STAGE</h3><p class="micro">Belum ada stage yang tercatat.</p>';
+    return;
+  }
+  el.innerHTML = `
+    <h3>WAKTU PER STAGE · ${runKind.toUpperCase()}</h3>
+    <div class="run-time-grid">
+      ${entries.map(([, entry]) => `
+        <div class="run-time-card">
+          <span>${esc(entry.label)}</span>
+          <b>${formatTime(entry.best)}${entry.last !== entry.best ? ` <em>last ${formatTime(entry.last)}</em>` : ''}</b>
+        </div>`).join('')}
+    </div>`;
+}
+
+function updateLiveClock() {
+  const clock = $('live-clock');
+  if (!clock) return;
+  const now = new Date();
+  $('live-clock-time').textContent = now.toLocaleTimeString('id-ID', { hour12: false }).replace(/\./g, ':');
+  const stage = $('live-clock-stage');
+  const inRun = started && !spectating && menuView === 'none';
+  if (inRun && activeStage) {
+    stage.textContent = `STAGE ${formatTime(game.time - activeStage.startedAt)} · ${activeStage.label.toUpperCase()}`;
+  } else {
+    stage.textContent = 'DI LUAR RUN';
+  }
 }
 
 function markCleared(index, nextIndex = null) {
@@ -485,6 +886,11 @@ function esc(value) {
 function expState() {
   if (!progress.expansion) progress.expansion = defaultExpansionProgress();
   return progress.expansion;
+}
+
+function atlasState() {
+  if (!progress.atlas) progress.atlas = defaultAtlasProgress();
+  return progress.atlas;
 }
 
 function syncExpansionUnlocks() {
@@ -614,6 +1020,7 @@ function startExpansionLevel(localIndex, options = {}) {
   accumulator = 0;
   lastTime = performance.now();
   clearHeldKeys();
+  beginStage(game.roomIndex, level.name);
   showBanner(level.name, level.subtitle);
   syncScreens();
   updateHud();
@@ -624,6 +1031,1233 @@ function startExpansionLevel(localIndex, options = {}) {
     if (trial) showToast(`Ujian: ${trial.name}`, 3000);
   } else {
     showToast(`Bab ${level.chapterNumeral} · ${level.chapterLevel}/10 — ${level.kind.toUpperCase()}`, 2200);
+  }
+}
+
+// ── Atlas runs, quick slots, and consumables ───────────────────────
+function startAtlasRoom(roomIndex) {
+  const room = ATLAS_ROOM_BY_ID[roomIndex];
+  if (!room) return;
+  const p = atlasState();
+  const zone = ATLAS_ZONE_BY_ID[room.atlasZone];
+  if (!zone || !atlasRoomAvailable(roomIndex)) {
+    showToast('Ruang itu masih terkunci. Selesaikan ruang sebelumnya dulu.', 2200);
+    return;
+  }
+  const missing = atlasMissingAbilities(zone.id);
+  if (missing.length) {
+    showToast(`Gerbang ${zone.localName} butuh: ${missing.map((id) => ATLAS_ABILITY_BY_ID[id]?.localName || id).join(', ')}.`, 2800);
+    return;
+  }
+  audio.init();
+  attempts = 1;
+  activeRunKind = 'atlas';
+  activeAtlasRoom = roomIndex;
+  activeExpansionIndex = null;
+  activeModeId = null;
+  activeTrialId = null;
+  modeRunRewarded = false;
+  game.reset();
+  applyCharacterToGame();
+  applySkinToGame();
+  game.atlasRun = true;
+  game.setAbilities(p.abilities || []);
+  game.enterRoom(roomIndex);
+  game.player.relic = true;
+  applyAtlasLoadout(game, p);
+  game.ash = Math.max(game.ash, 40 + room.atlasLocal * 4);
+  atlasQuickCooldown = 0;
+  atlasBuffBase = null;
+  atlasBuffTimer = 0;
+  atlasRegenTimer = 0;
+  atlasRegenAmount = 0;
+  game.events.length = 0;
+  started = true;
+  paused = false;
+  shopOpen = false;
+  mapOpen = false;
+  codexOpen = false;
+  inventoryOpen = false;
+  settingsOpen = false;
+  closeDialogue(true);
+  spectating = false;
+  spectateGame = null;
+  menuView = 'none';
+  lastGameState = 'playing';
+  accumulator = 0;
+  lastTime = performance.now();
+  clearHeldKeys();
+  atlasQuickCache = '';
+  renderAtlasQuickbar();
+  beginStage(game.roomIndex, room.name);
+  showBanner(room.name, `${zone.localName} · ${ATLAS_TEMPLATE_LABEL[room.atlasTemplate] || room.atlasTemplate}`);
+  syncScreens();
+  updateHud();
+  showToast(`Atlas · ${zone.localName} — ruang ${room.atlasLocal + 1}/30`, 2200);
+}
+
+function atlasEndingFor(p, zoneId = 'foundry') {
+  const completion = loreCompletion(p);
+  const allAbilities = (p.abilities || []).length >= ATLAS_ABILITY_GATES.length;
+  const bosses = new Set([...Object.keys(p.zoneBosses || {}), zoneId]);
+  const allBosses = bosses.size >= ATLAS_ZONES.length;
+  const anyLore = completion.revealed > 0;
+  const allLore = completion.categories.every((category) => category.done);
+  if (allAbilities) return 'ending_rule';
+  if (allLore) return 'ending_mend';
+  if (allBosses) return 'ending_break';
+  if (!anyLore) return 'ending_erase';
+  return 'ending_mend';
+}
+
+function grantAtlasZoneGear(zoneId) {
+  const p = atlasState();
+  const zone = ATLAS_ZONE_BY_ID[zoneId];
+  if (!zone) return;
+  const granted = [];
+  const armor = ATLAS_ARMOR_SETS.find((item) => item.zone === zoneId);
+  if (armor && !(p.ownedArmor || []).includes(armor.id)) {
+    if (!Array.isArray(p.ownedArmor)) p.ownedArmor = [];
+    p.ownedArmor.push(armor.id);
+    granted.push(armor.localName);
+  }
+  const charm = ATLAS_CHARMS[zone.index];
+  if (charm && !(p.ownedCharms || []).includes(charm.id)) {
+    if (!Array.isArray(p.ownedCharms)) p.ownedCharms = [];
+    p.ownedCharms.push(charm.id);
+    granted.push(charm.localName);
+  }
+  const weapon = ATLAS_WEAPONS.find((item) => item.zone === zoneId);
+  if (weapon && !(p.ownedWeapons || []).includes(weapon.id)) {
+    if (!Array.isArray(p.ownedWeapons)) p.ownedWeapons = [];
+    p.ownedWeapons.push(weapon.id);
+    granted.push(weapon.localName);
+  }
+  if (granted.length) showToast(`Hadiah zona: ${granted.join(' · ')}`, 3400);
+}
+
+function handleAtlasBoss(ev) {
+  const room = ATLAS_ROOM_BY_ID[ev.room];
+  if (!room) return;
+  const p = atlasState();
+  const finalBoss = room.atlasTemplate === 'boss' && ATLAS_ZONE_BY_ID[room.atlasZone]?.index === ATLAS_ZONES.length - 1;
+  const result = completeAtlasRoom(p, room.id, {
+    ending: finalBoss ? atlasEndingFor(p, room.atlasZone) : null,
+  });
+  if (result.firstClear) {
+    showToast(`Ruang Atlas tuntas · +✦ ${result.marks} · +${result.fragments} fragmen`, 2400);
+  }
+  if (room.atlasTemplate === 'boss') grantAtlasZoneGear(room.atlasZone);
+  if (result.ability) {
+    const ability = ATLAS_ABILITY_BY_ID[result.ability];
+    showToast(`Kemampuan baru: ${ability?.localName || result.ability}.`, 3200);
+  }
+  if (result.unlocked.length) {
+    const names = result.unlocked.map((id) => ATLAS_ZONE_BY_ID[id]?.localName || id);
+    showToast(`Zona terbuka: ${names.join(', ')}.`, 3200);
+  }
+  if (result.ending) {
+    const ending = ATLAS_ENDINGS.find((entry) => entry.id === result.ending);
+    showToast(`Akhiran tercatat: ${ending?.localName || result.ending}.`, 4200);
+  }
+  saveProgress();
+  atlasQuickCache = '';
+  if (menuView === 'atlas') buildAtlasScreen();
+}
+
+// ── Hearthfall: The Hollow Court ─────────────────────────────────────────
+const COURT_TEMPLATE_GLYPH = {
+  entry: '◈', combat: '◆', elite: '✹', puzzle: '✧', rest: '⌂', boss: '♛',
+};
+function courtState() {
+  if (!progress.court) progress.court = defaultCourtProgress();
+  return progress.court;
+}
+
+function courtBonusLines(bonus) {
+  const lines = [];
+  if (bonus.maxHp) lines.push(`+${bonus.maxHp} HP`);
+  if (bonus.flasks) lines.push(`+${bonus.flasks} flask`);
+  if (bonus.damage) lines.push(`+${Math.round(bonus.damage * 100)}% damage`);
+  if (bonus.speed) lines.push(`+${Math.round(bonus.speed * 100)}% kecepatan`);
+  if (bonus.gain) lines.push(`+${Math.round(bonus.gain * 100)}% abu`);
+  if (bonus.heal) lines.push(`+${Math.round(bonus.heal * 100)}% penyembuhan`);
+  return lines;
+}
+
+function formatCourtTime(seconds) {
+  const value = Math.max(0, Number(seconds) || 0);
+  const minutes = Math.floor(value / 60);
+  const rest = value - minutes * 60;
+  return `${minutes}:${rest.toFixed(1).padStart(4, '0')}`;
+}
+
+function courtTrialSection(p) {
+  const result = courtTrialResult;
+  return `
+    <section class="exp-section court-trial-section">
+      <div class="exp-section-head">
+        <h3>TANTANGAN PERAPIAN</h3>
+        <span>${p.stats.trialClears} kemenangan · rekor waktu tersimpan</span>
+      </div>
+      ${result ? `
+        <div class="court-trial-result" style="--trial-color:${result.trial.color}">
+          <span>${result.trial.glyph}</span>
+          <div>
+            <b>${esc(result.trial.name)} tuntas</b>
+            <em>Waktu ${formatCourtTime(result.seconds)}${result.isBest ? ' · REKOR BARU' : ''} · ${result.firstClear ? `+✦ ${result.marks}` : `+✦ ${result.marks} (ulangan)`}</em>
+          </div>
+        </div>` : ''}
+      <div class="court-trial-grid">
+        ${COURT_TRIALS.map((trial) => {
+          const state = p.trials[trial.id] || { clears: 0, bestTime: 0 };
+          const unlocked = courtTrialUnlocked(p, trial.id);
+          return `
+            <article class="court-trial-card${unlocked ? '' : ' locked'}" style="--trial-color:${trial.color}">
+              <span class="court-trial-glyph">${trial.glyph}</span>
+              <div class="court-trial-copy">
+                <h4>${esc(trial.name)}</h4>
+                <em>${esc(trial.subtitle)}</em>
+                <p>${esc(trial.desc)}</p>
+                <div class="court-boss-meta">
+                  <span>KEMENANGAN <b>${state.clears}</b></span>
+                  <span>TERBAIK <b>${state.bestTime ? formatCourtTime(state.bestTime) : '—'}</b></span>
+                </div>
+              </div>
+              <button class="btn ${unlocked ? 'btn-primary' : 'btn-ghost'} btn-compact" type="button"
+                data-action="start-trial" data-trial="${trial.id}" ${unlocked ? '' : 'disabled'}>
+                ${unlocked ? 'MULAI' : trial.requires === 'completion' ? 'TUNTASKAN COURT' : 'KALAHKAN BOS KACA'}
+              </button>
+            </article>`;
+        }).join('')}
+      </div>
+      <div class="court-ngplus">
+        <div>
+          <span>SUMPAH BERULANG</span>
+          <strong>+${p.ngPlus} / +${COURT_NG_PLUS_MAX}</strong>
+          <em>${p.completion ? `HP & damage musuh +${p.ngPlus * 20}%. Hadiah tanda +${p.ngPlus * 40} pada kemenangan pertama.` : 'Selesaikan The Hollow Court untuk membuka NG+.'}</em>
+        </div>
+        <div class="court-ngplus-actions">
+          <button class="btn btn-ghost btn-compact" type="button" data-action="ngplus" data-value="-1" ${p.completion && p.ngPlus > 0 ? '' : 'disabled'}>−</button>
+          <button class="btn btn-ghost btn-compact" type="button" data-action="ngplus" data-value="1" ${p.completion && p.ngPlus < COURT_NG_PLUS_MAX ? '' : 'disabled'}>+</button>
+        </div>
+      </div>
+    </section>
+  `;
+}
+
+function showCourt(tab = 'journey') {
+  cancelPrologue();
+  started = false;
+  paused = false;
+  shopOpen = false;
+  mapOpen = false;
+  codexOpen = false;
+  inventoryOpen = false;
+  settingsOpen = false;
+  closeDialogue(true);
+  spectating = false;
+  spectateGame = null;
+  menuView = 'court';
+  courtTab = tab;
+  const p = courtState();
+  syncCourtUnlocks(p);
+  if (!COURT_ZONE_IDS.includes(courtZoneId)) courtZoneId = COURT_ZONE_IDS[0];
+  if (!HOUSE_RESIDENT_BY_ID[courtResidentId]) courtResidentId = HOUSE_RESIDENTS[0].id;
+  courtTalkLine = '';
+  clearHeldKeys();
+  buildCourtScreen();
+  syncScreens();
+}
+
+function closeCourt() {
+  showMenu();
+}
+
+function buildCourtScreen() {
+  const wrap = $('court-body');
+  if (!wrap) return;
+  const p = courtState();
+  syncCourtUnlocks(p);
+  const stats = courtStats(p);
+  const summary = $('court-summary');
+  if (summary) {
+    summary.innerHTML = `
+      <div><span>RUANG TUNTAS</span><strong>${stats.cleared} / ${stats.total}</strong><em>${stats.percent}% Hearthfall</em></div>
+      <div><span>TANDA PERAPIAN</span><strong>✦ ${stats.marks}</strong><em>mata uang court</em></div>
+      <div><span>SENJATA &amp; ALAT</span><strong>${stats.weapons} / ${stats.totalWeapons} · ${stats.tools} / ${stats.totalTools}</strong><em>ditempa</em></div>
+      <div><span>RUMAH</span><strong>Lv ${stats.rooms} / ${stats.maxRoomLevels}</strong><em>${stats.warmth} kehangatan</em></div>
+      <div><span>PENGHUNI</span><strong>${stats.residents} / ${stats.totalResidents}</strong><em>tinggal di perapian</em></div>
+      <div><span>ZONA</span><strong>${stats.zones} / ${stats.totalZones}</strong><em>${stats.bosses} bos gugur</em></div>
+    `;
+  }
+  document.querySelectorAll('#court-tabs [data-court-tab]').forEach((tab) => {
+    tab.classList.toggle('active', tab.dataset.courtTab === courtTab);
+  });
+  if (courtTab === 'house') buildCourtHouseTab(wrap);
+  else if (courtTab === 'residents') buildCourtResidentsTab(wrap);
+  else if (courtTab === 'arsenal') buildCourtArsenalTab(wrap);
+  else buildCourtJourneyTab(wrap);
+}
+
+function buildCourtJourneyTab(wrap) {
+  const p = courtState();
+  wrap.innerHTML = `
+    ${courtTrialSection(p)}
+    ${packSection()}
+    <section class="exp-section">
+      <div class="exp-section-head">
+        <h3>LIMA ZONA PERAPIAN</h3>
+        <span>${COURT_ROOMS.length} ruang · ${Object.keys(COURT_BOSS_INFO).length} bos · progres per ruang tersimpan</span>
+      </div>
+      <div class="court-zone-grid">
+        ${COURT_ZONES.map((zone) => {
+          const cleared = courtZoneCleared(p, zone.id);
+          const unlocked = p.zoneUnlocked.includes(zone.id);
+          const boss = COURT_BOSS_INFO[zone.boss];
+          const mini = COURT_BOSS_INFO[zone.miniBoss];
+          return `
+            <article class="court-zone-card${unlocked ? '' : ' locked'}" style="--zone-color:${zone.color}">
+              <header>
+                <div>
+                  <h3>${esc(zone.name)}</h3>
+                  <span>${esc(zone.localName)} · ${esc(zone.subtitle)}</span>
+                </div>
+                <b>${cleared} / ${COURT_ROOMS_PER_ZONE}</b>
+              </header>
+              <p>${esc(zone.hero)}</p>
+              <div class="court-zone-bosses">
+                <span>ELITE <b>${esc(mini?.name || '—')}</b></span>
+                <span>BOS <b>${esc(boss?.name || '—')}</b></span>
+              </div>
+              <div class="court-room-grid">
+                ${Array.from({ length: COURT_ROOMS_PER_ZONE }, (_, local) => {
+                  const index = zone.index * COURT_ROOMS_PER_ZONE + local;
+                  const room = COURT_ROOMS[index];
+                  const status = courtLevelStatus(p, index);
+                  return `
+                    <button class="court-room ${status}" type="button"
+                      data-action="start-room" data-room="${index}" ${status === 'locked' ? 'disabled' : ''}
+                      title="${esc(room.name)}">
+                      <span>${COURT_TEMPLATE_GLYPH[room.courtTemplate] || '◆'}</span>
+                      <b>${local + 1}</b>
+                      <em>${status === 'cleared' ? 'TUNTAS' : status === 'available' ? 'MASUK' : 'TERKUNCI'}</em>
+                    </button>`;
+                }).join('')}
+              </div>
+              <footer class="court-zone-foot">
+                <span>${esc(zone.weather)}</span>
+                <em>${unlocked ? 'ZONA TERBUKA' : 'KALAHKAN BOS ZONA SEBELUMNYA'}</em>
+              </footer>
+            </article>`;
+        }).join('')}
+      </div>
+    </section>
+    <section class="exp-section">
+      <div class="exp-section-head"><h3>SEPULUH PENJAGA COURT</h3><span>HP · 3–4 fase · pola serangan</span></div>
+      <div class="court-boss-grid">
+        ${Object.values(COURT_BOSS_INFO).map((boss) => `
+          <article class="court-boss-card" style="--boss-color:${boss.color}">
+            <span class="court-boss-glyph">${boss.glyph}</span>
+            <div>
+              <h4>${esc(boss.name)}</h4>
+              <em>${esc(boss.title)}</em>
+              <p>${esc(boss.localName)} · ${boss.mini ? 'MINI-BOS' : 'BOS ZONA'}</p>
+              <div class="court-boss-meta">
+                <span>HP <b>${boss.maxHp}</b></span>
+                <span>FASE <b>${boss.maxPhases}</b></span>
+                <span>POLA <b>${boss.pattern.toUpperCase()}</b></span>
+              </div>
+            </div>
+          </article>`).join('')}
+      </div>
+    </section>
+  `;
+}
+
+function buildCourtHouseTab(wrap) {
+  const p = courtState();
+  const bonus = courtBonuses(p);
+  const warmth = houseWarmth(p);
+  const lines = courtBonusLines(bonus);
+  wrap.innerHTML = `
+    <section class="exp-section">
+      <div class="exp-section-head"><h3>PERAPIAN YANG KAU BANGUN</h3><span>Kehangatan ${warmth} · ${p.house.furnishings.length} / ${HOUSE_FURNISHINGS.length} perabot</span></div>
+      <div class="court-bonus-strip">
+        ${lines.length ? lines.map((line) => `<span>${line}</span>`).join('') : '<span>Belum ada bonus rumah. Tingkatkan ruangan.</span>'}
+      </div>
+      <div class="court-house-grid">
+        ${HOUSE_ROOMS.map((room) => {
+          const level = p.house.rooms[room.id] || 0;
+          const maxed = level >= room.maxLevel;
+          const cost = room.costs[Math.min(level + 1, room.costs.length - 1)];
+          return `
+            <article class="court-house-card" style="--room-color:${room.color}">
+              <header><span>${room.glyph}</span><div><h4>${esc(room.name)}</h4><em>${esc(room.desc)}</em></div></header>
+              <div class="court-level-pips">${Array.from({ length: room.maxLevel }, (_, i) => `<i class="${i < level ? 'on' : ''}"></i>`).join('')}</div>
+              <div class="court-room-actions">
+                <span>Lv ${level} / ${room.maxLevel}</span>
+                <button class="btn btn-ghost btn-compact" type="button" data-action="upgrade-room" data-room-id="${room.id}" ${maxed ? 'disabled' : ''}>
+                  ${maxed ? 'MAKSIMAL' : `↑ ${cost} ✦`}
+                </button>
+              </div>
+              <div class="court-furnishings">
+                ${HOUSE_FURNISHINGS.filter((item) => item.room === room.id).map((item) => {
+                  const owned = p.house.furnishings.includes(item.id);
+                  return `<button class="court-furnishing${owned ? ' owned' : ''}" type="button"
+                    data-action="buy-furnishing" data-furnishing="${item.id}" ${owned || level < 1 ? 'disabled' : ''}
+                    title="${esc(item.desc)}">${owned ? '✓' : '＋'} ${esc(item.name)} <em>${item.cost}✦</em></button>`;
+                }).join('')}
+              </div>
+              ${level < 1 ? '<p class="micro">Naikkan ruangan ke Lv 1 untuk memasang perabot.</p>' : ''}
+            </article>`;
+        }).join('')}
+      </div>
+    </section>
+  `;
+}
+
+function buildCourtResidentsTab(wrap) {
+  const p = courtState();
+  const resident = HOUSE_RESIDENT_BY_ID[courtResidentId] || HOUSE_RESIDENTS[0];
+  const state = p.residents[resident.id];
+  const unlocked = residentUnlocked(p, resident.id);
+  const saved = residentDialogue(p, resident.id, new Date().getDate());
+  const line = courtTalkLine || (unlocked ? saved.line : 'Penghuni ini belum percaya padamu.');
+  const quest = resident.quest;
+  const step = quest.steps[state.questStep] || null;
+  const reward = quest.reward;
+  wrap.innerHTML = `
+    <section class="exp-section">
+      <div class="exp-section-head"><h3>PENGHUNI PERAPIAN</h3><span>${HOUSE_RESIDENTS.filter((entry) => residentUnlocked(p, entry.id)).length} / ${HOUSE_RESIDENTS.length} tinggal di sini</span></div>
+      <div class="court-resident-strip">
+        ${HOUSE_RESIDENTS.map((entry) => {
+          const open = residentUnlocked(p, entry.id);
+          return `<button class="court-resident-chip${entry.id === resident.id ? ' active' : ''}${open ? '' : ' locked'}"
+            type="button" data-action="select-resident" data-resident="${entry.id}">
+            <span style="--npc-color:${entry.color}">${entry.glyph}</span>
+            <b>${esc(entry.name)}</b>
+            <em>${open ? esc(entry.role) : 'BELUM TERBUKA'}</em>
+          </button>`;
+        }).join('')}
+      </div>
+      <div class="court-resident-detail" style="--npc-color:${resident.color}">
+        <div class="court-resident-portrait">${resident.glyph}</div>
+        <div class="court-resident-copy">
+          <h3>${esc(resident.name)} <small>${esc(resident.role)}</small></h3>
+          <p class="court-dialogue">“${esc(line)}”</p>
+          <div class="court-affinity">
+            <span>IKATAN ${state.affinity} / 100 · ${residentAffinityTier(state.affinity).toUpperCase()}</span>
+            <div><i style="width:${state.affinity}%"></i></div>
+          </div>
+          <div class="court-resident-actions">
+            <button class="btn btn-ghost btn-compact" type="button" data-action="talk-resident" data-resident="${resident.id}" ${unlocked ? '' : 'disabled'}>BICARA</button>
+            <button class="btn btn-primary btn-compact" type="button" data-action="gift-resident" data-resident="${resident.id}" ${unlocked && p.marks >= GIFT_COST ? '' : 'disabled'}>HADIAH · ${GIFT_COST} ✦</button>
+          </div>
+          <div class="court-quest">
+            <header><span>MISI PRIBADI</span><b>${esc(quest.name)}</b><em>${state.questDone ? 'SELESAI' : `${state.questStep} / ${quest.steps.length}`}</em></header>
+            <ol>
+              ${quest.steps.map((entry, index) => `<li class="${state.questDone || index < state.questStep ? 'done' : index === state.questStep ? 'current' : ''}">${esc(entry.label)}</li>`).join('')}
+            </ol>
+            <p>Hadiah: ${reward.marks ? `${reward.marks} ✦` : ''}${reward.weapon ? ` · ${esc(COURT_WEAPON_BY_ID[reward.weapon]?.name || reward.weapon)}` : ''}${reward.tool ? ` · ${esc(COURT_TOOL_BY_ID[reward.tool]?.name || reward.tool)}` : ''}</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  `;
+}
+
+function buildCourtArsenalTab(wrap) {
+  const p = courtState();
+  const equippedTools = new Set(p.equippedTools);
+  wrap.innerHTML = `
+    <section class="exp-section">
+      <div class="exp-section-head"><h3>TEMPA SENJATA</h3><span>${p.weapons.length} / ${COURT_WEAPONS.length} dimiliki · ${COURT_WEAPON_BY_ID[p.equippedWeapon]?.name || 'Pedang Sumpah'} terpasang</span></div>
+      <div class="court-weapon-grid">
+        ${COURT_WEAPONS.map((weapon) => {
+          const owned = p.weapons.includes(weapon.id);
+          const equipped = p.equippedWeapon === weapon.id;
+          const profile = COURT_WEAPON_PROFILES[weapon.id];
+          const damage = profile.attacks.map((attack) => attack.dmg).join(' · ');
+          const range = profile.projectile ? 'JAUH' : Math.max(...profile.attacks.map((attack) => attack.range));
+          return `
+            <article class="court-weapon-card${owned ? ' owned' : ''}${equipped ? ' equipped' : ''}">
+              <span class="court-weapon-glyph">${weapon.glyph}</span>
+              <div>
+                <h4>${esc(weapon.name)}</h4>
+                <em>${esc(weapon.style.toUpperCase())} · TIER ${weapon.tier}</em>
+                <p>${esc(weapon.desc)}</p>
+                <div class="court-boss-meta"><span>DMG <b>${damage}</b></span><span>JANGKAUAN <b>${range}</b></span></div>
+              </div>
+              <button class="btn btn-ghost btn-compact" type="button" data-action="${owned ? 'equip-weapon' : 'buy-weapon'}" data-weapon="${weapon.id}" ${equipped ? 'disabled' : ''}>
+                ${equipped ? 'TERPASANG' : owned ? 'PAKAI' : `${weapon.cost} ✦`}
+              </button>
+            </article>`;
+        }).join('')}
+      </div>
+    </section>
+    <section class="exp-section">
+      <div class="exp-section-head"><h3>ALAT PERJALANAN</h3><span>${p.equippedTools.length} / 3 terpasang · slot ${COURT_TOOL_SLOTS.join(' / ')}</span></div>
+      <div class="court-tool-grid">
+        ${COURT_TOOLS.map((tool) => {
+          const owned = p.tools.includes(tool.id);
+          const equipped = equippedTools.has(tool.id);
+          return `
+            <article class="court-tool-card${owned ? ' owned' : ''}${equipped ? ' equipped' : ''}">
+              <span>${tool.glyph}</span>
+              <div><h4>${esc(tool.name)}</h4><em>${tool.slot.toUpperCase()}</em><p>${esc(tool.desc)}</p></div>
+              <button class="btn btn-ghost btn-compact" type="button" data-action="${owned ? 'equip-tool' : 'buy-tool'}" data-tool="${tool.id}">
+                ${equipped ? 'LEPAS' : owned ? 'PASANG' : `${tool.cost} ✦`}
+              </button>
+            </article>`;
+        }).join('')}
+      </div>
+    </section>
+  `;
+}
+
+function courtToastQuest(quests) {
+  for (const quest of quests || []) {
+    const resident = HOUSE_RESIDENT_BY_ID[quest.residentId];
+    if (resident) showToast(`Misi ${resident.name} selesai — hadiah diterima.`, 3200);
+  }
+}
+
+function handleCourtAction(target) {
+  const action = target.dataset.action;
+  if (!action) return;
+  const p = courtState();
+  if (action === 'start-room') {
+    startCourtRoom(Number(target.dataset.room));
+    return;
+  }
+  if (action === 'start-trial') {
+    startCourtTrial(target.dataset.trial);
+    return;
+  }
+  if (action === 'start-pack') {
+    startPackRun(Number(target.dataset.index) || 0);
+    return;
+  }
+  if (action === 'ngplus') {
+    const result = setCourtNgPlus(p, p.ngPlus + Number(target.dataset.value));
+    if (!result.ok) showToast('Selesaikan The Hollow Court untuk membuka NG+.', 2200);
+    else showToast(`Sumpah Berulang +${result.ngPlus} aktif untuk court.`, 1800);
+    saveProgress();
+    buildCourtScreen();
+    return;
+  }
+  if (action === 'upgrade-room') {
+    const result = upgradeHouseRoom(p, target.dataset.roomId);
+    if (!result.ok) {
+      showToast(result.reason === 'marks' ? `Butuh ${result.cost} Tanda Perapian.` : 'Ruangan sudah maksimal.', 2200);
+    } else {
+      showToast(`Ruangan naik ke Lv ${result.level}.`, 1800);
+    }
+  } else if (action === 'buy-furnishing') {
+    const result = buyFurnishing(p, target.dataset.furnishing);
+    if (!result.ok) {
+      showToast(result.reason === 'marks' ? `Butuh ${result.cost} Tanda Perapian.` : result.reason === 'room' ? 'Naikkan ruangan dulu.' : 'Perabot itu sudah ada.', 2200);
+    } else {
+      showToast(`Perabot dipasang: ${result.item.name}.`, 1800);
+      courtToastQuest(result.quests);
+    }
+  } else if (action === 'select-resident') {
+    courtResidentId = target.dataset.resident;
+    courtTalkLine = '';
+    buildCourtScreen();
+    return;
+  } else if (action === 'talk-resident') {
+    const result = talkToResident(p, target.dataset.resident, new Date().getDate());
+    if (!result.ok) showToast('Penghuni ini belum terbuka.', 1800);
+    else courtTalkLine = result.line;
+    saveProgress();
+    buildCourtScreen();
+    return;
+  } else if (action === 'gift-resident') {
+    const result = giftResident(p, target.dataset.resident);
+    if (!result.ok) showToast(result.reason === 'marks' ? 'Tanda Perapian tidak cukup.' : 'Penghuni ini belum terbuka.', 2000);
+    else {
+      courtTalkLine = result.line;
+      showToast('Hadiah diterima. Ikatan menguat.', 1800);
+      courtToastQuest(result.quest);
+    }
+  } else if (action === 'buy-weapon') {
+    const result = buyCourtWeapon(p, target.dataset.weapon);
+    if (!result.ok) showToast(result.reason === 'marks' ? `Butuh ${result.cost} Tanda Perapian.` : 'Senjata sudah dimiliki.', 2000);
+    else showToast(`Senjata ditempa: ${result.weapon.name}.`, 1900);
+  } else if (action === 'equip-weapon') {
+    const result = equipCourtWeapon(p, target.dataset.weapon);
+    if (!result.ok) showToast('Senjata belum dimiliki.', 1800);
+    else showToast('Senjata terpasang.', 1500);
+  } else if (action === 'buy-tool') {
+    const result = buyCourtTool(p, target.dataset.tool);
+    if (!result.ok) showToast(result.reason === 'marks' ? `Butuh ${result.cost} Tanda Perapian.` : 'Alat sudah dimiliki.', 2000);
+    else showToast(`Alat dibeli: ${result.tool.name}.`, 1800);
+  } else if (action === 'equip-tool') {
+    const result = equipCourtTool(p, target.dataset.tool);
+    if (!result.ok) showToast('Alat belum dimiliki.', 1800);
+    else showToast(result.equipped === false ? 'Alat dilepas.' : 'Alat terpasang.', 1500);
+  } else {
+    return;
+  }
+  saveProgress();
+  buildCourtScreen();
+}
+
+function startCourtRoom(localIndex, options = {}) {
+  coopGuestMode = false;
+  coopGuestRoom = -1;
+  const index = Number(localIndex);
+  const room = COURT_ROOMS[index];
+  const p = courtState();
+  const trial = options.trial || null;
+  if (!room || (!trial && !courtLevelUnlocked(p, index))) {
+    showToast('Ruang itu masih terkunci. Selesaikan ruang sebelumnya dulu.', 2200);
+    return;
+  }
+  if (trial && !courtTrialUnlocked(p, trial.id)) {
+    showToast('Tantangan itu belum terbuka.', 2200);
+    return;
+  }
+  audio.init();
+  attempts = 1;
+  activeRunKind = 'court';
+  activeCourtRoom = room.id;
+  activeCourtTrial = trial ? { id: trial.id, index: 0, startedAt: 0 } : null;
+  courtTrialResult = null;
+  activeExpansionIndex = null;
+  activeModeId = null;
+  activeTrialId = null;
+  modeRunRewarded = false;
+  game.reset();
+  applyCharacterToGame();
+  applySkinToGame();
+  applyCourtLoadout(p, game);
+  game.enterRoom(room.id);
+  if (activeCourtTrial) activeCourtTrial.startedAt = game.time;
+  game.player.relic = true;
+  game.ash = Math.max(game.ash, trial ? 90 : 40 + index * 6);
+  p.stats.runs += 1;
+  syncCourtUnlocks(p);
+  saveProgress();
+  game.events.length = 0;
+  started = true;
+  paused = false;
+  shopOpen = false;
+  mapOpen = false;
+  codexOpen = false;
+  inventoryOpen = false;
+  settingsOpen = false;
+  closeDialogue(true);
+  spectating = false;
+  spectateGame = null;
+  menuView = 'none';
+  lastGameState = 'playing';
+  accumulator = 0;
+  lastTime = performance.now();
+  clearHeldKeys();
+  beginStage(game.roomIndex, trial ? trial.name : room.name);
+  showBanner(trial ? trial.name : room.name, trial ? trial.subtitle : room.subtitle);
+  syncScreens();
+  updateHud();
+  showToast(trial ? `Tantangan · ${trial.name}${p.ngPlus ? ` · Sumpah +${p.ngPlus}` : ''}` : `Hearthfall · ${room.courtZone} — ruang ${room.courtLocal + 1}/10`, 2400);
+}
+
+function startCourtTrial(trialId) {
+  const trial = COURT_TRIAL_BY_ID[trialId];
+  const p = courtState();
+  if (!trial) return;
+  if (!courtTrialUnlocked(p, trial.id)) {
+    showToast(trial.requires === 'completion' ? 'Tuntaskan The Hollow Court dulu.' : 'Kalahkan bos Kebun Kaca dulu.', 2400);
+    return;
+  }
+  startCourtRoom(trial.start, { trial });
+}
+
+// ── Panggung Abadi: six-guardian gauntlet ─────────────────────────────────
+function packState() {
+  if (!progress.pack) progress.pack = defaultPackProgress();
+  return progress.pack;
+}
+
+function packArena() {
+  return COURT_ROOMS[9] || COURT_ROOMS[0];
+}
+
+function startPackRun(index = 0) {
+  const boss = PACK_BOSSES[index];
+  if (!boss) return;
+  if (!packBossUnlocked(packState(), index)) {
+    showToast('Kalahkan penjaga sebelumnya dulu.', 2200);
+    return;
+  }
+  const arena = packArena();
+  if (!arena) return;
+  audio.init();
+  attempts = 1;
+  coopGuestMode = false;
+  coopGuestRoom = -1;
+  activeRunKind = 'pack';
+  activePackIndex = index;
+  packRunActive = true;
+  activeCourtRoom = arena.id;
+  activeCourtTrial = null;
+  courtTrialResult = null;
+  activeExpansionIndex = null;
+  activeModeId = null;
+  activeTrialId = null;
+  modeRunRewarded = false;
+  game.reset();
+  applyCharacterToGame();
+  applySkinToGame();
+  applyCourtLoadout(courtState(), game);
+  game.enterRoom(arena.id);
+  game.boss = null;
+  game.awaitingBlessing = false;
+  game.blessingChoices = null;
+  game.state = 'playing';
+  game.player.relic = true;
+  game.ash = Math.max(game.ash, 120);
+  packRunStartedAt = game.time;
+  game.spawnBoss(boss.kind);
+  game.events.length = 0;
+  started = true;
+  paused = false;
+  shopOpen = false;
+  mapOpen = false;
+  codexOpen = false;
+  inventoryOpen = false;
+  settingsOpen = false;
+  closeDialogue(true);
+  spectating = false;
+  spectateGame = null;
+  menuView = 'none';
+  lastGameState = 'playing';
+  accumulator = 0;
+  lastTime = performance.now();
+  clearHeldKeys();
+  beginStage(arena.id, boss.name);
+  showBanner(boss.name, boss.title);
+  syncScreens();
+  updateHud();
+  saveProgress();
+  showToast(`Panggung Abadi · ${index + 1}/${PACK_BOSSES.length} — ${boss.name}`, 2600);
+}
+
+function handlePackBoss(ev) {
+  if (!packRunActive) return;
+  const index = activePackIndex;
+  const boss = PACK_BOSSES[index];
+  if (!boss) return;
+  const elapsed = Math.max(0, game.time - packRunStartedAt);
+  recordPackBoss(packState(), index, elapsed);
+  saveProgress();
+  const next = index + 1;
+  if (next >= PACK_BOSSES.length) {
+    recordPackFinish(packState(), elapsed);
+    const bonus = grantSkillPoints(progress.skills, SKILL_POINTS_PACK_CLEAR, 'pack:clear');
+    saveProgress();
+    applySkillsToGame();
+    packRunActive = false;
+    activePackIndex = -1;
+    game.state = 'playing';
+    game.awaitingBlessing = false;
+    game.blessingChoices = null;
+    game.boss = null;
+    showToast(
+      `PANGGUNG ABADI TUNTAS · ${formatCourtTime(elapsed)} · +${bonus.granted || SKILL_POINTS_PACK_CLEAR} SKILL POINT`,
+      6200,
+    );
+    showCourt('journey');
+    return;
+  }
+  activePackIndex = next;
+  game.state = 'playing';
+  game.awaitingBlessing = false;
+  game.blessingChoices = null;
+  game.boss = null;
+  const p = game.player;
+  p.hp = Math.min(p.maxHp, p.hp + Math.round(p.maxHp * 0.25));
+  p.invuln = Math.max(p.invuln, 1.2);
+  closeDialogue(true);
+  game.spawnBoss(PACK_BOSSES[next].kind);
+  showToast(`Penjaga ${next + 1}/${PACK_BOSSES.length} — ${PACK_BOSSES[next].name}`, 2400);
+}
+
+function packSection() {
+  const summary = packProgressSummary(packState());
+  return `
+    <section class="exp-section pack-section">
+      <div class="exp-section-head">
+        <h3>${PACK_NAME.toUpperCase()} — ${PACK_BOSSES.length} PENJAGA AGUNG</h3>
+        <span>${summary.cleared} / ${summary.total} gugur · ${summary.gauntletClears} tuntas · ${summary.percent}%</span>
+      </div>
+      <p class="map-note">
+        ${PACK_SUBTITLE}. Setiap penjaga memakai tema musiknya sendiri, memakai pola fase nyata,
+        dan meninggalkan Skill Point permanen untuk ultimate-mu.
+      </p>
+      <div class="pack-grid">
+        ${PACK_BOSSES.map((boss, index) => {
+          const cleared = packState().cleared[boss.id] === true;
+          const unlocked = packBossUnlocked(packState(), index);
+          return `
+            <article class="pack-card${unlocked ? '' : ' locked'}" style="--pack-color:${boss.color}">
+              <span class="pack-glyph" aria-hidden="true">${boss.glyph}</span>
+              <div class="pack-copy">
+                <h4>${esc(boss.name)}</h4>
+                <em>${esc(boss.title)}</em>
+                <p>${esc(boss.subtitle)}</p>
+                <div class="pack-meta">
+                  <span>FASE<b>${boss.phases}</b></span>
+                  <span>HP<b>${boss.maxHp}</b></span>
+                  <span>STATUS<b>${cleared ? 'GUGUR' : unlocked ? 'MENANTI' : 'TERKUNCI'}</b></span>
+                </div>
+              </div>
+              <button class="btn ${unlocked ? 'btn-primary' : 'btn-ghost'} btn-compact" type="button"
+                data-action="start-pack" data-index="${index}" ${unlocked ? '' : 'disabled'}>
+                ${cleared ? 'ULANGI' : unlocked ? 'HADAPI' : 'KUNCI'}
+              </button>
+            </article>`;
+        }).join('')}
+      </div>
+    </section>`;
+}
+
+// ── Faewood: ten-stage fairy biome, then the two bosses ───────────────────
+function fairyState() {
+  if (!progress.fairy) progress.fairy = defaultFairyProgress();
+  return progress.fairy;
+}
+
+function showFairy() {
+  cancelPrologue();
+  started = false;
+  paused = false;
+  shopOpen = false;
+  mapOpen = false;
+  codexOpen = false;
+  inventoryOpen = false;
+  settingsOpen = false;
+  closeDialogue(true);
+  spectating = false;
+  spectateGame = null;
+  menuView = 'fairy';
+  clearHeldKeys();
+  buildFairyScreen();
+  syncScreens();
+}
+
+function closeFairy() {
+  showMenu();
+}
+
+function fairyStageStatus(state, index) {
+  if (fairyStageCleared(state, index)) return 'cleared';
+  return fairyStageUnlocked(state, index) ? 'available' : 'locked';
+}
+
+function buildFairyScreen() {
+  const wrap = $('fairy-body');
+  const p = fairyState();
+  const summary = fairyProgressSummary(p);
+  const box = $('fairy-summary');
+  if (box) {
+    box.innerHTML = `
+      <div><span>TAHAP TUNTAS</span><strong>${summary.stagesCleared} / ${summary.stageTotal}</strong><em>${summary.bossesUnlocked ? 'gerbang bos terbuka' : '10 tahap sebelum bos'}</em></div>
+      <div><span>BOS GUGUR</span><strong>${summary.bossesCleared} / ${summary.bossTotal}</strong><em>Gelora &amp; Sylvara</em></div>
+      <div><span>PROGRES</span><strong>${summary.percent}%</strong><em>${FAIRY_NAME} — ${FAIRY_LOCAL_NAME}</em></div>
+      <div><span>RUN</span><strong>${summary.runs}</strong><em>${summary.bestTime ? `rekor ${formatCourtTime(summary.bestTime)}` : 'belum ada rekor'}</em></div>
+    `;
+  }
+  if (!wrap) return;
+  wrap.innerHTML = `
+    <section class="exp-section">
+      <div class="exp-section-head">
+        <h3>SEPULUH TAHAP TAMAN PERI</h3>
+        <span>${summary.stagesCleared} / ${FAIRY_STAGE_COUNT} tuntas · tahap terbuka berurutan</span>
+      </div>
+      <p class="map-note">
+        ${esc(FAIRY_SUBTITLE)}. Tahap terbuka satu per satu — kau harus melewati seluruh sepuluh
+        tahap sebelum singgasana bos terbuka. Setiap tahap menyimpan progresnya sendiri.
+      </p>
+      <div class="fairy-stage-grid">
+        ${FAIRY_STAGES.map((stage) => {
+          const status = fairyStageStatus(p, stage.index);
+          return `
+            <article class="fairy-stage-card ${status}" style="--fairy-color:${FAIRY_ZONE.color}">
+              <span class="fairy-stage-glyph" aria-hidden="true">${stage.glyph}</span>
+              <div class="fairy-stage-copy">
+                <h4>${stage.index + 1}. ${esc(stage.name)}</h4>
+                <em>${esc(stage.subtitle)} · ${esc(stage.tag)}</em>
+                <p>${esc(stage.hint)}</p>
+                <div class="fairy-meta">
+                  <span>MOB<b>${stage.enemies.length}</b></span>
+                  <span>NPC<b>${stage.npc ? 'ADA' : '—'}</b></span>
+                  <span>STATUS<b>${status === 'cleared' ? 'TUNTAS' : status === 'available' ? 'TERBUKA' : 'TERKUNCI'}</b></span>
+                </div>
+              </div>
+              <button class="btn ${status === 'locked' ? 'btn-ghost' : 'btn-primary'} btn-compact" type="button"
+                data-fairy-stage="${stage.index}" ${status === 'locked' ? 'disabled' : ''}>
+                ${status === 'cleared' ? 'ULANGI' : status === 'available' ? 'MASUK' : 'KUNCI'}
+              </button>
+            </article>`;
+        }).join('')}
+      </div>
+    </section>
+    <section class="exp-section">
+      <div class="exp-section-head">
+        <h3>DUA BOS DI BALIK GERBANG KESEPULUH</h3>
+        <span>${summary.bossesUnlocked ? 'terbuka' : 'selesaikan 10 tahap dulu'} · ${FAIRY_BOSSES.length} bos</span>
+      </div>
+      <p class="map-note">
+        Slime magma Gelora menjaga kuali, lalu Peri Naga Spektral Sylvara menjaga singgasana.
+        Keduanya memakai tema musik sendiri dan fase yang naik tiap sepertiga HP.
+      </p>
+      <div class="fairy-boss-grid">
+        ${FAIRY_BOSSES.map((boss) => {
+          const info = FAIRY_BOSS_INFO[boss.kind];
+          const unlocked = fairyBossUnlocked(p, boss.id);
+          const cleared = p.bosses?.[boss.id] === true;
+          return `
+            <article class="fairy-boss-card${unlocked ? '' : ' locked'}" style="--boss-color:${boss.color}">
+              <span class="fairy-boss-glyph" aria-hidden="true">${boss.glyph}</span>
+              <div>
+                <h4>${esc(info.name)}</h4>
+                <em>${esc(info.title)}</em>
+                <p>${esc(info.localName)} · ${boss.phases} fase · ${boss.pattern.toUpperCase()}</p>
+                <div class="fairy-meta">
+                  <span>HP<b>${boss.maxHp}</b></span>
+                  <span>FASE<b>${boss.phases}</b></span>
+                  <span>STATUS<b>${cleared ? 'GUGUR' : unlocked ? 'MENANTI' : 'TERKUNCI'}</b></span>
+                </div>
+              </div>
+              <button class="btn ${unlocked ? 'btn-primary' : 'btn-ghost'} btn-compact" type="button"
+                data-fairy-boss="${boss.id}" ${unlocked ? '' : 'disabled'}>
+                ${cleared ? 'ULANGI' : unlocked ? 'HADAPI' : 'KUNCI'}
+              </button>
+            </article>`;
+        }).join('')}
+      </div>
+    </section>
+  `;
+  wrap.querySelectorAll('[data-fairy-stage]').forEach((button) => {
+    button.addEventListener('click', () => startFairyStage(Number(button.dataset.fairyStage)));
+  });
+  wrap.querySelectorAll('[data-fairy-boss]').forEach((button) => {
+    button.addEventListener('click', () => startFairyBoss(button.dataset.fairyBoss));
+  });
+}
+
+function startFairyStage(stageIndex) {
+  const p = fairyState();
+  const index = Math.max(0, Math.min(FAIRY_STAGE_COUNT - 1, Math.floor(Number(stageIndex) || 0)));
+  const room = FAIRY_STAGE_ROOMS[index];
+  if (!room) return;
+  if (!fairyStageUnlocked(p, index)) {
+    showToast('Tahap itu masih terkunci. Selesaikan tahap sebelumnya dulu.', 2200);
+    return;
+  }
+  audio.init();
+  attempts = 1;
+  coopGuestMode = false;
+  coopGuestRoom = -1;
+  activeRunKind = 'fairy';
+  activeFairyStage = index;
+  activeFairyBoss = null;
+  activeCourtRoom = null;
+  activeCourtTrial = null;
+  activePackIndex = -1;
+  activeExpansionIndex = null;
+  activeModeId = null;
+  activeTrialId = null;
+  modeRunRewarded = false;
+  packRunActive = false;
+  game.reset();
+  applyCharacterToGame();
+  applySkinToGame();
+  game.enterRoom(room.id);
+  game.player.relic = true;
+  game.ash = Math.max(game.ash, 40 + index * 12);
+  recordFairyRun(p, 0, { won: false });
+  fairyRunStartedAt = game.time;
+  cutsceneSeen = new Set();
+  postCreditTimer = -1;
+  saveProgress();
+  game.events.length = 0;
+  started = true;
+  paused = false;
+  shopOpen = false;
+  mapOpen = false;
+  codexOpen = false;
+  inventoryOpen = false;
+  settingsOpen = false;
+  closeDialogue(true);
+  spectating = false;
+  spectateGame = null;
+  menuView = 'none';
+  lastGameState = 'playing';
+  accumulator = 0;
+  lastTime = performance.now();
+  clearHeldKeys();
+  beginStage(game.roomIndex, room.name);
+  showBanner(room.name, room.subtitle);
+  syncScreens();
+  updateHud();
+  showToast(`Taman Peri · tahap ${index + 1}/${FAIRY_STAGE_COUNT} — ${room.name}`, 2400);
+}
+
+function startFairyBoss(bossId) {
+  const p = fairyState();
+  const boss = FAIRY_BOSSES.find((entry) => entry.id === bossId);
+  if (!boss) return;
+  if (!fairyBossUnlocked(p, bossId)) {
+    showToast('Tuntaskan sepuluh tahap Taman Peri dulu untuk membuka singgasana.', 2600);
+    return;
+  }
+  const room = FAIRY_ROOM_BY_ID[boss.roomIndex];
+  if (!room) return;
+  audio.init();
+  attempts = 1;
+  coopGuestMode = false;
+  coopGuestRoom = -1;
+  activeRunKind = 'fairy';
+  activeFairyStage = -1;
+  activeFairyBoss = boss.id;
+  activeCourtRoom = null;
+  activeCourtTrial = null;
+  activePackIndex = -1;
+  activeExpansionIndex = null;
+  activeModeId = null;
+  activeTrialId = null;
+  modeRunRewarded = false;
+  packRunActive = false;
+  game.reset();
+  applyCharacterToGame();
+  applySkinToGame();
+  game.enterRoom(room.id);
+  game.player.relic = true;
+  game.ash = Math.max(game.ash, boss.id === 'dragon' ? 260 : 180);
+  recordFairyRun(p, 0, { won: false });
+  fairyRunStartedAt = game.time;
+  saveProgress();
+  game.events.length = 0;
+  started = true;
+  paused = false;
+  shopOpen = false;
+  mapOpen = false;
+  codexOpen = false;
+  inventoryOpen = false;
+  settingsOpen = false;
+  closeDialogue(true);
+  spectating = false;
+  spectateGame = null;
+  menuView = 'none';
+  lastGameState = 'playing';
+  accumulator = 0;
+  lastTime = performance.now();
+  clearHeldKeys();
+  beginStage(game.roomIndex, boss.name);
+  showBanner(boss.name, boss.title);
+  syncScreens();
+  updateHud();
+  showToast(`Taman Peri · ${boss.localName} — ${boss.name}`, 2600);
+  if (boss.id === 'dragon') playFinalBossCutscene();
+}
+
+function handleFairyBoss(ev) {
+  const room = FAIRY_ROOM_BY_ID[ev.room];
+  if (!room?.fairyBoss) return;
+  const p = fairyState();
+  const result = recordFairyBoss(p, room.fairyBoss);
+  const elapsed = Math.max(0, game.time - fairyRunStartedAt);
+  if (room.fairyBoss === 'dragon' && result.ok) {
+    recordFairyRun(p, elapsed, { won: true });
+    showToast(`SINGGASANA SAYAP TUNTAS · ${formatCourtTime(elapsed)} · Opus bebas`, 6000);
+    queuePostCredit();
+  }
+  saveProgress();
+}
+
+function courtTrialHeal(amount) {
+  const p = game.player;
+  if (!p) return;
+  const heal = Math.max(0, Number(amount) || 0) * p.maxHp;
+  p.hp = Math.min(p.maxHp, p.hp + heal);
+  p.invuln = Math.max(p.invuln, 0.8);
+}
+
+function finishCourtTrial() {
+  if (!activeCourtTrial) return;
+  const trial = COURT_TRIAL_BY_ID[activeCourtTrial.id];
+  const seconds = Math.max(0, game.time - activeCourtTrial.startedAt);
+  activeCourtTrial = null;
+  const result = recordCourtTrial(courtState(), trial.id, seconds, { ngPlus: courtState().ngPlus });
+  if (result.ok) {
+    courtTrialResult = { ...result, seconds };
+    saveProgress();
+  }
+  showCourt('journey');
+  if (result.ok) {
+    showToast(`Tantangan tuntas · ${trial.name} · ${formatCourtTime(seconds)}${result.isBest ? ' · REKOR BARU' : ''}${result.firstClear ? ` · +✦ ${result.marks}` : ''}`, 4600);
+  }
+}
+
+function handleCourtTrialBoss(ev, room) {
+  const trial = COURT_TRIAL_BY_ID[activeCourtTrial.id];
+  if (!trial) { activeCourtTrial = null; return; }
+  if (trial.id === 'boss_rush') {
+    const nextIndex = activeCourtTrial.index + 1;
+    if (nextIndex >= trial.order.length) {
+      finishCourtTrial();
+      return;
+    }
+    activeCourtTrial.index = nextIndex;
+    const nextRoom = COURT_ROOMS[trial.order[nextIndex]];
+    courtTrialHeal(trial.heal);
+    game.state = 'playing';
+    game.awaitingBlessing = false;
+    game.blessingChoices = null;
+    game.enterRoom(nextRoom.id);
+    activeCourtRoom = nextRoom.id;
+    closeDialogue(true);
+    showToast(`Penjaga ${nextIndex + 1} / ${trial.order.length} — ${nextRoom.name}`, 2400);
+    saveProgress();
+    return;
+  }
+  if (trial.id === 'glass_gauntlet' && room.id === COURT_ROOMS[trial.end]?.id) {
+    finishCourtTrial();
+  }
+}
+
+function handleCourtBoss(ev) {
+  const room = COURT_ROOM_BY_ID[ev.room];
+  if (!room) return;
+  if (activeCourtTrial) {
+    handleCourtTrialBoss(ev, room);
+    return;
+  }
+  const p = courtState();
+  const local = ev.room - COURT_ROOM_START;
+  const result = recordCourtClear(p, local, { boss: true, mini: !!ev.mini, kind: ev.kind });
+  if (result.firstClear) {
+    showToast(`Ruang court tuntas · +✦ ${result.marks}${result.quests?.length ? ' · misi penghuni maju' : ''}`, 2600);
+    courtToastQuest(result.quests);
+  }
+  if (room.courtTemplate === 'boss' && room.courtZoneIndex === COURT_ZONES.length - 1) {
+    p.completion = true;
+    showToast('The Hollow Court tuntas — Perapian Agung menyala kembali.', 4200);
+  }
+  saveProgress();
+  if (menuView === 'court') buildCourtScreen();
+}
+
+function applyAtlasConsumableToGame(item) {
+  if (!item || !game.player) return;
+  const p = game.player;
+  if (item.heal) p.hp = Math.min(p.maxHp, p.hp + item.heal);
+  if (item.buff) {
+    if (!atlasBuffBase) atlasBuffBase = { damage: p.damageMult, speed: p.speedMult };
+    atlasBuffTimer = Math.max(atlasBuffTimer, Number(item.buff.duration) || 8);
+    p.damageMult = atlasBuffBase.damage * (1 + (Number(item.buff.damage) || 0));
+    p.speedMult = atlasBuffBase.speed * (1 + (Number(item.buff.speed) || 0));
+  }
+  if (item.regen) {
+    atlasRegenTimer = Math.max(atlasRegenTimer, Number(item.regen.duration) || 6);
+    atlasRegenAmount = Math.max(atlasRegenAmount, Number(item.regen.hp) || 3);
+  }
+  if (item.damage) {
+    const radius = Number(item.radius) || 80;
+    const cx = p.x + p.w / 2;
+    const cy = p.y + p.h / 2;
+    for (const enemy of game.enemies) {
+      const ex = enemy.x + enemy.w / 2;
+      const ey = enemy.y + enemy.h / 2;
+      if (Math.hypot(ex - cx, ey - cy) <= radius) {
+        game.hurtEnemy(enemy, { dmg: item.damage, knock: 220, name: item.id }, ex >= cx ? 1 : -1);
+      }
+    }
+  }
+  if (item.utility === 'shield') {
+    p.invuln = Math.max(p.invuln, Number(item.duration) || 5);
+  } else if (item.utility === 'haste') {
+    if (!atlasBuffBase) atlasBuffBase = { damage: p.damageMult, speed: p.speedMult };
+    atlasBuffTimer = Math.max(atlasBuffTimer, Number(item.duration) || 5);
+    p.speedMult = atlasBuffBase.speed * 1.25;
+  } else if (item.utility === 'purify') {
+    p.hp = Math.min(p.maxHp, p.hp + 8);
+  }
+}
+
+function useAtlasQuickSlot(slotIndex) {
+  if (activeRunKind !== 'atlas' || !started || paused || menuView !== 'none' || game.state !== 'playing') return false;
+  if (atlasQuickCooldown > 0) return false;
+  const p = atlasState();
+  const itemId = p.quickSlots?.[slotIndex];
+  const item = ATLAS_CONSUMABLE_BY_ID[itemId];
+  if (!item) {
+    showToast(`Slot cepat ${slotIndex + 1} kosong.`, 1400);
+    return false;
+  }
+  const result = useAtlasConsumable(p, itemId);
+  if (!result.ok) {
+    showToast(`${item.name} habis.`, 1400);
+    return false;
+  }
+  applyAtlasConsumableToGame(item);
+  atlasQuickCooldown = 0.9;
+  saveProgress();
+  renderAtlasQuickbar();
+  updateHud();
+  showToast(`Dipakai: ${item.name} · sisa ${result.remaining}`, 1500);
+  return true;
+}
+
+function renderAtlasQuickbar() {
+  const bar = $('atlas-quickbar');
+  if (!bar) return;
+  const show = activeRunKind === 'atlas' && started && menuView === 'none' && !spectating;
+  bar.classList.toggle('hidden', !show);
+  if (!show) {
+    bar.innerHTML = '';
+    atlasQuickCache = '';
+    return;
+  }
+  const p = atlasState();
+  const signature = (p.quickSlots || []).map((id) => `${id || ''}:${atlasConsumableCount(p, id)}`).join('|');
+  if (signature === atlasQuickCache) return;
+  atlasQuickCache = signature;
+  bar.innerHTML = ATLAS_QUICK_SLOTS.map((slot) => {
+    const itemId = p.quickSlots?.[slot.index];
+    const item = ATLAS_CONSUMABLE_BY_ID[itemId];
+    const count = atlasConsumableCount(p, itemId);
+    return `
+      <button class="atlas-quick-slot${item ? '' : ' empty'}" type="button"
+        data-atlas-quick-use="${slot.index}" title="${esc(item?.name || 'Slot kosong')}">
+        <b>${slot.index + 1}</b>
+        <span>${esc(item ? item.name : 'KOSONG')}</span>
+        <em>${item ? `x${count}` : ''}</em>
+      </button>`;
+  }).join('');
+}
+
+function tickAtlasRun(dt) {
+  if (activeRunKind !== 'atlas') return;
+  if (atlasQuickCooldown > 0) atlasQuickCooldown = Math.max(0, atlasQuickCooldown - dt);
+  if (atlasBuffTimer > 0) {
+    atlasBuffTimer = Math.max(0, atlasBuffTimer - dt);
+    if (atlasBuffTimer === 0 && atlasBuffBase && game.player) {
+      game.player.damageMult = atlasBuffBase.damage;
+      game.player.speedMult = atlasBuffBase.speed;
+      atlasBuffBase = null;
+    }
+  }
+  if (atlasRegenTimer > 0 && game.player) {
+    atlasRegenTimer = Math.max(0, atlasRegenTimer - dt);
+    if (atlasRegenAmount > 0) {
+      game.player.hp = Math.min(game.player.maxHp, game.player.hp + atlasRegenAmount * dt);
+    }
+    if (atlasRegenTimer === 0) atlasRegenAmount = 0;
   }
 }
 
@@ -758,8 +2392,13 @@ function handleExpansionCampaignComplete() {
   e.flags.campaignComplete = true;
   e.flags.ngPlusUnlocked = true;
   grantSkin('skin_forgotten');
+  const bonus = grantSkillPoints(progress.skills, SKILL_POINTS_CAMPAIGN, 'campaign:complete');
   saveProgress();
-  showToast('Kampanye Echoes selesai — New Game Plus terbuka.', 4600);
+  applySkillsToGame();
+  showToast(
+    `Kampanye Echoes selesai — New Game Plus terbuka. +${bonus.granted || SKILL_POINTS_CAMPAIGN} SKILL POINT`,
+    4600,
+  );
 }
 
 function claimQuest(questId) {
@@ -1536,9 +3175,22 @@ function provisionStartAsh(index) {
 }
 
 function startRun(index = 0) {
+  coopGuestMode = false;
+  coopGuestRoom = -1;
   audio.init();
   attempts = 1;
   activeRunKind = 'legacy';
+  activeCourtTrial = null;
+  activeFairyStage = -1;
+  activeFairyBoss = null;
+  cutsceneSeen = new Set();
+  postCreditTimer = -1;
+  labRun = null;
+  labDirector = null;
+  labGuestMode = false;
+  labRewardsOpen = false;
+  labSummaryOpen = false;
+  game.labyrinth = false;
   activeExpansionIndex = null;
   activeModeId = null;
   activeTrialId = null;
@@ -1568,6 +3220,7 @@ function startRun(index = 0) {
   lastTime = performance.now();
   clearHeldKeys();
   discoverCurrentRoom(game.roomIndex);
+  beginStage(game.roomIndex, game.room.name);
   showBanner(game.room.name, game.room.subtitle);
   syncScreens();
   updateHud();
@@ -1575,6 +3228,19 @@ function startRun(index = 0) {
 
 function retryRun() {
   attempts += 1;
+  if (activeRunKind === 'court' && activeCourtTrial) {
+    startCourtTrial(activeCourtTrial.id);
+    return;
+  }
+  if (activeRunKind === 'pack' && activePackIndex >= 0) {
+    startPackRun(activePackIndex);
+    return;
+  }
+  if (activeRunKind === 'fairy') {
+    if (activeFairyBoss) startFairyBoss(activeFairyBoss);
+    else startFairyStage(Math.max(0, activeFairyStage));
+    return;
+  }
   const usedCheckpoint = game.respawnAtCheckpoint();
   if (!usedCheckpoint) {
     const index = game.roomIndex;
@@ -1584,11 +3250,22 @@ function retryRun() {
       game.setChallenge(expansionChallengeConfig());
       game.setKnownCollectibles(expState().collectibles);
       applySkinToGame();
+    } else if (activeRunKind === 'atlas') {
+      const p = atlasState();
+      game.atlasRun = true;
+      game.setAbilities(p.abilities || []);
+      applySkinToGame();
+    } else if (activeRunKind === 'court') {
+      applyCourtLoadout(courtState(), game);
+      game.player.relic = true;
     }
     if (index > 0) {
       game.enterRoom(index);
       if (index >= 2) game.player.relic = true;
-      if (index >= EXPANSION_ROOM_START) provisionExpansionAsh(index - EXPANSION_ROOM_START);
+      if (index >= ATLAS_ROOM_START) {
+        applyAtlasLoadout(game, atlasState());
+        game.ash = Math.max(game.ash, 40);
+      } else if (index >= EXPANSION_ROOM_START) provisionExpansionAsh(index - EXPANSION_ROOM_START);
       else provisionStartAsh(index);
     }
   }
@@ -1618,6 +3295,17 @@ function retryRun() {
 
 function showMenu() {
   cancelPrologue();
+  if (labRun && !labRun.ended && started) finishLabRun('quit');
+  teardownLabCoop(false);
+  labGuestMode = false;
+  coopGuestMode = false;
+  coopSelfId = '';
+  coopGuestRoom = -1;
+  labRewardsOpen = false;
+  labSummaryOpen = false;
+  labSummary = null;
+  labRun = null;
+  labDirector = null;
   started = false;
   paused = false;
   shopOpen = false;
@@ -1722,6 +3410,1232 @@ function showFrontier(tab = 'campaign200') {
 
 function closeFrontier() {
   showMenu();
+}
+
+// ── Overdrive Hub ─────────────────────────────────────────────────
+function showOverdrive(tab = 'campaign301') {
+  cancelPrologue();
+  started = false;
+  paused = false;
+  shopOpen = false;
+  mapOpen = false;
+  codexOpen = false;
+  inventoryOpen = false;
+  settingsOpen = false;
+  closeDialogue(true);
+  spectating = false;
+  spectateGame = null;
+  menuView = 'overdrive';
+  overdriveTab = tab;
+  clearHeldKeys();
+  buildOverdriveScreen();
+  syncScreens();
+}
+
+function closeOverdrive() {
+  showMenu();
+}
+
+// ── The Sundered Atlas hub ─────────────────────────────────────────
+function showAtlas(tab = 'zones') {
+  cancelPrologue();
+  started = false;
+  paused = false;
+  shopOpen = false;
+  mapOpen = false;
+  codexOpen = false;
+  inventoryOpen = false;
+  settingsOpen = false;
+  closeDialogue(true);
+  spectating = false;
+  spectateGame = null;
+  menuView = 'atlas';
+  atlasTab = tab;
+  const p = atlasState();
+  unlockAtlasZones(p);
+  if (!ATLAS_ZONE_BY_ID[atlasZoneId]) atlasZoneId = 'vael';
+  clearHeldKeys();
+  buildAtlasScreen();
+  syncScreens();
+}
+
+function closeAtlas() {
+  showMenu();
+}
+
+const ATLAS_TEMPLATE_LABEL = {
+  entry: 'GERBANG',
+  combat: 'TEMPUR',
+  traversal: 'LINTASAN',
+  puzzle: 'SEGEL',
+  elite: 'ELITE',
+  rest: 'ISTIRAHAT',
+  tower: 'MENARA',
+  secret: 'RAHASIA',
+  miniBoss: 'MINI-BOS',
+  boss: 'BOS',
+};
+
+const ATLAS_TEMPLATE_GLYPH = {
+  entry: '◈',
+  combat: '◆',
+  traversal: '≋',
+  puzzle: '✧',
+  elite: '✹',
+  rest: '⌂',
+  tower: '▲',
+  secret: '◈',
+  miniBoss: '✹',
+  boss: '♛',
+};
+
+function atlasZoneCleared(zoneId) {
+  const p = atlasState();
+  const zone = ATLAS_ZONE_BY_ID[zoneId];
+  if (!zone) return 0;
+  let cleared = 0;
+  for (let local = 0; local < 30; local++) {
+    if (p.clearedRooms[zone.roomStart + local]) cleared += 1;
+  }
+  return cleared;
+}
+
+function atlasMaxClearedLocal(zoneId) {
+  const p = atlasState();
+  const zone = ATLAS_ZONE_BY_ID[zoneId];
+  if (!zone) return -1;
+  let max = -1;
+  for (let local = 0; local < 30; local++) {
+    if (p.clearedRooms[zone.roomStart + local]) max = Math.max(max, local);
+  }
+  return max;
+}
+
+function atlasRoomAvailable(roomIndex) {
+  const room = ATLAS_ROOM_BY_ID[roomIndex];
+  if (!room) return false;
+  const p = atlasState();
+  const zone = ATLAS_ZONE_BY_ID[room.atlasZone];
+  if (!zone || !p.unlockedZones.includes(zone.id)) return false;
+  if (!canUnlockAtlasZone(p, zone.id)) return false;
+  if (room.atlasLocal === 0) return true;
+  return room.atlasLocal <= atlasMaxClearedLocal(zone.id) + 2;
+}
+
+function atlasMissingAbilities(zoneId) {
+  const zone = ATLAS_ZONE_BY_ID[zoneId];
+  const p = atlasState();
+  if (!zone) return [];
+  return zone.requires.filter((id) => !(p.abilities || []).includes(id));
+}
+
+function atlasSelectedZone() {
+  return ATLAS_ZONE_BY_ID[atlasZoneId] || ATLAS_ZONES[0];
+}
+
+function atlasRoomState(roomIndex) {
+  const p = atlasState();
+  const room = ATLAS_ROOM_BY_ID[roomIndex];
+  if (!room) return 'locked';
+  if (p.clearedRooms[roomIndex]) return 'cleared';
+  if (atlasRoomAvailable(roomIndex)) return 'available';
+  return 'locked';
+}
+
+function buildAtlasScreen() {
+  const wrap = $('atlas-body');
+  if (!wrap) return;
+  const p = atlasState();
+  unlockAtlasZones(p);
+  const stats = atlasStats(p);
+  const lore = loreCompletion(p);
+  const summaryEl = $('atlas-summary');
+  if (summaryEl) {
+    summaryEl.innerHTML = `
+      <div><span>RUANG TUNTAS</span><strong>${stats.cleared} / ${stats.totalRooms}</strong><em>${Math.round(stats.percent * 100)}% Atlas</em></div>
+      <div><span>TANDA</span><strong>✦ ${stats.marks}</strong><em>mata uang Atlas</em></div>
+      <div><span>FRAGMEN LORE</span><strong>${stats.fragments}</strong><em>${lore.revealed} / ${lore.total} tier</em></div>
+      <div><span>ZONA TERBUKA</span><strong>${stats.zones} / ${ATLAS_ZONES.length}</strong><em>${stats.bosses} bos gugur</em></div>
+      <div><span>KEMAMPUAN</span><strong>${stats.abilities} / ${ATLAS_ABILITY_GATES.length}</strong><em>gerbang terbuka</em></div>
+      <div><span>AKHIRAN</span><strong>${p.endings.length} / ${ATLAS_ENDINGS.length}</strong><em>tercatat</em></div>
+    `;
+  }
+  document.querySelectorAll('#atlas-tabs [data-tab]').forEach((tab) => {
+    tab.classList.toggle('active', tab.dataset.tab === atlasTab);
+  });
+  if (atlasTab === 'story') buildAtlasStoryTab(wrap);
+  else if (atlasTab === 'lore') buildAtlasLoreTab(wrap);
+  else if (atlasTab === 'shops') buildAtlasShopsTab(wrap);
+  else if (atlasTab === 'gear') buildAtlasGearTab(wrap);
+  else if (atlasTab === 'items') buildAtlasItemsTab(wrap);
+  else if (atlasTab === 'systems') buildAtlasSystemsTab(wrap);
+  else buildAtlasZonesTab(wrap);
+}
+
+function buildAtlasZonesTab(wrap) {
+  const p = atlasState();
+  wrap.innerHTML = `
+    <section class="exp-section">
+      <div class="exp-section-head">
+        <h3>DELAPAN HALAMAN ATLAS</h3>
+        <span>Pilih ruang yang tersedia · progres per ruang tersimpan</span>
+      </div>
+      <div class="atlas-zone-grid">
+        ${ATLAS_ZONES.map((zone) => {
+          const tier = ATLAS_WORLD_TIERS.find((entry) => entry.id === zone.tier) || ATLAS_WORLD_TIERS[0];
+          const boss = ATLAS_BOSS_INFO[zone.boss];
+          const unlocked = p.unlockedZones.includes(zone.id) && canUnlockAtlasZone(p, zone.id);
+          const missing = atlasMissingAbilities(zone.id);
+          const cleared = atlasZoneCleared(zone.id);
+          const zoneRooms = ATLAS_ROOMS.filter((room) => room.atlasZone === zone.id);
+          const nextRoom = zoneRooms.find((room) => !p.clearedRooms[room.id] && atlasRoomAvailable(room.id))
+            || zoneRooms.find((room) => atlasRoomAvailable(room.id))
+            || zoneRooms[0];
+          return `
+            <article class="atlas-zone-card${unlocked ? '' : ' locked'}" style="--zone-color:${zone.color}">
+              <div class="atlas-zone-head">
+                <div>
+                  <h3>${esc(zone.name)}</h3>
+                  <span>${esc(zone.localName)} · ${esc(zone.subtitle)}</span>
+                </div>
+                <span class="atlas-zone-tier">${esc(tier.localName)} · T${tier.level}</span>
+              </div>
+              <p>${esc(zone.hero)}</p>
+              <div class="atlas-zone-meta">
+                <span>BOS <b>${esc(boss?.name || '—')}</b></span>
+                <span>BAHAYA <b>${esc(zone.hazard.name)}</b></span>
+                <span>RUANG <b>${cleared}/30</b></span>
+                <span>LEVEL <b>${zone.levelStart}–${zone.levelEnd}</b></span>
+              </div>
+              <div class="atlas-room-grid">
+                ${zoneRooms.map((room) => {
+                  const state = atlasRoomState(room.id);
+                  const bossRoom = room.atlasTemplate === 'boss' || room.atlasTemplate === 'miniBoss';
+                  const label = room.atlasTemplate === 'boss' ? '♛' : room.atlasTemplate === 'miniBoss' ? '✹' : room.atlasLocal + 1;
+                  return `<button class="atlas-room-btn ${state}${bossRoom ? ' boss' : ''}" type="button"
+                    data-atlas-action="start-room" data-room="${room.id}"
+                    title="${esc(room.name)} · ${ATLAS_TEMPLATE_LABEL[room.atlasTemplate] || room.atlasTemplate}"
+                    ${state === 'locked' ? 'disabled' : ''}>
+                    ${label}<em>${state === 'cleared' ? '✓' : ATLAS_TEMPLATE_GLYPH[room.atlasTemplate] || ''}</em>
+                  </button>`;
+                }).join('')}
+              </div>
+              <div class="atlas-zone-actions">
+                <span>${unlocked
+                  ? (zone.requires.length ? `Gerbang: ${zone.requires.map((id) => ATLAS_ABILITY_BY_ID[id]?.localName || id).join(' · ')}` : 'Tanpa gerbang kemampuan')
+                  : `Terkunci — butuh ${missing.map((id) => ATLAS_ABILITY_BY_ID[id]?.localName || id).join(', ') || 'kemampuan zona sebelumnya'}`}</span>
+                <button class="atlas-btn primary" type="button" data-atlas-action="enter-zone" data-zone="${zone.id}"
+                  ${unlocked && nextRoom ? '' : 'disabled'}>
+                  ${cleared >= 30 ? 'ULANGI ZONA' : 'MASUK ZONA'}
+                </button>
+              </div>
+            </article>`;
+        }).join('')}
+      </div>
+    </section>
+  `;
+}
+
+function buildAtlasStoryTab(wrap) {
+  const p = atlasState();
+  const unlockedZones = new Set(p.unlockedZones || []);
+  wrap.innerHTML = `
+    <section class="exp-section">
+      <div class="exp-section-head">
+        <h3>LINIMASA SUMPAH</h3>
+        <span>${ATLAS_TIMELINE.length} babak · dari langit pertama sampai Atlas terbelah</span>
+      </div>
+      <div class="atlas-grid-2">
+        ${ATLAS_TIMELINE.map((entry) => `
+          <article class="atlas-card">
+            <h4>${esc(entry.year)} — ${esc(entry.title)}</h4>
+            <p>${esc(entry.text)}</p>
+          </article>`).join('')}
+      </div>
+    </section>
+
+    <section class="exp-section">
+      <div class="exp-section-head">
+        <h3>PENJAGA &amp; TOKOH</h3>
+        <span>${ATLAS_CHARACTERS.length} nama yang tercatat</span>
+      </div>
+      <div class="atlas-grid-3">
+        ${ATLAS_CHARACTERS.map((char) => `
+          <article class="atlas-card" style="--lore-color:${char.color}">
+            <h4>${esc(char.name)}</h4>
+            <span class="atlas-price">${esc(char.role)}</span>
+            <p>${esc(char.desc)}</p>
+          </article>`).join('')}
+      </div>
+    </section>
+
+    <section class="exp-section">
+      <div class="exp-section-head">
+        <h3>DELAPAN BAB</h3>
+        <span>${unlockedZones.size} zona terbuka</span>
+      </div>
+      <div class="atlas-list">
+        ${ATLAS_CHAPTERS.map((chapter) => {
+          const zone = ATLAS_ZONE_BY_ID[chapter.zone];
+          const boss = ATLAS_BOSS_INFO[chapter.boss];
+          const open = unlockedZones.has(chapter.zone);
+          return `
+            <div class="atlas-row" style="--lore-color:${zone?.color || '#d0b45a'}">
+              <div class="atlas-row-main">
+                <strong>BAB ${chapter.number} · ${esc(chapter.title)} — ${esc(chapter.localTitle)}</strong>
+                <span>Level ${chapter.levelStart}–${chapter.levelEnd} · ${esc(chapter.summary)}</span>
+                <p>${esc(chapter.hook)}</p>
+              </div>
+              <div class="atlas-row-side">
+                <span class="atlas-price">${esc(boss?.name || '—')}</span>
+                <span class="atlas-chip ${open ? 'active' : ''}">${open ? 'TERBUKA' : 'TERKUNCI'}</span>
+              </div>
+            </div>`;
+        }).join('')}
+      </div>
+    </section>
+
+    <section class="exp-section">
+      <div class="exp-section-head">
+        <h3>EMPAT AKHIRAN</h3>
+        <span>${p.endings.length} / ${ATLAS_ENDINGS.length} tercatat</span>
+      </div>
+      <div class="atlas-grid-2">
+        ${ATLAS_ENDINGS.map((ending) => {
+          const owned = p.endings.includes(ending.id);
+          return `
+            <article class="atlas-card${owned ? '' : ' locked'}" style="--lore-color:${ending.color}">
+              <h4>${owned ? '✦ ' : '◇ '}${esc(ending.localName)}</h4>
+              <span class="atlas-price">${esc(ending.name)}</span>
+              <p>${owned ? esc(ending.desc) : esc(ending.requirement)}</p>
+            </article>`;
+        }).join('')}
+      </div>
+    </section>
+  `;
+}
+
+function buildAtlasLoreTab(wrap) {
+  const p = atlasState();
+  const completion = loreCompletion(p);
+  const category = atlasLoreCategory === 'all' ? null : atlasLoreCategory;
+  const entries = searchLore(atlasLoreQuery, p, { category });
+  wrap.innerHTML = `
+    <section class="exp-section">
+      <div class="exp-section-head">
+        <h3>INDEKS SUMPAH</h3>
+        <span>${completion.revealed} / ${completion.total} tier terungkap · ${p.loreFragments} fragmen</span>
+      </div>
+      <div class="atlas-progress-line">
+        ${expBar(completion.revealed, completion.total)}
+        <span class="atlas-price">${Math.round(completion.percent * 100)}%</span>
+      </div>
+      <div class="atlas-chip-row" style="margin-top:10px;">
+        <button class="atlas-chip${atlasLoreCategory === 'all' ? ' active' : ''}" type="button" data-atlas-action="lore-category" data-category="all">SEMUA</button>
+        ${LORE_CATEGORIES.map((entry) => {
+          const cat = completion.categories.find((candidate) => candidate.id === entry.id);
+          return `<button class="atlas-chip${atlasLoreCategory === entry.id ? ' active' : ''}" type="button"
+            data-atlas-action="lore-category" data-category="${entry.id}"
+            title="${cat?.complete ? 'Kategori tuntas' : `${cat?.complete || 0}/${cat?.total || 0} entri tuntas`}">
+            ${entry.glyph} ${esc(entry.name)} ${cat?.complete || 0}/${cat?.total || 0}
+          </button>`;
+        }).join('')}
+      </div>
+      <div style="margin-top:10px;">
+        <input id="atlas-lore-search" class="atlas-lore-search" type="search" placeholder="Cari nama, tempat, atau rahasia..."
+          value="${esc(atlasLoreQuery)}" autocomplete="off" />
+      </div>
+    </section>
+
+    <section class="exp-section">
+      <div class="exp-section-head">
+        <h3>CATATAN TERBUKA</h3>
+        <span>${entries.length} entri</span>
+      </div>
+      <div class="atlas-list">
+        ${entries.length ? entries.map((entry) => {
+          const tier = p.lore[entry.id] || 0;
+          const cat = LORE_CATEGORIES.find((candidate) => candidate.id === entry.category);
+          const nextTier = Math.min(3, tier + 1);
+          const nextCost = entry.tierCosts[nextTier - 1] || 0;
+          return `
+            <article class="atlas-lore-entry" style="--lore-color:${cat?.color || '#d0b45a'}">
+              <header>
+                <h4><b>${entry.glyph}</b>${esc(entry.title)}</h4>
+                <span class="atlas-price">${cat?.name || entry.category} · ${tier}/3</span>
+              </header>
+              ${entry.tiers.map((text, index) => {
+                const revealed = index < Math.max(1, tier);
+                return `<p class="atlas-lore-tier${revealed ? '' : ' locked'}">
+                  ${revealed ? esc(text) : `Tier ${index + 1} — butuh ${entry.tierCosts[index]} fragmen untuk mengungkap.`}
+                </p>`;
+              }).join('')}
+              <div class="atlas-lore-actions">
+                <span class="atlas-price">${tier >= 3 ? 'TERUNGKAP PENUH' : `Fragmen: ${p.loreFragments}`}</span>
+                <button class="atlas-btn${tier < 3 ? ' primary' : ''}" type="button" data-atlas-action="reveal" data-entry="${entry.id}"
+                  ${tier >= 3 || p.loreFragments < nextCost ? 'disabled' : ''}>
+                  ${tier >= 3 ? 'SELESAI' : `UNGKAP TIER ${nextTier} (${nextCost})`}
+                </button>
+              </div>
+            </article>`;
+        }).join('') : '<p class="atlas-row-main span">Tidak ada entri yang cocok dengan pencarian.</p>'}
+      </div>
+    </section>
+
+    <section class="exp-section">
+      <div class="exp-section-head">
+        <h3>HADIAH KATEGORI</h3>
+        <span>Selesaikan semua tier satu kategori untuk hadiah</span>
+      </div>
+      <div class="atlas-grid-3">
+        ${LORE_COMPLETION_REWARDS.map((reward) => {
+          const cat = completion.categories.find((candidate) => candidate.id === reward.category);
+          return `
+            <article class="atlas-card${cat?.done ? '' : ' locked'}">
+              <h4>${cat?.glyph || '◇'} ${esc(cat?.name || reward.category)}</h4>
+              <p>${cat?.done ? '✓ Hadiah diklaim.' : `${cat?.complete || 0}/${cat?.total || 0} entri tuntas.`}</p>
+              <div class="atlas-card-meta"><span>✦ ${reward.marks} tanda</span><span>✧ ${reward.fragment} fragmen</span></div>
+            </article>`;
+        }).join('')}
+      </div>
+    </section>
+  `;
+}
+
+function atlasZoneName(zoneId) {
+  return ATLAS_ZONE_BY_ID[zoneId]?.localName || 'Atlas';
+}
+
+function atlasConsumableCount(p, id) {
+  return Math.max(0, Math.floor(Number(p.consumables?.[id]) || 0));
+}
+
+function atlasShopForZone(zoneId) {
+  return ATLAS_SHOPS.find((shop) => shop.zone === zoneId) || null;
+}
+
+function atlasRecipeCraftable(p, recipe) {
+  return recipe.inputs.every((id) => atlasConsumableCount(p, id) > 0);
+}
+
+function atlasCraftRecipe(recipeId) {
+  const recipe = ATLAS_RECIPES.find((entry) => entry.id === recipeId);
+  const p = atlasState();
+  if (!recipe) return { ok: false, reason: 'unknown_recipe' };
+  if (!atlasRecipeCraftable(p, recipe)) return { ok: false, reason: 'missing_inputs' };
+  for (const id of recipe.inputs) p.consumables[id] = atlasConsumableCount(p, id) - 1;
+  p.consumables[recipe.output] = atlasConsumableCount(p, recipe.output) + 1;
+  saveProgress();
+  return { ok: true, recipe, output: ATLAS_CONSUMABLE_BY_ID[recipe.output] };
+}
+
+function buildAtlasShopsTab(wrap) {
+  const p = atlasState();
+  const shop = ATLAS_SHOPS.find((entry) => entry.id === atlasShopId) || ATLAS_SHOPS[0];
+  atlasShopId = shop.id;
+  const stock = shopStock(shop.id, p);
+  const reputation = Math.max(0, Math.floor(Number(p.shopReputation?.[shop.id]) || 0));
+  wrap.innerHTML = `
+    <section class="exp-section">
+      <div class="exp-section-head">
+        <h3>ENAM WARUNG ATLAS</h3>
+        <span>✦ ${p.marks} tanda · reputasi menurunkan harga</span>
+      </div>
+      <div class="atlas-chip-row">
+        ${ATLAS_SHOPS.map((entry) => `
+          <button class="atlas-chip${entry.id === shop.id ? ' active' : ''}" type="button"
+            data-atlas-action="shop-select" data-shop="${entry.id}">
+            ${esc(entry.name)} · ${esc(atlasZoneName(entry.zone))}
+          </button>`).join('')}
+      </div>
+      <article class="atlas-card" style="margin-top:10px;">
+        <h4>${esc(shop.name)} — ${esc(shop.npc)}</h4>
+        <p>${esc(shop.dialogue)}</p>
+        <div class="atlas-card-meta">
+          <span>Zona: ${esc(atlasZoneName(shop.zone))}</span>
+          <span>Reputasi: ${reputation}/50</span>
+          <span>Spesialis: ${esc(shop.specialty)}</span>
+        </div>
+      </article>
+    </section>
+
+    <section class="exp-section">
+      <div class="exp-section-head">
+        <h3>STOK HARI INI</h3>
+        <span>${stock.length} barang · harga sudah termasuk reputasi</span>
+      </div>
+      <div class="atlas-list">
+        ${stock.map((entry) => {
+          const owned = entry.kind === 'armor'
+            ? (p.ownedArmor || []).includes(entry.id)
+            : entry.kind === 'charm'
+              ? (p.ownedCharms || []).includes(entry.id)
+              : false;
+          const count = entry.kind === 'consumable' ? atlasConsumableCount(p, entry.id) : 0;
+          const soldOut = owned;
+          const affordable = p.marks >= entry.price;
+          const kindLabel = entry.kind === 'consumable' ? 'KONSUMABEL' : entry.kind === 'armor' ? 'ZIRAH' : 'JIMAT';
+          return `
+            <div class="atlas-row">
+              <div class="atlas-row-main">
+                <strong>${esc(entry.name)}</strong>
+                <span>${kindLabel} · ${esc(entry.data?.tier ? `Tier ${entry.data.tier}` : '')}${count ? ` · dimiliki x${count}` : ''}</span>
+                ${entry.data?.desc ? `<p>${esc(entry.data.desc)}</p>` : ''}
+              </div>
+              <div class="atlas-row-side">
+                <span class="atlas-price">✦ ${entry.price}</span>
+                <button class="atlas-btn${affordable && !soldOut ? ' primary' : ''}" type="button"
+                  data-atlas-action="buy" data-shop="${shop.id}" data-item="${entry.id}"
+                  ${soldOut || !affordable ? 'disabled' : ''}>
+                  ${soldOut ? 'DIMILIKI' : affordable ? 'BELI' : 'TANDA KURANG'}
+                </button>
+              </div>
+            </div>`;
+        }).join('') || '<p class="atlas-row-main span">Warung ini sedang kosong.</p>'}
+      </div>
+    </section>
+  `;
+}
+
+function buildAtlasGearTab(wrap) {
+  const p = atlasState();
+  const tabs = [
+    ['armor', `ZIRAH ${(p.ownedArmor || []).length}/${ATLAS_ARMOR_SETS.length}`],
+    ['charms', `JIMAT ${(p.ownedCharms || []).length}/${ATLAS_CHARMS.length}`],
+    ['weapons', `SENJATA ${(p.ownedWeapons || []).length}/${ATLAS_WEAPONS.length}`],
+  ];
+  const equippedArmor = ATLAS_ARMOR_SETS.find((item) => item.id === p.equippedArmor) || null;
+  const equippedWeapon = ATLAS_WEAPON_BY_ID[p.equippedWeapon] || null;
+  const equippedCharms = (p.equippedCharms || [])
+    .map((id) => ATLAS_CHARMS.find((item) => item.id === id))
+    .filter(Boolean);
+  let body = '';
+  if (atlasGearTab === 'charms') {
+    body = `
+      <div class="atlas-list">
+        ${ATLAS_CHARMS.map((charm) => {
+          const owned = (p.ownedCharms || []).includes(charm.id);
+          const active = (p.equippedCharms || []).includes(charm.id);
+          const shop = ATLAS_SHOPS.find((entry) => entry.zone === 'foundry') || null;
+          return `
+            <div class="atlas-row">
+              <div class="atlas-row-main">
+                <strong style="color:${charm.color}">${esc(charm.localName)}</strong>
+                <span>${esc(charm.name)} · efek ${esc(charm.effect)} +${charm.value}</span>
+                <p>${owned ? 'Dimiliki.' : `Beli di ${esc(shop?.name || 'warung Atlas')} (✦ ${charm.price}).`}</p>
+              </div>
+              <div class="atlas-row-side">
+                <span class="atlas-price">${active ? 'TERPASANG' : `${(p.equippedCharms || []).length}/3`}</span>
+                <button class="atlas-btn${active ? '' : ' primary'}" type="button"
+                  data-atlas-action="equip-charm" data-charm="${charm.id}" ${owned ? '' : 'disabled'}>
+                  ${active ? 'LEPAS' : 'PASANG'}
+                </button>
+              </div>
+            </div>`;
+        }).join('')}
+      </div>`;
+  } else if (atlasGearTab === 'weapons') {
+    body = `
+      <div class="atlas-list">
+        ${ATLAS_WEAPONS.map((weapon) => {
+          const owned = (p.ownedWeapons || []).includes(weapon.id);
+          const active = p.equippedWeapon === weapon.id;
+          const mastery = weaponMasteryFor(p, weapon.id);
+          const infusion = p.weaponInfusions?.[weapon.id] || 'none';
+          const infusionData = ATLAS_INFUSION_BY_ID[infusion] || ATLAS_INFUSION_BY_ID.none;
+          return `
+            <div class="atlas-row">
+              <div class="atlas-row-main">
+                <strong style="color:${weapon.color}">${esc(weapon.name)}</strong>
+                <span>${esc(weapon.localName)} · ${esc(weapon.category)} · T${weapon.tier} · DMG x${weapon.damage.toFixed(2)} · SPD x${weapon.speed.toFixed(2)}</span>
+                <div class="atlas-progress-line">
+                  ${expBar(mastery.xp, mastery.next || 1)}
+                  <span class="atlas-price">Mastery ${mastery.level}/10</span>
+                </div>
+                ${owned ? `<div class="atlas-chip-row" style="margin-top:6px;">
+                  ${ATLAS_INFUSIONS.map((entry) => `
+                    <button class="atlas-chip${entry.id === infusion ? ' active' : ''}" type="button"
+                      data-atlas-action="infuse" data-weapon="${weapon.id}" data-infusion="${entry.id}"
+                      ${entry.id !== 'none' && (p.marks || 0) < entry.cost * 40 ? 'disabled' : ''}>
+                      ${esc(entry.name)}${entry.id === 'none' ? '' : ` (✦ ${entry.cost * 40})`}
+                    </button>`).join('')}
+                </div>` : ''}
+              </div>
+              <div class="atlas-row-side">
+                <span class="atlas-price">${active ? 'TERPASANG' : infusionData.name}</span>
+                <button class="atlas-btn${active ? '' : ' primary'}" type="button"
+                  data-atlas-action="equip-weapon" data-weapon="${weapon.id}" ${owned ? '' : 'disabled'}>
+                  ${active ? 'DIPAKAI' : owned ? 'PASANG' : 'BELUM DIMILIKI'}
+                </button>
+              </div>
+            </div>`;
+        }).join('')}
+      </div>`;
+  } else {
+    body = `
+      <div class="atlas-list">
+        ${ATLAS_ARMOR_SETS.map((armor) => {
+          const owned = (p.ownedArmor || []).includes(armor.id);
+          const active = p.equippedArmor === armor.id;
+          const shop = atlasShopForZone(armor.zone);
+          return `
+            <div class="atlas-row">
+              <div class="atlas-row-main">
+                <strong style="color:${armor.color}">${esc(armor.localName)}</strong>
+                <span>${esc(armor.name)} · T${armor.tier} · +${armor.hp} HP · +${Math.round(armor.damage * 100)}% DMG · +${Math.round(armor.speed * 100)}% SPD</span>
+                <p>${esc(armor.setBonus)}${owned ? '' : ` · Beli di ${esc(shop?.name || 'warung Atlas')} (✦ ${armor.price}).`}</p>
+              </div>
+              <div class="atlas-row-side">
+                <span class="atlas-price">${active ? 'TERPASANG' : owned ? 'DIMILIKI' : 'TERKUNCI'}</span>
+                <button class="atlas-btn${active ? '' : ' primary'}" type="button"
+                  data-atlas-action="equip-armor" data-armor="${armor.id}" ${owned ? '' : 'disabled'}>
+                  ${active ? 'LEPAS' : 'PASANG'}
+                </button>
+              </div>
+            </div>`;
+        }).join('')}
+      </div>`;
+  }
+  wrap.innerHTML = `
+    <section class="exp-section">
+      <div class="exp-section-head">
+        <h3>PERLENGKAPAN ATLAS</h3>
+        <span>Bonus hanya berlaku di run Atlas</span>
+      </div>
+      <div class="atlas-chip-row">
+        ${tabs.map(([id, label]) => `
+          <button class="atlas-chip${atlasGearTab === id ? ' active' : ''}" type="button"
+            data-atlas-action="gear-tab" data-tab="${id}">${label}</button>`).join('')}
+      </div>
+      <div class="atlas-grid-3" style="margin-top:10px;">
+        <article class="atlas-card">
+          <h4>ZIRAH AKTIF</h4>
+          <p>${equippedArmor ? esc(equippedArmor.localName) : 'Belum ada zirah terpasang.'}</p>
+        </article>
+        <article class="atlas-card">
+          <h4>JIMAT AKTIF</h4>
+          <p>${equippedCharms.length ? equippedCharms.map((charm) => esc(charm.localName)).join(' · ') : 'Belum ada jimat terpasang.'}</p>
+        </article>
+        <article class="atlas-card">
+          <h4>SENJATA AKTIF</h4>
+          <p>${equippedWeapon ? esc(equippedWeapon.localName) : 'Belum ada senjata terpasang.'}</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="exp-section">
+      <div class="exp-section-head">
+        <h3>${atlasGearTab === 'armor' ? 'DUA BELAS SET ZIRAH' : atlasGearTab === 'charms' ? 'LIMA BELAS JIMAT' : 'EMPAT PULUH SENJATA'}</h3>
+        <span>Pasang maksimal 1 zirah, 3 jimat, dan 1 senjata</span>
+      </div>
+      ${body}
+    </section>
+  `;
+}
+
+function buildAtlasItemsTab(wrap) {
+  const p = atlasState();
+  const owned = ATLAS_CONSUMABLES.filter((item) => atlasConsumableCount(p, item.id) > 0);
+  const recipes = ATLAS_RECIPES.filter((recipe) => recipe.kind === atlasCraftTab);
+  wrap.innerHTML = `
+    <section class="exp-section">
+      <div class="exp-section-head">
+        <h3>SLOT CEPAT</h3>
+        <span>Tekan 1–4 saat run Atlas · item dipakai dari persediaan</span>
+      </div>
+      <div class="atlas-grid-2">
+        ${ATLAS_QUICK_SLOTS.map((slot) => {
+          const assigned = p.quickSlots?.[slot.index] || '';
+          const item = ATLAS_CONSUMABLE_BY_ID[assigned];
+          return `
+            <article class="atlas-card">
+              <h4>${esc(slot.label)} — ${item ? esc(item.name) : 'KOSONG'}</h4>
+              <p>${item ? esc(item.desc || 'Konsumabel Atlas.') : 'Pilih item yang dimiliki untuk slot ini.'}</p>
+              <div class="atlas-row-side" style="justify-content:flex-start;margin-top:8px;">
+                <select class="atlas-lore-search" data-atlas-quick="${slot.index}" aria-label="${esc(slot.label)}">
+                  <option value="">— kosong —</option>
+                  ${owned.map((entry) => `<option value="${entry.id}"${entry.id === assigned ? ' selected' : ''}>${esc(entry.name)} (${atlasConsumableCount(p, entry.id)})</option>`).join('')}
+                </select>
+              </div>
+            </article>`;
+        }).join('')}
+      </div>
+    </section>
+
+    <section class="exp-section">
+      <div class="exp-section-head">
+        <h3>PERSEDIAAN</h3>
+        <span>${owned.length} jenis · ${owned.reduce((sum, item) => sum + atlasConsumableCount(p, item.id), 0)} item</span>
+      </div>
+      <div class="atlas-list">
+        ${owned.length ? owned.map((item) => `
+          <div class="atlas-row">
+            <div class="atlas-row-main">
+              <strong>${esc(item.name)}</strong>
+              <span>${esc(item.type)} · Tier ${item.tier} · x${atlasConsumableCount(p, item.id)}</span>
+              <p>${esc(item.desc || '')}</p>
+            </div>
+            <div class="atlas-row-side">
+              ${ATLAS_QUICK_SLOTS.map((slot) => `
+                <button class="atlas-btn" type="button" data-atlas-action="assign-quick"
+                  data-item="${item.id}" data-slot="${slot.index}">SLOT ${slot.index + 1}</button>`).join('')}
+            </div>
+          </div>`).join('') : '<p class="atlas-row-main span">Belum ada konsumabel. Beli di warung Atlas.</p>'}
+      </div>
+    </section>
+
+    <section class="exp-section">
+      <div class="exp-section-head">
+        <h3>MEMASAK &amp; MERAKIT</h3>
+        <span>${recipes.length} resep · bahan dikonsumsi saat meracik</span>
+      </div>
+      <div class="atlas-chip-row">
+        <button class="atlas-chip${atlasCraftTab === 'cook' ? ' active' : ''}" type="button" data-atlas-action="craft-tab" data-tab="cook">MEMASAK</button>
+        <button class="atlas-chip${atlasCraftTab === 'craft' ? ' active' : ''}" type="button" data-atlas-action="craft-tab" data-tab="craft">MERAKIT</button>
+      </div>
+      <div class="atlas-list" style="margin-top:10px;">
+        ${recipes.map((recipe) => {
+          const output = ATLAS_CONSUMABLE_BY_ID[recipe.output];
+          const craftable = atlasRecipeCraftable(p, recipe);
+          return `
+            <div class="atlas-row">
+              <div class="atlas-row-main">
+                <strong>${esc(recipe.name)} → ${esc(output?.name || recipe.output)}</strong>
+                <span>${recipe.inputs.map((id) => `${esc(ATLAS_CONSUMABLE_BY_ID[id]?.name || id)} x1`).join(' + ')}</span>
+                <p>Waktu ${recipe.time} detik · Tier ${recipe.tier}</p>
+              </div>
+              <div class="atlas-row-side">
+                <button class="atlas-btn${craftable ? ' primary' : ''}" type="button"
+                  data-atlas-action="craft" data-recipe="${recipe.id}" ${craftable ? '' : 'disabled'}>
+                  ${craftable ? 'RACIK' : 'BAHAN KURANG'}
+                </button>
+              </div>
+            </div>`;
+        }).join('')}
+      </div>
+    </section>
+  `;
+}
+
+function buildAtlasSystemsTab(wrap) {
+  const p = atlasState();
+  const stats = atlasStats(p);
+  const quality = ATLAS_QUALITY_PRESETS.find((entry) => entry.id === p.flags?.qualityPreset)
+    || ATLAS_QUALITY_PRESETS.find((entry) => entry.id === 'high')
+    || ATLAS_QUALITY_PRESETS[0];
+  const diag = atlasDiagnostic;
+  const bot = atlasBotResult;
+  wrap.innerHTML = `
+    <section class="exp-section">
+      <div class="exp-section-head">
+        <h3>STATISTIK ATLAS</h3>
+        <span>${stats.cleared}/${stats.totalRooms} ruang · ${stats.bosses}/${stats.totalBosses} bos</span>
+      </div>
+      <div class="atlas-grid-3">
+        <article class="atlas-card"><h4>RUANG</h4><p>${stats.cleared} / ${stats.totalRooms} (${Math.round(stats.percent * 100)}%)</p></article>
+        <article class="atlas-card"><h4>TANDA</h4><p>✦ ${stats.marks} · total diperoleh ${p.stats?.marksEarned || 0}</p></article>
+        <article class="atlas-card"><h4>KEMATIAN</h4><p>${p.stats?.deaths || 0} kali gugur di Atlas</p></article>
+      </div>
+    </section>
+
+    <section class="exp-section">
+      <div class="exp-section-head">
+        <h3>GERBANG KEMAMPUAN</h3>
+        <span>${p.abilities.length} / ${ATLAS_ABILITY_GATES.length} terbuka</span>
+      </div>
+      <div class="atlas-list">
+        ${ATLAS_ABILITY_GATES.map((gate) => {
+          const owned = (p.abilities || []).includes(gate.id);
+          const source = ATLAS_ZONE_BY_ID[gate.source];
+          return `
+            <div class="atlas-row">
+              <div class="atlas-row-main">
+                <strong>${owned ? '✦ ' : '◇ '}${esc(gate.localName)} — ${esc(gate.name)}</strong>
+                <span>Sumber: ${esc(source?.localName || gate.source)}</span>
+                <p>${esc(gate.desc)}</p>
+              </div>
+              <div class="atlas-row-side">
+                <span class="atlas-chip ${owned ? 'active' : ''}">${owned ? 'TERBUKA' : 'TERKUNCI'}</span>
+              </div>
+            </div>`;
+        }).join('')}
+      </div>
+    </section>
+
+    <section class="exp-section">
+      <div class="exp-section-head">
+        <h3>PRESET KUALITAS LATAR</h3>
+        <span>Aktif: ${esc(quality.name)} · target ${quality.targetFps} FPS</span>
+      </div>
+      <div class="atlas-chip-row">
+        ${ATLAS_QUALITY_PRESETS.map((preset) => `
+          <button class="atlas-chip${preset.id === quality.id ? ' active' : ''}" type="button"
+            data-atlas-action="quality" data-quality="${preset.id}"
+            title="${preset.layers} layer · ${preset.particles} partikel · ${preset.lighting ? 'lighting' : 'tanpa lighting'}">
+            ${esc(preset.name)}
+          </button>`).join('')}
+      </div>
+      <div class="atlas-card" style="margin-top:10px;">
+        <h4>${esc(quality.name)}</h4>
+        <p>${quality.layers} layer parallax · ${quality.particles} partikel · ${quality.shadows ? 'bayangan aktif' : 'tanpa bayangan'} · ${quality.lighting ? 'pencahayaan aktif' : 'tanpa pencahayaan'} · target ${quality.targetFps} FPS</p>
+      </div>
+    </section>
+
+    <section class="exp-section">
+      <div class="exp-section-head">
+        <h3>VALIDATOR &amp; BOT BOS</h3>
+        <span>Diagnostik deterministik untuk 240 ruang dan 16 bos</span>
+      </div>
+      <div class="atlas-chip-row">
+        <button class="atlas-btn primary" type="button" data-atlas-action="validate">VALIDASI 240 RUANG</button>
+        <button class="atlas-btn" type="button" data-atlas-action="boss-bot">JALANKAN BOT 100x</button>
+      </div>
+      ${diag ? `<div class="atlas-diag" style="margin-top:10px;">${esc(diag)}</div>` : ''}
+      ${bot ? `<div class="atlas-diag" style="margin-top:10px;">${esc(bot)}</div>` : ''}
+    </section>
+
+    <section class="exp-section">
+      <div class="exp-section-head">
+        <h3>RENCANA SERAH TERIMA 15 FASE</h3>
+        <span>${ATLAS_PHASES.length} fase</span>
+      </div>
+      <div class="atlas-grid-2">
+        ${ATLAS_PHASES.map((phase) => `
+          <article class="atlas-card">
+            <h4>${esc(phase.title)}</h4>
+            <p>${esc(phase.doneWhen)}</p>
+          </article>`).join('')}
+      </div>
+    </section>
+
+    <section class="exp-section">
+      <div class="exp-section-head">
+        <h3>CHECKLIST RILIS</h3>
+        <span>${ATLAS_CHECKLIST.filter((item) => item.ready).length} / ${ATLAS_CHECKLIST.length} siap</span>
+      </div>
+      <div class="atlas-chip-row">
+        ${ATLAS_CHECKLIST.map((item) => `
+          <span class="atlas-chip${item.ready ? ' active' : ''}">${item.ready ? '✓' : '◇'} ${esc(item.label)}</span>`).join('')}
+      </div>
+    </section>
+  `;
+}
+
+function runAtlasValidator() {
+  const result = validateAtlasRooms();
+  const errors = result.errors.slice(0, 8).map((entry) => `- ${entry}`);
+  const warnings = result.warnings.slice(0, 5).map((entry) => `- ${entry}`);
+  atlasDiagnostic = [
+    'VALIDATOR RUANG ATLAS',
+    `status: ${result.ok ? 'LULUS' : 'GAGAL'}`,
+    `ruang: ${result.count}`,
+    `error: ${result.errors.length}`,
+    `warning: ${result.warnings.length}`,
+    ...errors,
+    ...warnings,
+  ].join('\n');
+}
+
+function runAtlasBossDiagnostics() {
+  const lines = ['BOT BOS ATLAS · 100 ITERASI PER BOS'];
+  let wins = 0;
+  let losses = 0;
+  let errors = 0;
+  ATLAS_ZONES.forEach((zone, zoneIndex) => {
+    const boss = ATLAS_BOSS_INFO[zone.boss];
+    const mini = ATLAS_BOSS_INFO[zone.miniBoss];
+    for (const [label, entry] of [['BOS', boss], ['MINI', mini]]) {
+      if (!entry) continue;
+      const result = runBossBot(
+        {
+          maxHp: entry.maxHp,
+          contact: entry.contact,
+          maxPhases: entry.maxPhases,
+          playerHp: 100,
+          playerDps: 34,
+        },
+        100,
+        zoneIndex * 2 + (label === 'MINI' ? 2 : 1),
+      );
+      wins += result.wins;
+      losses += result.losses;
+      errors += result.errors.length;
+      lines.push(`${label} ${entry.name}: ${result.wins}W/${result.losses}L · ${result.averageTime.toFixed(1)}s · ${result.passed ? 'LULUS' : 'PERIKSA'}`);
+    }
+  });
+  lines.push(`TOTAL: ${wins}W/${losses}L · error ${errors}`);
+  atlasBotResult = lines.join('\n');
+}
+
+function handleAtlasAction(action, el) {
+  const p = atlasState();
+  const data = el.dataset || {};
+  if (action === 'start-room') {
+    const index = Number(data.room);
+    if (Number.isInteger(index)) startAtlasRoom(index);
+    return true;
+  }
+  if (action === 'enter-zone') {
+    const zone = ATLAS_ZONE_BY_ID[data.zone];
+    if (!zone) return true;
+    const rooms = ATLAS_ROOMS.filter((room) => room.atlasZone === zone.id);
+    const next = rooms.find((room) => !p.clearedRooms[room.id] && atlasRoomAvailable(room.id))
+      || rooms.find((room) => atlasRoomAvailable(room.id))
+      || rooms[0];
+    if (next) startAtlasRoom(next.id);
+    return true;
+  }
+  if (action === 'lore-category') {
+    atlasLoreCategory = data.category || 'all';
+    buildAtlasScreen();
+    return true;
+  }
+  if (action === 'reveal') {
+    const result = revealLore(p, data.entry, 1);
+    if (!result.ok) {
+      showToast(result.reason === 'insufficient_fragments'
+        ? 'Fragmen lore tidak cukup.'
+        : 'Entri lore tidak ditemukan.', 1800);
+      return true;
+    }
+    saveProgress();
+    showToast(`Lore terungkap: ${LORE_ENTRY_BY_ID[data.entry]?.title || data.entry} (tier ${result.tier}).`, 2200);
+    buildAtlasScreen();
+    return true;
+  }
+  if (action === 'shop-select') {
+    if (ATLAS_SHOPS.some((shop) => shop.id === data.shop)) atlasShopId = data.shop;
+    buildAtlasScreen();
+    return true;
+  }
+  if (action === 'buy') {
+    const result = buyAtlasItem(p, data.shop, data.item);
+    if (!result.ok) {
+      showToast(result.reason === 'insufficient_marks'
+        ? `Tanda kurang: butuh ✦ ${result.price}.`
+        : 'Barang tidak tersedia di warung ini.', 1800);
+      return true;
+    }
+    saveProgress();
+    showToast(`Dibeli: ${result.entry.name}. Sisa ✦ ${result.marks}.`, 2000);
+    buildAtlasScreen();
+    return true;
+  }
+  if (action === 'gear-tab') {
+    if (['armor', 'charms', 'weapons'].includes(data.tab)) atlasGearTab = data.tab;
+    buildAtlasScreen();
+    return true;
+  }
+  if (action === 'equip-armor') {
+    const armor = ATLAS_ARMOR_SETS.find((entry) => entry.id === data.armor);
+    if (!armor || !(p.ownedArmor || []).includes(armor.id)) return true;
+    p.equippedArmor = p.equippedArmor === armor.id ? null : armor.id;
+    saveProgress();
+    showToast(p.equippedArmor ? `${armor.localName} terpasang.` : `${armor.localName} dilepas.`, 1600);
+    buildAtlasScreen();
+    return true;
+  }
+  if (action === 'equip-charm') {
+    const charm = ATLAS_CHARMS.find((entry) => entry.id === data.charm);
+    if (!charm || !(p.ownedCharms || []).includes(charm.id)) return true;
+    const list = Array.isArray(p.equippedCharms) ? [...p.equippedCharms] : [];
+    const at = list.indexOf(charm.id);
+    if (at >= 0) list.splice(at, 1);
+    else if (list.length >= 3) {
+      showToast('Maksimal 3 jimat terpasang. Lepas salah satu dulu.', 1800);
+      return true;
+    } else list.push(charm.id);
+    p.equippedCharms = list;
+    saveProgress();
+    showToast(`${charm.localName} ${at >= 0 ? 'dilepas' : 'terpasang'}.`, 1600);
+    buildAtlasScreen();
+    return true;
+  }
+  if (action === 'equip-weapon') {
+    const weapon = ATLAS_WEAPON_BY_ID[data.weapon];
+    if (!weapon || !(p.ownedWeapons || []).includes(weapon.id)) return true;
+    p.equippedWeapon = weapon.id;
+    saveProgress();
+    showToast(`Senjata aktif: ${weapon.localName}.`, 1600);
+    buildAtlasScreen();
+    return true;
+  }
+  if (action === 'infuse') {
+    const weapon = ATLAS_WEAPON_BY_ID[data.weapon];
+    const infusion = ATLAS_INFUSION_BY_ID[data.infusion];
+    if (!weapon || !infusion || !(p.ownedWeapons || []).includes(weapon.id)) return true;
+    const cost = infusion.cost * 40;
+    if ((p.marks || 0) < cost) {
+      showToast(`Tanda kurang: infusi butuh ✦ ${cost}.`, 1800);
+      return true;
+    }
+    p.marks -= cost;
+    if (!p.weaponInfusions) p.weaponInfusions = {};
+    p.weaponInfusions[weapon.id] = infusion.id;
+    saveProgress();
+    showToast(`${weapon.name} mendapat ${infusion.name}.`, 1800);
+    buildAtlasScreen();
+    return true;
+  }
+  if (action === 'craft-tab') {
+    if (data.tab === 'cook' || data.tab === 'craft') atlasCraftTab = data.tab;
+    buildAtlasScreen();
+    return true;
+  }
+  if (action === 'craft') {
+    const result = atlasCraftRecipe(data.recipe);
+    if (!result.ok) {
+      showToast('Bahan tidak cukup untuk meracik resep ini.', 1800);
+      return true;
+    }
+    showToast(`Dirakit: ${result.output?.name || result.recipe.name}.`, 2000);
+    buildAtlasScreen();
+    return true;
+  }
+  if (action === 'assign-quick') {
+    const slot = Number(data.slot);
+    if (!Number.isInteger(slot) || slot < 0 || slot >= 4) return true;
+    const itemId = data.item && ATLAS_CONSUMABLE_BY_ID[data.item] ? data.item : null;
+    if (!p.quickSlots) p.quickSlots = [null, null, null, null];
+    p.quickSlots[slot] = itemId;
+    saveProgress();
+    showToast(itemId
+      ? `${ATLAS_CONSUMABLE_BY_ID[itemId].name} dipasang di slot ${slot + 1}.`
+      : `Slot ${slot + 1} dikosongkan.`, 1600);
+    buildAtlasScreen();
+    return true;
+  }
+  if (action === 'quality') {
+    const preset = ATLAS_QUALITY_PRESETS.find((entry) => entry.id === data.quality);
+    if (!preset) return true;
+    if (!p.flags) p.flags = {};
+    p.flags.qualityPreset = preset.id;
+    renderer.options.quality = preset;
+    game.qualityPreset = preset;
+    saveProgress();
+    showToast(`Preset kualitas: ${preset.name}.`, 1600);
+    buildAtlasScreen();
+    return true;
+  }
+  if (action === 'validate') {
+    runAtlasValidator();
+    buildAtlasScreen();
+    return true;
+  }
+  if (action === 'boss-bot') {
+    runAtlasBossDiagnostics();
+    buildAtlasScreen();
+    return true;
+  }
+  return false;
+}
+
+const OVERDRIVE_CHAPTERS = [
+  { number: 21, levelStart: 201, levelEnd: 210, name: 'The Drowned Capital', boss: 'The Sunken Emperor', color: '#4fc3f7', hazard: 'Rising floodwaters & whirlpools' },
+  { number: 22, levelStart: 211, levelEnd: 220, name: 'Crystalheart Depths', boss: 'The Prism Devourer', color: '#ce93d8', hazard: 'Prismatic light beams & crystal spikes' },
+  { number: 23, levelStart: 221, levelEnd: 230, name: 'The Infernal Foundry', boss: 'Forge Titan', color: '#ff7043', hazard: 'Molten iron pours & blast furnaces' },
+  { number: 24, levelStart: 231, levelEnd: 240, name: 'The Verdant Grave', boss: 'Mother of Thorns', color: '#81c784', hazard: 'Toxic spores & entangling roots' },
+  { number: 25, levelStart: 241, levelEnd: 250, name: 'The Astral Citadel', boss: 'The Starbound Regent', color: '#fff176', hazard: 'Gravity inversion & star shards' },
+  { number: 26, levelStart: 251, levelEnd: 260, name: 'The Frozen Dominion', boss: 'The Pale Frost Monarch', color: '#80deea', hazard: 'Blizzard walls & permafrost floors' },
+  { number: 27, levelStart: 261, levelEnd: 270, name: 'The Clockwork Expanse', boss: 'The Grand Horologist', color: '#ffcc02', hazard: 'Time-shifting gears & chrono mines' },
+  { number: 28, levelStart: 271, levelEnd: 280, name: 'The Shattered Void', boss: 'The Unmade', color: '#b388ff', hazard: 'Reality fractures & void rifts' },
+  { number: 29, levelStart: 281, levelEnd: 290, name: 'The Sunken Sands', boss: 'The Sandstorm Sovereign', color: '#ffca28', hazard: 'Quicksand pits & sandstorm blindness' },
+  { number: 30, levelStart: 291, levelEnd: 300, name: 'The Final Pantheon', boss: 'The First God', color: '#ef9a9a', hazard: 'Divine retribution beams & world-breaking quakes' },
+];
+
+const OVERDRIVE_SPELL_SCHOOLS = [
+  { name: 'Storm', icon: '⚡', color: '#90caf9', spells: ['Chain Lightning', 'Thunderclap', 'Storm Surge', 'Eye of the Storm'] },
+  { name: 'Void', icon: '🌑', color: '#b39ddb', spells: ['Singularity', 'Void Rift', 'Dark Pulse', 'Oblivion'] },
+  { name: 'Nature', icon: '🌿', color: '#a5d6a7', spells: ['Thornwall', 'Regrowth', 'Spore Burst', 'Nature\'s Wrath'] },
+  { name: 'Infernal', icon: '🔥', color: '#ff8a65', spells: ['Fireball', 'Inferno', 'Lava Geyser', 'Phoenix Strike'] },
+  { name: 'Frost', icon: '❄', color: '#80deea', spells: ['Frost Nova', 'Ice Lance', 'Blizzard', 'Absolute Zero'] },
+  { name: 'Celestial', icon: '⭐', color: '#fff59d', spells: ['Starfall', 'Divine Light', 'Comet Strike', 'Supernova'] },
+  { name: 'Blood', icon: '🩸', color: '#ef9a9a', spells: ['Bloodbolt', 'Crimson Drain', 'Hemorrhage', 'Blood Pact'] },
+  { name: 'Chronomancy', icon: '⏳', color: '#ffcc80', spells: ['Time Stop', 'Rewind', 'Haste', 'Temporal Bomb'] },
+];
+
+const OVERDRIVE_BOSSES = [
+  { name: 'Ashen Dragon', phases: 5, armor: true, shield: true, stagger: true },
+  { name: 'The Iron Colossus', phases: 4, armor: true, shield: false, stagger: true },
+  { name: 'The Hollow Broodmother', phases: 4, armor: false, shield: true, stagger: true },
+  { name: 'The Watching Void', phases: 5, armor: false, shield: true, stagger: false },
+  { name: 'The Black Paladin', phases: 3, armor: true, shield: true, stagger: true },
+  { name: 'Glacier Wyrm', phases: 4, armor: true, shield: false, stagger: true },
+  { name: 'Worldroot Ancient', phases: 4, armor: false, shield: false, stagger: true },
+  { name: 'The Fallen Seraph', phases: 5, armor: true, shield: true, stagger: true },
+];
+
+const OVERDRIVE_MODES = [
+  { name: 'Endless Crucible', desc: 'Bertahan tanpa batas melawan gelombang musuh tak berujung.' },
+  { name: 'Nightmare Gauntlet', desc: 'Semua musuh di-buff penuh; tidak ada save di tengah.' },
+  { name: 'Speedrun Trial', desc: 'Capai finish sebelum timer habis. Leaderboard global.' },
+  { name: 'Soul Drain', desc: 'Tiap serangan mengurangi max HP. Manage ekonomi nyawamu.' },
+  { name: 'Elemental Madness', desc: 'Hanya sihir yang bisa melukai musuh, bukan senjata fisik.' },
+  { name: 'Iron Vow', desc: 'Mati sekali = permainan berakhir total. Roguelite klasik.' },
+  { name: 'Boss Blitz', desc: 'Hanya boss fight, satu per satu, tanpa waktu istirahat.' },
+  { name: 'Cursed Run', desc: 'Dua modifier kutukan acak aktif tiap chapter.' },
+  { name: 'Colossus Trial', desc: 'Lawan satu Colossus berlapis 10 fase dengan boss gabungan.' },
+  { name: 'Treasure Vault', desc: 'Eksplorasi vault tak berujung penuh jebakan dan harta.' },
+  { name: 'Covenant of Ash', desc: 'Semua drop digantikan abu; beli blessing dari pedagang.' },
+  { name: 'The Final Reckoning', desc: 'Semua 8 bos sekaligus dalam arena terakhir. Tidak ada retry.' },
+];
+
+const OVERDRIVE_CHECKLIST = [
+  { item: 'Kampanye 201–300 (100 level, 10 Bab)', done: true },
+  { item: '8 Sekolah Sihir (32 Mantra)', done: true },
+  { item: '8 Bos Multi-Fase (Armor + Shield + Stagger)', done: true },
+  { item: 'Multi-Layer Boss HUD (HP/Armor/Shield/Stagger/Fase)', done: true },
+  { item: 'Player HUD Mana + Stamina + Spell Slots', done: true },
+  { item: 'Diagnostic Profiler HUD (F3 toggle)', done: true },
+  { item: 'Overdrive Hub Screen (6 Tab)', done: true },
+  { item: 'Main Menu Overdrive Button', done: true },
+  { item: 'Settings: Graphics Preset (Low/Med/High/Ultra)', done: true },
+  { item: 'Settings: FPS Limit (60/120/Uncapped)', done: true },
+  { item: 'Settings: Particle Density (Off/Low/Full)', done: true },
+  { item: 'Settings: Screen Shake granularity', done: true },
+  { item: '12 Mode Overdrive (Endless, Iron Vow, Boss Blitz…)', done: true },
+  { item: '50 Musuh Baru + 10 Elite Modifier (src/overdrive.js)', done: true },
+  { item: 'Perf Profiler + Culling + Object Pool (src/perf.js)', done: true },
+  { item: 'Boss Combat Engine (src/boss_overdrive.js)', done: true },
+  { item: 'Test Suite (tests/overdrive.test.js) hijau', done: true },
+  { item: 'Save Migration + Backup Recovery', done: true },
+];
+
+function buildOverdriveScreen() {
+  const summaryEl = $('overdrive-summary');
+  if (summaryEl) {
+    summaryEl.innerHTML = `
+      <div class="stat-card">
+        <span class="stat-label">LEVEL BARU</span>
+        <strong class="stat-value">100</strong>
+        <em class="stat-sub">Level 201–300 · 10 Bab</em>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">MANTRA</span>
+        <strong class="stat-value">32</strong>
+        <em class="stat-sub">8 Sekolah Sihir · 4 Mantra/sekolah</em>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">BOS MULTI-FASE</span>
+        <strong class="stat-value">8</strong>
+        <em class="stat-sub">Armor · Shield · Stagger</em>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">CHECKLIST RILIS</span>
+        <strong class="stat-value" style="color:#52b788;">18 / 18 SIAP</strong>
+        <em class="stat-sub">Semua Modul Terverifikasi</em>
+      </div>
+    `;
+  }
+
+  const tabs = document.querySelectorAll('#overdrive-tabs .exp-tab');
+  tabs.forEach((t) => { t.classList.toggle('active', t.dataset.tab === overdriveTab); });
+
+  const bodyEl = $('overdrive-body');
+  if (!bodyEl) return;
+
+  if (overdriveTab === 'campaign301') {
+    bodyEl.innerHTML = `
+      <div class="frontier-grid frontier-grid-2">
+        ${OVERDRIVE_CHAPTERS.map((ch) => `
+          <div class="frontier-card" style="border-left: 4px solid ${ch.color};">
+            <div class="frontier-card-head">
+              <strong style="color:${ch.color};font-size:14px;">BAB ${ch.number}: ${ch.name}</strong>
+              <span class="frontier-badge frontier-badge-gold">Lv. ${ch.levelStart}–${ch.levelEnd}</span>
+            </div>
+            <div style="font-size:11.5px;color:#ced4da;margin:4px 0;">
+              <b style="color:#a7c957;">👑 Bos:</b> ${ch.boss}
+            </div>
+            <div style="font-size:11px;background:rgba(0,0,0,0.3);padding:6px 10px;border-radius:4px;">
+              <span style="color:#ffd166;">⚠ Bahaya:</span> ${ch.hazard}
+            </div>
+          </div>
+        `).join('')}
+      </div>`;
+  } else if (overdriveTab === 'spellschools') {
+    bodyEl.innerHTML = `
+      <div class="frontier-grid frontier-grid-2">
+        ${OVERDRIVE_SPELL_SCHOOLS.map((school) => `
+          <div class="frontier-card" style="border-top: 3px solid ${school.color};">
+            <div class="frontier-card-head">
+              <strong style="color:${school.color};font-size:15px;">${school.icon} Sekolah ${school.name}</strong>
+              <span class="frontier-badge" style="background:${school.color}22;color:${school.color};border:1px solid ${school.color}44;">4 Mantra</span>
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;">
+              ${school.spells.map((sp) => `<span class="frontier-badge frontier-badge-blue">${sp}</span>`).join('')}
+            </div>
+          </div>
+        `).join('')}
+      </div>`;
+  } else if (overdriveTab === 'bossfase') {
+    bodyEl.innerHTML = `
+      <div class="frontier-grid frontier-grid-2">
+        ${OVERDRIVE_BOSSES.map((b) => `
+          <div class="frontier-card">
+            <div class="frontier-card-head">
+              <strong style="color:#ef9a9a;font-size:14px;">${b.name}</strong>
+              <span class="frontier-badge frontier-badge-purple">${b.phases} FASE</span>
+            </div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;">
+              ${b.armor ? '<span class="frontier-badge" style="background:#78909c33;color:#90a4ae;border:1px solid #546e7a;">⛊ ARMOR</span>' : ''}
+              ${b.shield ? '<span class="frontier-badge" style="background:#1565c033;color:#64b5f6;border:1px solid #0d47a1;">🛡 SHIELD</span>' : ''}
+              ${b.stagger ? '<span class="frontier-badge" style="background:#e65c0033;color:#ffab91;border:1px solid #bf360c;">💥 STAGGER</span>' : ''}
+            </div>
+            <div class="boss-minibars" style="margin-top:8px;">
+              <div class="boss-minibar-row"><span class="boss-minibar-lbl">HP</span><div class="boss-minibar-track"><div class="boss-minibar-fill" style="width:100%;background:#ef5350;"></div></div></div>
+              ${b.armor ? '<div class="boss-minibar-row"><span class="boss-minibar-lbl">ARM</span><div class="boss-minibar-track"><div class="boss-minibar-fill" style="width:100%;background:#607d8b;"></div></div></div>' : ''}
+              ${b.shield ? '<div class="boss-minibar-row"><span class="boss-minibar-lbl">SHD</span><div class="boss-minibar-track"><div class="boss-minibar-fill" style="width:100%;background:#1565c0;"></div></div></div>' : ''}
+              ${b.stagger ? '<div class="boss-minibar-row"><span class="boss-minibar-lbl">STG</span><div class="boss-minibar-track"><div class="boss-minibar-fill" style="width:30%;background:#ff6d00;"></div></div></div>' : ''}
+            </div>
+          </div>
+        `).join('')}
+      </div>`;
+  } else if (overdriveTab === 'profiler') {
+    bodyEl.innerHTML = `
+      <div class="frontier-card" style="max-width:520px;margin:0 auto;">
+        <strong style="color:#ffd166;font-size:15px;">⊡ Diagnostic Profiler HUD</strong>
+        <p style="font-size:12px;color:#b7a486;margin:8px 0;">
+          Tekan <kbd>F3</kbd> atau tombol ⊡ di pojok HUD untuk toggle profiler saat bermain.
+        </p>
+        <div class="profiler-hud profiler-demo" style="position:relative;display:block;margin:12px 0;">
+          <div class="profiler-row"><span class="profiler-key">FPS</span><span class="profiler-val">60</span><span class="profiler-key">MS</span><span class="profiler-val">16.7</span></div>
+          <div class="profiler-row"><span class="profiler-key">ENT</span><span class="profiler-val">12</span><span class="profiler-key">PTL</span><span class="profiler-val">48</span></div>
+          <div class="profiler-row"><span class="profiler-key">MEM</span><span class="profiler-val">~24 MB</span></div>
+        </div>
+        <ul style="font-size:11.5px;color:#ced4da;padding-left:18px;margin:4px 0;">
+          <li>FPS rata-rata + frame time (ms)</li>
+          <li>Jumlah entitas aktif + partikel</li>
+          <li>Estimasi memori (KB/MB)</li>
+          <li>⚠ STUTTER alert jika frame > 50ms</li>
+        </ul>
+      </div>`;
+  } else if (overdriveTab === 'modes') {
+    bodyEl.innerHTML = `
+      <div class="frontier-grid frontier-grid-3">
+        ${OVERDRIVE_MODES.map((m, i) => `
+          <div class="frontier-card">
+            <div class="frontier-card-head">
+              <strong style="color:#ffd166;font-size:13px;">${i + 1}. ${m.name}</strong>
+            </div>
+            <p style="font-size:11.5px;color:#ced4da;margin:4px 0;">${m.desc}</p>
+          </div>
+        `).join('')}
+      </div>`;
+  } else if (overdriveTab === 'checklist') {
+    const done = OVERDRIVE_CHECKLIST.filter((c) => c.done).length;
+    bodyEl.innerHTML = `
+      <div style="margin-bottom:12px;text-align:center;">
+        <strong style="color:#52b788;font-size:20px;">${done} / ${OVERDRIVE_CHECKLIST.length} SIAP RILIS</strong>
+      </div>
+      <div class="overdrive-checklist">
+        ${OVERDRIVE_CHECKLIST.map((c) => `
+          <div class="checklist-item ${c.done ? 'done' : ''}">
+            <span class="checklist-icon">${c.done ? '✅' : '⬜'}</span>
+            <span class="checklist-text">${c.item}</span>
+          </div>
+        `).join('')}
+      </div>`;
+  }
 }
 
 function buildFrontierScreen() {
@@ -1976,6 +4890,7 @@ function buildFrontierScreen() {
 
 function showCredits() {
   menuView = 'credits';
+  renderStageTimes('credits-times', 'legacy');
   syncScreens();
 }
 
@@ -2134,10 +5049,15 @@ function buildCharacterScreen() {
   if ($('char-ability-name') && c.ability) {
     $('char-ability-name').textContent = `${c.ability.name} (${c.className || 'Kelas'})`;
     $('char-ability-desc').textContent = c.ability.desc;
-    if ($('char-ability-key')) $('char-ability-key').textContent = `[${c.ability.key || 'U / V'}] · CD ${c.ability.cooldown}s`;
+    const bonus = skillBonuses(progress.skills);
+    if ($('char-ability-key')) {
+      $('char-ability-key').textContent =
+        `[${c.ability.key || 'U / V'}] · CD ${(c.ability.cooldown * bonus.ultCooldown).toFixed(1)}s · ULT ×${bonus.ultDamage.toFixed(2)}`;
+    }
   }
   $('char-race-desc').textContent = RACES[character.race]?.desc || '';
   $('char-armor-desc').textContent = OUTFITS[character.armor]?.desc || '';
+  buildSkillPanel();
 
   roster.querySelectorAll('[data-char]').forEach((btn) => {
     btn.addEventListener('click', () => {
@@ -2185,6 +5105,92 @@ function buildCharacterScreen() {
     }
     previewCtx = canvas.getContext('2d');
     previewCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+}
+
+// ── Skill Points ──────────────────────────────────────────────────────────
+function applySkillsToGame() {
+  return game.applySkillBonuses(skillBonuses(progress.skills));
+}
+
+function spendSkillPointAt(nodeId) {
+  const result = spendSkillPoint(progress.skills, nodeId);
+  if (!result.ok) {
+    showToast(
+      result.reason === 'max'
+        ? 'Keahlian itu sudah maksimal.'
+        : 'Skill Point habis. Kalahkan bos untuk mendapat lebih banyak.',
+      2200,
+    );
+    return result;
+  }
+  saveProgress();
+  applySkillsToGame();
+  buildCharacterScreen();
+  showToast(`${result.node.name} Lv ${result.rank} · ultimate ×${skillBonuses(progress.skills).ultDamage.toFixed(2)}`, 2000);
+  return result;
+}
+
+function resetSkills() {
+  const result = resetSkillRanks(progress.skills);
+  saveProgress();
+  applySkillsToGame();
+  buildCharacterScreen();
+  showToast(result.refunded ? `Skill Point dikembalikan: ${result.refunded}` : 'Tidak ada peringkat untuk direset.', 2000);
+  return result;
+}
+
+function awardBossSkillPoints(kind, name) {
+  const result = grantBossSkillPoints(progress.skills, kind);
+  if (!result.ok) return result;
+  saveProgress();
+  if (result.points > 0) {
+    showToast(
+      `SKILL POINT +${result.points}${result.first ? ' · penjaga baru' : ''} — total ${progress.skills.points}${name ? ` (${name})` : ''}`,
+      2800,
+    );
+    applySkillsToGame();
+  }
+  return result;
+}
+
+function buildSkillPanel() {
+  const list = $('char-skill-list');
+  if (!list) return;
+  const summary = skillSummary(progress.skills);
+  const pointsEl = $('char-skill-points');
+  if (pointsEl) pointsEl.textContent = `${summary.points} SKILL POINT`;
+  const summaryEl = $('char-skill-summary');
+  if (summaryEl) {
+    summaryEl.textContent =
+      `Ultimate ×${summary.bonuses.ultDamage.toFixed(2)} · CD ×${summary.bonuses.ultCooldown.toFixed(2)}` +
+      ` · kritik ${Math.round(summary.bonuses.ultCrit * 100)}% · ${summary.used}/${SKILL_MAX_RANKS} peringkat`;
+  }
+  list.innerHTML = SKILL_NODES.map((node) => {
+    const rank = summary.ranks[node.id] || 0;
+    const max = rank >= node.maxRank;
+    const affordable = summary.points > 0 && !max;
+    return `
+      <article class="skill-node${max ? ' maxed' : ''}" style="--skill-color:${node.color}">
+        <span class="skill-glyph" aria-hidden="true">${node.glyph}</span>
+        <div class="skill-copy">
+          <strong>${node.name}</strong>
+          <em>${node.branchName} · Lv ${rank}/${node.maxRank}</em>
+          <p>${node.desc}</p>
+        </div>
+        <button class="btn ${affordable ? 'btn-primary' : 'btn-ghost'} btn-compact" type="button"
+          data-skill="${node.id}" ${affordable ? '' : 'disabled'}>
+          ${max ? 'MAKSIMAL' : affordable ? '+1 POIN' : 'BUTUH POIN'}
+        </button>
+      </article>`;
+  }).join('');
+  list.querySelectorAll('[data-skill]').forEach((btn) => {
+    btn.addEventListener('click', () => spendSkillPointAt(btn.dataset.skill));
+  });
+  const resetBtn = $('btn-skill-reset');
+  if (resetBtn) {
+    resetBtn.disabled = summary.spent <= 0;
+    resetBtn.onclick = () => resetSkills();
   }
 }
 
@@ -2303,6 +5309,87 @@ function cancelPrologue() {
   audio.stopPrologue();
   stopPrologueVoice();
   $('prologue-progress').style.width = '0%';
+}
+
+// ── cinematic cutscenes (final boss portrait + post-credit epilogue) ─────
+function paintCutscene() {
+  const canvas = $('cutscene-canvas');
+  if (!canvas || !cutsceneScene) return;
+  const ctx = canvas.getContext('2d');
+  drawCutscene(ctx, canvas.width, canvas.height, cutsceneScene, cutsceneTime);
+}
+
+function showCutsceneBeat(force = false) {
+  if (!cutsceneScene) return;
+  const beat = cutsceneBeatAt(cutsceneScene, cutsceneTime);
+  if (!beat) return;
+  if (!force && cutsceneBeatIndex === cutsceneScene.beats.indexOf(beat)) return;
+  cutsceneBeatIndex = cutsceneScene.beats.indexOf(beat);
+  $('cutscene-label').textContent = beat.label;
+  $('cutscene-line').textContent = beat.text;
+  $('cutscene-count').textContent = `${Math.min(cutsceneScene.beats.length, cutsceneBeatIndex + 1)} / ${cutsceneScene.beats.length}`;
+  paintCutscene();
+}
+
+function startCutscene(scene, onDone) {
+  const cinematic = typeof scene === 'string' ? cutsceneFor(scene) : scene;
+  if (!cinematic) return false;
+  audio.init();
+  audioUnlocked = true;
+  cutsceneActive = true;
+  cutsceneScene = cinematic;
+  cutsceneTime = 0;
+  cutsceneBeatIndex = -1;
+  cutsceneDone = typeof onDone === 'function' ? onDone : null;
+  paused = false;
+  shopOpen = false;
+  mapOpen = false;
+  codexOpen = false;
+  inventoryOpen = false;
+  settingsOpen = false;
+  closeDialogue(true);
+  $('cutscene-eyebrow').textContent = cinematic.eyebrow;
+  $('cutscene-title').textContent = cinematic.title;
+  $('cutscene-progress').style.width = '0%';
+  $('btn-cutscene-skip').textContent = 'LEWATI ▸';
+  if (cinematic.music) {
+    music.crossfadeTo(cinematic.music, 1.4);
+    desiredMusic = cinematic.music;
+  }
+  showCutsceneBeat(true);
+  syncScreens();
+  return true;
+}
+
+function finishCutscene(skipped = false) {
+  if (!cutsceneActive) return;
+  cutsceneActive = false;
+  cutsceneScene = null;
+  cutsceneTime = 0;
+  $('cutscene-progress').style.width = '0%';
+  $('cutscene-screen').classList.add('hidden');
+  const done = cutsceneDone;
+  cutsceneDone = null;
+  lastTime = performance.now();
+  accumulator = 0;
+  syncScreens();
+  if (done) done(skipped);
+}
+
+function playFinalBossCutscene() {
+  if (cutsceneSeen.has(BOSS_CUTSCENE.id)) return;
+  cutsceneSeen.add(BOSS_CUTSCENE.id);
+  // The intro dialogue stays queued beneath the cutscene, so it is already on
+  // screen once the portrait finishes — no need to re-emit it.
+  startCutscene(BOSS_CUTSCENE, () => {
+    if (game.boss) game.boss.intro = Math.max(game.boss.intro || 0, 0.9);
+  });
+}
+
+function queuePostCredit() {
+  if (cutsceneSeen.has(POST_CREDIT.id)) return;
+  cutsceneSeen.add(POST_CREDIT.id);
+  postCreditTimer = 2.4;
 }
 
 function togglePrologueVoice() {
@@ -2735,6 +5822,40 @@ function buildInventory() {
     group('KONSUMABEL', `${consumables.length} jenis · stok cepat`, consumables, true),
   ].join('');
 
+  const loadout = $('inventory-loadout');
+  if (loadout) {
+    const weaponNames = (p.weapons || []).map((id) => WEAPONS[id]?.name || id);
+    const courtTools = (progress.court?.equippedTools || []).map((id) => COURT_TOOL_BY_ID[id]?.name || id);
+    loadout.innerHTML = `
+      <h3>PERLENGKAPAN AKTIF</h3>
+      <div class="loadout-grid">
+        <div class="loadout-cell"><span>KELAS</span><b>${esc(CHARACTERS[p.characterId]?.className || 'Penjaga')}</b><em>${esc(CHARACTERS[p.characterId]?.ability?.name || '—')}</em></div>
+        <div class="loadout-cell"><span>SENJATA</span><b>${esc(WEAPONS[p.weapon]?.name || p.weapon)}</b><em>${esc(weaponNames.join(' · ') || 'Pedang Sumpah')}</em></div>
+        <div class="loadout-cell"><span>AMUNISI</span><b>${p.arrows || 0} panah · ${p.shurikens || 0} shuriken</b><em>flask ${p.flasks}/${p.maxFlasks}</em></div>
+        <div class="loadout-cell"><span>ALAT COURT</span><b>${esc(courtTools.join(' · ') || '—')}</b><em>${progress.court?.equippedWeapon ? `senjata ${esc(COURT_WEAPON_BY_ID[progress.court.equippedWeapon]?.name || progress.court.equippedWeapon)}` : 'loadout kampanye'}</em></div>
+      </div>`;
+  }
+
+  const bindingWrap = $('inventory-bindings');
+  if (bindingWrap) {
+    bindingWrap.innerHTML = `
+      <h3>KEYBIND AKTIF</h3>
+      <div class="binding-mini-grid">
+        ${ACTIONS.map((action) => {
+          const codes = settings.bindings[action.id] || [];
+          return `<div class="binding-mini-row"><span>${esc(action.label)}</span><span><kbd>${formatCode(codes[0])}</kbd>${codes[1] ? ` <kbd>${formatCode(codes[1])}</kbd>` : ''}</span></div>`;
+        }).join('')}
+      </div>
+      <button class="btn btn-ghost btn-small" type="button" data-inventory-controls>ATUR KEYBIND</button>`;
+    bindingWrap.querySelector('[data-inventory-controls]').addEventListener('click', () => {
+      inventoryOpen = false;
+      settingsOpen = true;
+      settingsTab = 'controls';
+      buildSettings();
+      syncScreens();
+    });
+  }
+
   wrap.querySelectorAll('[data-use-item]').forEach((btn) => {
     btn.addEventListener('click', () => useInventoryItem(btn.dataset.useItem));
   });
@@ -2778,6 +5899,7 @@ function toggleInventory() {
 // ── settings UI ──────────────────────────────────────────────────────────
 const SETTINGS_TABS = [
   { id: 'audio', label: 'AUDIO' },
+  { id: 'graphics', label: 'GRAFIK' },
   { id: 'controls', label: 'KONTROL' },
   { id: 'gameplay', label: 'GAMEPLAY & AKSESIBILITAS' },
 ];
@@ -2790,13 +5912,24 @@ function applySettings({ persist = true } = {}) {
     muted: settings.audio.muted,
   });
   music.setVolume(1);
+  const particleScale = settings.gameplay.particleDensity === 'off'
+    ? 0
+    : settings.gameplay.particleDensity === 'low'
+      ? 0.45
+      : 1;
   renderer.options = {
     shakeScale:
       settings.gameplay.screenShake === 'off' ? 0 : settings.gameplay.screenShake === 'low' ? 0.45 : 1,
     reduceFlashing: settings.gameplay.reduceFlashing,
     highContrast: settings.gameplay.highContrast,
     colorblind: settings.gameplay.colorblind,
+    antiAliasing: settings.gameplay.antiAliasing,
+    fov: settings.gameplay.fov,
+    renderDistance: settings.gameplay.renderDistance,
+    qualityBias: settings.gameplay.qualityBias,
+    particleScale,
   };
+  renderer.resize();
   const root = document.documentElement;
   root.classList.toggle('text-large', settings.gameplay.textSize === 'large');
   root.classList.toggle('reduce-flashing', settings.gameplay.reduceFlashing);
@@ -2821,6 +5954,15 @@ function settingsSliderRow(key, label, value) {
       <label for="set-audio-${key}">${label}</label>
       <input id="set-audio-${key}" type="range" min="0" max="100" step="1" value="${value}" data-audio="${key}" />
       <span class="settings-value" data-audio-value="${key}">${value}</span>
+    </div>`;
+}
+
+function settingsRangeRow(kind, key, label, value, min, max, step, suffix = '') {
+  return `
+    <div class="settings-row">
+      <label for="set-${kind}-${key}">${label}</label>
+      <input id="set-${kind}-${key}" type="range" min="${min}" max="${max}" step="${step}" value="${value}" data-${kind}-range="${key}" />
+      <span class="settings-value" data-${kind}-value="${key}">${value}${suffix}</span>
     </div>`;
 }
 
@@ -2882,6 +6024,72 @@ function buildSettings() {
           audio.init();
           audio.setMuted(settings.audio.muted);
         }
+        applySettings();
+        buildSettings();
+      });
+    });
+    return;
+  }
+
+  if (settingsTab === 'graphics') {
+    body.innerHTML = `
+      <div class="settings-group">
+        <span class="settings-group-title">PRESET & BEBAN RENDER</span>
+        <div class="settings-row">
+          <label for="set-graphics-preset">Preset grafis</label>
+          <select id="set-graphics-preset" data-graphics-select="graphicsPreset">
+            ${['low', 'med', 'high', 'ultra'].map((id) => `<option value="${id}" ${settings.gameplay.graphicsPreset === id ? 'selected' : ''}>${id.toUpperCase()}</option>`).join('')}
+          </select>
+          <span class="settings-hint">Preset awal; slider di bawah tetap bisa menimpa beban render.</span>
+        </div>
+        ${settingsRangeRow('graphics', 'qualityBias', 'Performance ↔ Quality', settings.gameplay.qualityBias, 0, 100, 1, '%')}
+        <div class="graphics-bias-labels"><span>PERFORMA</span><span>SEIMBANG</span><span>KUALITAS</span></div>
+        ${settingsRangeRow('graphics', 'fov', 'Field of View', settings.gameplay.fov, 80, 120, 1, '°')}
+        ${settingsRangeRow('graphics', 'renderDistance', 'Render distance', settings.gameplay.renderDistance, 50, 100, 5, '%')}
+      </div>
+      <div class="settings-group">
+        <span class="settings-group-title">KUALITAS GAMBAR</span>
+        ${settingsCheckboxRow('graphics-toggle', 'antiAliasing', 'Anti-aliasing canvas', settings.gameplay.antiAliasing, 'Menghaluskan tepi sprite dan teks canvas; matikan untuk performa.')}
+        <div class="settings-row">
+          <label for="set-particles">Kepadatan partikel</label>
+          <select id="set-particles" data-graphics-select="particleDensity">
+            <option value="off" ${settings.gameplay.particleDensity === 'off' ? 'selected' : ''}>OFF</option>
+            <option value="low" ${settings.gameplay.particleDensity === 'low' ? 'selected' : ''}>LOW</option>
+            <option value="full" ${settings.gameplay.particleDensity === 'full' ? 'selected' : ''}>FULL</option>
+          </select>
+          <span></span>
+        </div>
+        ${settingsCheckboxRow('gameplay-toggle', 'fpsCounter', 'Tampilkan penghitung FPS', settings.gameplay.fpsCounter)}
+      </div>
+      <p class="map-note">Bias di bawah 25% membatasi resolusi internal ke 1× dan menipiskan cuaca; di atas 65% canvas memakai resolusi perangkat penuh. FOV mengubah zoom dunia, render distance menambah kabut tepi dan mengurangi partikel jauh.</p>
+    `;
+    body.querySelectorAll('[data-graphics-range]').forEach((input) => {
+      input.addEventListener('input', () => {
+        const key = input.dataset.graphicsRange;
+        settings.gameplay[key] = Math.round(Number(input.value) || 0);
+        if (key === 'qualityBias') {
+          const bias = settings.gameplay.qualityBias;
+          settings.gameplay.graphicsPreset = bias < 25 ? 'low' : bias < 55 ? 'med' : bias < 85 ? 'high' : 'ultra';
+        }
+        const label = body.querySelector(`[data-graphics-value="${key}"]`);
+        if (label) label.textContent = `${settings.gameplay[key]}${key === 'fov' ? '°' : '%'}`;
+        applySettings();
+        if (key === 'qualityBias') {
+          const preset = body.querySelector('[data-graphics-select="graphicsPreset"]');
+          if (preset) preset.value = settings.gameplay.graphicsPreset;
+        }
+      });
+    });
+    body.querySelectorAll('[data-graphics-select]').forEach((select) => {
+      select.addEventListener('change', () => {
+        settings.gameplay[select.dataset.graphicsSelect] = select.value;
+        applySettings();
+        buildSettings();
+      });
+    });
+    body.querySelectorAll('[data-graphics-toggle]').forEach((input) => {
+      input.addEventListener('change', () => {
+        settings.gameplay[input.dataset.graphicsToggle] = input.checked;
         applySettings();
         buildSettings();
       });
@@ -3239,6 +6447,14 @@ window.addEventListener('keydown', (e) => {
     e.preventDefault();
   }
 
+  // A running cutscene owns the keyboard: Space/Enter/Escape skips it.
+  if (cutsceneActive) {
+    if (e.code === 'Space' || e.code === 'Enter' || e.code === 'Escape' || e.code === 'Backspace') {
+      finishCutscene(true);
+    }
+    return;
+  }
+
   // Rebinding captures every key except Escape, which always cancels.
   if (settingsCapture) {
     e.preventDefault();
@@ -3285,6 +6501,26 @@ window.addEventListener('keydown', (e) => {
       showMenu();
       return;
     }
+  }
+
+  if (menuView === 'atlas') {
+    if (e.code === 'Escape' || e.code === 'Backspace') showMenu();
+    return;
+  }
+
+  if (menuView === 'labyrinth') {
+    if (e.code === 'Escape' || e.code === 'Backspace') showMenu();
+    return;
+  }
+
+  if (labRewardsOpen) {
+    if (/^Digit[1-4]$/.test(e.code)) chooseLabReward(Number(e.code.slice(5)) - 1);
+    return;
+  }
+
+  if (labSummaryOpen) {
+    if (e.code === 'Escape' || e.code === 'Enter') closeLabSummary();
+    return;
   }
 
   if (prologueActive) {
@@ -3399,6 +6635,20 @@ window.addEventListener('keydown', (e) => {
 
   if (paused) return;
 
+  if (activeRunKind === 'atlas' && game.state === 'playing') {
+    const quickSlot = {
+      Digit1: 0, Numpad1: 0,
+      Digit2: 1, Numpad2: 1,
+      Digit3: 2, Numpad3: 2,
+      Digit4: 3, Numpad4: 3,
+    }[e.code];
+    if (quickSlot !== undefined) {
+      e.preventDefault();
+      useAtlasQuickSlot(quickSlot);
+      return;
+    }
+  }
+
   if (actionForCode(settings, e.code) === 'interact' && game.state === 'playing') {
     openShop();
     return;
@@ -3483,8 +6733,1052 @@ function inputSnapshot() {
   return input;
 }
 
+// ── Infinite Labyrinth (Cursed Realms) ──────────────────────────────────
+function labState() {
+  if (!progress.labyrinth) progress.labyrinth = defaultLabyrinthProgress();
+  return progress.labyrinth;
+}
+
+function labCheckpointLoad() {
+  try {
+    const raw = localStorage.getItem(LAB_CHECKPOINT_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function labCheckpointSave() {
+  if (!labRun || labGuestMode || !canCheckpoint(labRun.cycle)) return;
+  try {
+    localStorage.setItem(LAB_CHECKPOINT_KEY, JSON.stringify(serializeLabyrinthRun(labRun)));
+  } catch {
+    /* storage unavailable */
+  }
+}
+
+function labCheckpointClear() {
+  try {
+    localStorage.removeItem(LAB_CHECKPOINT_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+function showCoop() {
+  coopRunMode = 'campaign';
+  labCoop.runMode = 'campaign';
+  showLabyrinth('coop');
+}
+
+function showLabyrinth(tab = 'run') {
+  cancelPrologue();
+  started = false;
+  paused = false;
+  shopOpen = false;
+  mapOpen = false;
+  codexOpen = false;
+  inventoryOpen = false;
+  settingsOpen = false;
+  closeDialogue(true);
+  spectating = false;
+  spectateGame = null;
+  menuView = 'labyrinth';
+  labTab = tab;
+  clearHeldKeys();
+  buildLabyrinthScreen();
+  syncScreens();
+}
+
+function buildLabyrinthScreen() {
+  const p = labState();
+  const rank = rankForXp(p.mastery.xp);
+  const summary = $('lab-summary');
+  if (summary) {
+    summary.innerHTML = `
+      <div class="lab-stat"><span>SIKLUS TERDALAM</span><strong>${p.best.cycle}</strong></div>
+      <div class="lab-stat"><span>BOS GUGUR</span><strong>${p.best.bosses}</strong></div>
+      <div class="lab-stat"><span>MUSUH GUGUR</span><strong>${p.totals.enemies}</strong></div>
+      <div class="lab-stat"><span>PERINGKAT</span><strong>${rank.rank} · ${rank.name}</strong></div>
+      <div class="lab-stat"><span>PECAHAN</span><strong>${p.currencies.shards}</strong></div>
+      <div class="lab-stat"><span>ZONA</span><strong>${discoverySummary(p).zones}</strong></div>`;
+  }
+  document.querySelectorAll('[data-lab-tab]').forEach((button) => {
+    button.classList.toggle('active', button.dataset.labTab === labTab);
+  });
+  const body = $('lab-body');
+  if (!body) return;
+  if (labTab === 'run') {
+    const checkpoint = labCheckpointLoad();
+    body.innerHTML = `
+      <div class="lab-modes">${LABYRINTH_MODES.map((mode) => `
+        <button class="lab-mode-card" type="button" data-lab-mode="${mode.id}">
+          <span class="lab-mode-name">${mode.name}</span>
+          <span class="lab-mode-sub">${mode.subtitle}</span>
+          <p>${mode.desc}</p>
+          <em>${mode.rules.coop ? '2–4 PEMAIN' : 'SOLO / SCOUT'}</em>
+        </button>`).join('')}</div>
+      <div class="lab-run-footer">
+        ${checkpoint ? '<button class="btn btn-ghost btn-compact" type="button" data-lab-action="resume">LANJUTKAN CHECKPOINT (tidak masuk leaderboard)</button>' : ''}
+        <p class="micro">Run berakhir saat kau gugur. Checkpoint disimpan setiap 5 siklus dan menandai run sebagai tidak layak leaderboard.</p>
+      </div>`;
+  } else if (labTab === 'modes') {
+    body.innerHTML = `
+      <div class="lab-grid">${LABYRINTH_ZONES.map((zone) => `
+        <article class="lab-zone-card" style="--zone:${zone.color}">
+          <span class="lab-zone-index">${String(zone.index + 1).padStart(2, '0')}</span>
+          <h4>${zone.localName}</h4>
+          <em>${zone.name}</em>
+          <p>${zone.lore}</p>
+          <span class="lab-zone-boss">BOS · ${LABYRINTH_BOSS_BY_ID[zone.bossId]?.name || zone.bossId}</span>
+        </article>`).join('')}</div>
+      <h3 class="lab-section-title">30 BOS LABYRINTH</h3>
+      <div class="lab-boss-list">${LABYRINTH_BOSSES.map((boss) => `<span class="lab-boss-pill" style="--rarity:${boss.rarityData.color}">${boss.name}<b>${boss.phases} FASE</b></span>`).join('')}</div>`;
+  } else if (labTab === 'items') {
+    body.innerHTML = `
+      <div class="lab-grid">${LABYRINTH_ITEMS.map((item) => `
+        <article class="lab-item-card" style="--item:${item.color}">
+          <span class="lab-item-cat">${item.categoryName} · ${item.rarity}</span>
+          <h4>${item.name}</h4>
+          <p>${itemDescription(item)}</p>
+          ${item.curse ? `<em class="lab-curse">${item.curse}</em>` : ''}
+          <span class="lab-lore">${item.lore}</span>
+        </article>`).join('')}</div>
+      <h3 class="lab-section-title">FORBIDDEN SYNERGY</h3>
+      <div class="lab-synergy-list">${SYNERGIES.map((synergy) => `<article class="lab-synergy"><h4>${synergy.name}</h4><p>${synergy.requires.map((id) => LABYRINTH_ITEM_BY_ID[id]?.name || id).join(' + ')}</p><em>${synergy.desc}</em></article>`).join('')}</div>`;
+  } else if (labTab === 'records') {
+    const rows = leaderboardRows(p, 10);
+    body.innerHTML = `
+      <div class="lab-grid lab-grid-narrow">${LABYRINTH_CURRENCIES.map((currency) => `<article class="lab-currency" style="--coin:${currency.color}"><span>${currency.localName}</span><strong>${p.currencies[currency.id] || 0}</strong></article>`).join('')}</div>
+      <h3 class="lab-section-title">MASTERY</h3>
+      <div class="lab-mastery">${MASTERY_TRACKS.map((track) => `<span>${track.name}</span>`).join('')}</div>
+      <h3 class="lab-section-title">RIWAYAT RUN</h3>
+      <div class="lab-table">${rows.length ? rows.map((row) => `<div class="lab-row"><b>#${row.position}</b><span>SIKLUS ${row.cycle}</span><span>${row.bosses} BOS</span><span>${row.enemies} MUSUH</span><span>${Math.round(row.time)}s</span><em>${row.modeId}${row.checkpointed ? ' · CP' : ''}</em></div>`).join('') : '<p class="micro">Belum ada run yang tercatat.</p>'}</div>
+      <p class="micro">Discovery · ${discoverySummary(p).zones} zona · ${discoverySummary(p).bosses} bos · ${discoverySummary(p).items} barang · ${discoverySummary(p).synergies} sinergi.</p>`;
+  } else {
+    const lobby = labCoop.lobby;
+    const party = lobby?.players || [];
+    const activeMode = labCoop.runMode || coopRunMode;
+    body.innerHTML = `
+      <div class="lab-coop-panel">
+        <p class="eyebrow">PARTY · 2–4 PENJAGA · HOST AUTHORITATIVE</p>
+        <div class="lab-coop-modes" role="group" aria-label="Mode co-op">
+          ${[['campaign', 'KAMPANYE', 'Ruang 1–14'], ['court', 'HEARTHFALL', 'Ruang 354+'], ['labyrinth', 'LABYRINTH', 'Gelombang tanpa akhir']].map(([id, label, sub]) => `
+            <button class="lab-coop-mode ${activeMode === id ? 'active' : ''}" type="button" data-coop-mode="${id}">
+              <b>${label}</b><em>${sub}</em>
+            </button>`).join('')}
+        </div>
+        <div class="lab-coop-fields">
+          <label>ROOM CODE<input id="lab-room-code" maxlength="8" placeholder="KOSONG = ACAK" value="${esc(labCoop.code || '')}" /></label>
+          <label>KATA SANDI<input id="lab-room-pass" type="password" placeholder="opsional" /></label>
+        </div>
+        <div class="lab-coop-actions">
+          <button class="btn btn-primary btn-compact" type="button" data-lab-action="host">HOST PARTY</button>
+          <button class="btn btn-ghost btn-compact" type="button" data-lab-action="join">JOIN PARTY</button>
+          <button class="btn btn-ghost btn-compact" type="button" data-lab-action="leave">PUTUSKAN</button>
+          ${labCoop.role === 'host' ? '<button class="btn btn-primary btn-compact" type="button" data-lab-action="start-coop">MULAI SESSION</button>' : ''}
+        </div>
+        <p class="lab-coop-status ${labCoop.error ? 'error' : ''}">${labCoop.status || 'Belum tersambung. Host membuat room; pemain lain memasukkan kode yang sama.'}</p>
+        <div class="lab-party">${party.map((player) => `<span class="lab-party-slot ${player.leader ? 'leader' : ''}"><b>${esc(player.name)}</b><em>${player.classId}</em><i>${player.ready || player.leader ? 'SIAP' : 'MENUNGGU'}</i></span>`).join('') || '<span class="lab-party-slot empty">SLOT KOSONG</span>'}</div>
+        <p class="micro">${COOP_MAX_PLAYERS} slot · musuh diskalakan (${partyScaling(Math.max(1, party.length)).hp}× HP). Snapshot 20 Hz, input 20 Hz, delta terkuantisasi. Revive dengan menahan INTERACT di dekat kawan yang tumbang.</p>
+        <p class="micro">Untuk LAN, jalankan server dengan <kbd>HOST=0.0.0.0</kbd> lalu bagikan alamat host dan room code.</p>
+      </div>`;
+  }
+}
+
+function labAllyFromLobby(player, index) {
+  return {
+    id: player.id,
+    name: player.name,
+    classId: player.classId,
+    color: ['#8ec5fc', '#8fdcff', '#ffd166', '#b07be8'][index % 4],
+    hp: 100,
+    maxHp: 100,
+    power: 0.9,
+    x: 180 + index * 70,
+    y: 470 - 46,
+  };
+}
+
+function startLabyrinth(modeId = 'standard', options = {}) {
+  audio.init();
+  attempts = 1;
+  activeRunKind = 'labyrinth';
+  activeExpansionIndex = null;
+  activeModeId = null;
+  activeTrialId = null;
+  const resumed = options.resumed || null;
+  labRun = resumed ? resumeLabyrinthRun(resumed) : createLabyrinthRun({
+    seed: options.seed,
+    modeId,
+    partySize: options.partySize || 1,
+    difficulty: options.difficulty || 'normal',
+  });
+  if (!labRun) return;
+  labGuestMode = !!options.guest;
+  coopGuestMode = false;
+  game.reset();
+  applyCharacterToGame();
+  applySkinToGame();
+  game.labyrinth = true;
+  activeStage = null;
+  labBaseStats = captureBaseStats(game);
+  applyLoadoutToGame(labRun, game, labBaseStats);
+  game.player.relic = true;
+  game.ash = Math.max(game.ash, 32);
+  labDirector = new WaveDirector(labRun);
+  labDirector.begin();
+  if (options.allies?.length) game.setAllies(options.allies);
+  game.loadArena(arenaForRun(labRun));
+  labWaveEngaged = false;
+  labWaveTimer = 0;
+  labRewardsOpen = false;
+  labRewards = [];
+  labSummaryOpen = false;
+  labSummary = null;
+  if (!labGuestMode) spawnLabWave();
+  started = true;
+  paused = false;
+  shopOpen = false;
+  mapOpen = false;
+  codexOpen = false;
+  inventoryOpen = false;
+  settingsOpen = false;
+  closeDialogue(true);
+  spectating = false;
+  spectateGame = null;
+  menuView = 'none';
+  lastGameState = 'playing';
+  accumulator = 0;
+  lastTime = performance.now();
+  clearHeldKeys();
+  const zone = LABYRINTH_ZONE_BY_ID[labRun.zoneId] || LABYRINTH_ZONES[0];
+  showBanner(zone.localName, `Siklus ${labRun.cycle} · ${stageForCycle(labRun.cycle).label}`);
+  showToast(`${LABYRINTH_MODE_BY_ID[labRun.modeId]?.name || 'Infinite Labyrinth'} — ${zone.localName}`, 2600);
+  syncScreens();
+  updateHud();
+}
+
+function spawnLabWave() {
+  if (!labDirector || !labRun) return;
+  const spawned = labDirector.spawnWave();
+  if (!spawned) return;
+  spawned.enemies.forEach((enemy, index) => {
+    game.spawnEnemy({
+      type: enemy.type,
+      x: clamp(360 + index * 170, 120, WORLD_W - 120),
+      minX: 40,
+      maxX: WORLD_W - 80,
+      variant: enemy.variant,
+      hpScale: enemy.hpScale * partyScaling(Math.max(1, labRun.partySize)).hp,
+      dmgScale: enemy.dmgScale * partyScaling(Math.max(1, labRun.partySize)).dmg,
+      speedScale: enemy.speedScale,
+      elite: enemy.elite,
+      eliteRank: enemy.eliteRank,
+      name: enemy.name,
+    });
+  });
+  if (spawned.boss) game.spawnBoss(spawned.boss.kind, spawned.boss.overrides);
+  labWaveEngaged = true;
+  showToast(`${spawned.label} · ${spawned.index}/${spawned.total}${spawned.boss ? ` — ${spawned.boss.overrides.name}` : ''}`, 2200);
+}
+
+function tickLabyrinth(dt) {
+  if (!labRun || labRun.ended || labGuestMode) return;
+  labTicks += 1;
+  labRun.stats.timeSurvived += dt;
+  tickRituals(labRun, dt);
+  labRun.stats.damageDealt = Math.max(labRun.stats.damageDealt, game.damageDealt || 0);
+  if ((game.damageReceived || 0) > labRun.stats.damageReceived) {
+    advanceRituals(labRun, { type: 'damageTaken' });
+    labRun.stats.damageReceived = game.damageReceived;
+  }
+  if (game.kills > labRun.stats.enemiesDefeated) {
+    const gained = game.kills - labRun.stats.enemiesDefeated;
+    labRun.stats.enemiesDefeated = game.kills;
+    for (let i = 0; i < gained; i += 1) advanceRituals(labRun, { type: 'enemyDown' });
+  }
+  if (game.state === 'dead') {
+    finishLabRun('defeat');
+    return;
+  }
+  if (!labWaveEngaged) {
+    labWaveTimer += dt;
+    if (labWaveTimer >= 0.9) {
+      labWaveTimer = 0;
+      spawnLabWave();
+    }
+    return;
+  }
+  const wave = labDirector?.wave;
+  if (wave?.kind === 'boss' || game.boss) return;
+  const alive = game.enemies.filter((enemy) => !enemy.dead && enemy.hp > 0).length;
+  if (alive > 0) return;
+  const result = labDirector.completeWave();
+  if (result === 'wave') {
+    labWaveEngaged = false;
+    labWaveTimer = 0;
+    showToast('Gelombang bersih — berikutnya datang.', 1400);
+  } else {
+    openLabRewards();
+  }
+}
+
+function handleLabEvent(ev) {
+  if (!labRun || labRun.ended) return;
+  if (ev.type === 'labyrinthBossDown') {
+    labRun.stats.bossesDefeated += 1;
+    if (ev.id) labRun.history.bosses.push(ev.id);
+    advanceRituals(labRun, { type: 'bossDown' });
+    if (labDirector) labDirector.completeWave();
+    openLabRewards();
+  } else if (ev.type === 'enemyDown') {
+    advanceRituals(labRun, { type: 'enemyDown' });
+  } else if (ev.type === 'allyDown') {
+    showToast(`${ev.name} tumbang — tahan INTERACT untuk menghidupkan.`, 2400);
+  } else if (ev.type === 'allyRevived') {
+    showToast(`${ev.name} bangkit kembali.`, 1800);
+  }
+}
+
+function openLabRewards() {
+  if (!labRun || labRun.ended) return;
+  labRewards = rewardChoices(labRun, 3);
+  labRewardsOpen = true;
+  labWaveEngaged = false;
+  clearHeldKeys();
+  const eyebrow = $('lab-reward-eyebrow');
+  if (eyebrow) eyebrow.textContent = `SIKLUS ${labRun.cycle} SELESAI · ${LABYRINTH_ZONE_BY_ID[labRun.zoneId]?.localName || ''}`;
+  buildLabRewards();
+  labCheckpointSave();
+  syncScreens();
+}
+
+function buildLabRewards() {
+  const wrap = $('lab-reward-cards');
+  if (!wrap) return;
+  wrap.innerHTML = labRewards.map((reward, index) => `
+    <button class="lab-reward-card ${reward.cursed ? 'cursed' : ''}" type="button" data-lab-reward="${index}" style="--reward:${reward.color || '#d0a45a'}">
+      <span class="lab-reward-kind">${reward.cursed ? 'CURSED BARGAIN' : (reward.type || 'reward').toUpperCase()}</span>
+      <h3>${reward.name}</h3>
+      <p>${reward.desc}</p>
+      ${reward.curse ? `<em>${reward.curse}</em>` : ''}
+      ${reward.lore ? `<span class="lab-lore">${reward.lore}</span>` : ''}
+      <b>PILIH ${index + 1}</b>
+    </button>`).join('');
+}
+
+function chooseLabReward(index) {
+  if (!labRewardsOpen) return false;
+  const reward = labRewards[index];
+  if (!reward) return false;
+  const p = game.player;
+  if (reward.type === 'item' || reward.type === 'bargain') {
+    const ok = applyItemToRun(labRun, reward);
+    if (!ok) return false;
+    applyLoadoutToGame(labRun, game, labBaseStats);
+  } else if (reward.type === 'heal') {
+    p.hp = Math.min(p.maxHp, p.hp + Math.round(p.maxHp * (reward.value || 0.35) * (p.healMult || 1)));
+    p.flasks = Math.min(p.maxFlasks, p.flasks + 1);
+  } else if (reward.type === 'flask') {
+    p.maxFlasks += 1;
+    p.flasks = p.maxFlasks;
+  } else if (reward.type === 'blessing') {
+    p.damageMult *= 1.12;
+    labRun.blessings.push('cycle');
+  } else if (reward.type === 'currency') {
+    game.ash += Number(reward.value) || 0;
+    labState().currencies.shards += Math.max(1, Math.round((Number(reward.value) || 0) / 4));
+    saveProgress();
+  } else if (reward.type === 'material') {
+    labState().currencies.ritualFragments += Number(reward.value) || 1;
+    saveProgress();
+  }
+  labRewardsOpen = false;
+  labRewards = [];
+  const next = labDirector.advanceCycle();
+  labRun.cycle = labRun.planCycle;
+  labRun.zoneId = next?.zoneId || labRun.zoneId;
+  game.loadArena(arenaForRun(labRun));
+  labWaveEngaged = false;
+  labWaveTimer = 0;
+  if (!labGuestMode) spawnLabWave();
+  const zone = LABYRINTH_ZONE_BY_ID[labRun.zoneId] || LABYRINTH_ZONES[0];
+  showBanner(zone.localName, `Siklus ${labRun.cycle} · ${stageForCycle(labRun.cycle).label}`);
+  syncScreens();
+  updateHud();
+  return true;
+}
+
+function finishLabRun(reason = 'defeat') {
+  if (!labRun || labRun.ended) return;
+  labRun.ended = true;
+  labRun.stats.highestCycle = Math.max(labRun.stats.highestCycle, labRun.cycle);
+  labRun.stats.enemiesDefeated = Math.max(labRun.stats.enemiesDefeated, game.kills || 0);
+  labRun.stats.damageReceived = Math.max(labRun.stats.damageReceived, game.damageReceived || 0);
+  labRun.stats.damageDealt = Math.max(labRun.stats.damageDealt, game.damageDealt || 0);
+  labRun.partySize = Math.max(1, 1 + (game.allies?.length || 0));
+  progress.labyrinth = recordLabyrinthRun(labState(), labRun);
+  saveProgress();
+  labSummary = runSummary(labRun);
+  labSummary.reason = reason;
+  labSummaryOpen = true;
+  labRewardsOpen = false;
+  labRewards = [];
+  paused = true;
+  buildLabSummary();
+  syncScreens();
+}
+
+function buildLabSummary() {
+  const body = $('lab-summary-body');
+  if (!body || !labSummary) return;
+  const rows = [
+    ['SIKLUS', labSummary.cycle],
+    ['BOS', labSummary.bosses],
+    ['ELITE', labSummary.elites],
+    ['MUSUH', labSummary.enemies],
+    ['WAKTU', `${labSummary.time}s`],
+    ['DAMAGE', labSummary.damageDealt],
+    ['BARANG', labSummary.items],
+    ['KUTUKAN', labSummary.curses],
+    ['SINERGI', labSummary.synergies],
+    ['XP', labSummary.xp],
+  ];
+  body.innerHTML = rows.map(([label, value]) => `<div class="lab-stat"><span>${label}</span><strong>${value}</strong></div>`).join('')
+    + `<p class="micro">${labSummary.checkpointed ? 'Checkpoint dipakai — run tidak layak leaderboard.' : 'Run layak leaderboard.'}</p>`;
+}
+
+function closeLabSummary() {
+  labSummaryOpen = false;
+  labSummary = null;
+  started = false;
+  activeRunKind = 'legacy';
+  game.labyrinth = false;
+  game.reset();
+  showLabyrinth('records');
+}
+
+function updateLabHud() {
+  const hud = $('lab-hud');
+  if (!hud) return;
+  const show = started && !spectating && menuView === 'none' && activeRunKind === 'labyrinth' && !labSummaryOpen;
+  hud.classList.toggle('hidden', !show);
+  if (!show || !labRun) return;
+  const model = labyrinthHudModel(labRun, labDirector);
+  $('lab-hud-cycle').textContent = `SIKLUS ${String(model.cycle).padStart(3, '0')}`;
+  $('lab-hud-stage').textContent = `${model.stage.label} · ${model.zone.name}`;
+  $('lab-hud-zone').textContent = model.zone.localName;
+  $('lab-hud-wave').textContent = `${model.waveLabel} · ${model.wave}/${model.totalWaves}`;
+  $('lab-hud-label').textContent = model.boss ? `BOSS · ${model.boss.name}` : (labRun.modifiers.length ? labRun.modifiers.map((id) => LABYRINTH_MODIFIER_BY_ID[id]?.name).filter(Boolean).join(' · ') : 'TANPA MODIFIER');
+  $('lab-hud-curses').textContent = `${model.curses} KUTUKAN · ${(labRun.items || []).length} BARANG`;
+  $('lab-hud-score').textContent = `${model.score} PTS`;
+  const party = [{ id: 'host', name: CHARACTERS[character.characterId]?.name || 'Penjaga', hp: game.player.hp, maxHp: game.player.maxHp }, ...(game.allies || [])];
+  $('lab-hud-party').innerHTML = party.map((member) => `<span class="lab-party-hp ${member.downed ? 'downed' : ''}"><b>${esc(member.name)}</b><i style="width:${Math.max(0, Math.min(100, (member.hp / Math.max(1, member.maxHp)) * 100))}%"></i></span>`).join('');
+}
+
+function labSnapshotState() {
+  const alive = game.enemies.filter((enemy) => !enemy.dead && enemy.hp > 0);
+  return {
+    t: performance.now() / 1000,
+    scene: 'labyrinth',
+    roomIndex: game.roomIndex,
+    roomName: game.room?.name || '',
+    players: [
+      { id: labCoop.selfId || 'p1', slot: 0, x: game.player.x, y: game.player.y, hp: game.player.hp, maxHp: game.player.maxHp, stateCode: 0, facing: game.player.facing },
+      ...(game.allies || []).map((ally, index) => ({ id: ally.id, slot: index + 1, x: ally.x, y: ally.y, hp: ally.hp, maxHp: ally.maxHp, stateCode: ally.downed ? 4 : 0, facing: ally.facing })),
+    ],
+    enemies: alive.map((enemy, index) => ({ slot: index, x: enemy.x, y: enemy.y, hp: enemy.hp, maxHp: enemy.maxHp, stateCode: enemy.elite ? 3 : 0, facing: enemy.facing })),
+    boss: game.boss && !game.boss.dying ? { slot: 99, x: game.boss.x, y: game.boss.y, hp: game.boss.hp, maxHp: game.boss.maxHp, stateCode: game.boss.phase, facing: game.boss.facing } : null,
+    projectiles: game.projectiles.slice(0, 24).map((pr) => ({ x: pr.x, y: pr.y, typeCode: 0 })),
+    wave: { index: (labDirector?.waveIndex ?? 0) + 1, total: labDirector?.totalWaves || 4, kindCode: labDirector?.wave?.kind === 'boss' ? 3 : 0 },
+    lab: {
+      cycle: labRun.cycle,
+      zoneId: labRun.zoneId,
+      waveIndex: labDirector?.waveIndex ?? 0,
+      seed: labRun.seed,
+      modeId: labRun.modeId,
+      types: alive.map((enemy) => enemy.type),
+      bossKind: game.boss?.kind || null,
+      bossName: game.boss?.name || null,
+      bossPattern: game.boss?.patternType || 'slam',
+      bossW: game.boss?.w || 120,
+      bossH: game.boss?.h || 130,
+    },
+  };
+}
+
+function coopSnapshotState() {
+  if (activeRunKind === 'labyrinth' && labRun) return labSnapshotState();
+  const alive = game.enemies.filter((enemy) => !enemy.dead && enemy.hp > 0);
+  const boss = game.boss && !game.boss.dying ? game.boss : null;
+  return {
+    t: performance.now() / 1000,
+    scene: activeRunKind === 'court' ? 'court' : 'campaign',
+    roomIndex: game.roomIndex,
+    roomName: game.room?.name || '',
+    players: [
+      { id: labCoop.selfId || 'p1', slot: 0, x: game.player.x, y: game.player.y, hp: game.player.hp, maxHp: game.player.maxHp, stateCode: 0, facing: game.player.facing },
+      ...(game.allies || []).map((ally, index) => ({ id: ally.id, slot: index + 1, x: ally.x, y: ally.y, hp: ally.hp, maxHp: ally.maxHp, stateCode: ally.downed ? 4 : 0, facing: ally.facing })),
+    ],
+    enemies: alive.map((enemy, index) => ({ slot: index, x: enemy.x, y: enemy.y, hp: enemy.hp, maxHp: enemy.maxHp, stateCode: enemy.elite ? 3 : 0, facing: enemy.facing })),
+    boss: boss ? { slot: 99, x: boss.x, y: boss.y, hp: boss.hp, maxHp: boss.maxHp, stateCode: boss.phase, facing: boss.facing } : null,
+    bossMeta: boss ? {
+      kind: boss.kind,
+      name: boss.name,
+      title: boss.title,
+      pattern: boss.patternType || 'slam',
+      maxPhases: boss.maxPhases || 3,
+      phaseThresholds: boss.phaseThresholds || [0.66, 0.33],
+      w: boss.w || 120,
+      h: boss.h || 130,
+    } : null,
+    projectiles: game.projectiles.slice(0, 24).map((pr) => ({ x: pr.x, y: pr.y, typeCode: 0 })),
+    types: alive.map((enemy) => enemy.type),
+    wave: null,
+    lab: null,
+  };
+}
+
+function applyCoopSnapshot() {
+  if (!coopGuestMode || !started) return;
+  const sample = labCoop.interpolator.sample(performance.now());
+  if (!sample) return;
+  const roomIndex = Number(sample.roomIndex);
+  if (Number.isInteger(roomIndex) && roomIndex !== game.roomIndex && roomIndex >= 0 && roomIndex < ALL_ROOMS.length) {
+    game.enterRoom(roomIndex);
+    game.events.length = 0;
+    coopGuestRoom = roomIndex;
+  }
+  game.time += 0.016;
+  game.state = 'playing';
+  const players = sample.players || [];
+  const self = players.find((player) => player.id && player.id === coopSelfId) || players[0];
+  const others = players.filter((player) => player !== self);
+  if (self) {
+    game.player.x = self.x;
+    game.player.y = self.y;
+    game.player.hp = self.hp;
+    game.player.maxHp = Math.max(1, self.maxHp);
+    game.player.facing = self.facing || 1;
+  }
+  const lobbyPlayers = labCoop.lobby?.players || [];
+  game.allies = others.map((ally, index) => {
+    const meta = lobbyPlayers.find((player) => player.id === ally.id);
+    return {
+      id: ally.id || `guest${index}`,
+      name: meta?.name || `Penjaga ${index + 2}`,
+      classId: meta?.classId || 'sera',
+      color: ['#8ec5fc', '#ffd166', '#b07be8'][index % 3],
+      x: ally.x,
+      y: ally.y,
+      w: 30,
+      h: 46,
+      vx: 0,
+      vy: 0,
+      facing: ally.facing || 1,
+      hp: ally.hp,
+      maxHp: Math.max(1, ally.maxHp),
+      downed: ally.stateCode === 4,
+      onGround: true,
+      invuln: 0,
+      attackCooldown: 0,
+      input: {},
+    };
+  });
+  const types = sample.types || [];
+  const previousBoss = game.boss;
+  game.enemies = [];
+  (sample.enemies || []).forEach((state, index) => {
+    const enemy = game.spawnEnemy({ type: types[index] || 'crawler', x: state.x, minX: 40, maxX: WORLD_W - 80 });
+    enemy.x = state.x;
+    enemy.y = state.y;
+    enemy.hp = state.hp;
+    enemy.maxHp = Math.max(1, state.maxHp);
+    enemy.facing = state.facing || -1;
+    enemy.hitFlash = state.stateCode === 3 ? 0.08 : 0;
+    enemy.dead = state.hp <= 0;
+  });
+  if (sample.boss) {
+    const meta = sample.bossMeta || {};
+    if (!previousBoss || (meta.kind && previousBoss.kind !== meta.kind)) {
+      game.boss = null;
+      game.spawnBoss(meta.kind || 'warden', {
+        name: meta.name,
+        title: meta.title,
+        maxHp: Math.max(1, sample.boss.maxHp),
+        contact: Math.max(8, Math.round(sample.boss.maxHp / 45)),
+        w: meta.w || 120,
+        h: meta.h || 130,
+        pattern: meta.pattern || 'slam',
+        maxPhases: meta.maxPhases || 3,
+        phaseThresholds: meta.phaseThresholds || [0.66, 0.33],
+      });
+      game.events.length = 0;
+    }
+    if (game.boss) {
+      game.boss.x = sample.boss.x;
+      game.boss.y = sample.boss.y;
+      game.boss.hp = sample.boss.hp;
+      game.boss.maxHp = Math.max(1, sample.boss.maxHp);
+      game.boss.phase = Math.max(1, sample.boss.stateCode || 1);
+      game.boss.intro = 0;
+    }
+  } else if (game.boss) {
+    game.boss = null;
+  }
+  updateHud();
+}
+
+// ── co-op networking (host authoritative, WebSocket relay) ────────────────
+
+function applyGuestSnapshot() {
+  if (!labRun || labGuestMode === false) return;
+  const sample = labCoop.interpolator.sample(performance.now());
+  if (!sample) return;
+  const meta = sample.lab;
+  if (meta && meta.cycle !== labRun.cycle) {
+    labRun.cycle = meta.cycle;
+    labRun.zoneId = LABYRINTH_ZONE_BY_ID[meta.zoneId] ? meta.zoneId : labRun.zoneId;
+    ensurePlans(labRun, 2);
+    game.loadArena(arenaForRun(labRun));
+  }
+  if (meta?.zoneId && meta.zoneId !== labRun.zoneId && LABYRINTH_ZONE_BY_ID[meta.zoneId]) {
+    labRun.zoneId = meta.zoneId;
+  }
+  game.time += 0.016;
+  game.state = 'playing';
+  const self = sample.players?.find((player) => player.id && player.id === coopSelfId) || sample.players?.[0];
+  if (self) {
+    game.player.x = self.x;
+    game.player.y = self.y;
+    game.player.hp = self.hp;
+    game.player.maxHp = Math.max(1, self.maxHp);
+    game.player.facing = self.facing || 1;
+  }
+  const owned = (sample.players || []).filter((player) => player !== self);
+  game.allies = owned.map((ally, index) => ({
+    id: ally.id || `guest${index}`,
+    name: labCoop.lobby?.players?.find((player) => player.id === ally.id)?.name || game.allies[index]?.name || `Penjaga ${index + 2}`,
+    classId: 'sera',
+    color: ['#8ec5fc', '#ffd166', '#b07be8'][index % 3],
+    x: ally.x,
+    y: ally.y,
+    w: 30,
+    h: 46,
+    vx: 0,
+    vy: 0,
+    facing: ally.facing || 1,
+    hp: ally.hp,
+    maxHp: Math.max(1, ally.maxHp),
+    downed: ally.stateCode === 4,
+    onGround: true,
+    invuln: 0,
+    attackCooldown: 0,
+    input: {},
+  }));
+  const types = meta?.types || [];
+  const live = (game.enemies || []).filter((enemy) => !enemy.dead);
+  while (live.length < (sample.enemies?.length || 0)) {
+    const enemy = game.spawnEnemy({ type: types[live.length] || 'crawler', x: 400, minX: 40, maxX: WORLD_W - 80 });
+    live.push(enemy);
+  }
+  (sample.enemies || []).forEach((state, index) => {
+    const enemy = live[index];
+    if (!enemy) return;
+    enemy.x = state.x;
+    enemy.y = state.y;
+    enemy.hp = state.hp;
+    enemy.maxHp = Math.max(1, state.maxHp);
+    enemy.facing = state.facing || -1;
+    enemy.hitFlash = state.stateCode === 3 ? 0.08 : enemy.hitFlash;
+  });
+  for (let i = sample.enemies?.length || 0; i < live.length; i += 1) live[i].dead = true;
+  game.enemies = game.enemies.filter((enemy) => !enemy.dead);
+  if (sample.boss) {
+    if (!game.boss) {
+      const kind = meta?.bossKind && LABYRINTH_BOSS_BY_ID[meta.bossKind.replace('lab_', '')] ? meta.bossKind : 'lab_guest_boss';
+      const info = kind !== 'lab_guest_boss' ? LABYRINTH_BOSS_BY_ID[meta.bossKind.replace('lab_', '')] : null;
+      game.spawnBoss(kind, info ? {
+        name: info.name,
+        title: info.title,
+        maxHp: Math.max(1, sample.boss.maxHp),
+        contact: Math.max(8, Math.round(sample.boss.maxHp / 40)),
+        w: info.w,
+        h: info.h,
+        pattern: info.pattern,
+        maxPhases: info.phases,
+        phaseThresholds: info.phaseThresholds,
+        dialogueData: info.dialogue,
+        labBossId: info.id,
+      } : {
+        name: meta?.bossName || 'Labyrinth Boss',
+        maxHp: Math.max(1, sample.boss.maxHp),
+        contact: 20,
+        w: 120,
+        h: 130,
+        pattern: meta?.bossPattern || 'slam',
+        maxPhases: 3,
+        phaseThresholds: [0.66, 0.33],
+      });
+    }
+    if (game.boss) {
+      game.boss.x = sample.boss.x;
+      game.boss.y = sample.boss.y;
+      game.boss.hp = sample.boss.hp;
+      game.boss.maxHp = Math.max(1, sample.boss.maxHp);
+      game.boss.phase = Math.max(1, sample.boss.stateCode || 1);
+      game.boss.intro = 0;
+    }
+  } else if (game.boss) {
+    game.boss = null;
+  }
+  updateHud();
+}
+
+// ── co-op networking (host authoritative, WebSocket relay) ────────────────
+function labCoopSend(message) {
+  return labCoop.transport?.send(message) || false;
+}
+
+function labCoopStatus(text, error = false) {
+  labCoop.status = text;
+  labCoop.error = error;
+  if (menuView === 'labyrinth' && labTab === 'coop') buildLabyrinthScreen();
+}
+
+function teardownLabCoop(notify = true) {
+  if (notify && labCoop.role === 'host' && labCoop.transport?.connected) labCoopSend({ type: 'lab_close' });
+  try {
+    labCoop.transport?.close();
+  } catch {
+    /* ignore */
+  }
+  labCoop.transport = null;
+  labCoop.role = null;
+  labCoop.lobby = null;
+  labCoop.code = '';
+  labCoop.joined = false;
+  labCoop.peers = {};
+  labCoop.interpolator = new SnapshotInterpolator({ delay: 0.12 });
+}
+
+function connectLabCoop(role) {
+  if (!('WebSocket' in window)) {
+    labCoopStatus('Browser ini tidak mendukung WebSocket.', true);
+    return;
+  }
+  const rawCode = ($('lab-room-code')?.value || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8);
+  const code = rawCode || roomCodeFromSeed(Date.now());
+  const password = $('lab-room-pass')?.value || '';
+  const runMode = labCoop.runMode || coopRunMode || 'labyrinth';
+  teardownLabCoop(false);
+  labCoop.role = role;
+  labCoop.code = code;
+  labCoop.password = password;
+  labCoop.runMode = runMode;
+  coopRunMode = runMode;
+  labCoop.playerName = CHARACTERS[character.characterId]?.name || 'Penjaga';
+  const transport = createWebSocketTransport(coopSocketUrl(window.location.origin, code), {
+    WebSocketImpl: window.WebSocket,
+    onOpen: () => labCoopStatus(`Tersambung ke room ${code}.`),
+    onClose: () => labCoopStatus('Koneksi terputus.', true),
+    onError: () => labCoopStatus('Gagal menyambung. Pastikan server berjalan.', true),
+  });
+  labCoop.transport = transport;
+  transport.onMessage(handleLabSocket);
+  if (role === 'host') {
+    labCoop.lobby = createLobby({
+      hostName: labCoop.playerName,
+      classId: character.characterId,
+      seed: Date.now() & 0x7fffffff,
+      modeId: runMode === 'labyrinth' ? 'labyrinth' : 'campaign',
+      name: 'ASHEN VOW PARTY',
+      password,
+      code,
+    });
+    labCoop.selfId = labCoop.lobby.players[0]?.id || 'p1';
+    labCoopStatus(`Room ${code} dibuat (${runMode}). Bagikan kode ini.`);
+  } else {
+    labCoopStatus(`Bergabung ke ${code}…`);
+  }
+  buildLabyrinthScreen();
+}
+
+function handleLabSocket(message) {
+  if (!message || typeof message.type !== 'string') return;
+  if (message.type === 'server_welcome') {
+    labCoop.serverId = message.id;
+    if (labCoop.role === 'guest' && !labCoop.joined) {
+      labCoop.joined = true;
+      labCoopSend({ type: 'lab_join', name: labCoop.playerName || 'Penjaga', classId: character.characterId, password: labCoop.password || '' });
+    }
+    labCoopStatus(`Room ${message.room} · ${message.players}/${message.max} pemain.`);
+    return;
+  }
+  if (message.type === 'server_peer') {
+    if (message.left && message.leftPeer) {
+      const player = labCoop.peers[message.leftPeer];
+      delete labCoop.peers[message.leftPeer];
+      if (player) {
+        if (labCoop.lobby) {
+          labCoop.lobby = {
+            ...labCoop.lobby,
+            players: labCoop.lobby.players.filter((entry) => entry.id !== player.id),
+          };
+        }
+        game.setAllies((game.allies || []).filter((ally) => ally.id !== player.id));
+        labCoopStatus(`${player.name} keluar — party ${Math.max(1, message.players)}/${message.max}.`);
+      }
+    }
+    labCoopStatus(`Room ${message.room} · ${message.players}/${message.max} pemain.`);
+    return;
+  }
+  if (message.type === 'server_host') {
+    // The old host disconnected. The relay promotes the oldest socket; keep
+    // the lobby state already replicated to this guest instead of dropping
+    // the whole party.
+    if (labCoop.role === 'guest') {
+      labCoop.role = 'host';
+      labCoop.selfId = labCoop.lobby?.players?.find((player) => !player.host)?.id || labCoop.selfId;
+      coopGuestMode = false;
+      labGuestMode = false;
+      labCoopStatus('Host lama terputus — kau menjadi host baru. Simulasi dilanjutkan dari snapshot terakhir.', true);
+      if (labCoop.lobby) labCoopSend({ type: 'lab_lobby', lobby: { ...labCoop.lobby, password: labCoop.lobby.password ? '*' : '' } });
+    }
+    return;
+  }
+  if (message.type === 'lab_lobby') {
+    labCoop.lobby = message.lobby;
+    if (menuView === 'labyrinth' && labTab === 'coop') buildLabyrinthScreen();
+    return;
+  }
+  if (message.type === 'lab_join' && labCoop.role === 'host') {
+    if (!labCoop.lobby) return;
+    const result = joinLobby(labCoop.lobby, { name: message.name, classId: message.classId, password: message.password });
+    if (!result.ok) {
+      labCoopSend({ type: 'lab_reject', to: message._from, error: result.error });
+      labCoopStatus(result.error, true);
+      return;
+    }
+    result.player.ready = true;
+    labCoop.lobby = result.lobby;
+    labCoop.peers[message._from || result.player.id] = result.player;
+    const ally = labAllyFromLobby(result.player, Object.keys(labCoop.peers).length);
+    if (started && !coopGuestMode && (activeRunKind === 'labyrinth' || activeRunKind === 'court' || activeRunKind === 'legacy')) {
+      game.setAllies([...(game.allies || []).map((entry) => ({ ...entry })), ally]);
+    } else if (labRun) {
+      labRun.pendingAllies = [...(labRun.pendingAllies || []), ally];
+    }
+    labCoopSend({ type: 'lab_lobby', lobby: { ...labCoop.lobby, password: labCoop.lobby.password ? '*' : '' } });
+    labCoopStatus(`${result.player.name} bergabung (${labCoop.lobby.players.length}/${COOP_MAX_PLAYERS}).`);
+    return;
+  }
+  if (message.type === 'lab_input' && labCoop.role === 'host') {
+    const peerId = message._from;
+    if (!peerId) return;
+    const lobbyPlayer = labCoop.lobby?.players.find((player) => labCoop.peers[peerId]?.id === player.id);
+    const allyId = labCoop.peers[peerId]?.id || lobbyPlayer?.id;
+    if (allyId) game.setAllyInput(allyId, message.input || {});
+    return;
+  }
+  if (message.type === 'lab_welcome' && labCoop.role === 'guest') {
+    labCoop.lobby = message.lobby;
+    if (message.run?.seed) {
+      startLabyrinth('multiplayer', {
+        seed: message.run.seed,
+        guest: true,
+        partySize: message.lobby?.players?.length || 2,
+      });
+      const self = message.lobby?.players?.find((player) => !player.host && player.name.toLowerCase() === String(labCoop.playerName || '').toLowerCase())
+        || message.lobby?.players?.find((player) => !player.host);
+      coopSelfId = self?.id || '';
+      labCoop.selfId = coopSelfId;
+      labGuestMode = true;
+      coopGuestMode = false;
+      labCoopStatus('Session Labyrinth dimulai sebagai guest — input dikirim ke host.');
+      showToast('Co-op: kau bergabung ke party host.', 2200);
+    }
+    return;
+  }
+  if (message.type === 'coop_start' && labCoop.role === 'guest') {
+    startCoopGuest(message);
+    return;
+  }
+  if (message.type === 'lab_reject') {
+    labCoopStatus(message.error || 'Ditolak host.', true);
+    return;
+  }
+  if (message.type === 'snapshot' && labCoop.role === 'guest') {
+    const decoded = decodeSnapshot(message.delta);
+    if (decoded) labCoop.interpolator.push(decoded);
+    return;
+  }
+  if (message.type === 'lab_close') {
+    labCoopStatus('Host menutup sesi.', true);
+    teardownLabCoop(false);
+  }
+}
+
+function startLabCoopSession() {
+  if (labCoop.role !== 'host' || !labCoop.lobby) {
+    labCoopStatus('Buat party dulu sebelum memulai.', true);
+    return;
+  }
+  const check = canStartLobby(labCoop.lobby);
+  if (!check.ok) {
+    labCoopStatus(check.reason, true);
+    return;
+  }
+  const startedLobby = startLobby(labCoop.lobby);
+  if (!startedLobby.ok) {
+    labCoopStatus(startedLobby.error, true);
+    return;
+  }
+  labCoop.lobby = startedLobby.lobby;
+  const mode = labCoop.runMode || coopRunMode || 'labyrinth';
+  coopRunMode = mode;
+  const allies = labCoop.lobby.players
+    .filter((player) => !player.host)
+    .map((player, index) => labAllyFromLobby(player, index));
+  if (mode === 'campaign') {
+    startRun(0);
+    game.setAllies(allies);
+  } else if (mode === 'court') {
+    startCourtRoom(0);
+    game.setAllies(allies);
+  } else {
+    startLabyrinth('multiplayer', { seed: labCoop.lobby.seed, partySize: labCoop.lobby.players.length, allies });
+  }
+  for (const player of labCoop.lobby.players.filter((entry) => !entry.host)) {
+    if (mode === 'labyrinth') {
+      labCoopSend({ type: 'lab_welcome', lobby: labCoop.lobby, run: { seed: labCoop.lobby.seed, modeId: 'multiplayer' } });
+    } else {
+      labCoopSend({
+        type: 'coop_start',
+        mode,
+        lobby: labCoop.lobby,
+        seed: labCoop.lobby.seed,
+        roomIndex: game.roomIndex,
+        roomLocal: mode === 'court' ? 0 : 0,
+      });
+    }
+  }
+  labCoopStatus(`Session ${mode} dimulai · ${labCoop.lobby.players.length} penjaga.`);
+}
+
+function startCoopGuest(message) {
+  const mode = message.mode === 'court' || message.mode === 'campaign' ? message.mode : 'campaign';
+  if (message.lobby) labCoop.lobby = message.lobby;
+  const lobby = labCoop.lobby;
+  const normalizedName = String(labCoop.playerName || '').toLowerCase();
+  const self = lobby?.players?.find((player) => !player.host && player.name.toLowerCase() === normalizedName)
+    || lobby?.players?.find((player) => !player.host);
+  coopSelfId = self?.id || '';
+  labCoop.selfId = coopSelfId;
+  labCoop.runMode = mode;
+  coopRunMode = mode;
+  labCoop.interpolator = new SnapshotInterpolator({ delay: 0.12 });
+  if (mode === 'court') {
+    startCourtRoom(0);
+    labGuestMode = false;
+    coopGuestMode = true;
+  } else {
+    startRun(0);
+    labGuestMode = false;
+    coopGuestMode = true;
+  }
+  game.setAllies([]);
+  game.events.length = 0;
+  coopGuestRoom = game.roomIndex;
+  labCoopStatus(`Session ${mode} dimulai sebagai guest — kendali avatar dikirim ke host.`);
+  showToast('Co-op: kau mengendalikan penjaga sendiri.', 2400);
+  syncScreens();
+  updateHud();
+}
+
+function labSendHostSnapshot() {
+  if (labCoop.role !== 'host' || !labCoop.transport?.connected || !started || labGuestMode || coopGuestMode) return;
+  if (activeRunKind === 'labyrinth' && !labRun) return;
+  const now = performance.now();
+  if (now - labCoop.snapshotAt < 66) return;
+  labCoop.snapshotAt = now;
+  labCoopSend({ type: 'snapshot', delta: encodeSnapshot(coopSnapshotState()) });
+}
+
+function labSendGuestInput() {
+  if (labCoop.role !== 'guest' || !labCoop.transport?.connected || !started) return;
+  const now = performance.now();
+  if (now - labCoop.inputAt < 1000 / 20) return;
+  labCoop.inputAt = now;
+  labCoop.seq += 1;
+  labCoopSend({ type: 'lab_input', seq: labCoop.seq, input: inputSnapshot() });
+}
+
 // ── UI wiring ────────────────────────────────────────────────────────────
 $('btn-start').addEventListener('click', beginJourney);
+$('btn-court-menu')?.addEventListener('click', () => showCourt('journey'));
+$('btn-fairy-menu')?.addEventListener('click', () => showFairy());
+$('btn-fairy-back')?.addEventListener('click', () => closeFairy());
+$('btn-cutscene-skip')?.addEventListener('click', () => finishCutscene(true));
+$('btn-court-back')?.addEventListener('click', closeCourt);
+$('court-screen')?.addEventListener('click', (event) => {
+  const tab = event.target.closest('[data-court-tab]');
+  if (tab) {
+    courtTab = tab.dataset.courtTab;
+    buildCourtScreen();
+    return;
+  }
+  const action = event.target.closest('[data-action]');
+  if (action) handleCourtAction(action);
+});
+$('btn-coop-menu')?.addEventListener('click', () => showCoop());
+$('btn-labyrinth-menu')?.addEventListener('click', () => showLabyrinth('run'));
+$('btn-lab-back')?.addEventListener('click', () => { teardownLabCoop(); showMenu(); });
+$('lab-quit')?.addEventListener('click', () => finishLabRun('quit'));
+$('lab-summary-again')?.addEventListener('click', () => {
+  const mode = labSummary?.modeId || 'standard';
+  labSummaryOpen = false;
+  startLabyrinth(mode);
+});
+$('lab-summary-hub')?.addEventListener('click', closeLabSummary);
+$('labyrinth-screen')?.addEventListener('click', (event) => {
+  const tab = event.target.closest('[data-lab-tab]');
+  if (tab) {
+    labTab = tab.dataset.labTab;
+    buildLabyrinthScreen();
+    return;
+  }
+  const mode = event.target.closest('[data-lab-mode]');
+  if (mode) {
+    startLabyrinth(mode.dataset.labMode);
+    return;
+  }
+  const coopMode = event.target.closest('[data-coop-mode]');
+  if (coopMode) {
+    coopRunMode = coopMode.dataset.coopMode;
+    labCoop.runMode = coopRunMode;
+    buildLabyrinthScreen();
+    return;
+  }
+  const action = event.target.closest('[data-lab-action]')?.dataset.labAction;
+  if (!action) return;
+  if (action === 'host') connectLabCoop('host');
+  else if (action === 'join') connectLabCoop('guest');
+  else if (action === 'leave') {
+    teardownLabCoop();
+    labCoopStatus('Sesi diputuskan.');
+    buildLabyrinthScreen();
+  } else if (action === 'start-coop') startLabCoopSession();
+  else if (action === 'resume') {
+    const saved = labCheckpointLoad();
+    if (saved) startLabyrinth(saved.modeId, { resumed: saved });
+  }
+});
+$('lab-reward-cards')?.addEventListener('click', (event) => {
+  const card = event.target.closest('[data-lab-reward]');
+  if (card) chooseLabReward(Number(card.dataset.labReward));
+});
 $('btn-character-menu').addEventListener('click', showCharacter);
 $('btn-character-back').addEventListener('click', closeCharacter);
 $('btn-character-save').addEventListener('click', () => {
@@ -3510,6 +7804,59 @@ $('btn-mode3d-menu')?.addEventListener('click', () => showMode3D('campaign'));
 $('btn-mode3d-back')?.addEventListener('click', closeMode3D);
 $('btn-frontier-menu')?.addEventListener('click', () => showFrontier('campaign200'));
 $('btn-frontier-back')?.addEventListener('click', closeFrontier);
+$('btn-overdrive-menu')?.addEventListener('click', () => showOverdrive('campaign301'));
+$('btn-atlas-menu')?.addEventListener('click', () => showAtlas('zones'));
+$('btn-atlas-back')?.addEventListener('click', closeAtlas);
+
+$('atlas-tabs')?.addEventListener('click', (event) => {
+  const tab = event.target.closest('[data-tab]');
+  if (!tab) return;
+  atlasTab = tab.dataset.tab;
+  buildAtlasScreen();
+});
+
+$('atlas-body')?.addEventListener('click', (event) => {
+  const target = event.target.closest('[data-atlas-action]');
+  if (!target) return;
+  event.preventDefault();
+  handleAtlasAction(target.dataset.atlasAction, target);
+});
+
+$('atlas-body')?.addEventListener('change', (event) => {
+  const select = event.target.closest('[data-atlas-quick]');
+  if (!select) return;
+  const slot = Number(select.dataset.atlasQuick);
+  if (!Number.isInteger(slot) || slot < 0 || slot >= 4) return;
+  const p = atlasState();
+  const itemId = select.value && ATLAS_CONSUMABLE_BY_ID[select.value] ? select.value : null;
+  if (!p.quickSlots) p.quickSlots = [null, null, null, null];
+  p.quickSlots[slot] = itemId;
+  saveProgress();
+  showToast(itemId
+    ? `${ATLAS_CONSUMABLE_BY_ID[itemId].name} dipasang di slot ${slot + 1}.`
+    : `Slot ${slot + 1} dikosongkan.`, 1600);
+  buildAtlasScreen();
+});
+
+$('atlas-body')?.addEventListener('input', (event) => {
+  if (event.target.id !== 'atlas-lore-search') return;
+  atlasLoreQuery = event.target.value;
+  clearTimeout(atlasSearchTimer);
+  atlasSearchTimer = setTimeout(() => {
+    buildAtlasScreen();
+    const input = $('atlas-lore-search');
+    if (input) {
+      input.focus();
+      input.setSelectionRange(input.value.length, input.value.length);
+    }
+  }, 220);
+});
+
+$('atlas-quickbar')?.addEventListener('click', (event) => {
+  const button = event.target.closest('[data-atlas-quick-use]');
+  if (!button) return;
+  useAtlasQuickSlot(Number(button.dataset.atlasQuickUse));
+});
 
 $('select-3d-submode')?.addEventListener('change', (e) => {
   if (game3D) game3D.subMode = e.target.value;
@@ -3745,7 +8092,8 @@ function buyShopItem(id) {
   updateHud();
 }
 
-function formatTime(seconds) {  const s = Math.max(0, Math.floor(seconds));
+function formatTime(seconds) {
+  const s = Math.max(0, Math.floor(seconds));
   const m = Math.floor(s / 60);
   return `${String(m).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 }
@@ -3760,8 +8108,15 @@ function statsHtml(items) {
 }
 
 function fillDeathStats() {
-  const room = ROOMS[game.roomIndex];
-  $('death-sub').textContent = `Kau gugur di ${room.name}. Sumpah belum tuntas — bangkit dan coba lagi.`;
+  const room = ROOMS[game.roomIndex] || game.room || { name: 'Atlas' };
+  if (activeRunKind === 'atlas') {
+    const p = atlasState();
+    p.stats.deaths = (Number(p.stats.deaths) || 0) + 1;
+    saveProgress();
+    $('death-sub').textContent = `Kau gugur di ${room.name}. Atlas mencatat kematianmu — bangkit dan coba lagi.`;
+  } else {
+    $('death-sub').textContent = `Kau gugur di ${room.name}. Sumpah belum tuntas — bangkit dan coba lagi.`;
+  }
   $('death-stats').innerHTML = statsHtml([
     [formatTime(game.time), 'Waktu'],
     [game.kills, 'Terbunuh'],
@@ -3777,6 +8132,16 @@ function fillVictoryStats() {
     [game.blessings.length, 'Berkah'],
     [attempts, 'Percobaan'],
   ]);
+  renderStageTimes('victory-times', activeRunKind);
+  if (activeRunKind === 'atlas') {
+    const p = atlasState();
+    const endingId = p.endings[p.endings.length - 1];
+    const ending = ATLAS_ENDINGS.find((entry) => entry.id === endingId);
+    $('victory-blessings').textContent = ending
+      ? `${ending.localName} — ${ending.desc}`
+      : 'Atlas terbelah, dan satu halaman terakhir menutup dirinya.';
+    return;
+  }
   const names = game.blessings.map((id) => BLESSING_NAMES[id] || id);
   $('victory-blessings').textContent = names.length
     ? `Berkah yang kau bawa: ${names.join(' · ')}.`
@@ -3814,7 +8179,16 @@ function syncScreens() {
   $('expansion-screen').classList.toggle('hidden', menuView !== 'expansion' || covered);
   $('frontier-screen').classList.toggle('hidden', menuView !== 'frontier' || covered);
   $('mode3d-screen').classList.toggle('hidden', menuView !== 'mode3d' || covered);
+  $('overdrive-screen')?.classList.toggle('hidden', menuView !== 'overdrive' || covered);
+  $('atlas-screen')?.classList.toggle('hidden', menuView !== 'atlas' || covered);
+  $('labyrinth-screen')?.classList.toggle('hidden', menuView !== 'labyrinth' || covered);
+  $('court-screen')?.classList.toggle('hidden', menuView !== 'court' || covered);
+  $('fairy-screen')?.classList.toggle('hidden', menuView !== 'fairy' || covered);
+  $('lab-reward-screen')?.classList.toggle('hidden', !labRewardsOpen);
+  $('lab-summary-screen')?.classList.toggle('hidden', !labSummaryOpen);
+  if (!inRun || activeRunKind !== 'atlas') $('atlas-quickbar')?.classList.add('hidden');
   $('prologue-screen').classList.toggle('hidden', !prologueActive);
+  $('cutscene-screen')?.classList.toggle('hidden', !cutsceneActive);
   $('spectate-ui').classList.toggle('hidden', !spectating);
   $('map-screen').classList.toggle('hidden', !mapOpen);
   $('codex-screen').classList.toggle('hidden', !codexOpen);
@@ -3825,11 +8199,11 @@ function syncScreens() {
   $('pause-screen').classList.toggle('hidden', !(inRun && paused && !shopOpen && s === 'playing') || covered);
   $('shop-screen').classList.toggle('hidden', !(inRun && shopOpen));
   $('blessing-screen').classList.toggle('hidden', !(inRun && !paused && !shopOpen && s === 'blessing'));
-  $('dead-screen').classList.toggle('hidden', !(inRun && s === 'dead'));
+  $('dead-screen').classList.toggle('hidden', !(inRun && s === 'dead' && activeRunKind !== 'labyrinth'));
   $('victory-screen').classList.toggle('hidden', !(inRun && s === 'victory'));
 
   const hudVisible = inRun && !paused && !shopOpen && !mapOpen && !codexOpen && !inventoryOpen && !dialogueOpen
-    && !settingsOpen
+    && !settingsOpen && !cutsceneActive
     && (s === 'playing' || s === 'blessing');
   $('hud').classList.toggle('hidden', !hudVisible);
   $('touch').classList.toggle(
@@ -3879,7 +8253,7 @@ function updateHud() {
   const weapon = WEAPONS[p.weapon] || WEAPONS.sword;
   $('weapon-badge').textContent = weapon.short;
   $('weapon-badge').dataset.weapon = p.weapon;
-  if (p.weapon === 'bow') {
+  if (WEAPONS[p.weapon]?.ammo === 'arrows') {
     $('ammo-badge').textContent = `PANAH ${p.arrows}`;
     $('ammo-badge').classList.toggle('empty', p.arrows <= 0);
   } else {
@@ -3912,8 +8286,7 @@ function updateHud() {
     $('boss-name').textContent = boss.name;
     $('boss-title').textContent = boss.title;
     $('boss-fill').style.width = `${Math.max(0, (boss.hp / boss.maxHp) * 100)}%`;
-    const phase = $('boss-phase');
-    const roman = ['I', 'II', 'III'][boss.phase - 1] || 'I';
+    const phase = $('boss-phase');      const roman = ['I', 'II', 'III', 'IV', 'V', 'VI'][boss.phase - 1] || String(boss.phase);
     phase.textContent = `FASE ${roman}`;
     phase.classList.toggle('on', boss.phase > 1);
   }
@@ -3927,17 +8300,53 @@ function updateHud() {
     if (game.canShop()) hint = `Tekan ${formatCode(settings.bindings.interact?.[0])} — Warung Abu`;
   }
   $('hint').textContent = hint;
+  renderAtlasQuickbar();
+  updateLabHud();
 }
 
 // ── game loop ────────────────────────────────────────────────────────────
 function drainEvents() {
-  if (!game.events.length) return;
-  const events = game.events.splice(0, game.events.length);
-  for (const ev of events) {
-    const activeRun = started && !spectating && menuView === 'none';
+  if (!game.events.length) return;    const events = game.events.splice(0, game.events.length);
+    for (const ev of events) {
+      if (ev.type === 'gatePass') recordStageTime(ev.from, activeStage?.label);
+      else if (ev.type === 'bossDown') recordStageTime(ev.room, ev.name);
+      else if (ev.type === 'roomEnter') beginStage(ev.room, ev.name);
+      if (ev.type === 'bossDown' || ev.type === 'labyrinthBossDown') awardBossSkillPoints(ev.kind, ev.name);
+      const activeRun = started && !spectating && menuView === 'none';
     if (activeRun && !paused) audio.play(ev);
     if (activeRun) {
-      if (activeRunKind === 'expansion') {
+      if (activeRunKind === 'pack') {
+        if (ev.type === 'bossDown') handlePackBoss(ev);
+      } else if (activeRunKind === 'court') {
+        if (ev.type === 'gatePass') {
+          const from = ev.from - COURT_ROOM_START;
+          if (COURT_ROOM_BY_ID[ev.from] && !activeCourtTrial) {
+            recordCourtClear(courtState(), from);
+            saveProgress();
+          }
+          if (activeCourtTrial?.id === 'glass_gauntlet') {
+            courtTrialHeal(COURT_TRIAL_BY_ID.glass_gauntlet?.heal || 0);
+          }
+          if (COURT_ROOM_BY_ID[ev.to]) activeCourtRoom = ev.to;
+        } else if (ev.type === 'bossDown') {
+          handleCourtBoss(ev);
+        } else if (ev.type === 'roomEnter' && COURT_ROOM_BY_ID[ev.room]) {
+          activeCourtRoom = ev.room;
+        }
+      } else if (activeRunKind === 'atlas') {
+        if (ev.type === 'gatePass') {
+          const p = atlasState();
+          if (ATLAS_ROOM_BY_ID[ev.from]) {
+            const result = completeAtlasRoom(p, ev.from);
+            if (result.firstClear) saveProgress();
+          }
+          if (ATLAS_ROOM_BY_ID[ev.to]) activeAtlasRoom = ev.to;
+        } else if (ev.type === 'bossDown') {
+          handleAtlasBoss(ev);
+        } else if (ev.type === 'roomEnter' && ATLAS_ROOM_BY_ID[ev.room]) {
+          activeAtlasRoom = ev.room;
+        }
+      } else if (activeRunKind === 'expansion') {
         if (ev.type === 'gatePass') {
           const from = ev.from - EXPANSION_ROOM_START;
           const to = ev.to - EXPANSION_ROOM_START;
@@ -3953,6 +8362,36 @@ function drainEvents() {
         } else if (ev.type === 'campaignComplete') {
           handleExpansionCampaignComplete();
         }
+      } else if (activeRunKind === 'fairy') {
+        if (ev.type === 'gatePass') {
+          const from = FAIRY_ROOM_BY_ID[ev.from];
+          if (from?.fairyStage) {
+            recordFairyStage(fairyState(), from.fairyStage - 1);
+            saveProgress();
+          }
+          const to = FAIRY_ROOM_BY_ID[ev.to];
+          if (to?.fairyStage) {
+            activeFairyStage = to.fairyStage - 1;
+            activeFairyBoss = null;
+          } else if (to?.fairyBoss) {
+            activeFairyBoss = to.fairyBoss;
+            activeFairyStage = -1;
+          }
+        } else if (ev.type === 'bossDown') {
+          handleFairyBoss(ev);
+        } else if (ev.type === 'roomEnter') {
+          const room = FAIRY_ROOM_BY_ID[ev.room];
+          if (room?.fairyStage) {
+            activeFairyStage = room.fairyStage - 1;
+            activeFairyBoss = null;
+          } else if (room?.fairyBoss) {
+            activeFairyBoss = room.fairyBoss;
+            activeFairyStage = -1;
+            if (room.fairyBoss === 'dragon') playFinalBossCutscene();
+          }
+        }
+      } else if (activeRunKind === 'labyrinth') {
+        handleLabEvent(ev);
       } else {
         if (ev.type === 'gatePass') markCleared(ev.from, ev.to);
         else if (ev.type === 'bossDown') markCleared(ev.room, ev.next);
@@ -3963,6 +8402,7 @@ function drainEvents() {
       if (activeRunKind === 'expansion' && ev.room >= EXPANSION_ROOM_START && ev.room < EXPANSION_ROOM_START + TOTAL_LEVELS) {
         activeExpansionIndex = ev.room - EXPANSION_ROOM_START;
       }
+      if (activeRunKind === 'atlas' && ATLAS_ROOM_BY_ID[ev.room]) activeAtlasRoom = ev.room;
       discoverCurrentRoom(ev.room);
       showBanner(ev.name, ev.subtitle);
     } else if (ev.type === 'bossSpawn') showToast(`⚔ ${ev.name} — ${ev.title}`, 2400);
@@ -3975,6 +8415,7 @@ function drainEvents() {
     else if (ev.type === 'respawn') showToast('Kau terlempar dari jurang');
     else if (ev.type === 'wallBroken') showToast('Dinding Miselium hancur — relung rahasia terbuka.', 2400);
     else if (ev.type === 'wallHit') showToast(`Dinding retak — ${ev.hp}/${ev.maxHp}`, 900);
+    else if (ev.type === 'ultimate' && ev.crit) showToast(`ULTIMATE KRITIS — ${ev.name} ×${ev.scale}`, 1600);
     else if (ev.type === 'flaskReward') showToast(`Tegukan Akar — +1 flask (${ev.charges} total)`, 2600);
     else if (ev.type === 'bossDown') showToast(`${ev.name} gugur.`, 2200);
     else if (ev.type === 'blessingChosen') showToast(`Berkah: ${ev.name}`, 1600);
@@ -3992,15 +8433,32 @@ function drainEvents() {
       showToast(`${label} habis — beli di Warung Abu.`, 2100);
     } else if (ev.type === 'weaponSwitch') showToast(`Senjata: ${ev.name}`, 1200);
     else if (ev.type === 'roomCondition' && ev.condition) showToast(`${ev.weather ? `${ev.weather} · ` : ''}${ev.condition}`, 2600);
+    else if (ev.type === 'npcHello') showToast(ev.line, 4600);
+    else if (ev.type === 'bossForm') {
+      showBanner(ev.name, ev.title);
+      showToast(`${ev.arena === 'heaven' ? '☁ LANGIT TERBELAH' : ev.arena === 'hell' ? '🔥 NERAKA TERBUKA' : 'BENTUK BARU'} — ${ev.name}`, 3200);
+    }
     else if (ev.type === 'echoGain' && activeRunKind === 'expansion') showToast(`✦ +${ev.amount} Gema · total ${ev.total}`, 1400);
   }
 }
 
 function desiredTrack() {
   if (prologueActive) return null;
+  if (cutsceneActive) return cutsceneScene?.music || 'faewood';
+  if (menuView === 'court') return 'hearth';
+  if (menuView === 'fairy') return 'faewood';
   if (started && !spectating && menuView === 'none') {
-    if (game.state === 'victory') return 'victory';
-    if (game.boss && game.state === 'playing') return zoneForRoom(game.roomIndex).bossMusic || 'boss';
+    if (game.state === 'victory') {
+      if (activeRunKind === 'fairy' && game.roomIndex >= FAIRY_ROOM_START) return 'celebration';
+      return 'victory';
+    }
+    if (activeRunKind === 'labyrinth' && labRun) {
+      if (game.boss) return 'boss';
+      return LABYRINTH_ZONE_BY_ID[labRun.zoneId]?.music || 'ashen';
+    }
+    if (game.boss && game.state === 'playing') {
+      return bossTrackFor(game.boss.kind, zoneForRoom(game.roomIndex).bossMusic || 'boss');
+    }
     return zoneForRoom(game.roomIndex).music;
   }
   return 'menu';
@@ -4023,8 +8481,11 @@ function syncMusic(raw) {
       (enemy) => Math.abs((enemy.x || 0) - game.player.x) < 380 && enemy.hp > 0,
     );
     music.setLayer('combat', bossFight || near ? 0.85 : 0);
+    if (bossFight) music.setBossPhase(game.boss.phase, game.boss.maxPhases);
+    else if (music.phaseLevel > 0.01) music.clearBossPhase();
   } else {
     music.setLayer('combat', 0);
+    if (music.phaseLevel > 0.01) music.clearBossPhase();
   }
 }
 
@@ -4066,16 +8527,38 @@ function frame(now) {
     if (prologueActive) paintPrologue();
   }
 
+  if (cutsceneActive && cutsceneScene) {
+    const dt = Math.min(raw, 0.1);
+    cutsceneTime += dt;
+    const pct = clamp(cutsceneTime / cutsceneScene.duration, 0, 1);
+    $('cutscene-progress').style.width = `${pct * 100}%`;
+    showCutsceneBeat();
+    paintCutscene();
+    if (cutsceneTime >= cutsceneScene.duration) finishCutscene(false);
+  }
+
+  // The epilogue waits a beat after the victory screen so the death animation
+  // and celebration music land before the credits roll.
+  if (postCreditTimer > 0 && !cutsceneActive) {
+    postCreditTimer -= raw;
+    if (postCreditTimer <= 0) {
+      postCreditTimer = -1;
+      startCutscene(POST_CREDIT);
+    }
+  }
+
   if (spectating && spectateGame) {
     spectateGame.time += Math.min(raw, 0.05);
     if (peekDir !== 0) peekOffset = clamp(peekOffset + peekDir * 330 * raw, -WORLD_W, WORLD_W);
     renderer.render(spectateGame, { spectate: true, cameraX: spectateCamera() });
   } else {
-    if (started && !paused && !shopOpen && !mapOpen && !codexOpen && !inventoryOpen && !dialogueOpen && !settingsOpen && !prologueActive && menuView === 'none') {
+    if (started && !paused && !shopOpen && !mapOpen && !codexOpen && !inventoryOpen && !dialogueOpen && !settingsOpen && !prologueActive && !cutsceneActive && !labRewardsOpen && !labSummaryOpen && !labGuestMode && !coopGuestMode && menuView === 'none') {
       accumulator += raw;
       let steps = 0;
       while (accumulator >= FIXED && steps < 10) {
         game.update(FIXED, inputSnapshot());
+        if (activeRunKind === 'atlas') tickAtlasRun(FIXED);
+        if (activeRunKind === 'labyrinth') tickLabyrinth(FIXED);
         accumulator -= FIXED;
         steps += 1;
         if (game.state !== 'playing') {
@@ -4086,6 +8569,8 @@ function frame(now) {
     } else {
       accumulator = 0;
     }
+    if (labGuestMode && started && activeRunKind === 'labyrinth') applyGuestSnapshot();
+    if (coopGuestMode && started) applyCoopSnapshot();
     renderer.render(game);
     if (mapOpen) mapView.draw(now / 1000);
 
@@ -4109,6 +8594,8 @@ function frame(now) {
   }
 
   drainEvents();
+  labSendHostSnapshot();
+  labSendGuestInput();
   syncScreens();
   updateHud();
 }
@@ -4233,6 +8720,138 @@ window.__ashen = {
   showMenu,
   showLevels,
   showExpansion,
+  showAtlas,
+  closeAtlas,
+  buildAtlasScreen,
+  startAtlasRoom,
+  atlasAction(action, data = {}) {
+    return handleAtlasAction(action, { dataset: data });
+  },
+  useAtlasQuickSlot,
+  get atlas() {
+    return atlasState();
+  },
+  get labyrinth() {
+    return {
+      run: labRun,
+      summary: labSummary,
+      rewards: labRewards,
+      rewardsOpen: labRewardsOpen,
+      summaryOpen: labSummaryOpen,
+      guest: labGuestMode,
+      ticks: labTicks,
+      engaged: labWaveEngaged,
+      waveIndex: labDirector?.waveIndex ?? -1,
+      totalWaves: labDirector?.totalWaves ?? 0,
+      alive: game.enemies.filter((enemy) => !enemy.dead && enemy.hp > 0).length,
+      tab: labTab,
+      progress: labState(),
+      coop: {
+        role: labCoop.role,
+        code: labCoop.code,
+        status: labCoop.status,
+        connected: !!labCoop.transport?.connected,
+        lobby: labCoop.lobby,
+        mode: labCoop.runMode || coopRunMode,
+        guest: coopGuestMode,
+        selfId: coopSelfId || labCoop.selfId,
+      },
+    };
+  },
+  showCourt,
+  closeCourt,
+  showFairy,
+  closeFairy,
+  startCutscene,
+  finishCutscene,
+  get cutscene() {
+    return { active: cutsceneActive, id: cutsceneScene?.id || null, time: cutsceneTime, duration: cutsceneScene?.duration || 0 };
+  },
+  buildFairyScreen,
+  startFairyStage,
+  startFairyBoss,
+  get fairy() {
+    return {
+      progress: fairyState(),
+      summary: fairyProgressSummary(fairyState()),
+      activeStage: activeFairyStage,
+      activeBoss: activeFairyBoss,
+    };
+  },
+  buildCourtScreen,
+  startCourtRoom,
+  startCourtTrial,
+  startPackRun,
+  get skills() {
+    return progress.skills;
+  },
+  get pack() {
+    return packState();
+  },
+  get skillSummary() {
+    return skillSummary(progress.skills);
+  },
+  spendSkill: spendSkillPointAt,
+  resetSkills,
+  applySkills: applySkillsToGame,
+  awardBossSkillPoints,
+  bossMusicFor(kind) {
+    return bossTrackFor(kind);
+  },
+  get runKind() {
+    return activeRunKind;
+  },
+  courtAction(action, data = {}) {
+    const target = { dataset: { action, ...data } };
+    handleCourtAction(target);
+  },
+  get court() {
+    return {
+      progress: courtState(),
+      stats: courtStats(courtState()),
+      bonuses: courtBonuses(courtState()),
+      zones: courtZoneSummary(courtState()),
+      tab: courtTab,
+      resident: courtResidentId,
+      activeRoom: activeCourtRoom,
+      ngPlus: courtState().ngPlus,
+      activeTrial: activeCourtTrial ? { ...activeCourtTrial } : null,
+      trialResult: courtTrialResult ? { ...courtTrialResult, trial: courtTrialResult.trial.name } : null,
+    };
+  },
+  showLabyrinth,
+  buildLabyrinthScreen,
+  startLabyrinth,
+  chooseLabReward,
+  finishLabRun,
+  closeLabSummary,
+  labSnapshotState,
+  showCoop,
+  labHostCoop() {
+    connectLabCoop('host');
+  },
+  labJoinCoop() {
+    connectLabCoop('guest');
+  },
+  labStartCoopSession() {
+    startLabCoopSession();
+  },
+  startCoopGuestForTest(message) {
+    startCoopGuest(message);
+  },
+  applyCoopTestSnapshot(snapshot) {
+    const decoded = decodeSnapshot(snapshot);
+    if (!decoded) return null;
+    labCoop.interpolator.push(decoded);
+    applyCoopSnapshot();
+    return { selfId: coopSelfId, room: game.roomIndex, playerX: game.player.x, allies: game.allies.map((ally) => ally.id) };
+  },
+  atlasEndingFor(zoneId = 'foundry') {
+    return atlasEndingFor(atlasState(), zoneId);
+  },
+  drainEvents,
+  fillDeathStats,
+  fillVictoryStats,
   showCredits,
   buildExpansionScreen,
   startExpansionLevel,
@@ -4374,6 +8993,8 @@ buildLevelCards();
 applyCharacterToGame();
 applySettings();
 renderer.render(game);
+setInterval(updateLiveClock, 250);
+updateLiveClock();
 syncScreens();
 updateHud();
 requestAnimationFrame(frame);

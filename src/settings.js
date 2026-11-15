@@ -43,6 +43,12 @@ export function defaultSettings() {
       fpsCounter: false,
       frameCap: 60,
       gamepad: true,
+      graphicsPreset: 'high',
+      particleDensity: 'full',
+      qualityBias: 55,
+      antiAliasing: true,
+      fov: 100,
+      renderDistance: 100,
     },
     bindings: defaultBindings(),
   };
@@ -115,6 +121,15 @@ export function sanitizeSettings(raw) {
   const frameCap = [0, 60, 120].includes(Number(gameplay.frameCap))
     ? Number(gameplay.frameCap)
     : defaults.gameplay.frameCap;
+  const graphicsPreset = ['low', 'med', 'high', 'ultra'].includes(gameplay.graphicsPreset)
+    ? gameplay.graphicsPreset
+    : defaults.gameplay.graphicsPreset;
+  const particleDensity = ['off', 'low', 'full'].includes(gameplay.particleDensity)
+    ? gameplay.particleDensity
+    : defaults.gameplay.particleDensity;
+  const qualityBias = clamp(Math.round(num(gameplay.qualityBias, defaults.gameplay.qualityBias)), 0, 100);
+  const fov = clamp(Math.round(num(gameplay.fov, defaults.gameplay.fov)), 80, 120);
+  const renderDistance = clamp(Math.round(num(gameplay.renderDistance, defaults.gameplay.renderDistance)), 50, 100);
 
   return {
     version: SETTINGS_VERSION,
@@ -134,6 +149,12 @@ export function sanitizeSettings(raw) {
       fpsCounter: Boolean(gameplay.fpsCounter),
       frameCap,
       gamepad: gameplay.gamepad === undefined ? true : Boolean(gameplay.gamepad),
+      graphicsPreset,
+      particleDensity,
+      qualityBias,
+      antiAliasing: gameplay.antiAliasing === undefined ? defaults.gameplay.antiAliasing : Boolean(gameplay.antiAliasing),
+      fov,
+      renderDistance,
     },
     bindings: sanitizeBindings(source.bindings),
   };

@@ -69,7 +69,7 @@ test('default settings define one or two unique bindings per action', () => {
 test('sanitizeSettings clamps values, rejects unknown keys, and fills missing bindings', () => {
   const settings = sanitizeSettings({
     audio: { master: 999, music: -20, sfx: 'x', muted: 1 },
-    gameplay: { screenShake: 'nope', frameCap: 999, textSize: 'huge' },
+    gameplay: { screenShake: 'nope', frameCap: 999, textSize: 'huge', qualityBias: 999, fov: 5, renderDistance: 0, antiAliasing: 1 },
     bindings: { left: ['KeyQ', 'KeyQ', 'NotAKey'], jump: [] },
   });
   assert.equal(settings.audio.master, 100);
@@ -79,6 +79,10 @@ test('sanitizeSettings clamps values, rejects unknown keys, and fills missing bi
   assert.equal(settings.gameplay.screenShake, 'full');
   assert.equal(settings.gameplay.frameCap, 60);
   assert.equal(settings.gameplay.textSize, 'normal');
+  assert.equal(settings.gameplay.qualityBias, 100);
+  assert.equal(settings.gameplay.fov, 80);
+  assert.equal(settings.gameplay.renderDistance, 50);
+  assert.equal(settings.gameplay.antiAliasing, true);
   assert.equal(settings.bindings.left.length, 2);
   assert.equal(settings.bindings.left[0], 'KeyQ');
   assert.notEqual(settings.bindings.left[0], settings.bindings.left[1]);

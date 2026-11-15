@@ -4,10 +4,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#0b0807" />
-    <title>Ashen Vow — v0.3.0</title>
+    <title>Ashen Vow — v0.10.0</title>
     <meta
       name="description"
-      content="Ashen Vow adalah metroidvania medieval 2D dengan combat pedang real-time, 114 ruang, 36 boss, 100 level ekspansi, Thornveil Haven, peta, dan indeks sumpah."
+      content="Ashen Vow adalah metroidvania medieval 2D dengan combat pedang real-time, 414 ruang, 64 boss, 100 level ekspansi, Thornveil Haven, peta, jam langsung, dan indeks sumpah."
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -16,6 +16,8 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="./styles.css" />
+    <link rel="stylesheet" href="./styles-labyrinth.css" />
+    <link rel="stylesheet" href="./styles-court.css" />
     <link
       rel="icon"
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%230b0807'/%3E%3Cpath d='M32 6l7 18 18 8-18 8-7 18-7-18-18-8 18-8z' fill='%23d08a45'/%3E%3C/svg%3E"
@@ -27,6 +29,11 @@
         <canvas id="game" width="960" height="540" aria-label="Arena permainan Ashen Vow"></canvas>
 
         <!-- ══ HUD ══ -->
+        <div id="live-clock" class="live-clock" aria-live="off">
+          <span id="live-clock-time">--:--:--</span>
+          <em id="live-clock-stage">DI LUAR RUN</em>
+        </div>
+
         <div id="hud" class="hud hidden">
           <div class="hud-top">
             <div class="vitals">
@@ -36,13 +43,31 @@
               <div class="bars">
                 <div class="name-row">
                   <span class="char-name">The Oathbound</span>
-                  <span id="hp-text" class="hp-text">100 / 100</span>
+                  <span id="hp-text" class="hp-text">82 / 100</span>
                 </div>
                 <div class="hp-track">
                   <div id="hp-fill" class="hp-fill"></div>
                   <div class="hp-gloss"></div>
                   <div class="hp-ticks"></div>
                 </div>
+                <!-- Mana Bar -->
+                <div class="hud-subbar-row">
+                  <span class="hud-subbar-label mana-label">MP</span>
+                  <div class="hud-subbar-track mana-track">
+                    <div id="mana-fill" class="hud-subbar-fill mana-fill" style="width:65%"></div>
+                  </div>
+                  <span id="mana-text" class="hud-subbar-text">65/100</span>
+                </div>
+                <!-- Stamina Bar -->
+                <div class="hud-subbar-row">
+                  <span class="hud-subbar-label stamina-label">ST</span>
+                  <div class="hud-subbar-track stamina-track">
+                    <div id="stamina-fill" class="hud-subbar-fill stamina-fill" style="width:90%"></div>
+                  </div>
+                  <span id="stamina-text" class="hud-subbar-text">90/100</span>
+                </div>
+                <!-- Elemental Spell Slots -->
+                <div id="spell-slots" class="spell-slots"></div>
                 <div class="flask-row">
                   <span class="flask-label">FLASK</span>
                   <div id="flasks" class="flasks"></div>
@@ -53,6 +78,7 @@
                   <span id="ammo-badge" class="ammo-badge">SHURIKEN 0</span>
                   <span id="ability-badge" class="ability-badge ready">⚡ SKILL [U]</span>
                 </div>
+                <div id="atlas-quickbar" class="atlas-quickbar hidden" aria-label="Slot cepat Atlas"></div>
               </div>
             </div>
             <div class="hud-right">
@@ -69,19 +95,62 @@
             </div>
           </div>
 
+          <!-- ══ Multi-Layer Boss Health Bar ══ -->
           <div id="boss-wrap" class="boss-wrap hidden">
             <div class="boss-meta">
               <span id="boss-name" class="boss-name">Sir Mordrake</span>
               <span id="boss-phase" class="boss-phase"></span>
+              <span id="boss-phase-label" class="boss-phase-label">FASE 1 / 1</span>
             </div>
-            <div class="boss-track">
-              <div id="boss-fill" class="boss-fill"></div>
-              <div class="boss-gloss"></div>
+            <!-- Main HP -->
+            <div class="boss-bar-row" title="Nyawa Utama">
+              <span class="boss-bar-label">HP</span>
+              <div class="boss-track">
+                <div id="boss-fill" class="boss-fill"></div>
+                <div class="boss-gloss"></div>
+              </div>
+            </div>
+            <!-- Armor Bar -->
+            <div class="boss-bar-row" title="Armor">
+              <span class="boss-bar-label armor-lbl">ARM</span>
+              <div class="boss-track boss-track-armor">
+                <div id="boss-armor-fill" class="boss-armor-fill" style="width:100%"></div>
+              </div>
+            </div>
+            <!-- Shield Bar -->
+            <div class="boss-bar-row" title="Perisai">
+              <span class="boss-bar-label shield-lbl">SHD</span>
+              <div class="boss-track boss-track-shield">
+                <div id="boss-shield-fill" class="boss-shield-fill" style="width:100%"></div>
+              </div>
+            </div>
+            <!-- Stagger Meter -->
+            <div class="boss-bar-row" title="Stagger">
+              <span class="boss-bar-label stagger-lbl">STG</span>
+              <div class="boss-track boss-track-stagger">
+                <div id="boss-stagger-fill" class="boss-stagger-fill" style="width:0%"></div>
+              </div>
             </div>
             <span id="boss-title" class="boss-title"></span>
           </div>
 
           <div id="hint" class="hint"></div>
+          <!-- ══ Diagnostic Profiler HUD ══ -->
+          <div id="profiler-hud" class="profiler-hud hidden" aria-live="polite">
+            <div class="profiler-row">
+              <span class="profiler-key">FPS</span><span id="prof-fps" class="profiler-val">60</span>
+              <span class="profiler-key">MS</span><span id="prof-ms" class="profiler-val">16.7</span>
+            </div>
+            <div class="profiler-row">
+              <span class="profiler-key">ENT</span><span id="prof-ent" class="profiler-val">0</span>
+              <span class="profiler-key">PTL</span><span id="prof-ptl" class="profiler-val">0</span>
+            </div>
+            <div class="profiler-row">
+              <span class="profiler-key">MEM</span><span id="prof-mem" class="profiler-val">—</span>
+            </div>
+            <div id="prof-stutter" class="profiler-stutter hidden">⚠ STUTTER</div>
+          </div>
+          <button id="btn-profiler-toggle" class="profiler-toggle-btn" type="button" title="Toggle Profiler (F3)" aria-label="Toggle Diagnostic Profiler">⊡</button>
           <span id="fps-badge" class="fps-badge hidden">60 FPS</span>
 
           <div id="banner" class="banner">
@@ -89,12 +158,30 @@
             <strong id="banner-name" class="banner-name"></strong>
           </div>
           <div id="toast" class="toast"></div>
+          <div id="lab-hud" class="lab-hud hidden" aria-live="polite">
+            <div class="lab-hud-cycle">
+              <span>INFINITE LABYRINTH</span>
+              <strong id="lab-hud-cycle">SIKLUS 001</strong>
+              <em id="lab-hud-stage">Reruntuhan Awal</em>
+            </div>
+            <div class="lab-hud-wave">
+              <span id="lab-hud-zone">The Forgotten Crypt</span>
+              <b id="lab-hud-wave">Wave 1 / 4</b>
+              <em id="lab-hud-label">TANPA MODIFIER</em>
+            </div>
+            <div id="lab-hud-party" class="lab-hud-party"></div>
+            <div class="lab-hud-meta">
+              <span id="lab-hud-curses">0 KUTUKAN · 0 BARANG</span>
+              <span id="lab-hud-score">0 PTS</span>
+              <button id="lab-quit" class="lab-quit" type="button">AKHIRI RUN</button>
+            </div>
+          </div>
         </div>
 
         <!-- ══ MAIN MENU ══ -->
         <section id="title-screen" class="screen title-screen">
           <div class="screen-inner title-inner">
-            <p class="eyebrow">SEBUAH SUMPAH DI ANTARA ABU · v0.3.0</p>
+            <p class="eyebrow">SEBUAH SUMPAH DI ANTARA ABU · v0.10.0</p>
             <h1 class="game-title">ASHEN<span>VOW</span></h1>
             <div class="title-rule"><i></i><b>✦</b><i></i></div>
             <p class="lede">
@@ -135,6 +222,30 @@
                 <span>INFINITE FRONTIERS — BEYOND THE VEIL</span>
                 <em>Level 101–200 · 15 Kelas · 15 Elite Mobs · Map Editor 3D · v0.4.0</em>
               </button>
+              <button id="btn-overdrive-menu" class="btn btn-ghost menu-btn overdrive-menu-btn" type="button">
+                <span>ASHEN VOW: OVERDRIVE (THE ETERNAL REALM)</span>
+                <em>Level 201–300 · 8 Sekolah Sihir · 8 Bos Multi-Fase · 12 Mode Baru · v0.5.0</em>
+              </button>
+              <button id="btn-atlas-menu" class="btn btn-ghost menu-btn atlas-menu-btn" type="button">
+                <span>THE SUNDERED ATLAS</span>
+                <em>8 Zona · 240 Ruang · Indeks Sumpah · 4 Akhiran · v0.6.0</em>
+              </button>
+              <button id="btn-coop-menu" class="btn btn-ghost menu-btn coop-menu-btn" type="button">
+                <span>MULTIPLAYER — CO-OP</span>
+                <em>Kampanye · Hearthfall · Labyrinth · 2–4 pemain</em>
+              </button>
+              <button id="btn-labyrinth-menu" class="btn btn-ghost menu-btn lab-menu-btn" type="button">
+                <span>INFINITE LABYRINTH — CURSED REALMS</span>
+                <em>20 zona · 30 bos · barang terkutuk · co-op 4 pemain · v0.7.0</em>
+              </button>
+              <button id="btn-court-menu" class="btn btn-ghost menu-btn court-menu-btn" type="button">
+                <span>HEARTHFALL — THE HOLLOW COURT</span>
+                <em>6 zona · 60 level · 12 bos · +6 Panggung Abadi · Skill Point · v0.10.0</em>
+              </button>
+              <button id="btn-fairy-menu" class="btn btn-ghost menu-btn fairy-menu-btn" type="button">
+                <span>FAEWOOD — TAMAN PERI</span>
+                <em>10 tahap jamur &amp; peri · 2 bos baru · Slime Magma &amp; Naga Spektral</em>
+              </button>
               <button id="btn-expansion-menu" class="btn btn-ghost menu-btn expansion-menu-btn" type="button">
                 <span>ECHOES OF THE FORGOTTEN WORLD</span>
                 <em>100 level · Thornveil Haven · Chronicle · v0.3.0</em>
@@ -145,7 +256,7 @@
               </button>
               <button id="btn-updates" class="btn btn-ghost menu-btn" type="button">
                 <span>CATATAN UPDATE</span>
-                <em>Riwayat rilis · v0.3.0 · Echoes of the Forgotten World</em>
+                <em>Riwayat rilis · v0.10.0 · Taman Peri</em>
               </button>
             </nav>
 
@@ -221,7 +332,8 @@
               </div>
             </div>
 
-            <p class="credit-version">ASHEN VOW · v0.3.0 · 10 PENJAGA · 36 BOSS · 114 RUANG</p>
+            <div id="credits-times" class="credits-times"></div>
+            <p class="credit-version">ASHEN VOW · v0.10.0 · 13 PENJAGA · 72 BOSS · 426 RUANG</p>
             <div class="screen-links">
               <button id="btn-credits-back" class="link-btn" type="button">← KEMBALI KE MENU</button>
             </div>
@@ -234,12 +346,12 @@
             <p class="eyebrow">ARSIP RILIS · SETIAP LUKA YANG DITAMBAL</p>
             <h2 class="screen-title">CATATAN UPDATE</h2>
             <p class="screen-sub">
-              Riwayat perubahan Ashen Vow, dari fondasi pertama sampai Sigil &amp; Ritual.
+              Riwayat perubahan Ashen Vow, dari fondasi pertama sampai Taman Peri.
               Catatan ini ikut tersimpan di dalam game.
             </p>
             <div class="updates-meta">
-              <span id="updates-version">VERSI SAAT INI · v0.3.0</span>
-              <span>DIPERBARUI 11 NOVEMBER 2026</span>
+              <span id="updates-version">VERSI SAAT INI · v0.10.0</span>
+              <span>DIPERBARUI 15 NOVEMBER 2026</span>
             </div>
             <div id="update-log" class="update-log"></div>
             <div class="screen-links">
@@ -340,6 +452,168 @@
           </div>
         </section>
 
+        <!-- ══ OVERDRIVE HUB ══ -->
+        <section id="overdrive-screen" class="screen hidden">
+          <div class="screen-inner overdrive-inner">
+            <p class="eyebrow">ASHEN VOW OVERDRIVE · THE ETERNAL REALM · v0.5.0</p>
+            <h2 class="screen-title overdrive-title">THE ETERNAL REALM</h2>
+            <p class="screen-sub">
+              Level 201–300 · 10 Bab Wilayah Abadi · 8 Sekolah Sihir · 32 Mantra · 8 Bos Multi-Fase · 12 Mode Overdrive.
+            </p>
+            <div id="overdrive-summary" class="overdrive-summary"></div>
+            <nav id="overdrive-tabs" class="exp-tabs overdrive-tabs" aria-label="Bagian Overdrive">
+              <button class="exp-tab active" type="button" data-tab="campaign301">KAMPANYE 201–300</button>
+              <button class="exp-tab" type="button" data-tab="spellschools">8 SEKOLAH SIHIR</button>
+              <button class="exp-tab" type="button" data-tab="bossfase">BOS &amp; FASE</button>
+              <button class="exp-tab" type="button" data-tab="profiler">DIAGNOSTIK PROFILER</button>
+              <button class="exp-tab" type="button" data-tab="modes">MODE OVERDRIVE</button>
+              <button class="exp-tab" type="button" data-tab="checklist">CHECKLIST RILIS (18/18)</button>
+            </nav>
+            <div id="overdrive-body" class="overdrive-body"></div>
+            <div class="screen-links">
+              <button id="btn-overdrive-back" class="link-btn" type="button">← KEMBALI KE MENU</button>
+            </div>
+            <p class="micro">Kampanye 2D 1–200 tetap utuh. Overdrive adalah kelanjutan langsung dari Infinite Frontiers.</p>
+          </div>
+        </section>
+
+        <!-- ══ SUNDERED ATLAS HUB ══ -->
+        <section id="atlas-screen" class="screen hidden">
+          <div class="screen-inner atlas-inner">
+            <p class="eyebrow">THE SUNDERED ATLAS · PARTS V–VII · v0.6.0</p>
+            <h2 class="screen-title atlas-title">ATLAS YANG TERBELAH</h2>
+            <p class="screen-sub">
+              Delapan halaman dunia, 240 ruang, dan satu Indeks Sumpah yang mencatat setiap nama.
+              Buka gerbang kemampuan, kumpulkan tanda, dan tentukan bagaimana Atlas berakhir.
+            </p>
+            <div id="atlas-summary" class="exp-summary atlas-summary"></div>
+            <nav id="atlas-tabs" class="exp-tabs atlas-tabs" aria-label="Bagian The Sundered Atlas">
+              <button class="exp-tab active" type="button" data-tab="zones">ZONA &amp; RUANG</button>
+              <button class="exp-tab" type="button" data-tab="story">CERITA</button>
+              <button class="exp-tab" type="button" data-tab="lore">INDEKS SUMPAH</button>
+              <button class="exp-tab" type="button" data-tab="shops">WARUNG</button>
+              <button class="exp-tab" type="button" data-tab="gear">PERLENGKAPAN</button>
+              <button class="exp-tab" type="button" data-tab="items">BARANG &amp; RESEP</button>
+              <button class="exp-tab" type="button" data-tab="systems">SISTEM</button>
+            </nav>
+            <div id="atlas-body" class="exp-body atlas-body"></div>
+            <div class="screen-links">
+              <button id="btn-atlas-back" class="link-btn" type="button">← KEMBALI KE MENU</button>
+            </div>
+            <p class="micro">Progres Atlas tersimpan di browser ini. Zirah, jimat, dan senjata Atlas hanya memberi bonus di run Atlas.</p>
+          </div>
+        </section>
+
+        <!-- ══ INFINITE LABYRINTH HUB ══ -->
+        <section id="labyrinth-screen" class="screen hidden">
+          <div class="screen-inner lab-inner">
+            <p class="eyebrow">CURSED REALMS · THE ETERNAL DESCENT · v0.7.0</p>
+            <h2 class="screen-title">INFINITE LABYRINTH</h2>
+            <p class="screen-sub">
+              Tidak ada level terakhir. Hanya siklus berikutnya. Gelombang musuh, elite, bos,
+              lalu pilih satu hadiah — atau terima tawaran terkutuk dan turun lebih dalam.
+            </p>
+            <div id="lab-summary" class="lab-summary"></div>
+            <nav class="exp-tabs lab-tabs" aria-label="Bagian Infinite Labyrinth">
+              <button class="exp-tab active" type="button" data-lab-tab="run">MULAI DESCENT</button>
+              <button class="exp-tab" type="button" data-lab-tab="modes">ZONA &amp; 30 BOS</button>
+              <button class="exp-tab" type="button" data-lab-tab="items">BARANG TERKUTUK</button>
+              <button class="exp-tab" type="button" data-lab-tab="records">CATATAN &amp; MASTERY</button>
+              <button class="exp-tab" type="button" data-lab-tab="coop">CO-OP 2–4 PEMAIN</button>
+            </nav>
+            <div id="lab-body" class="lab-body"></div>
+            <div class="screen-links">
+              <button id="btn-lab-back" class="link-btn" type="button">← KEMBALI KE MENU</button>
+            </div>
+            <p class="micro">Kutukan dan barang hanya berlaku di dalam run. Mastery, discovery, dan mata uang tersimpan permanen.</p>
+          </div>
+        </section>
+
+        <!-- ══ HEARTHFALL: THE HOLLOW COURT ══ -->
+        <section id="court-screen" class="screen hidden">
+          <div class="screen-inner court-inner">
+            <p class="eyebrow">HEARTHFALL · THE HOLLOW COURT · v0.10.0</p>
+            <h2 class="screen-title">PERAPIAN YANG TERAKHIR</h2>
+            <p class="screen-sub">
+              Tiga zona, tiga puluh ruang, enam penjaga — dan satu rumah yang tumbuh dari setiap
+              kemenangan. Tempa senjata, pasang perabot, dan dengarkan penghuni yang kau bawa pulang.
+            </p>
+            <div id="court-summary" class="exp-summary court-summary"></div>
+            <nav id="court-tabs" class="exp-tabs court-tabs" aria-label="Bagian Hearthfall">
+              <button class="exp-tab active" type="button" data-court-tab="journey">ZONA &amp; 30 LEVEL</button>
+              <button class="exp-tab" type="button" data-court-tab="house">RUMAH &amp; PERABOT</button>
+              <button class="exp-tab" type="button" data-court-tab="residents">8 PENGHUNI</button>
+              <button class="exp-tab" type="button" data-court-tab="arsenal">TEMPA &amp; ALAT</button>
+            </nav>
+            <div id="court-body" class="exp-body court-body"></div>
+            <div class="screen-links">
+              <button id="btn-court-back" class="link-btn" type="button">← KEMBALI KE MENU</button>
+            </div>
+            <p class="micro">House bonus, senjata, dan alat court hanya berlaku di run Hearthfall. Progres tersimpan di browser ini.</p>
+          </div>
+        </section>
+
+        <!-- ══ CINEMATIC CUTSCENES ══ -->
+        <section id="cutscene-screen" class="cutscene-screen hidden" aria-label="Sinematik Ashen Vow">
+          <canvas id="cutscene-canvas" width="1280" height="720"></canvas>
+          <div class="cutscene-top">
+            <span id="cutscene-eyebrow" class="cutscene-eyebrow">SINGGASANA SAYAP</span>
+            <button id="btn-cutscene-skip" class="prologue-skip" type="button">LEWATI ▸</button>
+          </div>
+          <div class="cutscene-subtitle">
+            <h3 id="cutscene-title" class="cutscene-title">SYLVARA</h3>
+            <span id="cutscene-label" class="cutscene-label">SINGGASANA SAYAP</span>
+            <p id="cutscene-line" class="cutscene-line"></p>
+            <div class="prologue-foot">
+              <div class="prologue-bar"><i id="cutscene-progress"></i></div>
+              <span id="cutscene-count" class="prologue-count">1 / 6</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- ══ FAEWOOD: TAMAN PERI ══ -->
+        <section id="fairy-screen" class="screen hidden">
+          <div class="screen-inner fairy-inner">
+            <p class="eyebrow">FAEWOOD · TAMAN PERI · v0.10.0</p>
+            <h2 class="screen-title">HUTAN DI BAWAH SAYAP CAHAYA</h2>
+            <p class="screen-sub">
+              Sepuluh tahap jamur dan peri harus kau lewati sebelum singgasana bos terbuka.
+              Di ujungnya, slime magma dan naga peri spektral menjaga cahaya terakhir taman ini.
+            </p>
+            <div id="fairy-summary" class="exp-summary fairy-summary"></div>
+            <div id="fairy-body" class="exp-body fairy-body"></div>
+            <div class="screen-links">
+              <button id="btn-fairy-back" class="link-btn" type="button">← KEMBALI KE MENU</button>
+            </div>
+            <p class="micro">Tahap dan bos terbuka berurutan. Progres Taman Peri tersimpan di browser ini bersama progres lain.</p>
+          </div>
+        </section>
+
+        <!-- ══ LABYRINTH REWARD CHAMBER ══ -->
+        <section id="lab-reward-screen" class="screen overlay-screen hidden">
+          <div class="screen-inner">
+            <p id="lab-reward-eyebrow" class="eyebrow">CHAMBER OF THE LABYRINTH</p>
+            <h2 class="screen-title">PILIH SATU HADIAH</h2>
+            <p class="screen-sub">Tiga pilihan. Kadang keempatnya menuntut harga. Baca kutukan sebelum menerima kekuatan.</p>
+            <div id="lab-reward-cards" class="lab-reward-cards"></div>
+            <p class="micro">Tekan <kbd>1</kbd>–<kbd>4</kbd> untuk memilih · tidak ada hadiah yang bisa diambil dua kali.</p>
+          </div>
+        </section>
+
+        <!-- ══ LABYRINTH RUN SUMMARY ══ -->
+        <section id="lab-summary-screen" class="screen overlay-screen hidden">
+          <div class="screen-inner narrow">
+            <p class="eyebrow blood">LABIRIN MENUTUP SATU PINTU</p>
+            <h2 class="screen-title dead-title">RUN BERAKHIR</h2>
+            <p class="screen-sub">Namamu dicatat. Siklus berikutnya menunggu.</p>
+            <div id="lab-summary-body" class="lab-summary-body"></div>
+            <button id="lab-summary-again" class="btn btn-primary" type="button"><span>TURUN LAGI</span></button>
+            <div class="screen-links">
+              <button id="lab-summary-hub" class="link-btn" type="button">KEMBALI KE LABYRINTH HUB</button>
+            </div>
+          </div>
+        </section>
+
         <!-- ══ SHOP ══ -->
         <section id="shop-screen" class="screen hidden">
           <div class="screen-inner shop-inner">
@@ -416,13 +690,14 @@
             <h2 class="screen-title victory-title">SUMPAH TUNTAS</h2>
             <p class="screen-sub">Bara padam. Puncak sunyi. Namamu terukir di batu.</p>
             <div id="victory-stats" class="stats"></div>
+            <div id="victory-times" class="run-times"></div>
             <p id="victory-blessings" class="victory-blessings"></p>
             <button id="btn-again" class="btn btn-primary" type="button"><span>MULAI LAGI</span></button>
             <div class="screen-links">
               <button id="btn-victory-levels" class="link-btn" type="button">PILIH LEVEL</button>
               <button id="btn-victory-menu" class="link-btn" type="button">MENU UTAMA</button>
             </div>
-            <p class="micro">Terima kasih telah memainkan Ashen Vow v0.3.0</p>
+            <p class="micro">Terima kasih telah memainkan Ashen Vow v0.10.0</p>
           </div>
         </section>
 
@@ -480,6 +755,20 @@
                   <div id="char-colors" class="char-swatches"></div>
                 </div>
               </div>
+            </div>
+
+            <div class="skill-panel">
+              <div class="skill-panel-head">
+                <span class="char-label">SKILL POINT</span>
+                <strong id="char-skill-points" class="skill-points">0 SKILL POINT</strong>
+                <button id="btn-skill-reset" class="link-btn" type="button">RESET KEAHLIAN</button>
+              </div>
+              <p class="char-note">
+                Setiap penjaga yang gugur memberi Skill Point. Peringkat ultimate menaikkan damage
+                ultimate secara langsung dan tersimpan permanen.
+              </p>
+              <div id="char-skill-list" class="skill-list"></div>
+              <p id="char-skill-summary" class="skill-summary"></p>
             </div>
 
             <div class="screen-links">
@@ -588,6 +877,7 @@
             <p class="screen-sub">
               Catatan tentang semua yang hidup, mati, dan menunggu di antara abu.
             </p>
+            <p class="micro">Waktu lokal dan timer stage tampil di kanan atas setiap saat.</p>
             <div id="codex-tabs" class="codex-tabs" role="tablist" aria-label="Kategori indeks"></div>
             <p id="codex-count" class="codex-count"></p>
             <div id="codex-entries" class="codex-entries"></div>
@@ -611,7 +901,9 @@
               Gunakan dengan bijak di antara abu.
             </p>
             <div id="inventory-quick" class="inventory-quick"></div>
+            <div id="inventory-loadout" class="inventory-loadout"></div>
             <div id="inventory-list" class="inventory-list"></div>
+            <div id="inventory-bindings" class="inventory-bindings"></div>
             <div class="screen-links">
               <button id="btn-inventory-close" class="btn btn-primary btn-compact" type="button">
                 <span>KEMBALI KE PERTEMPURAN</span>
@@ -673,7 +965,7 @@
       </div>
 
       <footer class="footer">
-        <span>ASHEN VOW · v0.3.0</span>
+        <span>ASHEN VOW · v0.10.0</span>
         <span class="dot">✦</span>
         <span>Metroidvania medieval 2D · 14 ruang · 6 boss · dibuat dengan Canvas</span>
       </footer>
