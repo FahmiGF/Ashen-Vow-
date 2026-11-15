@@ -1,4 +1,17 @@
-# Ashen Vow — v0.10.0
+# Ashen Vow — v0.11.0
+
+## Speedrun — Satu Nyawa (v0.11.0)
+
+Satu nyawa, tanpa checkpoint, dan tempo yang terus menderas sampai kau jatuh.
+
+- **Jalankan:** menu utama → **SPEEDRUN — SATU NYAWA**.
+- **Mulai 2×, naik tiap bos terakhir:** kampanye penuh berjalan dua kali lebih cepat. Setiap kali **The Oathbreaker** gugur, multiplier naik satu tingkat (3×, 4×, 5×, …) dan kampanye dimulai lagi dari Gerbang Abu dengan tempo baru. Rantai ini berhenti hanya saat kau mati.
+- **Satu nyawa, tanpa checkpoint:** `retryRun` tidak bisa membangkitkanmu, `respawnAtCheckpoint()` menolak selama mode ini, dan jurang berubah jadi maut — jatuh langsung mengakhiri run alih-alih melemparkanmu ke titik aman.
+- **Cara kerja kecepatan:** simulasi tetap deterministik pada 120 Hz; yang bertambah adalah jumlah langkah per frame (`speedrunMaxSubsteps` membatasinya agar tab yang tertidur tidak melompat), bukan ukuran langkahnya.
+- **HUD:** badge `⚡ 2× · 1 NYAWA · PUTARAN 1` di kanan atas, berubah merah mulai 5×.
+- **Hub & ringkasan:** hub menampilkan rekor multiplier, putaran tuntas, waktu terbaik, jumlah run, lima aturan mode, dan tangga kecepatan 2× sampai ∞. Kematian membuka layar ringkasan berisi kecepatan akhir, putaran, ruang yang dilewati, dan waktu bertahan, dengan tombol mulai lagi 2×.
+- **Rekor & riwayat run:** `progress.speedrun` di `ashen-vow-progress-v1` menyimpan `bestMultiplier`, `bestCycles`, `bestTime`, `bestRooms`, `runs`, `deaths`, dan `clears`, plus `history` berisi 10 percobaan terakhir (multiplier, putaran tuntas, ruang, waktu, hasil, dan stempel waktu). Hub merender riwayat itu di bawah tangga kecepatan — terbaru di atas, ditandai **GUGUR** atau **TUNTAS**; sanitizer membatasi angka, memotong daftar, dan mempertahankan field masa depan.
+- **Test & smoke:** `tests/speedrun.test.js` menambah 9 test; total suite **274 test deterministik**. `npm run smoke:speedrun` memverifikasi start 2×, tempo yang lebih cepat dari jam dinding, jurang mematikan, ringkasan satu nyawa, eskalasi Oathbreaker ke 3×, kematian kedua di 3×, riwayat run, dan persistensi setelah reload. `npm run smoke:speedrun:mobile` mengulang alur itu di viewport potret 390×844 (hub, badge HUD, layar ringkasan, baris riwayat).
 
 ## Taman Peri — Faewood (v0.10.0)
 

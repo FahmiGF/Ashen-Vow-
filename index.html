@@ -4,10 +4,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#0b0807" />
-    <title>Ashen Vow — v0.10.0</title>
+    <title>Ashen Vow — v0.11.0</title>
     <meta
       name="description"
-      content="Ashen Vow adalah metroidvania medieval 2D dengan combat pedang real-time, 414 ruang, 64 boss, 100 level ekspansi, Thornveil Haven, peta, jam langsung, dan indeks sumpah."
+      content="Ashen Vow adalah metroidvania medieval 2D dengan combat pedang real-time, 426 ruang, 72 boss, mode Speedrun satu nyawa, 100 level ekspansi, Thornveil Haven, peta, jam langsung, dan indeks sumpah."
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -82,6 +82,7 @@
               </div>
             </div>
             <div class="hud-right">
+              <div id="speedrun-badge" class="speedrun-badge hidden">⚡ 2× · 1 NYAWA</div>
               <div class="ash-badge" title="Abu — mata uang Warung Abu">
                 <span>✦</span>
                 <strong id="ash-count">0</strong>
@@ -181,7 +182,7 @@
         <!-- ══ MAIN MENU ══ -->
         <section id="title-screen" class="screen title-screen">
           <div class="screen-inner title-inner">
-            <p class="eyebrow">SEBUAH SUMPAH DI ANTARA ABU · v0.10.0</p>
+            <p class="eyebrow">SEBUAH SUMPAH DI ANTARA ABU · v0.11.0</p>
             <h1 class="game-title">ASHEN<span>VOW</span></h1>
             <div class="title-rule"><i></i><b>✦</b><i></i></div>
             <p class="lede">
@@ -240,11 +241,15 @@
               </button>
               <button id="btn-court-menu" class="btn btn-ghost menu-btn court-menu-btn" type="button">
                 <span>HEARTHFALL — THE HOLLOW COURT</span>
-                <em>6 zona · 60 level · 12 bos · +6 Panggung Abadi · Skill Point · v0.10.0</em>
+                <em>6 zona · 60 level · 12 bos · +6 Panggung Abadi · Skill Point · v0.11.0</em>
               </button>
               <button id="btn-fairy-menu" class="btn btn-ghost menu-btn fairy-menu-btn" type="button">
                 <span>FAEWOOD — TAMAN PERI</span>
                 <em>10 tahap jamur &amp; peri · 2 bos baru · Slime Magma &amp; Naga Spektral</em>
+              </button>
+              <button id="btn-speedrun-menu" class="btn btn-ghost menu-btn speedrun-menu-btn" type="button">
+                <span>SPEEDRUN — SATU NYAWA</span>
+                <em>2× → 3× → 4× · tanpa checkpoint</em>
               </button>
               <button id="btn-expansion-menu" class="btn btn-ghost menu-btn expansion-menu-btn" type="button">
                 <span>ECHOES OF THE FORGOTTEN WORLD</span>
@@ -256,7 +261,7 @@
               </button>
               <button id="btn-updates" class="btn btn-ghost menu-btn" type="button">
                 <span>CATATAN UPDATE</span>
-                <em>Riwayat rilis · v0.10.0 · Taman Peri</em>
+                <em>Riwayat rilis · v0.11.0 · Speedrun</em>
               </button>
             </nav>
 
@@ -333,7 +338,7 @@
             </div>
 
             <div id="credits-times" class="credits-times"></div>
-            <p class="credit-version">ASHEN VOW · v0.10.0 · 13 PENJAGA · 72 BOSS · 426 RUANG</p>
+            <p class="credit-version">ASHEN VOW · v0.11.0 · 13 PENJAGA · 72 BOSS · 426 RUANG</p>
             <div class="screen-links">
               <button id="btn-credits-back" class="link-btn" type="button">← KEMBALI KE MENU</button>
             </div>
@@ -346,11 +351,11 @@
             <p class="eyebrow">ARSIP RILIS · SETIAP LUKA YANG DITAMBAL</p>
             <h2 class="screen-title">CATATAN UPDATE</h2>
             <p class="screen-sub">
-              Riwayat perubahan Ashen Vow, dari fondasi pertama sampai Taman Peri.
+              Riwayat perubahan Ashen Vow, dari fondasi pertama sampai Speedrun.
               Catatan ini ikut tersimpan di dalam game.
             </p>
             <div class="updates-meta">
-              <span id="updates-version">VERSI SAAT INI · v0.10.0</span>
+              <span id="updates-version">VERSI SAAT INI · v0.11.0</span>
               <span>DIPERBARUI 15 NOVEMBER 2026</span>
             </div>
             <div id="update-log" class="update-log"></div>
@@ -586,6 +591,39 @@
               <button id="btn-fairy-back" class="link-btn" type="button">← KEMBALI KE MENU</button>
             </div>
             <p class="micro">Tahap dan bos terbuka berurutan. Progres Taman Peri tersimpan di browser ini bersama progres lain.</p>
+          </div>
+        </section>
+
+        <!-- ══ SPEEDRUN HUB ══ -->
+        <section id="speedrun-screen" class="screen hidden">
+          <div class="screen-inner speedrun-inner">
+            <p class="eyebrow">SPEEDRUN · SATU NYAWA · TANPA CHECKPOINT</p>
+            <h2 class="screen-title">TARUHAN YANG TERUS MENDERAS</h2>
+            <p class="screen-sub">
+              Kampanye berjalan dua kali lebih cepat. Setiap kali The Oathbreaker gugur,
+              kecepatan naik satu tingkat — dan kau hanya punya satu nyawa.
+            </p>
+            <div id="speedrun-summary" class="exp-summary speedrun-summary"></div>
+            <div id="speedrun-body" class="speedrun-body"></div>
+            <div class="screen-links">
+              <button id="speedrun-start" class="btn btn-primary" type="button"><span>MULAI SPEEDRUN 2×</span></button>
+              <button id="btn-speedrun-back" class="link-btn" type="button">← KEMBALI KE MENU</button>
+            </div>
+            <p class="micro">Satu kematian mengakhiri run. Rekor kecepatan tertinggi disimpan di browser ini.</p>
+          </div>
+        </section>
+
+        <!-- ══ SPEEDRUN SUMMARY ══ -->
+        <section id="speedrun-summary-screen" class="screen overlay-screen hidden">
+          <div class="screen-inner narrow">
+            <p class="eyebrow blood">RUN SPEEDRUN BERAKHIR</p>
+            <h2 class="screen-title dead-title">SATU NYAWA HABIS</h2>
+            <p id="speedrun-summary-sub" class="screen-sub">Kau gugur. Rekor tersimpan.</p>
+            <div id="speedrun-summary-body" class="speedrun-summary-body"></div>
+            <div class="screen-links">
+              <button id="speedrun-summary-again" class="btn btn-primary" type="button"><span>MULAI LAGI 2×</span></button>
+              <button id="speedrun-summary-menu" class="link-btn" type="button">KEMBALI KE MENU</button>
+            </div>
           </div>
         </section>
 

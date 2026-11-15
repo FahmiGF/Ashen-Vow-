@@ -28,9 +28,23 @@ test('update log is complete and ordered newest first', () => {
   }
 });
 
-test('the latest update documents the Faewood stages and its two bosses', () => {
+test('the latest update documents Speedrun and its one-life escalation', () => {
   const latest = LATEST_UPDATE;
-  assert.equal(latest.version, '0.10.0');
+  assert.equal(latest.version, '0.11.0');
+  const text = [latest.summary, ...latest.highlights, ...(latest.fixes || [])].join(' ');
+  assert.match(text, /Speedrun/i);
+  assert.match(text, /satu nyawa/i);
+  assert.match(text, /tanpa checkpoint/i);
+  assert.match(text, /2×/);
+  assert.match(text, /3×/);
+  assert.match(text, /Oathbreaker/i);
+  assert.match(text, /progress\.speedrun/i);
+  assert.match(text, /oneLife/);
+});
+
+test('the update log still documents the Faewood stages and its two bosses', () => {
+  const latest = UPDATE_LOG.find((entry) => entry.version === '0.10.0');
+  assert.ok(latest);
   const text = [latest.summary, ...latest.highlights, ...(latest.fixes || [])].join(' ');
   assert.match(text, /Faewood|Taman Peri/i);
   assert.match(text, /sepuluh tahap|10 tahap/i);

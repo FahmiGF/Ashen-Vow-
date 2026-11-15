@@ -6356,6 +6356,172 @@ html.colorblind .map-pin-btn[data-pin='key'] {
   }
 }
 
+/* ── Speedrun: one life, escalating speed ─────────────────────────────── */
+.speedrun-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border: 1px solid rgba(232, 168, 76, 0.55);
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(46, 26, 10, 0.92), rgba(18, 10, 4, 0.92));
+  font-family: var(--font-display);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  color: #f6cf8a;
+  white-space: nowrap;
+}
+
+.speedrun-badge.danger {
+  border-color: rgba(232, 92, 68, 0.7);
+  color: #ff9a7a;
+  box-shadow: 0 0 16px rgba(232, 92, 68, 0.35);
+}
+
+.speedrun-menu-btn {
+  border-color: rgba(232, 168, 76, 0.4);
+}
+
+.speedrun-rules {
+  margin: 12px 0 0;
+  padding-left: 20px;
+  text-align: left;
+  display: grid;
+  gap: 8px;
+}
+
+.speedrun-rules li {
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: #b9a68c;
+}
+
+.speedrun-ladder {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.speedrun-rung {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 10px;
+  border: 1px solid rgba(232, 168, 76, 0.28);
+  border-radius: 10px;
+  background: rgba(14, 10, 7, 0.72);
+}
+
+.speedrun-rung span {
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  color: #9a8464;
+}
+
+.speedrun-rung strong {
+  font-family: var(--font-display);
+  font-size: 22px;
+  color: #f3c883;
+}
+
+.speedrun-rung.endless strong {
+  color: #ff9a7a;
+}
+
+.speedrun-history {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.speedrun-history-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 5px 10px;
+  padding: 9px 10px;
+  border: 1px solid rgba(232, 168, 76, 0.18);
+  border-radius: 8px;
+  background: rgba(14, 10, 7, 0.6);
+  font-size: 11.5px;
+  color: #b9a68c;
+}
+
+.speedrun-history-row.record {
+  border-color: rgba(232, 168, 76, 0.6);
+  background: rgba(30, 18, 8, 0.74);
+}
+
+.speedrun-history-row .sr-index {
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  color: #8a7458;
+}
+
+.speedrun-history-row .sr-speed {
+  font-family: var(--font-display);
+  font-size: 16px;
+  color: #f3c883;
+}
+
+.speedrun-history-row .sr-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px 8px;
+  flex: 1 1 130px;
+  min-width: 0;
+}
+
+.speedrun-history-row .sr-time {
+  font-variant-numeric: tabular-nums;
+  color: #d8c2a0;
+}
+
+.speedrun-history-row .sr-result {
+  margin-left: auto;
+  padding: 3px 7px;
+  border: 1px solid rgba(232, 92, 68, 0.5);
+  border-radius: 999px;
+  font-size: 9px;
+  font-style: normal;
+  letter-spacing: 0.12em;
+  color: #ff9a7a;
+  white-space: nowrap;
+}
+
+.speedrun-history-row.cleared .sr-result {
+  border-color: rgba(140, 214, 130, 0.5);
+  color: #9fd58f;
+}
+
+.speedrun-history-row .sr-stamp {
+  flex: 1 0 100%;
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  color: #7d6a52;
+}
+
+.speedrun-empty {
+  margin: 12px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #9a8464;
+}
+
+.speedrun-body {
+  margin-top: 8px;
+}
+
+@media (max-width: 600px) {
+  .speedrun-badge {
+    font-size: 9px;
+    padding: 4px 8px;
+  }
+}
+
 /* Portrait phones keep the game frame 16:9, so cinematics must escape it and
    fill the viewport like the regular `.screen` overlays. Declared last so it
    wins over the base `.cutscene-screen` rules above. */

@@ -1451,6 +1451,8 @@ export class AshenGame {
     this.gateLock = 0;
     this.prevInput = {};
     this.labyrinth = false;
+    // Speedrun: one life, lethal pits, no checkpoint revival.
+    this.oneLife = false;
     this.allies = [];
     this.damageDealt = 0;
     this.damageReceived = 0;
@@ -2255,7 +2257,13 @@ export class AshenGame {
       if (!p.pitGrace) {
         p.pitGrace = true;
         this.damagePlayer(28, p.x + p.w / 2, { knock: false });
-        if (this.state === 'playing') {
+        if (this.state === 'playing' && this.oneLife) {
+          // No safety net in a speedrun: the pit simply ends the run.
+          p.hp = 0;
+          this.state = 'dead';
+          this.deathTimer = 0;
+          this.emit({ type: 'death' });
+        } else if (this.state === 'playing') {
           p.x = this.room.spawn.x;
           p.y = this.room.spawn.y;
           p.vx = 0;
@@ -3145,6 +3153,7 @@ export class AshenGame {
   }
 
   respawnAtCheckpoint() {
+    if (this.oneLife) return false;
     if (this.checkpointRoom == null) return false;
     const room = this.checkpointRoom;
     const p = this.player;

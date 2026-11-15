@@ -1,9 +1,18 @@
 # Ashen Vow — Claude Master Plan
 
-> Compressed handoff for continuing **Ashen Vow v0.10.0**.
-> Status: **playable, browser-verified; Milestones A and B plus Sigil & Ritual, Echoes of the Forgotten World, Infinite Frontiers, Overdrive, The Sundered Atlas, Infinite Labyrinth co-op, Hearthfall (The Hollow Court), Skill Points + Panggung Abadi, and Taman Peri (Faewood) complete**.
+> Compressed handoff for continuing **Ashen Vow v0.11.0**.
+> Status: **playable, browser-verified; Milestones A and B plus Sigil & Ritual, Echoes of the Forgotten World, Infinite Frontiers, Overdrive, The Sundered Atlas, Infinite Labyrinth co-op, Hearthfall (The Hollow Court), Skill Points + Panggung Abadi, Taman Peri (Faewood), and Speedrun (one life, escalating game speed) complete**.
 > Roadmap: [`MASTERPLAN.md`](MASTERPLAN.md).
 > Repo: `https://github.com/FahmiGF/Ashen-Vow-` · branch `main` · push account `isshinAshinaSeal`.
+
+## 0.05 v0.11.0 — Speedrun: Satu Nyawa
+
+- `src/speedrun.js` — pure rules and records: `SPEEDRUN_START_MULTIPLIER = 2` with one step per cleared cycle (`speedrunMultiplier(cycle)`), `SPEEDRUN_LIVES = 1`, `SPEEDRUN_RULES`, `speedrunMaxSubsteps(scale)`, `defaultSpeedrunProgress`, `sanitizeSpeedrunHistory` (newest-first, `SPEEDRUN_HISTORY_LIMIT = 10`, clamps every field), `sanitizeSpeedrunProgress`, `speedrunSummary`, and `recordSpeedrun` (appends to the history, mutates the live save object and reports `isRecord`).
+- `src/core.js` — `this.oneLife` (set by the run, cleared by `reset()`): `respawnAtCheckpoint()` returns `false`, and a pit fall sets `state = 'dead'` instead of teleporting the player back to spawn. No other core behaviour changes.
+- `src/main.js` — `activeRunKind = 'speedrun'`; `showSpeedrun` / `buildSpeedrunScreen` / `startSpeedrun(cycle, opts)` / `finishSpeedrun` / `handleSpeedrunClear`. The frame loop multiplies the accumulator by the multiplier while keeping the 1/120 s fixed step; `bossDown` for `oathbreaker` sets `speedrunCleared` and the escalation restarts the campaign at the next multiplier. Death opens `#speedrun-summary-screen` instead of the generic death screen, `retryRun` cannot revive, and HUD `#speedrun-badge` shows `⚡ 3× · 1 NYAWA · PUTARAN 2` (danger styling from 5×). Hooks: `speedrun`, `showSpeedrun`, `startSpeedrun`, `finishSpeedrun`.
+- `index.html` / `styles.css` — **SPEEDRUN — SATU NYAWA** menu entry, hub `#speedrun-screen` (records, five rules, 2×→∞ ladder), death summary `#speedrun-summary-screen`, and `.speedrun-*` styles.
+- Save: `progress.speedrun` (`runs`, `deaths`, `clears`, `bestMultiplier`, `bestCycles`, `bestTime`, `bestRooms`, `lastMultiplier`, `lastTime`, `history[]`) inside `ashen-vow-progress-v1`, sanitized on load; each history entry is `{ multiplier, clears, rooms, time, died, at }`.
+- Tests: `tests/speedrun.test.js` (9 tests: multiplier ladder, sanitizer, records, history cap/order/junk, substep budget, checkpoint refusal, lethal vs non-lethal pits) plus updated update-log assertions. Total suite **274/274**. Browser smoke `node tools/speedrun-smoke.mjs` drives the real UI (2× start, faster-than-wall-clock pacing, lethal pit, one-life summary, restart, Oathbreaker escalation to 3×, second death at 3×, history, reload persistence) and `node tools/speedrun-mobile.mjs` repeats the hub, badge, summary and history checks at 390×844.
 
 ## 0.1 v0.10.0 — Taman Peri (Faewood)
 
@@ -111,6 +120,7 @@ Do **not** add a framework, bundler, or asset pipeline unless the product scope 
 | `src/court.js` | Hearthfall: 6 zones / 60 court rooms, 24 enemies, 12 bosses (3–4 phases), 8 weapons + profiles, 12 tools, 6 house rooms, 24 furnishings, 8 NPC residents, `progress.court` save logic |
 | `src/fairy.js` | Faewood finale: 10 sequential stages + 2 boss arenas at rooms 414–425, 10 enemies, 4 tiny NPCs, 2 four-phase bosses, dragon heaven/hell forms, `progress.fairy` |
 | `src/cutscene.js` | 20-second final-boss portrait and 30-second post-credit epilogue timelines plus procedural `drawCutscene` art |
+| `src/speedrun.js` | Speedrun rules, 2×+ multiplier ladder, record/history sanitizer and substep budget for the one-life challenge mode |
 | `src/map.js` | Map model (fog, adjacency, pins, stats, 14-node layout) + `MapView` canvas renderer |
 | `src/prologue.js` | 12-beat, 60-second prologue timeline plus procedural cutscene art (`drawPrologue`) |
 | `src/main.js` | Menus, character customization, prologue playback, progress, settings UI, music sync, map/shop/codex/dialogue UI, fixed-step loop, input, HUD, debug hooks |
@@ -118,6 +128,7 @@ Do **not** add a framework, bundler, or asset pipeline unless the product scope 
 | `tests/expansion.test.js` | 10 tests for expansion data counts, room/boss lookups, unlocks, save migration, quests, events, haven bonuses, modifiers, collectibles |
 | `tests/foundations.test.js` | 15 tests for settings, bindings, persistence, gamepad, map fog/pins/stats, zones, music safety |
 | `tests/fairy.test.js` | 12 tests for Faewood content, stage chain, boss seal, progress sanitizer, heaven/hell forms, cutscene timing and real core boss fights |
+| `tests/speedrun.test.js` | 9 tests for speedrun multipliers, records, run history, sanitizer, substep budget and core one-life behaviour |
 | `tests/court.test.js` | 22 tests for Hearthfall content, rooms, bosses/phases, zone gates, weapons, house, tools, classes, NPC quests, save, pacing, loadout and simulation |
 | `tools/court-bench.mjs` | Measured room/resident lookup and house-bonus cache benchmark |
 | `server.js` | Static server on port 4300 |
@@ -371,7 +382,7 @@ Rules:
 npm test
 ```
 
-Current result: **264/264 passing** across the legacy, expansion, Atlas, Overdrive, Hearthfall, Skill Point, Faewood, labyrinth/co-op and update-log suites. Coverage includes:
+Current result: **274/274 passing** across the legacy, expansion, Atlas, Overdrive, Hearthfall, Skill Point, Faewood, speedrun, labyrinth/co-op and update-log suites. Coverage includes:
 
 - **court: 60 rooms / 24 enemies / 12 bosses (3–4 phases) / 8 weapons / 12 tools / 13 selectable classes / 6 house rooms / 24 furnishings / 8 NPCs**;
 - **stage timing: `progress.stageTimes` records best/last/clear count per stage; live clock and timer in the top-right; inventory shows loadout and active keybinds; graphics settings control AA, FOV, render distance, particle density, and quality bias**;
@@ -385,6 +396,10 @@ Current result: **264/264 passing** across the legacy, expansion, Atlas, Overdri
 - **`progress.fairy` sanitizes impossible states while keeping valid clears, and the summary reports stages, bosses, runs, best time and completion percent**;
 - **the boss portrait runs 20 s and the post-credit epilogue 30 s, both built from beats that sum to the declared duration**;
 - **faewood registers a zone entry plus `faewood`, `magmaBoss`, `fairyBoss` and `celebration` tracks, and `MusicManager` stays safe without an AudioContext**;
+- **Speedrun starts at 2× and climbs one step per cleared cycle, and a death ends the run with the highest multiplier reached stored as the record**;
+- **one life disables `respawnAtCheckpoint()` and makes pit falls lethal in core, while the same pit stays survivable outside the mode**;
+- **the speedrun substep budget grows with the multiplier but stays capped, so the 120 Hz simulation keeps its determinism at high speed**;
+- **speedrun history keeps the newest ten attempts first, clamps junk entries, drops non-objects, and survives a save round-trip**;
 
 - gravity, floor landing, movement and world bounds;
 - single jump vs double jump after relic;

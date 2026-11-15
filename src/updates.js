@@ -1,9 +1,31 @@
 // Ashen Vow — release history shown in the in-game Update Log.
 // Keep the newest entry first. `GAME_VERSION` is the single source of truth
 // for the version shown by the Update Log screen and the debug hooks.
-export const GAME_VERSION = '0.10.0';
+export const GAME_VERSION = '0.11.0';
 
 export const UPDATE_LOG = [
+  {
+    version: '0.11.0',
+    date: '15 November 2026',
+    title: 'SPEEDRUN — SATU NYAWA',
+    tag: 'MODE TANTANGAN · 2×+ · v0.11.0',
+    summary:
+      'Mode Speedrun: satu nyawa, tanpa checkpoint, dan waktu yang terus menderas. Kampanye berjalan dua kali lebih cepat; setiap The Oathbreaker gugur kecepatan naik satu tingkat — 3×, 4×, 5× — sampai kau jatuh.',
+    highlights: [
+      'Speedrun: kampanye penuh pada 2× kecepatan dengan satu nyawa. Kematian langsung mengakhiri run dan menampilkan ringkasan; tidak ada tombol coba lagi, tidak ada checkpoint.',
+      'Eskalasi tanpa batas: setiap The Oathbreaker gugur, multiplier naik satu (3×, 4×, 5×, …) dan kampanye dimulai lagi dari Gerbang Abu dengan kecepatan baru, sampai kau mati.',
+      'Kecepatan diterapkan pada jam, bukan timestep: simulasi tetap 120 Hz deterministik, hanya jumlah langkah per frame yang bertambah, dengan batas langkah agar tab yang tertidur tidak melompat.',
+      'Jurang berubah jadi maut: jatuh di mode ini langsung membunuhmu alih-alih melemparmu kembali ke titik aman, karena checkpoint memang tidak ada.',
+      'Badge HUD menampilkan multiplier, jumlah nyawa, dan putaran keberapa; badge berubah merah mulai 5× untuk menandakan tempo yang sudah gila.',
+      'Hub Speedrun di menu utama: rekor multiplier, putaran tuntas, waktu terbaik, jumlah run, lima aturan mode, dan tangga kecepatan 2× sampai ∞.',
+      'Progress baru di progress.speedrun: rekor multiplier, putaran, waktu, ruang, dan statistik run; sanitizer membatasi angka dan mempertahankan field masa depan.',
+      'Menu utama Entri Speedrun dan layar ringkasan kematian dengan tombol mulai lagi 2× serta kembali ke menu.',
+    ],
+    fixes: [
+      'core: flag oneLife baru membuat respawnAtCheckpoint menolak bangkit dan pit hazard langsung mematikan pemain, sehingga mode satu nyawa benar-benar satu nyawa.',
+      'retryRun berhenti memakai checkpoint di mode Speedrun dan langsung menutup run alih-alih memuat ulang ruang.',
+    ],
+  },
   {
     version: '0.10.0',
     date: '15 November 2026',
