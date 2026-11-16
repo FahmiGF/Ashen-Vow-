@@ -15,6 +15,7 @@ import {
   FALLEN_ELITES,
   FALLEN_AMBIENT,
   FALLEN_BOSSES,
+  FALLEN_BOSS_BY_ID,
   FALLEN_BOSS_INFO,
   FALLEN_MAIN_BOSSES,
   FALLEN_OPTIONAL_BOSSES,
@@ -71,18 +72,23 @@ const clearHalls = (state, regionIndex) => {
   return region;
 };
 
-test('fallen arc exposes 39 contiguous rooms after the base game', () => {
-  assert.equal(FALLEN_ROOM_COUNT, 39);
-  assert.equal(FALLEN_ROOMS.length, 39);
+test('fallen arc exposes 59 contiguous rooms after the base game', () => {
+  assert.equal(FALLEN_ROOM_COUNT, 59);
+  assert.equal(FALLEN_ROOMS.length, 59);
   assert.equal(FALLEN_ROOMS[0].id, FALLEN_ROOM_START);
   FALLEN_ROOMS.forEach((room, i) => assert.equal(room.id, FALLEN_ROOM_START + i));
   assert.equal(validateFallenRooms().ok, true);
   assert.equal(validateFallenRooms([{ id: 1, name: 'x', spawn: { x: 0 }, platforms: [] }]).ok, false);
 });
 
-test('seven regions expose four halls plus a boss room each', () => {
+test('eleven regions expose four halls plus a boss room each', () => {
   assert.equal(FALLEN_REGIONS.length, FALLEN_REGION_COUNT);
-  assert.equal(FALLEN_REGION_ROOMS.length, 7);
+  assert.equal(FALLEN_REGION_ROOMS.length, 11);
+  assert.deepEqual(FALLEN_REGIONS.map((r) => r.id).slice(0, 4), [
+    'gilded_ruins', 'weeping_orchard', 'cloudspire', 'choir_hollow',
+  ]);
+  assert.deepEqual(FALLEN_REGIONS.map((r) => r.roomStart).slice(7), [475, 451, 480, 456]);
+  assert.ok(FALLEN_REGIONS.filter((r) => r.extra).length === 4, 'four interleaved zones');
   for (const [index, region] of FALLEN_REGIONS.entries()) {
     const rooms = FALLEN_REGION_ROOMS[index];
     assert.equal(rooms.length, 5);
@@ -110,15 +116,18 @@ test('halls chain in order and the campaign gate leads to the next region', () =
     assert.equal(bossRoom.gate.next, FALLEN_REGIONS[i + 1].roomStart);
     assert.equal(bossRoom.gate.requires, 'boss');
   }
-  assert.equal(FALLEN_ROOM_BY_ID[FALLEN_REGIONS[6].bossRoom].gate, null);
+  assert.equal(FALLEN_ROOM_BY_ID[FALLEN_REGIONS[FALLEN_REGION_COUNT - 1].bossRoom].gate, null);
 });
 
-test('eleven bosses split into seven story fights and four optional ones', () => {
-  assert.equal(FALLEN_BOSSES.length, 11);
-  assert.equal(FALLEN_MAIN_BOSSES.length, 7);
+test('fifteen bosses split into eleven story fights and four optional ones', () => {
+  assert.equal(FALLEN_BOSSES.length, 15);
+  assert.equal(FALLEN_MAIN_BOSSES.length, 11);
   assert.equal(FALLEN_OPTIONAL_BOSSES.length, 4);
   const kinds = new Set(FALLEN_BOSSES.map((b) => b.kind));
-  assert.equal(kinds.size, 11);
+  assert.equal(kinds.size, 15);
+  for (const id of ['mother_sorrow', 'campanarch_toll', 'redacted_scribe', 'staircase_warden']) {
+    assert.ok(FALLEN_BOSS_BY_ID[id], `${id} is a real level boss`);
+  }
   for (const boss of FALLEN_BOSSES) {
     const info = FALLEN_BOSS_INFO[boss.kind];
     assert.ok(info, `${boss.id} has engine info`);
@@ -144,10 +153,10 @@ test('every boss speaks on intro, each transition, and defeat', () => {
   }
 });
 
-test('bestiary uses the six engine archetypes and keeps six elites', () => {
+test('bestiary uses the six engine archetypes and keeps ten elites', () => {
   const ids = Object.keys(FALLEN_ENEMY_INFO);
-  assert.equal(ids.length, 17);
-  assert.equal(FALLEN_ELITES.length, 6);
+  assert.equal(ids.length, 32);
+  assert.equal(FALLEN_ELITES.length, 10);
   assert.equal(FALLEN_AMBIENT.length, 3);
   for (const id of ids) {
     const info = FALLEN_ENEMY_INFO[id];
@@ -161,7 +170,7 @@ test('default progress is empty but fully shaped', () => {
   assert.equal(state.ascended, false);
   assert.equal(state.rooms.length, FALLEN_ROOM_COUNT);
   assert.ok(state.rooms.every((v) => v === false));
-  assert.equal(Object.keys(state.bosses).length, 11);
+  assert.equal(Object.keys(state.bosses).length, 15);
   assert.equal(Object.keys(state.endings).length, 3);
   assert.deepEqual(state.upgrades, { health: 0, radiance: 0, damage: 0, weapon: 0 });
   assert.equal(state.movement, 0);
@@ -207,13 +216,18 @@ test('sanitize caps echoes, clamps numbers, and gates the secret ending', () => 
 
 test('regions unlock only through the previous region boss', () => {
   const state = defaultFallenProgress();
+  const orchard = FALLEN_REGIONS.findIndex((r) => r.id === 'weeping_orchard');
+  const cloudspire = FALLEN_REGIONS.findIndex((r) => r.id === 'cloudspire');
   assert.equal(fallenRegionUnlocked(state, 0), true);
-  assert.equal(fallenRegionUnlocked(state, 1), false);
+  assert.equal(fallenRegionUnlocked(state, orchard), false);
+  assert.equal(fallenRegionUnlocked(state, cloudspire), false);
   clearHalls(state, 0);
-  assert.equal(fallenRegionUnlocked(state, 1), false, 'halls alone do not open the sky');
+  assert.equal(fallenRegionUnlocked(state, orchard), false, 'halls alone do not open the sky');
   recordFallenBoss(state, 'aurelian');
-  assert.equal(fallenRegionUnlocked(state, 1), true);
-  assert.equal(fallenRegionUnlocked(state, 2), false);
+  assert.equal(fallenRegionUnlocked(state, orchard), true, 'the orchard opens with Aurelian');
+  assert.equal(fallenRegionUnlocked(state, cloudspire), true, 'Cloudspire still opens with Aurelian');
+  const bellfall = FALLEN_REGIONS.findIndex((r) => r.id === 'bellfall_quarter');
+  assert.equal(fallenRegionUnlocked(state, bellfall), false, 'Bellfall waits for the Choir');
 });
 
 test('rooms and bosses unlock sequentially inside a region', () => {
@@ -228,7 +242,7 @@ test('rooms and bosses unlock sequentially inside a region', () => {
   assert.equal(fallenBossUnlocked(state, 'aurelian'), true);
   assert.equal(fallenRoomUnlocked(state, FALLEN_OPTIONAL_BOSSES[0].roomIndex), false);
   recordFallenBoss(state, 'aurelian');
-  for (let i = 1; i < 6; i += 1) {
+  for (let i = 1; i < FALLEN_REGION_COUNT; i += 1) {
     clearHalls(state, i);
     recordFallenBoss(state, FALLEN_REGIONS[i].boss);
   }
@@ -267,7 +281,7 @@ test('boss records are rejected while the region is still locked', () => {
 test('endings require Seraphiel and Eclipse requires all four optional bosses', () => {
   const state = defaultFallenProgress();
   assert.equal(recordFallenEnding(state, 'dawn').ok, false);
-  for (let i = 0; i < 7; i += 1) {
+  for (let i = 0; i < FALLEN_REGION_COUNT; i += 1) {
     clearHalls(state, i);
     recordFallenBoss(state, FALLEN_REGIONS[i].boss);
   }
@@ -409,11 +423,11 @@ test('menu figure and archive react to progress', () => {
   const region = clearHalls(state, 0);
   recordFallenBoss(state, region.boss);
   clearHalls(state, 1);
-  recordFallenBoss(state, 'zephyria');
+  recordFallenBoss(state, FALLEN_REGIONS[1].boss);
   assert.equal(fallenMenuFigure(state).pose, 'kneeling_alert');
   assert.equal(fallenSummary(state).regionsCleared, 2);
   const archive = fallenArchive(state);
-  assert.equal(archive.bestiary.length, 17);
+  assert.equal(archive.bestiary.length, 32);
   assert.equal(archive.bosses.filter((b) => b.cleared).length, 2);
   assert.equal(archive.echoes.length, FALLEN_ECHOES.length);
 });
@@ -434,11 +448,12 @@ test('menu theme and death/run counters persist', () => {
 
 test('the engine registers every fallen room, enemy, and boss', () => {
   assert.equal(ROOMS.length, 14);
-  assert.equal(ALL_ROOMS.length, ALL_ROOMS.indexOf(FALLEN_ROOMS[0]) + FALLEN_ROOM_COUNT);
-  assert.equal(ALL_ROOMS.at(-1).id, FALLEN_ROOM_START + FALLEN_ROOM_COUNT - 1);
+  const start = ALL_ROOMS.indexOf(FALLEN_ROOMS[0]);
+  assert.deepEqual(ALL_ROOMS.slice(start, start + FALLEN_ROOM_COUNT), FALLEN_ROOMS);
+  assert.equal(FALLEN_ROOMS.at(-1).id, FALLEN_ROOM_START + FALLEN_ROOM_COUNT - 1);
   for (const room of FALLEN_ROOMS) assert.equal(ALL_ROOMS[room.id], room);
   assert.ok(ALL_ENEMY_INFO.lesser_cherub.fallen);
-  assert.equal(Object.keys(ALL_BOSS_INFO).filter((k) => k.startsWith('fallen_')).length, 11);
+  assert.equal(Object.keys(ALL_BOSS_INFO).filter((k) => k.startsWith('fallen_')).length, 15);
 });
 
 test('a fallen boss spawns with a purity shield that soaks raw damage', () => {

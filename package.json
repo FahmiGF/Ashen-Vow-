@@ -1,9 +1,9 @@
 {
   "name": "ashen-vow",
-  "version": "0.13.0",
+  "version": "0.14.0",
   "private": true,
   "type": "module",
-  "description": "Ashen Vow v0.13.0 — The Fallen Ones (Arc II): a second heavenly menu takeover with seven sky regions, 39 rooms, eleven bosses, Radiance/Blinding Burst, Judgment Marks, Shadow Stance, Purity Shields, Echoes carry-over and three endings — alongside Pondok Umpan, Speedrun, Faewood, Panggung Abadi, Hearthfall, co-op, Atlas, the labyrinth, 3D mode and expansions",
+  "description": "Ashen Vow v0.14.0 — The Radiant Crusade (Arc III): a war-camp menu, five siege levels, five bosses, the Valor Chain and an Arc IV rift teaser, plus four new Arc II zones (eleven regions, 59 rooms, 15 bosses) — alongside Pondok Umpan, Speedrun, Faewood, Panggung Abadi, Hearthfall, co-op, Atlas, the labyrinth, 3D mode and expansions",
   "scripts": {
     "start": "node server.js",
     "test": "node --test tests/*.test.js",
@@ -19,6 +19,7 @@
     "smoke:speedrun:mobile": "node tools/speedrun-mobile.mjs",
     "smoke:fishing": "node tools/fishing-smoke.mjs",
     "smoke:fallen": "node tools/fallen-smoke.mjs",
-    "audit:gadgets": "node tools/gadget-audit.mjs"
+    "audit:gadgets": "node tools/gadget-audit.mjs",
+    "smoke:crusade": "node tools/crusade-smoke.mjs"
   }
 }

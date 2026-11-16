@@ -148,8 +148,8 @@ async function main() {
       A.clearProgress();
       return { version: A.version, title: document.title, fallen: !!A.progress.fallen };
     })()`);
-    check('boot reports v0.13.0', boot.version, '0.13.0');
-    assert.match(boot.title, /0\.13\.0/);
+    check('boot reports v0.14.0', boot.version, '0.14.0');
+    assert.match(boot.title, /0\.14\.0/);
     check('fresh saves carry a fallen progress block', boot.fallen, true);
 
     const ascended = await evaluate(`(() => {
@@ -190,11 +190,11 @@ async function main() {
       };
     })()`);
     check('arc hub opens', hub.screen, 'fallen');
-    check('eleven boss entries render (7 regions + 4 optional)', hub.regions, 11);
+    check('fifteen boss entries render (11 regions + 4 optional)', hub.regions, 15);
     check('region 1 is playable', hub.firstRegionLocked, false);
     check('Aurelian starts sealed', hub.firstBossLocked, true);
     check('five hub tabs render', hub.tabs, 5);
-    check('bestiary lists seventeen enemies', hub.bestiary, 17);
+    check('hub bestiary lists thirty-two enemies', hub.bestiary, 32);
     check('archive lists three endings', hub.archive, 3);
 
     const run = await evaluate(`(() => {

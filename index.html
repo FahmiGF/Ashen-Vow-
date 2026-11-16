@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#0b0807" />
-    <title>Ashen Vow — v0.13.0</title>
+    <title>Ashen Vow — v0.14.0</title>
     <meta
       name="description"
       content="Ashen Vow adalah metroidvania medieval 2D dengan combat pedang real-time, 426 ruang, 72 boss, mode Speedrun satu nyawa, 100 level ekspansi, Thornveil Haven, peta, jam langsung, dan indeks sumpah."
@@ -20,6 +20,7 @@
     <link rel="stylesheet" href="./styles-court.css" />
     <link rel="stylesheet" href="./styles-fishing.css" />
     <link rel="stylesheet" href="./styles-fallen.css" />
+    <link rel="stylesheet" href="./styles-crusade.css" />
     <link
       rel="icon"
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%230b0807'/%3E%3Cpath d='M32 6l7 18 18 8-18 8-7 18-7-18-18-8 18-8z' fill='%23d08a45'/%3E%3C/svg%3E"
@@ -81,6 +82,21 @@
                   <span id="ability-badge" class="ability-badge ready">⚡ SKILL [U]</span>
                 </div>
                 <div id="atlas-quickbar" class="atlas-quickbar hidden" aria-label="Slot cepat Atlas"></div>
+                <div id="crusade-hud" class="crusade-hud hidden" aria-label="Valor Chain Perang Salib">
+                  <div class="crusade-valor-row">
+                    <span class="crusade-valor-label">VALOR</span>
+                    <div class="crusade-valor-track"><div id="crusade-valor-fill" class="crusade-valor-fill"></div></div>
+                    <span id="crusade-valor-text" class="crusade-valor-text">CHAIN 0</span>
+                    <span id="crusade-sigils" class="crusade-sigil-badge">⚑ 0</span>
+                  </div>
+                  <div class="crusade-resource-row">
+                    <span id="crusade-banners" class="crusade-banner-list"></span>
+                    <span id="crusade-boss-chain" class="crusade-boss-chain"></span>
+                    <span class="crusade-actions">
+                      <button type="button" class="crusade-hud-btn" data-crusade-action="strike" title="Crusader Strike (G)">⚔ STRIKE</button>
+                    </span>
+                  </div>
+                </div>
                 <div id="fallen-hud" class="fallen-hud hidden" aria-label="Sumber daya Yang Terjatuh">
                   <div class="fallen-radiance-row">
                     <span class="fallen-radiance-label">RADIANCE</span>
@@ -202,7 +218,7 @@
         <!-- ══ MAIN MENU ══ -->
         <section id="title-screen" class="screen title-screen">
           <div class="screen-inner title-inner">
-            <p class="eyebrow">SEBUAH SUMPAH DI ANTARA ABU · v0.13.0</p>
+            <p class="eyebrow">SEBUAH SUMPAH DI ANTARA ABU · v0.14.0</p>
             <h1 class="game-title">ASHEN<span>VOW</span></h1>
             <div class="title-rule"><i></i><b>✦</b><i></i></div>
             <p class="lede">
@@ -277,7 +293,11 @@
               </button>
               <button id="btn-fallen-menu" class="btn btn-ghost menu-btn fallen-menu-btn hidden" type="button">
                 <span>THE FALLEN ONES — YANG TERJATUH</span>
-                <em>Arc II · 7 wilayah langit · 11 bos · 3 akhiran</em>
+                <em>Arc II · 11 wilayah langit · 15 bos · 3 akhiran</em>
+              </button>
+              <button id="btn-crusade-menu" class="btn btn-ghost menu-btn crusade-menu-btn hidden" type="button">
+                <span>THE RADIANT CRUSADE — PERANG SALIB</span>
+                <em>Arc III · 5 tingkat · 5 bos · Valor Chain</em>
               </button>
               <button id="btn-expansion-menu" class="btn btn-ghost menu-btn expansion-menu-btn" type="button">
                 <span>ECHOES OF THE FORGOTTEN WORLD</span>
@@ -289,7 +309,7 @@
               </button>
               <button id="btn-updates" class="btn btn-ghost menu-btn" type="button">
                 <span>CATATAN UPDATE</span>
-                <em>Riwayat rilis · v0.13.0 · Yang Terjatuh</em>
+                <em>Riwayat rilis · v0.14.0 · Perang Salib</em>
               </button>
             </nav>
 
@@ -299,7 +319,8 @@
               <span>Progres tersimpan otomatis</span>
             </div>
             <p id="menu-expansion-progress" class="menu-expansion-progress">ECHOES · 0/100 LEVEL · BAB 1/10 · 0 GEMA</p>
-            <p id="fallen-menu-progress" class="menu-expansion-progress fallen-menu-progress">YANG TERJATUH · 0/7 WILAYAH · 0/11 BOS · 0 SERPIHAN</p>
+            <p id="fallen-menu-progress" class="menu-expansion-progress fallen-menu-progress">YANG TERJATUH · 0/11 WILAYAH · 0/15 BOS · 0 SERPIHAN</p>
+            <p id="crusade-menu-progress" class="menu-expansion-progress crusade-menu-progress hidden">PERANG SALIB · 0/5 TINGKAT · 0/5 BOS · 0 SIGIL</p>
 
             <p class="menu-controls">
               <kbd>A</kbd><kbd>D</kbd> gerak · <kbd>SPACE</kbd> lompat · <kbd>J</kbd> serang ·
@@ -367,7 +388,7 @@
             </div>
 
             <div id="credits-times" class="credits-times"></div>
-            <p class="credit-version">ASHEN VOW · v0.13.0 · 13 PENJAGA · 83 BOSS · 465 RUANG</p>
+            <p class="credit-version">ASHEN VOW · v0.14.0 · 13 PENJAGA · 92 BOSS · 505 RUANG</p>
             <div class="screen-links">
               <button id="btn-credits-back" class="link-btn" type="button">← KEMBALI KE MENU</button>
             </div>
@@ -384,7 +405,7 @@
               Catatan ini ikut tersimpan di dalam game.
             </p>
             <div class="updates-meta">
-              <span id="updates-version">VERSI SAAT INI · v0.13.0</span>
+              <span id="updates-version">VERSI SAAT INI · v0.14.0</span>
               <span>DIPERBARUI 15 NOVEMBER 2026</span>
             </div>
             <div id="update-log" class="update-log"></div>
@@ -648,7 +669,7 @@
         <!-- ══ THE FALLEN ONES — HUB ══ -->
         <section id="fallen-screen" class="screen hidden">
           <div class="screen-inner fallen-inner">
-            <p class="eyebrow fallen-eyebrow">THE ARCHIVE OF HEAVEN · 7 WILAYAH · 11 BOS</p>
+            <p class="eyebrow fallen-eyebrow">THE ARCHIVE OF HEAVEN · 11 WILAYAH · 15 BOS</p>
             <h2 class="screen-title">THE FALLEN ONES</h2>
             <p class="screen-sub">
               Tujuh wilayah langit, satu perjalanan tanpa jalan kembali. Radiance mengisi Blinding Burst,
@@ -659,6 +680,7 @@
             <div id="fallen-body" class="fallen-body"></div>
             <div class="screen-links">
               <button id="btn-fallen-back" class="link-btn" type="button">← KEMBALI KE GERBANG LANGIT</button>
+              <button id="btn-fallen-crusade" class="link-btn crusade-link hidden" type="button">⚑ PERANG SALIB BERSINAR →</button>
             </div>
             <p class="micro">Progres Yang Terjatuh tersimpan di kunci simpanan yang sama dengan dunia bawah.</p>
           </div>
@@ -671,6 +693,54 @@
             <h2 id="fallen-ending-title" class="screen-title">LANGIT MENUNGGU KEPUTUSANMU</h2>
             <div id="fallen-ending-body" class="fallen-ending-body"></div>
             <div id="fallen-ending-options" class="screen-links"></div>
+          </div>
+        </section>
+
+        <!-- ══ ARC III — THE RADIANT CRUSADE ══ -->
+        <section id="crusade-menu-screen" class="screen crusade-menu-screen hidden">
+          <div class="screen-inner crusade-menu-inner">
+            <p class="eyebrow crusade-eyebrow">ARC III · THE RADIANT CRUSADE · SEBUAH PERANG BARU</p>
+            <h1 class="crusade-title">THE RADIANT<span>CRUSADE</span></h1>
+            <p class="crusade-subtitle">Surga berhenti menghakimi. Sekarang ia berbaris.</p>
+            <div class="crusade-menu-layout">
+              <div class="crusade-camp-wrap">
+                <canvas id="crusade-menu-figure" width="320" height="200" aria-label="Kemah perang di bawah panji"></canvas>
+                <p id="crusade-menu-caption" class="crusade-caption">Kemah itu masih kosong.</p>
+                <p id="crusade-menu-banner" class="crusade-banner-label">BELUM ADA PANJI</p>
+              </div>
+              <div class="crusade-menu-side">
+                <div id="crusade-menu-summary" class="crusade-summary"></div>
+                <nav id="crusade-menu-options" class="crusade-options" aria-label="Menu Perang Salib"></nav>
+              </div>
+            </div>
+            <p id="crusade-menu-progress-secondary" class="micro">Echoes, Serpihan Halo, dan semua kosmetik tetap tersimpan. Valor Chain adalah milik Arc III.</p>
+          </div>
+        </section>
+
+        <section id="crusade-screen" class="screen hidden">
+          <div class="screen-inner crusade-inner">
+            <p class="eyebrow crusade-eyebrow">WAR CAMP OF EMBERS · 5 TINGKAT · 5 BOS</p>
+            <h2 class="screen-title">THE RADIANT CRUSADE</h2>
+            <p class="screen-sub">
+              Perang Salib bergerak dari padang barisan sampai Gerbang Penghakiman. Pukulan yang bersih
+              membangun Valor Chain; satu pukulan yang masuk mematahkannya.
+            </p>
+            <div id="crusade-summary" class="crusade-summary"></div>
+            <div id="crusade-tabs" class="crusade-tabs"></div>
+            <div id="crusade-body" class="crusade-body"></div>
+            <div class="screen-links">
+              <button id="btn-crusade-back" class="link-btn" type="button">← KEMBALI KE KEMAH PERANG</button>
+            </div>
+            <p class="micro">Progres Perang Salib tersimpan di kunci simpanan yang sama dengan kedua arc sebelumnya.</p>
+          </div>
+        </section>
+
+        <section id="crusade-clear-screen" class="screen overlay-screen crusade-clear-screen hidden">
+          <div class="screen-inner narrow">
+            <p class="eyebrow crusade-eyebrow">PALADIN TEMPLAR GUGUR · GERBANG TERBUKA</p>
+            <h2 id="crusade-clear-title" class="screen-title">ZIRAHTU KOSONG</h2>
+            <div id="crusade-clear-body" class="crusade-clear-body"></div>
+            <div id="crusade-clear-options" class="screen-links"></div>
           </div>
         </section>
 

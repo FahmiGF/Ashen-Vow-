@@ -1,0 +1,479 @@
+/* Ashen Vow v0.14.0 — Arc III: The Radiant Crusade.
+   Gold-and-war-camp skin layered on top of the fallen menu language. */
+
+.crusade-menu-screen,
+.crusade-clear-screen {
+  background:
+    radial-gradient(120% 80% at 50% 0%, rgba(255, 220, 140, 0.18), transparent 60%),
+    radial-gradient(90% 70% at 50% 110%, rgba(150, 30, 24, 0.22), transparent 65%),
+    linear-gradient(180deg, #120d06 0%, #2a1c0a 55%, #3c240c 100%);
+}
+
+.crusade-menu-inner,
+.crusade-inner {
+  max-width: 1080px;
+}
+
+.crusade-eyebrow {
+  color: #f0c878;
+  letter-spacing: 0.28em;
+}
+
+.crusade-title {
+  font-family: var(--font-display, 'Cinzel', serif);
+  font-size: clamp(2.4rem, 7vw, 4.6rem);
+  line-height: 0.95;
+  letter-spacing: 0.08em;
+  color: #fff4d8;
+  text-shadow: 0 0 26px rgba(255, 200, 110, 0.35), 0 4px 0 rgba(60, 30, 0, 0.6);
+  margin: 0.2em 0 0.1em;
+}
+
+.crusade-title span {
+  display: block;
+  color: #f0b060;
+  font-size: 0.72em;
+}
+
+.crusade-subtitle {
+  color: #e8d0a0;
+  margin-bottom: 1.2rem;
+}
+
+.crusade-menu-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1.4rem;
+  align-items: start;
+}
+
+.crusade-camp-wrap {
+  border: 1px solid rgba(220, 170, 90, 0.35);
+  background: linear-gradient(180deg, rgba(30, 20, 8, 0.85), rgba(18, 12, 6, 0.95));
+  padding: 0.6rem;
+  border-radius: 8px;
+}
+
+#crusade-menu-figure {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 4px;
+}
+
+.crusade-caption,
+.crusade-banner-label {
+  margin: 0.5rem 0 0;
+  font-size: 0.78rem;
+  letter-spacing: 0.12em;
+  color: #f0d0a0;
+  text-transform: uppercase;
+}
+
+.crusade-banner-label {
+  color: #c89a60;
+}
+
+.crusade-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.crusade-stat {
+  border: 1px solid rgba(200, 150, 80, 0.28);
+  background: rgba(28, 18, 8, 0.7);
+  padding: 0.5rem 0.6rem;
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.crusade-stat span {
+  font-size: 0.62rem;
+  letter-spacing: 0.14em;
+  color: #c8a878;
+}
+
+.crusade-stat strong {
+  font-size: 1.05rem;
+  color: #ffe8b8;
+}
+
+.crusade-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.crusade-option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid rgba(200, 150, 80, 0.35);
+  background: linear-gradient(90deg, rgba(60, 40, 16, 0.8), rgba(30, 20, 8, 0.6));
+  color: #ffeccc;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: border-color 120ms ease, transform 120ms ease, background 120ms ease;
+}
+
+.crusade-option:hover:not(:disabled),
+.crusade-option:focus-visible {
+  border-color: #f0c070;
+  background: linear-gradient(90deg, rgba(96, 62, 20, 0.9), rgba(40, 26, 10, 0.7));
+  transform: translateX(3px);
+  outline: none;
+}
+
+.crusade-option:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+
+.crusade-option span {
+  font-size: 0.86rem;
+  letter-spacing: 0.16em;
+}
+
+.crusade-option em {
+  font-style: normal;
+  font-size: 0.7rem;
+  color: #b89868;
+}
+
+.crusade-summary .crusade-stat,
+.crusade-inner .crusade-summary {
+  margin-bottom: 0.9rem;
+}
+
+.crusade-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0.8rem 0 1rem;
+}
+
+.crusade-tab {
+  padding: 0.45rem 0.9rem;
+  border: 1px solid rgba(200, 150, 80, 0.3);
+  background: rgba(24, 16, 8, 0.7);
+  color: #d8b888;
+  font-family: inherit;
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.crusade-tab.active {
+  border-color: #f0c070;
+  color: #1a1206;
+  background: #f0c070;
+}
+
+.crusade-body {
+  min-height: 220px;
+}
+
+.crusade-levels {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.crusade-level {
+  border: 1px solid rgba(200, 150, 80, 0.25);
+  background: linear-gradient(180deg, rgba(32, 22, 10, 0.9), rgba(18, 12, 6, 0.95));
+  border-radius: 8px;
+  padding: 0.9rem;
+}
+
+.crusade-level.cleared {
+  border-color: rgba(240, 200, 110, 0.6);
+  box-shadow: inset 0 0 24px rgba(240, 190, 90, 0.08);
+}
+
+.crusade-level.locked {
+  opacity: 0.55;
+}
+
+.crusade-level header {
+  display: flex;
+  gap: 0.7rem;
+  align-items: center;
+  margin-bottom: 0.45rem;
+}
+
+.crusade-level-glyph {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.crusade-level header strong {
+  display: block;
+  color: #ffe8c0;
+  letter-spacing: 0.05em;
+}
+
+.crusade-level header em {
+  display: block;
+  font-style: normal;
+  font-size: 0.72rem;
+  color: #b89868;
+}
+
+.crusade-level-state {
+  margin-left: auto;
+  font-size: 0.62rem;
+  letter-spacing: 0.14em;
+  color: #e8c070;
+  border: 1px solid rgba(232, 192, 112, 0.4);
+  padding: 0.2rem 0.45rem;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+
+.crusade-level p {
+  color: #ccb894;
+  font-size: 0.82rem;
+  margin: 0.3rem 0 0.55rem;
+}
+
+.crusade-room-dots {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem;
+  margin-bottom: 0.7rem;
+  font-size: 0.72rem;
+  color: #c8a878;
+}
+
+.crusade-room-dots i {
+  width: 10px;
+  height: 10px;
+  border: 1px solid rgba(220, 180, 110, 0.5);
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.crusade-room-dots i.done {
+  background: #f0c070;
+  box-shadow: 0 0 8px rgba(240, 192, 112, 0.6);
+}
+
+.crusade-room-dots b {
+  margin-left: 0.4rem;
+  font-weight: 500;
+}
+
+.crusade-room-dots b.done {
+  color: #ffe0a0;
+}
+
+.crusade-level-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.crusade-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 0.7rem;
+}
+
+.crusade-card {
+  border: 1px solid rgba(200, 150, 80, 0.25);
+  background: rgba(24, 16, 8, 0.8);
+  border-radius: 6px;
+  padding: 0.75rem;
+  color: #e8d4b0;
+}
+
+.crusade-card.earned {
+  border-color: rgba(240, 200, 120, 0.55);
+}
+
+.crusade-card.unseen {
+  opacity: 0.55;
+}
+
+.crusade-card strong {
+  display: block;
+  color: #ffe8c0;
+}
+
+.crusade-card em {
+  display: block;
+  font-style: normal;
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  color: #c8a060;
+  margin: 0.15rem 0 0.4rem;
+}
+
+.crusade-card p {
+  font-size: 0.78rem;
+  color: #c8b898;
+  margin: 0 0 0.45rem;
+}
+
+.crusade-card-meta {
+  font-size: 0.66rem;
+  color: #a89070;
+  letter-spacing: 0.08em;
+}
+
+.crusade-note {
+  color: #ccb894;
+  font-size: 0.84rem;
+  border-left: 2px solid rgba(240, 190, 110, 0.5);
+  padding-left: 0.8rem;
+  margin: 0 0 0.9rem;
+}
+
+.crusade-section-title {
+  color: #f0c070;
+  letter-spacing: 0.2em;
+  font-size: 0.78rem;
+  margin: 1.3rem 0 0.6rem;
+}
+
+.crusade-clear-body {
+  color: #e8d4b0;
+}
+
+.crusade-rift {
+  margin: 1rem 0;
+  padding: 1rem;
+  border: 1px solid rgba(180, 50, 40, 0.55);
+  background: radial-gradient(80% 120% at 50% 0%, rgba(140, 24, 18, 0.4), rgba(20, 8, 6, 0.9));
+  border-radius: 8px;
+}
+
+.crusade-rift strong {
+  color: #ff9a80;
+  letter-spacing: 0.18em;
+}
+
+.crusade-rift p {
+  margin: 0.4rem 0 0;
+  color: #d8b0a0;
+}
+
+/* ── in-run HUD ─────────────────────────────────────────────────────────── */
+.crusade-hud {
+  position: absolute;
+  left: 18px;
+  top: 54px;
+  z-index: 12;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid rgba(230, 190, 110, 0.35);
+  background: rgba(18, 12, 6, 0.78);
+  border-radius: 6px;
+  backdrop-filter: blur(3px);
+  max-width: min(420px, 82vw);
+}
+
+.crusade-hud.hidden {
+  display: none;
+}
+
+.crusade-valor-row,
+.crusade-resource-row {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.crusade-valor-label {
+  font-size: 0.6rem;
+  letter-spacing: 0.16em;
+  color: #e8c070;
+}
+
+.crusade-valor-track {
+  flex: 1;
+  height: 7px;
+  min-width: 80px;
+  background: rgba(255, 230, 180, 0.14);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.crusade-valor-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #b07020, #ffd280);
+  box-shadow: 0 0 10px rgba(255, 200, 110, 0.6);
+  transition: width 120ms linear;
+}
+
+.crusade-valor-text {
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  color: #ffe0a0;
+  white-space: nowrap;
+}
+
+.crusade-sigil-badge {
+  font-size: 0.68rem;
+  color: #f0c888;
+}
+
+.crusade-banner-list,
+.crusade-boss-chain {
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+  color: #c8a878;
+}
+
+.crusade-boss-chain {
+  color: #ff9a80;
+}
+
+.crusade-actions {
+  margin-left: auto;
+}
+
+.crusade-hud-btn {
+  font-family: inherit;
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  color: #1a1206;
+  background: #f0c070;
+  border: 0;
+  border-radius: 3px;
+  padding: 0.28rem 0.55rem;
+  cursor: pointer;
+}
+
+.crusade-hud-btn:disabled {
+  opacity: 0.4;
+}
+
+@media (max-width: 720px) {
+  .crusade-menu-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .crusade-title {
+    font-size: clamp(2rem, 11vw, 3.2rem);
+  }
+
+  .crusade-hud {
+    top: 8px;
+    left: 8px;
+    max-width: 94vw;
+  }
+}

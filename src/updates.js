@@ -1,9 +1,36 @@
 // Ashen Vow — release history shown in the in-game Update Log.
 // Keep the newest entry first. `GAME_VERSION` is the single source of truth
 // for the version shown by the Update Log screen and the debug hooks.
-export const GAME_VERSION = '0.13.0';
+export const GAME_VERSION = '0.14.0';
 
 export const UPDATE_LOG = [
+  {
+    version: '0.14.0',
+    date: '16 November 2026',
+    title: 'THE RADIANT CRUSADE — PERANG SALIB BERSINAR',
+    tag: 'ARC III · 5 TINGKAT · 5 BOS · VALOR CHAIN · v0.14.0',
+    summary:
+      'Surga berhenti menghakimi dan mulai berbaris. Arc III membuka menu kemah perang, lima tingkat pengepungan, lima bos baru dengan Paladin Templar Raksasa sebagai finale tiga fase, dan Valor Chain — rantai serangan yang menaikkan damage selama kau tidak tersentuh. Arc II juga tumbuh dari tujuh menjadi sebelas wilayah dengan empat zona baru di tengah perjalanan.',
+    highlights: [
+      'Lima tingkat Arc III: The Marching Fields, Siege of the Sky Bastion, The Sanctified Armory, The Cathedral of Swords, dan The Gate of Judgment — masing-masing tiga ruang plus satu ruang bos (20 ruang, id 485–504).',
+      'Lima bos baru: Marshal Aurion, The Ballista Choir, Lady Vesperine, Warden Ophelion, dan The Giant Paladin Templar Knight. Paladin punya tiga fase (The Oath, The Crusade, The Hollow Armor), Purity Shield 200, dan reward victory yang memicu transisi Arc IV.',
+      'Valor Chain: setiap pukulan bersih menambah chain, satu pukulan masuk mematahkannya, dan chain menaikkan damage sampai 1,6x. Pada chain 5, Crusader Strike (G) memecah Purity Shield dan menghabiskan sebagian chain.',
+      'Panji permanen dari setiap bos: Banner of Dawn (mulai chain 2), Siege Break (strike memecah shield), Mercy Edge (parry +2), Wall-Breaker (+35% strike), dan Final Verdict yang membuka celah langit.',
+      'Kemah Perang dengan tab Tingkat, Panji, Bestiary, Kemah, dan Arsip; Sigil Perang membeli tiga jalur peningkatan permanen (health, damage, valor).',
+      'Dua puluh satu musuh baru (15 mob + 6 elite) memakai tujuh archetype AI yang sudah ada: Crusader Recruit, Banner Bearer, Catapult Cherub, Siege Ram, Wall Archer, Gate Sentinel, Blade Acolyte, Armor Stand Ghost, Forge Hound, Sword Bat, Shield Choir, Vigil Sister, Gatekeeper Zealot, Rift Watcher, War Chanter, dan enam elite termasuk Hollow Crusader yang membawa petunjuk Arc IV.',
+      'Arc II diperluas dari 7 menjadi 11 wilayah: The Weeping Orchard (antara Gilded Ruins dan Cloudspire), The Bellfall Quarter (Choir Hollow–Foundry), The Sunless Vault (Mirror Aviary–Pale Cathedral), dan The Penitent Stairway (Pale Cathedral–Last Heaven). Total 59 ruang fallen (id 426–484) dan 15 bos.',
+      'Sepuluh mob dan empat elite baru untuk zona tambahan: Sap Wisp, Fruit Mimic, Orchard Thorn, Harvest Angel, Tolling Imp, Clapper Knight, Dust Verger, Bell Sentinel, Ink Leech, Archive Shade, Page Swarm, Ink Censor, Kneeling Statue, Stair Seraph, dan Penitent Archon.',
+      'Empat bos level Arc II: Mother Sorrow, Campanarch Toll, The Redacted Scribe, dan The Staircase Warden — semuanya punya fase, dialog, dan Purity Shield nyata.',
+      'Menu ketiga: setelah Paladin gugur, layar kemah perang menggantikan menu langit, lengkap dengan The Rift yang terkunci dan catatan “Something stirs below.”, panji yang tumbuh, dan teaser pasca-kredit.',
+      'Progres baru di progress.crusade dengan sanitizer: ruang dan level berurutan, panji hanya sah bila bosnya gugur, Sigil dibatasi, rift hanya terbuka setelah Paladin, dan arc4Hook tidak bisa dipalsukan.',
+      'Test suite bertambah menjadi 345 test deterministik, termasuk 22 test Arc III (data, Valor Chain, paladin chain, unlock, sanitizer, integrasi bos dan ruang nyata di src/core.js) serta pembaruan 30 test Arc II untuk 11 wilayah.',
+    ],
+    fixes: [
+      'Ruang fallen kini dialamatkan lewat id global (bukan indeks region × 5), sehingga empat zona yang disisipkan di tengah tidak merusak save lama atau unlock ruang.',
+      'Sanitizer crusade menolak riftLocked palsu dan membersihkan panji yang bosnya belum pernah gugur.',
+      'Layar kemenangan dasar disembunyikan untuk run crusade agar tidak bertumpuk dengan layar clear Arc IV.',
+    ],
+  },
   {
     version: '0.13.0',
     date: '16 November 2026',

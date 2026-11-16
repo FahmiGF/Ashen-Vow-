@@ -23,10 +23,15 @@ export const FALLEN_SUBTITLE = 'Langit membuka gerbangnya. Cahaya datang untuk m
 export const FALLEN_PITCH = 'Kau mengalahkan kegelapan. Sekarang cahaya datang untuk menghakimimu.';
 
 export const FALLEN_ROOM_START = 426; // immediately after Faewood's 414-425
-export const FALLEN_REGION_COUNT = 7;
+export const FALLEN_BASE_REGION_COUNT = 7;
+export const FALLEN_EXTRA_REGION_COUNT = 4;
+export const FALLEN_REGION_COUNT = FALLEN_BASE_REGION_COUNT + FALLEN_EXTRA_REGION_COUNT; // 11
 export const FALLEN_ROOMS_PER_REGION = 5; // four halls, then the region boss
 export const FALLEN_OPTIONAL_COUNT = 4;
-export const FALLEN_ROOM_COUNT = FALLEN_REGION_COUNT * FALLEN_ROOMS_PER_REGION + FALLEN_OPTIONAL_COUNT; // 39
+export const FALLEN_OPTIONAL_ROOM_START = FALLEN_ROOM_START + FALLEN_BASE_REGION_COUNT * FALLEN_ROOMS_PER_REGION; // 461
+export const FALLEN_EXTRA_ROOM_START = FALLEN_OPTIONAL_ROOM_START + FALLEN_OPTIONAL_COUNT; // 465
+export const FALLEN_ROOM_COUNT =
+  FALLEN_BASE_REGION_COUNT * FALLEN_ROOMS_PER_REGION + FALLEN_OPTIONAL_COUNT + FALLEN_EXTRA_REGION_COUNT * FALLEN_ROOMS_PER_REGION; // 59
 export const FALLEN_FLOOR_Y = 470;
 export const FALLEN_WORLD_W = 1400;
 
@@ -278,15 +283,140 @@ const REGION_SOURCE = [
     hint: 'Tidak ada tangga lagi. Hanya cahaya yang menunggu untuk memutuskan.',
     palette: { top: '#1c1608', mid: '#6a5424', low: '#d8b860', glow: '#fffbe0', fog: '#7a6428' },
   },
+  // ── v0.14.0 zones: the slower, stranger middle of the arc ──────────────
+  {
+    id: 'weeping_orchard',
+    name: 'The Weeping Orchard',
+    localName: 'Kebun yang Menangis',
+    subtitle: 'Silver trees that bear glowing fruit, tears falling upward',
+    theme: 'Pohon perak berbuah cahaya; air mata jatuh ke atas',
+    gimmick: 'Buah emas menyembuhkan tapi memanggil musuh. Getah yang menetes memperlambat langkah.',
+    ability: null,
+    boss: 'mother_sorrow',
+    color: '#f0c8d8',
+    glow: '#fff0f6',
+    fog: '#5a3a44',
+    particle: 'petals',
+    music: 'glassorchard',
+    glyph: '❁',
+    enemies: ['sap_wisp', 'fruit_mimic', 'orchard_thorn', 'harvest_angel'],
+    hint: 'Setiap buah di sini adalah doa yang tidak dijawab. Pohonnya masih menangis untukmu.',
+    palette: { top: '#160c12', mid: '#4a2836', low: '#a06074', glow: '#ffe0ec', fog: '#6a3c4c' },
+  },
+  {
+    id: 'bellfall_quarter',
+    name: 'The Bellfall Quarter',
+    localName: 'Kawasan Lonceng Jatuh',
+    subtitle: 'A sunken bell-tower district, giant bells swing overhead',
+    theme: 'Distrik menara lonceng yang tenggelam; lonceng raksasa berayun di atas',
+    gimmick: 'Lonceng yang berayun melontarkan, meremukkan, atau membunyikan alarm.',
+    ability: null,
+    boss: 'campanarch_toll',
+    color: '#e0b878',
+    glow: '#fff0cc',
+    fog: '#4a3a24',
+    particle: 'dust',
+    music: 'hollowcourt',
+    glyph: '⌂',
+    enemies: ['tolling_imp', 'clapper_knight', 'dust_verger', 'bell_sentinel'],
+    hint: 'Lonceng tidak pernah berhenti berayun. Iramanya menentukan di mana lantai akan terbuka.',
+    palette: { top: '#120e08', mid: '#463622', low: '#94764a', glow: '#ffe8b8', fog: '#5c4a30' },
+  },
+  {
+    id: 'sunless_vault',
+    name: 'The Sunless Vault',
+    localName: 'Gudang Tanpa Matahari',
+    subtitle: 'A dim archive where the host hid its crimes',
+    theme: 'Arsip gelap tempat tuan rumah menyembunyikan kejahatannya',
+    gimmick: 'Cahaya terbatas; hanya pantulan yang menunjukkan jalan. Tinta menutupi hitbox sebenarnya.',
+    ability: null,
+    boss: 'redacted_scribe',
+    color: '#b8c8e8',
+    glow: '#e8f0ff',
+    fog: '#2a3244',
+    particle: 'motes',
+    music: 'forgotten',
+    glyph: '▤',
+    enemies: ['ink_leech', 'archive_shade', 'page_swarm', 'ink_censor'],
+    hint: 'Rak-rak setinggi langit, dan setiap judul dihapus dengan tinta yang masih basah.',
+    palette: { top: '#080a12', mid: '#26303f', low: '#6a7a96', glow: '#dce8ff', fog: '#3c4a5e' },
+  },
+  {
+    id: 'penitent_stairway',
+    name: 'The Penitent Stairway',
+    localName: 'Tangga Tobat',
+    subtitle: 'An endless spiral climb of kneeling statues',
+    theme: 'Tangga spiral tanpa ujung, patung-patung berlutut',
+    gimmick: 'Gugur vertikal. Patung bangun bila kau berhenti bergerak.',
+    ability: null,
+    boss: 'staircase_warden',
+    color: '#e8e0d0',
+    glow: '#ffffff',
+    fog: '#4a4640',
+    particle: 'feathers',
+    music: 'lastvigil',
+    glyph: '⛰',
+    enemies: ['kneeling_statue', 'stair_seraph', 'pale_acolyte', 'penitent_archon'],
+    hint: 'Tidak ada puncak. Hanya lutut yang terus bertambah di setiap tingkat.',
+    palette: { top: '#101010', mid: '#43403a', low: '#a8a094', glow: '#fffaf0', fog: '#5e5850' },
+  },
 ];
 
-export const FALLEN_REGIONS = REGION_SOURCE.map((region, index) => ({
-  ...region,
-  index,
-  roomStart: FALLEN_ROOM_START + index * FALLEN_ROOMS_PER_REGION,
-  bossRoom: FALLEN_ROOM_START + index * FALLEN_ROOMS_PER_REGION + FALLEN_ROOMS_PER_REGION - 1,
-  final: index === FALLEN_REGION_COUNT - 1,
-}));
+// Narrative order. Original regions keep their v0.13.0 room ids; the four new
+// zones own 465-484 so old ascended saves stay valid.
+const REGION_ORDER = {
+  gilded_ruins: 0,
+  weeping_orchard: 0.5,
+  cloudspire: 1,
+  choir_hollow: 2,
+  bellfall_quarter: 2.5,
+  seraph_foundry: 3,
+  mirror_aviary: 4,
+  sunless_vault: 4.5,
+  pale_cathedral: 5,
+  penitent_stairway: 5.5,
+  last_heaven: 6,
+};
+
+const REGION_TIER = {
+  gilded_ruins: 0, weeping_orchard: 1, cloudspire: 1, choir_hollow: 2, bellfall_quarter: 3,
+  seraph_foundry: 3, mirror_aviary: 4, sunless_vault: 5, pale_cathedral: 5, penitent_stairway: 6, last_heaven: 6,
+};
+
+const REGION_ROOM_START = {
+  gilded_ruins: 426, cloudspire: 431, choir_hollow: 436, seraph_foundry: 441,
+  mirror_aviary: 446, pale_cathedral: 451, last_heaven: 456,
+  weeping_orchard: 465, bellfall_quarter: 470, sunless_vault: 475, penitent_stairway: 480,
+};
+
+const REGION_UNLOCK = {
+  gilded_ruins: [],
+  weeping_orchard: ['aurelian'],
+  cloudspire: ['aurelian'],
+  choir_hollow: ['zephyria'],
+  bellfall_quarter: ['choir_seven'],
+  seraph_foundry: ['choir_seven'],
+  mirror_aviary: ['ophanim_prime'],
+  sunless_vault: ['glass_archangel'],
+  pale_cathedral: ['glass_archangel'],
+  penitent_stairway: ['sanctus_verdict'],
+  last_heaven: ['sanctus_verdict'],
+};
+
+export const FALLEN_REGIONS = REGION_SOURCE
+  .slice()
+  .sort((a, b) => REGION_ORDER[a.id] - REGION_ORDER[b.id])
+  .map((region, index) => ({
+    ...region,
+    index,
+    order: REGION_ORDER[region.id],
+    tier: REGION_TIER[region.id],
+    extra: ['weeping_orchard', 'bellfall_quarter', 'sunless_vault', 'penitent_stairway'].includes(region.id),
+    unlockAfter: [...(REGION_UNLOCK[region.id] || [])],
+    roomStart: REGION_ROOM_START[region.id],
+    bossRoom: REGION_ROOM_START[region.id] + FALLEN_ROOMS_PER_REGION - 1,
+    final: region.id === 'last_heaven',
+  }));
 
 export const FALLEN_REGION_BY_ID = Object.fromEntries(FALLEN_REGIONS.map((r) => [r.id, r]));
 
@@ -395,6 +525,100 @@ const ENEMY_SOURCE = [
     behavior: 'chaser', hp: 600, dmg: 36, speed: 118, w: 70, h: 96, reward: 80, color: '#f0c8a0',
     region: 'last_heaven', elite: true, shield: 150, mark: 2,
     desc: 'Malaikat tanpa sayap yang mengabdi pada tuan rumah. Mencampur serangan gelap dan terang.',
+  },
+  // ── v0.14.0 mobs: Weeping Orchard ──────────────────────────────────────
+  {
+    id: 'sap_wisp', name: 'Sap Wisp', localName: 'Peri Getah', title: 'Tiny Weeping Drop',
+    behavior: 'hopper', hp: 60, dmg: 11, speed: 104, w: 26, h: 30, reward: 13, color: '#ffd0e0',
+    region: 'weeping_orchard', flying: true, shield: 0, mark: 0,
+    desc: 'Tetesan bercahaya dengan wajah kecil. Melayang naik lalu pecah menjadi genangan getah yang memperlambat.',
+  },
+  {
+    id: 'fruit_mimic', name: 'Fruit Mimic', localName: 'Buah Tiruan', title: 'Ripe and Waiting',
+    behavior: 'chaser', hp: 84, dmg: 15, speed: 96, w: 34, h: 36, reward: 16, color: '#ffe08a',
+    region: 'weeping_orchard', shield: 0, mark: 0,
+    desc: 'Buah emas yang menggantung rendah. Terlihat seperti penyembuh; menggigit saat disentuh.',
+  },
+  {
+    id: 'orchard_thorn', name: 'Orchard Thorn', localName: 'Duri Kebun', title: 'Rooted Bramble',
+    behavior: 'ranged', hp: 110, dmg: 16, speed: 40, w: 42, h: 56, reward: 18, color: '#f0e0d0',
+    region: 'weeping_orchard', shield: 35, mark: 0,
+    desc: 'Semak putih yang berakar. Menembak jarum dalam kipas; perisainya pecah dari atas.',
+  },
+  {
+    id: 'harvest_angel', name: 'Harvest Angel', localName: 'Malaikat Panen', title: 'Reap the Ripe',
+    behavior: 'spawner', hp: 430, dmg: 26, speed: 74, w: 68, h: 86, reward: 56, color: '#ffd8c0',
+    region: 'weeping_orchard', elite: true, shield: 105, mark: 0, childType: 'fruit_mimic',
+    desc: 'Elite yang menabur Buah Tiruan dan memanennya untuk menyembuhkan diri. Habisi buahnya dulu.',
+  },
+  // ── v0.14.0 mobs: Bellfall Quarter ───────────────────────────────────────
+  {
+    id: 'tolling_imp', name: 'Tolling Imp', localName: 'Iblis Lonceng', title: 'Bell Clinger',
+    behavior: 'hopper', hp: 66, dmg: 12, speed: 128, w: 26, h: 32, reward: 14, color: '#ffd8a0',
+    region: 'bellfall_quarter', flying: true, shield: 0, mark: 0,
+    desc: 'Kerub kecil yang bergantung pada lonceng. Membunyikannya untuk membingungkan, lalu menjatuhkan diri.',
+  },
+  {
+    id: 'clapper_knight', name: 'Clapper Knight', localName: 'Ksatria Pemukul', title: 'Clapper for a Mace',
+    behavior: 'slam', hp: 210, dmg: 24, speed: 60, w: 56, h: 68, reward: 30, color: '#e8c88a',
+    region: 'bellfall_quarter', shield: 45, mark: 1,
+    desc: 'Zirah dengan pemukul lonceng sebagai gada. Ayunan beratnya menciptakan garis guncangan.',
+  },
+  {
+    id: 'dust_verger', name: 'Dust Verger', localName: 'Penyapu Debu', title: 'Censer of Smoke',
+    behavior: 'ranged', hp: 120, dmg: 14, speed: 58, w: 38, h: 58, reward: 19, color: '#d8c8b0',
+    region: 'bellfall_quarter', shield: 0, mark: 1,
+    desc: 'Penyapu bertudung dengan pedupaan. Asapnya menyembunyikan telegraph musuh di sekitarnya.',
+  },
+  {
+    id: 'bell_sentinel', name: 'Bell Sentinel', localName: 'Sentinel Lonceng', title: 'Swing It Back',
+    behavior: 'slam', hp: 470, dmg: 28, speed: 64, w: 74, h: 90, reward: 58, color: '#f0d090',
+    region: 'bellfall_quarter', elite: true, shield: 115, mark: 0,
+    desc: 'Mengayunkan lonceng raksasa yang bisa kau arahkan kembali ke tubuhnya sendiri.',
+  },
+  // ── v0.14.0 mobs: Sunless Vault ────────────────────────────────────────
+  {
+    id: 'ink_leech', name: 'Ink Leech', localName: 'Lintah Tinta', title: 'Wall-Born',
+    behavior: 'lunge', hp: 98, dmg: 18, speed: 112, w: 40, h: 30, reward: 20, color: '#8898b8',
+    region: 'sunless_vault', shield: 0, mark: 1,
+    desc: 'Belut tinta yang bersembunyi di dinding. Menerjang lalu meninggalkan genangan tinta gelap.',
+  },
+  {
+    id: 'archive_shade', name: 'Archive Shade', localName: 'Bayangan Arsip', title: 'Translucent Clerk',
+    behavior: 'ranged', hp: 132, dmg: 17, speed: 84, w: 36, h: 56, reward: 22, color: '#c8d8f0',
+    region: 'sunless_vault', flying: true, shield: 30, mark: 0,
+    desc: 'Petugas transparan yang hanya terlihat di bawah cahaya. Setiap pukulan mencuri Radiance.',
+  },
+  {
+    id: 'page_swarm', name: 'Page Swarm', localName: 'Kawanan Halaman', title: 'Living Paper',
+    behavior: 'chaser', hp: 76, dmg: 13, speed: 156, w: 34, h: 26, reward: 16, color: '#e8f0ff',
+    region: 'sunless_vault', flying: true, shield: 0, mark: 0,
+    desc: 'Kawanan halaman hidup. Menyayat seperti kertas, dan berpencar bila Blinding Burst meledak.',
+  },
+  {
+    id: 'ink_censor', name: 'Ink Censor', localName: 'Sensor Tinta', title: 'Blackout',
+    behavior: 'ranged', hp: 500, dmg: 27, speed: 70, w: 66, h: 84, reward: 60, color: '#98a8c8',
+    region: 'sunless_vault', elite: true, flying: true, shield: 125, mark: 1,
+    desc: 'Elite yang menghitamkan sebagian layar. Hanya Blinding Burst yang mengembalikan arena.',
+  },
+  // ── v0.14.0 mobs: Penitent Stairway ────────────────────────────────────
+  {
+    id: 'kneeling_statue', name: 'Kneeling Statue', localName: 'Patung Berlutut', title: 'Frozen Until You Stop',
+    behavior: 'lunge', hp: 150, dmg: 20, speed: 90, w: 46, h: 62, reward: 23, color: '#d8d0c4',
+    region: 'penitent_stairway', shield: 40, mark: 0,
+    desc: 'Marmer yang berdoa. Membeku sampai kau berhenti bergerak, lalu menerjang.',
+  },
+  {
+    id: 'stair_seraph', name: 'Stair Seraph', localName: 'Seraf Tangga', title: 'Downward Gust',
+    behavior: 'ranged', hp: 118, dmg: 16, speed: 100, w: 34, h: 46, reward: 21, color: '#f0e8d8',
+    region: 'penitent_stairway', flying: true, shield: 25, mark: 0,
+    desc: 'Penjaga kecil bersayap. Mendobrakmu menuruni tangga dengan hembusan angin.',
+  },
+  {
+    id: 'penitent_archon', name: 'Penitent Archon', localName: 'Arkon Tobat', title: 'Stone Beneath You',
+    behavior: 'slam', hp: 540, dmg: 31, speed: 68, w: 78, h: 94, reward: 64, color: '#e8e0d0',
+    region: 'penitent_stairway', elite: true, shield: 135, mark: 2,
+    desc: 'Menandai lantai di bawahmu lalu menjatuhkan batu. Menghukum siapa pun yang berdiri diam.',
   },
 ];
 
@@ -791,6 +1015,109 @@ const BOSS_SOURCE = [
       'Timbangan itu tidak pernah seimbang. Mungkin memang tidak seharusnya.',
     ],
   },
+  // ── v0.14.0 level bosses for the four new zones ────────────────────────
+  {
+    id: 'mother_sorrow',
+    kind: 'fallen_mother_sorrow',
+    region: 'weeping_orchard',
+    name: 'Mother Sorrow, the Orchard Keeper',
+    title: 'The Orchard Keeper',
+    localName: 'Ibu Duka, Penjaga Kebun',
+    pattern: 'rain',
+    maxHp: 1050,
+    w: 150,
+    h: 158,
+    contact: 24,
+    phases: 2,
+    color: '#f0c8d8',
+    music: 'bossDawn',
+    ashReward: 210,
+    shards: 14,
+    ability: null,
+    glyph: '❁',
+    lines: [
+      'Setiap buah yang kutumbuhkan adalah anak yang tidak pernah kembali. Kau akan menjadi akar berikutnya.',
+      'Getahku membanjiri lantai. Sekarang cahaya akan membakarnya, dan kau akan belajar apa itu panen.',
+      'Pohon-pohon ini tumbuh dari air mataku. Akhirnya ada yang berhenti menangis.',
+    ],
+  },
+  {
+    id: 'campanarch_toll',
+    kind: 'fallen_campanarch_toll',
+    region: 'bellfall_quarter',
+    name: 'Campanarch Toll',
+    title: 'The Bell-Headed Priest',
+    localName: 'Campanarch Toll, Imam Kepala Lonceng',
+    pattern: 'ring',
+    maxHp: 1280,
+    w: 140,
+    h: 172,
+    contact: 26,
+    phases: 2,
+    color: '#e0b878',
+    music: 'bossDawn',
+    ashReward: 240,
+    shards: 16,
+    ability: null,
+    glyph: '⌂',
+    lines: [
+      'Lonceng pertama kubunyikan untuk kelahiran. Yang kedua untuk kematian. Kau datang tepat waktu untuk yang ketiga.',
+      'Retak di lantai ini adalah nadaku. Berdiri di atasnya, dan kau menari bersamaku.',
+      'Lonceng terakhir berbunyi tanpa tangan. Mungkin memang sudah waktunya.',
+    ],
+  },
+  {
+    id: 'redacted_scribe',
+    kind: 'fallen_redacted_scribe',
+    region: 'sunless_vault',
+    name: 'The Redacted Scribe',
+    title: 'Keeper of the Erased',
+    localName: 'Juru Tulis yang Dihapus',
+    pattern: 'volley',
+    maxHp: 1520,
+    w: 146,
+    h: 164,
+    contact: 24,
+    phases: 3,
+    color: '#b8c8e8',
+    music: 'bossDawn',
+    ashReward: 280,
+    shards: 19,
+    ability: null,
+    glyph: '▤',
+    lines: [
+      'Aku menghapus nama-nama itu atas perintah surga. Kau ingin tahu nama siapa yang pertama kuhapus?',
+      'Tinta menutupi kebenaran. Cahaya membakarnya. Keduanya bekerja untukku.',
+      'Halaman yang kau sobek itu berisi satu kalimat: Yang Terjatuh adalah leluhur dunia bawah.',
+      'Aku tidak bisa membaca tulisanku sendiri lagi. Mungkin itu hukuman yang adil.',
+    ],
+  },
+  {
+    id: 'staircase_warden',
+    kind: 'fallen_staircase_warden',
+    region: 'penitent_stairway',
+    name: 'The Staircase Warden',
+    title: 'The Endless Climb',
+    localName: 'Penjaga Tangga',
+    pattern: 'charge',
+    maxHp: 1780,
+    w: 156,
+    h: 168,
+    contact: 30,
+    phases: 3,
+    color: '#e8e0d0',
+    music: 'bossDawn',
+    ashReward: 320,
+    shards: 22,
+    ability: null,
+    glyph: '⛰',
+    lines: [
+      'Setiap tingkat tangga ini adalah satu dosa yang kau bawa dari bawah. Aku menghitungnya sambil menunggu.',
+      'Berhenti sejenak, dan patung-patung akan mengingatkanmu mengapa kau memanjat.',
+      'Kau masih naik. Aku sudah lupa apa yang ada di puncak.',
+      'Tangga ini tidak berakhir. Hanya penjaganya yang berakhir.',
+    ],
+  },
   {
     id: 'seraphiel',
     kind: 'fallen_seraphiel',
@@ -957,7 +1284,7 @@ export const FALLEN_BOSSES = BOSS_SOURCE.map((source) => {
   return {
     ...source,
     roomIndex: source.optional
-      ? FALLEN_ROOM_START + FALLEN_REGION_COUNT * FALLEN_ROOMS_PER_REGION + optionalIndex
+      ? FALLEN_OPTIONAL_ROOM_START + optionalIndex
       : region.bossRoom,
     phaseThresholds: thresholdsFor(source.phases),
   };
@@ -1031,9 +1358,9 @@ function enemiesFor(region, slot, types) {
       minX: 80,
       maxX: FALLEN_WORLD_W - 100,
       elite: !!info?.elite,
-      hpScale: 1 + region.index * 0.14,
-      dmgScale: 1 + region.index * 0.1,
-      speedScale: 1 + region.index * 0.05,
+      hpScale: 1 + region.tier * 0.14,
+      dmgScale: 1 + region.tier * 0.1,
+      speedScale: 1 + region.tier * 0.05,
     };
   });
 }
@@ -1144,6 +1471,8 @@ for (const region of FALLEN_REGIONS) {
   FALLEN_ROOMS.push(makeBossRoom(region));
 }
 for (const boss of FALLEN_OPTIONAL_BOSSES) FALLEN_ROOMS.push(makeOptionalRoom(boss));
+// Order by global id so ALL_ROOMS stays contiguous across the interleaved zones.
+FALLEN_ROOMS.sort((a, b) => a.id - b.id);
 
 export const FALLEN_ROOM_BY_ID = Object.fromEntries(FALLEN_ROOMS.map((room) => [room.id, room]));
 export const FALLEN_REGION_ROOMS = FALLEN_REGIONS.map((region) =>
@@ -1326,15 +1655,19 @@ export function sanitizeFallenProgress(raw) {
   const bosses = {};
   for (const boss of FALLEN_BOSSES) bosses[boss.id] = raw.bosses?.[boss.id] === true;
   // Region bosses only exist after their four halls; drop impossible states.
-  for (let region = 0; region < FALLEN_REGION_COUNT; region += 1) {
-    const start = region * FALLEN_ROOMS_PER_REGION;
-    for (let slot = 1; slot < FALLEN_ROOMS_PER_REGION; slot += 1) {
-      if (rooms[start + slot] && !rooms[start + slot - 1]) rooms[start + slot] = false;
+  // Rooms are addressed by global id so the interleaved v0.14.0 zones work.
+  for (const region of FALLEN_REGIONS) {
+    const halls = Array.from({ length: FALLEN_ROOMS_PER_REGION - 1 }, (_, slot) => region.roomStart + slot);
+    for (let i = 1; i < halls.length; i += 1) {
+      if (rooms[halls[i] - FALLEN_ROOM_START] && !rooms[halls[i - 1] - FALLEN_ROOM_START]) {
+        rooms[halls[i] - FALLEN_ROOM_START] = false;
+      }
     }
-    const boss = FALLEN_REGIONS[region].boss;
-    if ((bosses[boss] || rooms[start + FALLEN_ROOMS_PER_REGION - 1]) && !rooms.slice(start, start + FALLEN_ROOMS_PER_REGION - 1).every(Boolean)) {
-      bosses[boss] = false;
-      rooms[start + FALLEN_ROOMS_PER_REGION - 1] = false;
+    const bossLocal = region.bossRoom - FALLEN_ROOM_START;
+    const hallsDone = halls.every((id) => rooms[id - FALLEN_ROOM_START]);
+    if ((bosses[region.boss] || rooms[bossLocal]) && !hallsDone) {
+      bosses[region.boss] = false;
+      rooms[bossLocal] = false;
     }
   }
   const optionalIds = new Set(FALLEN_OPTIONAL_BOSSES.map((b) => b.id));
@@ -1415,27 +1748,27 @@ export function fallenIsAscended(progress) {
 
 export function fallenRegionUnlocked(state, regionIndex) {
   const safe = sanitizeFallenProgress(state);
-  const index = clamp(asInt(regionIndex), 0, FALLEN_REGION_COUNT - 1);
-  if (index === 0) return true;
-  const previous = FALLEN_REGIONS[index - 1];
-  return safe.bosses[previous.boss] === true;
+  const region = FALLEN_REGIONS[clamp(asInt(regionIndex), 0, FALLEN_REGION_COUNT - 1)];
+  if (!region || !region.unlockAfter.length) return true;
+  return region.unlockAfter.some((bossId) => safe.bosses[bossId] === true);
 }
 
 export function fallenRoomUnlocked(state, roomId) {
   const safe = sanitizeFallenProgress(state);
   const room = FALLEN_ROOM_BY_ID[roomId];
   if (!room) return false;
-  if (room.fallenOptional) return fallenRegionUnlocked(safe, FALLEN_REGION_COUNT - 1);
-  if (!fallenRegionUnlocked(safe, room.fallenRegion - 1)) return false;
+  if (room.fallenOptional) return fallenRegionUnlocked(safe, FALLEN_REGIONS.findIndex((r) => r.final));
+  const region = FALLEN_REGIONS[room.fallenRegion - 1];
+  if (!region || !fallenRegionUnlocked(safe, region.index)) return false;
   if (room.fallenSlot <= 0) return true;
-  return safe.rooms[room.id - FALLEN_ROOM_START - 1] === true;
+  return safe.rooms[region.roomStart + room.fallenSlot - 1 - FALLEN_ROOM_START] === true;
 }
 
 export function fallenBossUnlocked(state, bossId) {
   const safe = sanitizeFallenProgress(state);
   const boss = FALLEN_BOSS_BY_ID[bossId];
   if (!boss) return false;
-  if (boss.optional) return fallenRegionUnlocked(safe, FALLEN_REGION_COUNT - 1);
+  if (boss.optional) return fallenRegionUnlocked(safe, FALLEN_REGIONS.findIndex((r) => r.final));
   return safe.rooms[boss.roomIndex - FALLEN_ROOM_START - 1] === true;
 }
 
@@ -1447,9 +1780,8 @@ export function recordFallenRoom(state, roomId) {
   const firstClear = safe.rooms[local] !== true;
   safe.rooms[local] = true;
   const region = FALLEN_REGIONS[room.fallenRegion - 1];
-  const regionDone = safe.rooms
-    .slice(region.index * FALLEN_ROOMS_PER_REGION, region.index * FALLEN_ROOMS_PER_REGION + FALLEN_ROOMS_PER_REGION - 1)
-    .every(Boolean);
+  const regionDone = Array.from({ length: FALLEN_ROOMS_PER_REGION - 1 }, (_, slot) => region.roomStart + slot)
+    .every((id) => safe.rooms[id - FALLEN_ROOM_START] === true);
   if (regionDone) safe.movement = Math.max(safe.movement || 0, Math.min(FALLEN_MOVEMENTS.length - 1, region.index + 2));
   return { ok: true, firstClear, regionDone };
 }
@@ -1602,7 +1934,8 @@ export function fallenMenuFigure(state) {
     return { pose: FALLEN_ENDING_BY_ID[safe.ending].figure, color: FALLEN_ENDING_BY_ID[safe.ending].color, ending: safe.ending };
   }
   const regions = FALLEN_REGIONS.filter((region) => safe.bosses[region.boss]).length;
-  const pose = regions >= 5 ? 'rising' : regions >= 2 ? 'kneeling_alert' : 'kneeling';
+  const risingAt = Math.max(2, Math.ceil(FALLEN_REGION_COUNT * 0.7));
+  const pose = regions >= risingAt ? 'rising' : regions >= 2 ? 'kneeling_alert' : 'kneeling';
   return { pose, color: '#3a1c1c', ending: null, regions };
 }
 

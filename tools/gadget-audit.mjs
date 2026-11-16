@@ -194,6 +194,11 @@ async function main() {
         open: '(() => { const A = window.__ashen; A.progress.cleared[7] = true; A.ascendNow(); A.showFallenMenu(); })()',
       },
       { id: 'fallenHub', open: 'window.__ashen.showFallen("regions")' },
+      {
+        id: 'crusadeMenu',
+        open: '(() => { const A = window.__ashen; A.progress.cleared[7] = true; A.ascendNow(); A.progress.fallen.endings.dawn = true; A.progress.fallen.ending = "dawn"; A.unlockCrusadeNow(); A.showCrusadeMenu(); })()',
+      },
+      { id: 'crusadeHub', open: 'window.__ashen.showCrusade("levels")' },
     ];
 
     let first = true;

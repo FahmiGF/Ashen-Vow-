@@ -28,9 +28,25 @@ test('update log is complete and ordered newest first', () => {
   }
 });
 
-test('the latest update documents The Fallen Ones arc', () => {
+test('the latest update documents the Radiant Crusade', () => {
   const latest = LATEST_UPDATE;
-  assert.equal(latest.version, '0.13.0');
+  assert.equal(latest.version, '0.14.0');
+  const text = [latest.title, latest.summary, ...latest.highlights, ...(latest.fixes || [])].join(' ');
+  assert.match(text, /The Radiant Crusade/i);
+  assert.match(text, /Valor Chain/i);
+  assert.match(text, /Purity Shield/i);
+  assert.match(text, /Paladin Templar/i);
+  assert.match(text, /Crusader Strike/i);
+  assert.match(text, /The Rift/i);
+  assert.match(text, /sebelas wilayah|11 wilayah/i);
+  assert.match(text, /59 ruang/i);
+  assert.match(text, /progress\.crusade/i);
+  assert.match(text, /345 test/i);
+});
+
+test('the Fallen Ones release remains documented in the log', () => {
+  const latest = UPDATE_LOG.find((entry) => entry.version === '0.13.0');
+  assert.ok(latest);
   const text = [latest.summary, ...latest.highlights, ...(latest.fixes || [])].join(' ');
   assert.match(text, /The Fallen Ones/i);
   assert.match(text, /tujuh wilayah|7 wilayah/i);

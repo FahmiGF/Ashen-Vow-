@@ -1,4 +1,20 @@
-# Ashen Vow — v0.13.0
+# Ashen Vow — v0.14.0
+
+## The Radiant Crusade — Perang Salib Bersinar (v0.14.0)
+
+Surga berhenti menghakimi dan mulai berbaris. Setelah salah satu akhiran Yang Terjatuh, **The Radiant Crusade** membuka menu ketiga bergaya kemah perang dan lima tingkat pengepungan yang berakhir di Paladin Templar Raksasa. Di saat yang sama, Arc II tumbuh dari tujuh menjadi sebelas wilayah.
+
+- **Menu ketiga:** setelah Paladin gugur, boot mendarat di layar **THE RADIANT CRUSADE** — panji yang tumbuh mengikuti progres, api kemah, dan opsi CONTINUE CRUSADE, THE FIVE LEVELS, WAR CAMP OF EMBERS, **THE RIFT** yang terkunci (“Something stirs below.”), RETURN TO HEAVEN, dan OPTIONS. Tombol Arc III juga muncul di menu dasar dan hub langit.
+- **Lima tingkat, 20 ruang (id 485–504):** The Marching Fields, Siege of the Sky Bastion, The Sanctified Armory, The Cathedral of Swords, dan The Gate of Judgment. Setiap tingkat punya tiga ruang plus ruang bos, checkpoint **Kemah Perang** di awal dan **Banner Shrine** di tengah. Tidak ada room lama yang berubah.
+- **Lima bos:** Marshal Aurion (2 fase), The Ballista Choir (2), Lady Vesperine (3), Warden Ophelion (3), dan **The Giant Paladin Templar Knight** (3 fase: The Oath, The Crusade, The Hollow Armor) dengan Purity Shield 200 dan reward `victory`.
+- **Valor Chain:** setiap pukulan bersih menambah chain (parry +2); satu pukulan masuk mematahkannya. Chain menaikkan damage sampai 1,6×, dan pada chain 5 **Crusader Strike** (`G` atau tombol HUD) memecah Purity Shield dengan biaya 4 chain.
+- **Panji permanen:** Banner of Dawn (mulai chain 2), Siege Break (strike memecah shield), Mercy Edge (parry +2), Wall-Breaker (+35% strike), dan Final Verdict yang membuka celah langit. Panji tidak hilang saat gugur dan hanya sah bila bosnya benar-benar gugur.
+- **Kemah Perang:** tab Tingkat, Panji, Bestiary, Kemah, dan Arsip. **Sigil Perang** dari bos pertama-kali membeli tiga jalur permanen (health, damage, valor).
+- **21 musuh baru:** 15 mob dan 6 elite, semuanya memakai tujuh archetype AI engine — Crusader Recruit, Banner Bearer, Catapult Cherub, Siege Ram, Wall Archer, Gate Sentinel, Blade Acolyte, Armor Stand Ghost, Forge Hound, Sword Bat, Shield Choir, Vigil Sister, Gatekeeper Zealot, Rift Watcher, War Chanter, plus Captain Brightspear, Siege Master, Twin Blades of Mercy, Commander Rampart, Inquisitor Veyra, dan Hollow Crusader yang membawa petunjuk Arc IV.
+- **Paladin chain:** pada fase 2 Paladin membangun Valor Chain sendiri; Crusader Strike yang masuk mematahkannya dan membuatnya terhuyung. Fase 3 melepas perisai dan menaikkan tempo.
+- **Transisi Arc IV:** kill Paladin membuka layar clear dengan celah merah di langit, baris “Terima kasih telah membuka pintunya”, `progress.crusade.arc4Hook`, dan opsi **THE RIFT** yang tetap terkunci bergaya teaser — bukan konten palsu.
+- **Arc II diperluas menjadi 11 wilayah / 59 ruang / 15 bos:** empat zona baru disisipkan sesuai cerita — **The Weeping Orchard** (antara Gilded Ruins dan Cloudspire), **The Bellfall Quarter** (Choir Hollow–Foundry), **The Sunless Vault** (Mirror Aviary–Pale Cathedral), dan **The Penitent Stairway** (Pale Cathedral–Last Heaven) — dengan Mother Sorrow, Campanarch Toll, The Redacted Scribe, dan The Staircase Warden, plus 10 mob / 4 elite baru. Ruang baru memakai id 465–484 dan save lama tetap valid karena progres dialamatkan lewat id global, bukan indeks region.
+- **Test & smoke:** total suite menjadi **345 test deterministik**, termasuk **22 test Arc III** (data 5 tingkat/20 ruang/21 musuh/5 bos, Valor Chain, paladin chain, unlock, sanitizer, integrasi bos dan ruang nyata di `src/core.js`) dan 30 test Arc II yang diperbarui untuk 11 wilayah. `npm run smoke:crusade` menjalankan **56 check** di browser nyata (menu kemah, hub, run level 1, Purity Shield, Valor Chain, Crusader Strike, kill Marshal, Paladin 3 fase, layar clear, rift, persistensi, nol error konsol). `npm run smoke:fallen` tetap **39 check**, dan `npm run audit:gadgets` memeriksa **367 layout check di 10 viewport** (320×568–1920×1080) tanpa overflow.
 
 ## The Fallen Ones — Yang Terjatuh (v0.13.0)
 
@@ -17,7 +33,7 @@ Setelah The Oathbreaker gugur, langit terbuka. Ashen Vow menjadi dua game dalam 
 - **Shards of Halo:** mata uang meta dari bos pertama-kali, dipakai untuk empat peningkatan permanen (health, radiance, damage, weapon) dan senjata langit di tab **SERPIHAN**.
 - **Hub lima tab:** Wilayah, Bestiary (17 musuh nyata + 6 elite), Gema, Serpihan, dan Arsip (tiga akhiran, statistik, kemampuan).
 - **Musik tanpa aset baru:** wilayah memakai track yang sudah ada (`reliquary`, `stormexpanse`, `hollowcourt`, `cinderworks`, `glassorchard`, `lastvigil`, `forgotten`) dan bos memakai `bossDawn`/`bossJudge`.
-- **Test & smoke:** `tests/fallen.test.js` menambah **30 test** deterministik (geometri 39 ruang, validasi gerbang, dialog bos, aturan unlock, sanitizer, akhiran, gema, ekonomi serpihan, mekanik Radiance/Judgment/Shadow/Purity, integrasi bos nyata), sehingga total suite menjadi **322 test deterministik**. `npm run smoke:fallen` menjalankan **39 check** di browser nyata: menu surgawi, hub, run wilayah, bos dengan Purity Shield, kill nyata, hadiah serpihan, gerbang akhiran, dan persistensi setelah reload tanpa error konsol.
+- **Test & smoke:** `tests/fallen.test.js` menambah **30 test** deterministik (geometri ruang, validasi gerbang, dialog bos, aturan unlock, sanitizer, akhiran, gema, ekonomi serpihan, mekanik Radiance/Judgment/Shadow/Purity, integrasi bos nyata); arc ini kini mencakup 59 ruang dan 15 bos setelah perluasan v0.14.0. `npm run smoke:fallen` menjalankan **39 check** di browser nyata: menu surgawi, hub, run wilayah, bos dengan Purity Shield, kill nyata, hadiah serpihan, gerbang akhiran, dan persistensi setelah reload tanpa error konsol.
 
 ## Pondok Umpan — Memancing (v0.12.0)
 

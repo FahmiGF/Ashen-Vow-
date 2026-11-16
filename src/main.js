@@ -366,6 +366,7 @@ import {
   fallenArchive,
   fallenEchoesFor,
   fallenRunConfig,
+  radianceGain,
   radianceFull,
   blindingBurst,
   applyJudgment,
@@ -374,6 +375,48 @@ import {
   shadowTick,
   shadowDamageMul,
 } from './fallen.js';
+import {
+  CRUSADE_NAME,
+  CRUSADE_LOCAL_NAME,
+  CRUSADE_SUBTITLE,
+  CRUSADE_ROOM_START,
+  CRUSADE_ROOMS_PER_LEVEL,
+  CRUSADE_LEVEL_COUNT,
+  CRUSADE_LEVELS,
+  CRUSADE_ROOM_BY_ID,
+  CRUSADE_ENEMY_INFO,
+  CRUSADE_ENEMY_IDS,
+  CRUSADE_BOSSES,
+  CRUSADE_BOSS_BY_ID,
+  CRUSADE_BANNERS,
+  CRUSADE_UPGRADES,
+  CRUSADE_MENU_OPTIONS,
+  CRUSADE_RIFT,
+  defaultCrusadeProgress,
+  sanitizeCrusadeProgress,
+  crusadeUnlocked,
+  unlockCrusade,
+  crusadeLevelUnlocked,
+  crusadeRoomUnlocked,
+  crusadeBossUnlocked,
+  recordCrusadeRoom,
+  recordCrusadeBoss,
+  recordCrusadeDeath,
+  recordCrusadeRun,
+  buyCrusadeUpgrade,
+  addCrusadeSigils,
+  crusadeSummary,
+  crusadeArchive,
+  crusadeCampFigure,
+  crusadeRunConfig,
+  valorHit,
+  valorBreak,
+  valorStrikeReady,
+  crusaderStrike,
+  paladinChainTick,
+  breakPaladinChain,
+  valorMultiplier,
+} from './crusade.js';
 import {
   LABYRINTH_VERSION,
   LABYRINTH_NAME,
@@ -722,6 +765,7 @@ function defaultProgress() {
     speedrun: defaultSpeedrunProgress(),
     fishing: defaultFishingProgress(),
     fallen: defaultFallenProgress(),
+    crusade: defaultCrusadeProgress(),
     stageTimes: {},
   };
 }
@@ -759,7 +803,7 @@ function loadProgress() {
         };
     // Keep every unknown top-level field. v0.3.0 adds `expansion` without
     // changing the storage key or discarding future/legacy save data.
-    const { version, unlocked: _unlocked, cleared: _cleared, map: _map, expansion: _expansion, atlas: _atlas, labyrinth: _labyrinth, court: _court, skills: _skills, pack: _pack, fairy: _fairy, speedrun: _speedrun, fishing: _fishing, fallen: _fallen, stageTimes: _stageTimes, ...extras } = parsed;
+    const { version, unlocked: _unlocked, cleared: _cleared, map: _map, expansion: _expansion, atlas: _atlas, labyrinth: _labyrinth, court: _court, skills: _skills, pack: _pack, fairy: _fairy, speedrun: _speedrun, fishing: _fishing, fallen: _fallen, crusade: _crusade, stageTimes: _stageTimes, ...extras } = parsed;
     return {
       ...extras,
       version: 1,
@@ -776,6 +820,7 @@ function loadProgress() {
       speedrun: sanitizeSpeedrunProgress(parsed.speedrun),
       fishing: sanitizeFishingProgress(parsed.fishing),
       fallen: sanitizeFallenProgress(parsed.fallen),
+      crusade: sanitizeCrusadeProgress(parsed.crusade),
       stageTimes: sanitizeStageTimes(parsed.stageTimes),
     };
   } catch {
@@ -968,6 +1013,19 @@ function updateMenuProgress() {
     if (ascended) {
       const arc = fallenSummary(fallenState());
       $('fallen-menu-progress').textContent = `${FALLEN_LOCAL_NAME.toUpperCase()} · ${arc.regionsCleared}/${arc.regionTotal} WILAYAH · ${arc.bossesCleared}/${arc.bossTotal} BOS · ${arc.shards} SERPIHAN`;
+    }
+  }
+  const crusadeButton = $('btn-crusade-menu');
+  if (crusadeButton) {
+    const open = crusadeUnlocked(progress);
+    crusadeButton.classList.toggle('hidden', !open);
+    const progressLine = $('crusade-menu-progress');
+    if (progressLine) progressLine.classList.toggle('hidden', !open);
+    if (open) {
+      const war = crusadeSummary(crusadeState());
+      if (progressLine) progressLine.textContent = `${CRUSADE_LOCAL_NAME.toUpperCase()} · ${war.levelsCleared}/${war.levelTotal} TINGKAT · ${war.bossesCleared}/${war.bossTotal} BOS · ${war.sigils} SIGIL`;
+      const link = $('btn-fallen-crusade');
+      if (link) link.classList.remove('hidden');
     }
   }
 }
@@ -4024,6 +4082,13 @@ function retryRun() {
     else startFallenRegion(Math.max(0, activeFallenRegion), { slot: Math.max(0, activeFallenSlot) });
     return;
   }
+  if (activeRunKind === 'crusade') {
+    recordCrusadeDeath(crusadeState());
+    saveProgress();
+    if (activeCrusadeBoss) startCrusadeBoss(activeCrusadeBoss);
+    else startCrusadeLevel(Math.max(0, activeCrusadeLevel));
+    return;
+  }
   if (activeRunKind === 'pack' && activePackIndex >= 0) {
     startPackRun(activePackIndex);
     return;
@@ -4116,12 +4181,16 @@ function showMenu() {
   fallenRun = null;
   activeFallenRegion = -1;
   activeFallenBoss = null;
-  menuView = fallenMenuDefault();
+  crusadeClearOpen = false;
+  crusadeRun = null;
+  activeCrusadeBoss = null;
+  menuView = defaultMenuView();
   game.reset();
   game.events.length = 0;
   clearHeldKeys();
   updateMenuProgress();
   if (menuView === 'fallenMenu') buildFallenMenu();
+  else if (menuView === 'crusadeMenu') buildCrusadeMenu();
   syncScreens();
 }
 
@@ -8530,6 +8599,12 @@ $('speedrun-summary-menu')?.addEventListener('click', () => {
 });
 $('btn-fallen-menu')?.addEventListener('click', () => showFallenMenu());
 $('btn-fallen-back')?.addEventListener('click', () => showFallenMenu());
+$('btn-fallen-crusade')?.addEventListener('click', () => showCrusadeMenu());
+$('btn-crusade-menu')?.addEventListener('click', () => showCrusadeMenu());
+$('btn-crusade-back')?.addEventListener('click', () => showCrusadeMenu());
+$('crusade-hud')?.addEventListener('click', (event) => {
+  if (event.target.closest('[data-crusade-action="strike"]')) crusadeStrike();
+});
 $('fallen-hud')?.addEventListener('click', (event) => {
   const button = event.target.closest('[data-fallen-action]');
   if (!button) return;
@@ -9049,6 +9124,9 @@ function syncScreens() {
   $('fallen-menu-screen')?.classList.toggle('hidden', menuView !== 'fallenMenu' || covered);
   $('fallen-screen')?.classList.toggle('hidden', menuView !== 'fallen' || covered);
   $('fallen-ending-screen')?.classList.toggle('hidden', !(fallenEndingOpen && started));
+  $('crusade-menu-screen')?.classList.toggle('hidden', menuView !== 'crusadeMenu' || covered);
+  $('crusade-screen')?.classList.toggle('hidden', menuView !== 'crusade' || covered);
+  $('crusade-clear-screen')?.classList.toggle('hidden', !(crusadeClearOpen && started));
   $('speedrun-screen')?.classList.toggle('hidden', menuView !== 'speedrun' || covered);
   $('fishing-screen')?.classList.toggle('hidden', menuView !== 'fishing' || covered);
   $('bait-shop-screen')?.classList.toggle('hidden', menuView !== 'baitShop' || covered);
@@ -9070,7 +9148,7 @@ function syncScreens() {
   $('shop-screen').classList.toggle('hidden', !(inRun && shopOpen));
   $('blessing-screen').classList.toggle('hidden', !(inRun && !paused && !shopOpen && s === 'blessing'));
   $('dead-screen').classList.toggle('hidden', !(inRun && s === 'dead' && activeRunKind !== 'labyrinth' && activeRunKind !== 'speedrun'));
-  $('victory-screen').classList.toggle('hidden', !(inRun && s === 'victory' && activeRunKind !== 'fallen'));
+  $('victory-screen').classList.toggle('hidden', !(inRun && s === 'victory' && activeRunKind !== 'fallen' && activeRunKind !== 'crusade'));
 
   const hudVisible = inRun && !paused && !shopOpen && !mapOpen && !codexOpen && !inventoryOpen && !dialogueOpen
     && !settingsOpen && !cutsceneActive
@@ -9296,6 +9374,36 @@ function drainEvents() {
         }
       } else if (activeRunKind === 'labyrinth') {
         handleLabEvent(ev);
+      } else if (activeRunKind === 'crusade') {
+        if (ev.type === 'gatePass') {
+          const from = CRUSADE_ROOM_BY_ID[ev.from];
+          if (from && !from.crusadeBoss) {
+            recordCrusadeRoom(crusadeState(), from.id);
+            saveProgress();
+          }
+          const to = CRUSADE_ROOM_BY_ID[ev.to];
+          if (to) {
+            activeCrusadeLevel = to.crusadeLevel ? to.crusadeLevel - 1 : 0;
+            activeCrusadeBoss = to.crusadeBoss || null;
+          }
+        } else if (ev.type === 'bossDown') {
+          handleCrusadeBoss(ev);
+        } else if (ev.type === 'roomEnter') {
+          const room = CRUSADE_ROOM_BY_ID[ev.room];
+          if (room) {
+            activeCrusadeLevel = room.crusadeLevel ? room.crusadeLevel - 1 : 0;
+            activeCrusadeBoss = room.crusadeBoss || null;
+            for (const enemy of room.enemies || []) {
+              const state = crusadeState();
+              if (CRUSADE_ENEMY_INFO[enemy.type] && !state.archive.bestiary.includes(enemy.type)) {
+                state.archive.bestiary.push(enemy.type);
+                saveProgress();
+              }
+            }
+          }
+        } else if (ev.type === 'purityHit' && ev.broke) {
+          showToast('Purity Shield pecah — barisan itu bisa dilukai.', 1800);
+        }
       } else if (activeRunKind === 'fallen') {
         if (ev.type === 'gatePass') {
           const from = FALLEN_ROOM_BY_ID[ev.from];
@@ -9388,6 +9496,8 @@ function desiredTrack() {
   if (menuView === 'fairy') return 'faewood';
   if (menuView === 'fallenMenu') return 'forgotten';
   if (menuView === 'fallen') return 'lastvigil';
+  if (menuView === 'crusadeMenu') return 'hearth';
+  if (menuView === 'crusade') return 'cinderworks';
   if (started && !spectating && menuView === 'none') {
     if (game.state === 'victory') {
       if (activeRunKind === 'fairy' && game.roomIndex >= FAIRY_ROOM_START) return 'celebration';
@@ -9400,6 +9510,10 @@ function desiredTrack() {
     if (activeRunKind === 'fallen') {
       if (game.boss && game.state === 'playing') return bossTrackFor(game.boss.kind, game.boss._info?.music || 'bossDawn');
       return FALLEN_ROOM_BY_ID[game.roomIndex]?.music || 'forgotten';
+    }
+    if (activeRunKind === 'crusade') {
+      if (game.boss && game.state === 'playing') return bossTrackFor(game.boss.kind, 'bossJudge');
+      return CRUSADE_ROOM_BY_ID[game.roomIndex]?.music || 'cinderworks';
     }
     if (game.boss && game.state === 'playing') {
       return bossTrackFor(game.boss.kind, zoneForRoom(game.roomIndex).bossMusic || 'boss');
@@ -9463,6 +9577,7 @@ function frame(now) {
   pollGamepad();
   syncMusic(raw);
   if (activeRunKind === 'fallen' && started && !fallenEndingOpen) updateFallenHud();
+  if (activeRunKind === 'crusade' && started && !crusadeClearOpen) updateCrusadeHud();
 
   if (prologueActive) {
     const dt = Math.min(raw, 0.1);
@@ -9512,6 +9627,7 @@ function frame(now) {
         if (activeRunKind === 'atlas') tickAtlasRun(FIXED);
         if (activeRunKind === 'labyrinth') tickLabyrinth(FIXED);
         if (activeRunKind === 'fallen') tickFallen(FIXED);
+        if (activeRunKind === 'crusade') tickCrusade(FIXED);
         accumulator -= FIXED;
         steps += 1;
         if (game.state !== 'playing') {
@@ -10085,7 +10201,9 @@ function chooseFallenEnding(endingId) {
     return result;
   }
   const ending = result.ending;
+  unlockCrusade(progress);
   saveProgress();
+  updateMenuProgress();
   $('fallen-ending-title').textContent = `${ending.glyph} ${ending.localName.toUpperCase()} — ${ending.name.toUpperCase()}`;
   $('fallen-ending-body').innerHTML = `
     <p class="fallen-ending-result">${esc(ending.result)}</p>
@@ -10222,6 +10340,557 @@ function fallenKeydown(event) {
 }
 window.addEventListener('keydown', fallenKeydown);
 
+// ── Arc III: The Radiant Crusade ─────────────────────────────────────────
+// The war camp is a third menu skin. Rules live in src/crusade.js; this is
+// menus, the run shell, and the Valor Chain presentation.
+let crusadeTab = 'levels';
+let crusadeRun = null;
+let crusadeStartedAt = 0;
+let crusadeClearOpen = false;
+let crusadeHudKey = '';
+let crusadeLastBossHp = -1;
+let crusadeLastHp = -1;
+let crusadeBaseDamage = 1;
+let activeCrusadeLevel = 0;
+let activeCrusadeBoss = null;
+let crusadeBreakHintAt = 0;
+
+function crusadeState() {
+  if (!progress.crusade || typeof progress.crusade !== 'object') progress.crusade = defaultCrusadeProgress();
+  return progress.crusade;
+}
+
+function defaultMenuView() {
+  if (progress.crusade?.cleared) return 'crusadeMenu';
+  if (fallenIsAscended(progress) && fallenState().menuTheme !== 'base') return 'fallenMenu';
+  return 'title';
+}
+
+function showCrusadeMenu() {
+  cancelPrologue();
+  started = false;
+  paused = false;
+  shopOpen = false;
+  mapOpen = false;
+  codexOpen = false;
+  inventoryOpen = false;
+  settingsOpen = false;
+  fallenEndingOpen = false;
+  crusadeClearOpen = false;
+  fallenRun = null;
+  crusadeRun = null;
+  closeDialogue(true);
+  spectating = false;
+  spectateGame = null;
+  menuView = 'crusadeMenu';
+  game.reset();
+  game.events.length = 0;
+  clearHeldKeys();
+  buildCrusadeMenu();
+  updateMenuProgress();
+  syncScreens();
+}
+
+function showCrusade(tab = 'levels') {
+  cancelPrologue();
+  started = false;
+  paused = false;
+  shopOpen = false;
+  mapOpen = false;
+  codexOpen = false;
+  inventoryOpen = false;
+  settingsOpen = false;
+  fallenEndingOpen = false;
+  crusadeClearOpen = false;
+  closeDialogue(true);
+  spectating = false;
+  spectateGame = null;
+  crusadeTab = tab;
+  menuView = 'crusade';
+  game.reset();
+  game.events.length = 0;
+  clearHeldKeys();
+  buildCrusadeScreen();
+  syncScreens();
+}
+
+function crusadeMenuAction(id) {
+  if (id === 'continue' || id === 'levels') {
+    showCrusade('levels');
+  } else if (id === 'camp') {
+    showCrusade('camp');
+  } else if (id === 'rift') {
+    showToast('Celah itu belum bisa dibuka. Sesuatu di bawah sedang menunggu.', 2400);
+  } else if (id === 'heaven') {
+    showFallenMenu();
+  } else if (id === 'options') {
+    showSettings();
+  }
+}
+
+function drawCrusadeCamp(canvas, figure) {
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+  const w = canvas.width;
+  const h = canvas.height;
+  const sky = ctx.createLinearGradient(0, 0, 0, h);
+  sky.addColorStop(0, '#0e0a06');
+  sky.addColorStop(0.5, '#2c1e0c');
+  sky.addColorStop(1, '#4a2c10');
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, w, h);
+  if (figure.pose === 'rift') {
+    const crack = ctx.createLinearGradient(0, 0, 0, h * 0.6);
+    crack.addColorStop(0, 'rgba(255,90,60,0.85)');
+    crack.addColorStop(1, 'rgba(120,20,10,0)');
+    ctx.fillStyle = crack;
+    ctx.beginPath();
+    ctx.moveTo(w * 0.48, 0);
+    ctx.lineTo(w * 0.52, 0);
+    ctx.lineTo(w * 0.58, h * 0.62);
+    ctx.lineTo(w * 0.44, h * 0.62);
+    ctx.closePath();
+    ctx.fill();
+  }
+  // Camp tents.
+  for (let i = 0; i < 3; i += 1) {
+    const tx = w * (0.18 + i * 0.3);
+    ctx.fillStyle = i === 1 ? '#5a4020' : '#3c2a12';
+    ctx.beginPath();
+    ctx.moveTo(tx - 34, h * 0.8);
+    ctx.lineTo(tx, h * 0.52);
+    ctx.lineTo(tx + 34, h * 0.8);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(240,200,120,0.35)';
+    ctx.stroke();
+  }
+  // Campfire.
+  const fire = ctx.createRadialGradient(w * 0.5, h * 0.83, 2, w * 0.5, h * 0.83, 60);
+  fire.addColorStop(0, 'rgba(255,200,110,0.8)');
+  fire.addColorStop(1, 'rgba(255,140,40,0)');
+  ctx.fillStyle = fire;
+  ctx.fillRect(0, 0, w, h);
+  // Banner pole.
+  ctx.strokeStyle = '#d8b070';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(w * 0.78, h * 0.28);
+  ctx.lineTo(w * 0.78, h * 0.82);
+  ctx.stroke();
+  if (figure.banner) {
+    ctx.fillStyle = figure.pose === 'rift' ? '#8a2a1c' : '#c89438';
+    ctx.beginPath();
+    ctx.moveTo(w * 0.78, h * 0.28);
+    ctx.lineTo(w * 0.94, h * 0.34);
+    ctx.lineTo(w * 0.78, h * 0.42);
+    ctx.closePath();
+    ctx.fill();
+  }
+  // Embers.
+  for (let i = 0; i < 18; i += 1) {
+    const ex = ((i * 83) % w) + Math.sin(i * 1.7) * 8;
+    const ey = h - ((i * 37) % (h * 0.6));
+    ctx.fillStyle = i % 3 ? 'rgba(255,180,80,0.5)' : 'rgba(255,120,60,0.45)';
+    ctx.beginPath();
+    ctx.arc(ex, ey, i % 4 === 0 ? 2 : 1.2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  // The knight at the fire, growing with each cleared level.
+  if (figure.levels > 0 || figure.pose === 'rift') {
+    const cx = w * 0.5;
+    const baseY = h * 0.83;
+    ctx.fillStyle = figure.pose === 'rift' ? '#2a1010' : '#241808';
+    ctx.strokeStyle = 'rgba(255,220,160,0.7)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(cx, baseY - 52, 11, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(cx - 13, baseY - 40);
+    ctx.lineTo(cx + 13, baseY - 40);
+    ctx.lineTo(cx + 16, baseY - 4);
+    ctx.lineTo(cx - 16, baseY - 4);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(cx + 13, baseY - 36);
+    ctx.lineTo(cx + 30, baseY - 60);
+    ctx.stroke();
+  }
+}
+
+function buildCrusadeMenu() {
+  const el = $('crusade-menu-screen');
+  if (!el) return;
+  const state = crusadeState();
+  const summary = crusadeSummary(state);
+  const figure = crusadeCampFigure(state);
+  drawCrusadeCamp($('crusade-menu-figure'), figure);
+  const caption = figure.pose === 'rift'
+    ? 'Celah itu terbuka. Kau bisa mendengar sesuatu bernapas.'
+    : figure.pose === 'marching'
+      ? 'Kemah penuh. Barisan menunggu perintahmu.'
+      : figure.pose === 'camp'
+        ? 'Api kecil menyala. Satu panji berdiri.'
+        : 'Kemah itu masih kosong.';
+  $('crusade-menu-caption').textContent = caption;
+  $('crusade-menu-banner').textContent = figure.banner ? `${summary.banners}/${summary.bannerTotal} PANJI DIKIBARKAN` : 'BELUM ADA PANJI';
+  $('crusade-menu-summary').innerHTML = [
+    ['TINGKAT', `${summary.levelsCleared}/${summary.levelTotal}`],
+    ['BOS', `${summary.bossesCleared}/${summary.bossTotal}`],
+    ['PANJI', `${summary.banners}/${summary.bannerTotal}`],
+    ['SIGIL', String(summary.sigils)],
+    ['CHAIN', String(summary.bestChain)],
+  ].map(([label, value]) => `<div class="crusade-stat"><span>${label}</span><strong>${value}</strong></div>`).join('');
+  $('crusade-menu-options').innerHTML = CRUSADE_MENU_OPTIONS.map((option) => `
+    <button class="crusade-option" type="button" data-crusade-menu="${option.id}" ${option.locked ? 'disabled' : ''}>
+      <span>${esc(option.label)}${option.locked ? ' 🔒' : ''}</span>
+      <em>${esc(option.note)}</em>
+    </button>`).join('');
+  el.querySelectorAll('[data-crusade-menu]').forEach((button) => {
+    button.addEventListener('click', () => crusadeMenuAction(button.dataset.crusadeMenu));
+  });
+}
+
+function crusadeTabBody(tab, state) {
+  if (tab === 'levels') {
+    const levels = CRUSADE_LEVELS.map((level) => {
+      const unlocked = crusadeLevelUnlocked(state, level.index);
+      const cleared = state.bosses[level.boss] === true;
+      const bossUnlocked = crusadeBossUnlocked(state, level.boss);
+      const dots = Array.from({ length: CRUSADE_ROOMS_PER_LEVEL - 1 }, (_, slot) =>
+        `<i class="${state.rooms[level.roomStart + slot - CRUSADE_ROOM_START] ? 'done' : ''}"></i>`).join('');
+      return `<article class="crusade-level ${unlocked ? '' : 'locked'} ${cleared ? 'cleared' : ''}">
+        <header>
+          <span class="crusade-level-glyph" style="color:${level.color}">${level.glyph}</span>
+          <div><strong>${esc(level.localName)}</strong><em>${esc(level.name)} · ${esc(level.subtitle)}</em></div>
+          <span class="crusade-level-state">${cleared ? 'TUNTAS' : unlocked ? 'TERBUKA' : 'TERKUNCI'}</span>
+        </header>
+        <p>${esc(level.gimmick)}</p>
+        <div class="crusade-room-dots">${dots}<b class="${cleared ? 'done' : ''}">${esc(CRUSADE_BOSS_BY_ID[level.boss].localName)}</b></div>
+        <div class="crusade-level-actions">
+          <button class="btn btn-primary crusade-mini" type="button" data-crusade-level="${level.index}" ${unlocked ? '' : 'disabled'}><span>MASUK TINGKAT</span></button>
+          <button class="btn btn-ghost crusade-mini" type="button" data-crusade-boss="${level.boss}" ${bossUnlocked ? '' : 'disabled'}><span>${cleared ? 'ULANGI BOS' : 'HADAPI BOS'}</span></button>
+        </div>
+      </article>`;
+    }).join('');
+    return `<div class="crusade-levels">${levels}</div>`;
+  }
+  if (tab === 'banners') {
+    const archive = crusadeArchive(state);
+    return `<p class="crusade-note">Panji adalah hadiah tetap dari setiap bos. Mereka tidak bisa hilang saat kau gugur.</p>
+      <div class="crusade-grid">${archive.banners.map((banner) => `
+        <article class="crusade-card ${banner.earned ? 'earned' : 'unseen'}">
+          <strong>⚑ ${esc(banner.name)}</strong>
+          <em>${banner.earned ? 'DIKIBARKAN' : 'TERKUNCI'}</em>
+          <p>${esc(banner.desc)}</p>
+          <span class="crusade-card-meta">${esc(banner.localName)}</span>
+        </article>`).join('')}</div>`;
+  }
+  if (tab === 'bestiary') {
+    const archive = crusadeArchive(state);
+    return `<div class="crusade-grid">${archive.bestiary.map((enemy) => `
+      <article class="crusade-card ${enemy.seen ? '' : 'unseen'}">
+        <strong>${esc(enemy.name)}</strong>
+        <em>${esc(enemy.title)}${enemy.elite ? ' · ELITE' : ''}</em>
+        <p>${esc(enemy.desc)}</p>
+        <span class="crusade-card-meta">${enemy.seen ? `HP ${enemy.hp} · DMG ${enemy.dmg} · ${enemy.behavior}` : 'Belum terlihat'}</span>
+      </article>`).join('')}</div>`;
+  }
+  if (tab === 'camp') {
+    const upgrades = CRUSADE_UPGRADES.map((upgrade) => {
+      const tier = state.upgrades[upgrade.id] || 0;
+      const maxed = tier >= upgrade.tiers.length;
+      const cost = maxed ? 0 : upgrade.tiers[tier].cost;
+      return `<article class="crusade-card earned">
+        <strong>${esc(upgrade.name)}</strong><em>${tier}/${upgrade.tiers.length}${maxed ? ' · MAKS' : ` · ${cost} SIGIL`}</em>
+        <p>${esc(upgrade.desc)}</p>
+        <button class="btn btn-ghost crusade-mini" type="button" data-crusade-upgrade="${upgrade.id}" ${maxed ? 'disabled' : ''}><span>NAIKKAN</span></button>
+      </article>`;
+    }).join('');
+    return `<p class="crusade-note">Sigil Perang: <strong>${state.sigils}</strong>. Dibawa dari bos dan dipakai permanen di Kemah Perang.</p>
+      <div class="crusade-grid">${upgrades}</div>`;
+  }
+  const archive = crusadeArchive(state);
+  const summary = crusadeSummary(state);
+  return `<div class="crusade-archive">
+    <p class="crusade-note">${esc(CRUSADE_SUBTITLE)}</p>
+    <h3 class="crusade-section-title">PANJI BOS</h3>
+    <div class="crusade-grid">${archive.bosses.map((boss) => `<article class="crusade-card ${boss.cleared ? 'earned' : 'unseen'}"><strong>${boss.glyph} ${esc(boss.name)}</strong><em>${boss.cleared ? 'GUGUR' : 'BELUM'}</em><p>${esc(boss.title)}</p><span class="crusade-card-meta">${boss.phases} fase · ${boss.maxHp} HP</span></article>`).join('')}</div>
+    <h3 class="crusade-section-title">STATISTIK PERANG</h3>
+    <div class="crusade-stat-row"><span>Turun</span><strong>${summary.runs}</strong><span>Gugur</span><strong>${summary.deaths}</strong><span>Chain</span><strong>${summary.bestChain}</strong><span>Strike</span><strong>${summary.strikes}</strong></div>
+    <div class="crusade-rift">
+      <strong>THE RIFT · ${CRUSADE_RIFT.locked ? 'TERKUNCI' : 'TERBUKA'}</strong>
+      <p>${summary.arc4Hook ? 'Zirah Paladin kosong, dan sesuatu di dalamnya sudah pergi. Celah di langit masih hangat.' : 'Gerbang Penghakiman belum jatuh. Celah di langit masih tertutup.'}</p>
+      <p class="crusade-card-meta">${esc(CRUSADE_RIFT.note)} · Arc IV belum dirancang.</p>
+    </div>
+    <p class="micro">The Radiant Crusade · ${summary.roomsCleared}/${summary.roomTotal} ruang · ${summary.percent}% arsip lengkap.</p>
+  </div>`;
+}
+
+function buildCrusadeScreen() {
+  const el = $('crusade-screen');
+  if (!el) return;
+  const state = crusadeState();
+  const summary = crusadeSummary(state);
+  $('crusade-summary').innerHTML = [
+    ['TINGKAT', `${summary.levelsCleared}/${summary.levelTotal}`],
+    ['BOS', `${summary.bossesCleared}/${summary.bossTotal}`],
+    ['PANJI', `${summary.banners}/${summary.bannerTotal}`],
+    ['SIGIL', String(summary.sigils)],
+    ['CHAIN', String(summary.bestChain)],
+  ].map(([label, value]) => `<div class="crusade-stat"><span>${label}</span><strong>${value}</strong></div>`).join('');
+  const tabs = [
+    ['levels', 'TINGKAT'],
+    ['banners', 'PANJI'],
+    ['bestiary', 'BESTIARY'],
+    ['camp', 'KEMAH'],
+    ['archive', 'ARSIP'],
+  ];
+  $('crusade-tabs').innerHTML = tabs.map(([id, label]) => `<button class="crusade-tab ${crusadeTab === id ? 'active' : ''}" type="button" data-crusade-tab="${id}">${label}</button>`).join('');
+  const body = $('crusade-body');
+  body.innerHTML = crusadeTabBody(crusadeTab, state);
+  $('crusade-tabs').querySelectorAll('[data-crusade-tab]').forEach((button) => {
+    button.addEventListener('click', () => { crusadeTab = button.dataset.crusadeTab; buildCrusadeScreen(); });
+  });
+  body.querySelectorAll('[data-crusade-level]').forEach((button) => {
+    button.addEventListener('click', () => startCrusadeLevel(Number(button.dataset.crusadeLevel)));
+  });
+  body.querySelectorAll('[data-crusade-boss]').forEach((button) => {
+    button.addEventListener('click', () => startCrusadeBoss(button.dataset.crusadeBoss));
+  });
+  body.querySelectorAll('[data-crusade-upgrade]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const result = buyCrusadeUpgrade(crusadeState(), button.dataset.crusadeUpgrade);
+      if (!result.ok) {
+        showToast(result.reason === 'sigils' ? `Butuh ${result.cost} Sigil Perang.` : 'Sudah maksimal.', 1800);
+        return;
+      }
+      saveProgress();
+      showToast(`Peningkatan dibeli · ${result.value}`, 1800);
+      buildCrusadeScreen();
+    });
+  });
+}
+
+function startCrusadeLevel(levelIndex, { slot = 0 } = {}) {
+  const state = crusadeState();
+  if (!crusadeLevelUnlocked(state, levelIndex)) {
+    showToast('Tingkat itu masih tertutup — jatuhkan bos sebelumnya.', 2200);
+    return;
+  }
+  const config = crusadeRunConfig(state, levelIndex);
+  activeCrusadeLevel = config.level.index;
+  activeCrusadeBoss = null;
+  let entry = clamp(Number(slot) || 0, 0, CRUSADE_ROOMS_PER_LEVEL - 1);
+  while (entry > 0 && !crusadeRoomUnlocked(state, config.level.roomStart + entry)) entry -= 1;
+  beginCrusadeRun(config.level.roomStart + entry, config.run);
+}
+
+function startCrusadeBoss(bossId) {
+  const state = crusadeState();
+  const boss = CRUSADE_BOSS_BY_ID[bossId];
+  if (!boss) return;
+  if (!crusadeBossUnlocked(state, bossId)) {
+    showToast('Bos itu masih tertahan di balik barisan.', 2000);
+    return;
+  }
+  const config = crusadeRunConfig(state, boss.levelIndex);
+  activeCrusadeLevel = boss.levelIndex;
+  activeCrusadeBoss = boss.id;
+  beginCrusadeRun(boss.roomIndex, config.run);
+}
+
+function beginCrusadeRun(roomIndex, run) {
+  audio.init();
+  attempts = 1;
+  coopGuestMode = false;
+  coopGuestRoom = -1;
+  labRun = null;
+  labDirector = null;
+  speedrunRun = null;
+  fallenRun = null;
+  fallenEndingOpen = false;
+  crusadeClearOpen = false;
+  activeRunKind = 'crusade';
+  crusadeRun = run;
+  crusadeStartedAt = performance.now();
+  crusadeLastBossHp = -1;
+  crusadeLastHp = 0;
+  crusadeHudKey = '';
+  game.labyrinth = false;
+  game.reset();
+  applyCharacterToGame();
+  applySkinToGame();
+  game.player.relic = true;
+  game.enterRoom(roomIndex);
+  game.player.maxHp = run.maxHp;
+  game.player.hp = run.maxHp;
+  // Seed the damage watcher with the boss that just spawned so the opening
+  // hit counts toward the Valor Chain instead of being swallowed.
+  crusadeLastBossHp = game.boss ? game.boss.hp : -1;
+  crusadeBaseDamage = game.player.damageMult || 1;
+  game.player.damageMult = crusadeBaseDamage;
+  game.ash = Math.max(game.ash, 60);
+  crusadeLastHp = game.player.hp;
+  game.events.length = 0;
+  started = true;
+  paused = false;
+  shopOpen = false;
+  mapOpen = false;
+  codexOpen = false;
+  inventoryOpen = false;
+  settingsOpen = false;
+  closeDialogue(true);
+  spectating = false;
+  spectateGame = null;
+  menuView = 'none';
+  lastGameState = 'playing';
+  accumulator = 0;
+  lastTime = performance.now();
+  clearHeldKeys();
+  discoverCurrentRoom(roomIndex);
+  showBanner(game.room.name, game.room.subtitle);
+  showToast(`⚑ ${CRUSADE_LOCAL_NAME} — ${CRUSADE_LEVELS[activeCrusadeLevel]?.localName || 'Barisan'}`, 2600);
+  syncScreens();
+  updateHud();
+  updateCrusadeHud(true);
+}
+
+function handleCrusadeBoss(ev) {
+  const room = CRUSADE_ROOM_BY_ID[ev.room];
+  const bossId = room?.crusadeBoss;
+  if (!bossId) return;
+  const boss = CRUSADE_BOSS_BY_ID[bossId];
+  const result = recordCrusadeBoss(crusadeState(), bossId);
+  activeCrusadeBoss = null;
+  if (!result.ok) return;
+  game.player.hp = Math.min(game.player.maxHp, game.player.hp + game.player.maxHp * 0.25);
+  if (result.firstClear) {
+    saveProgress();
+    updateMenuProgress();
+    const banner = result.banner ? ` · panji ${CRUSADE_BANNERS.find((b) => b.id === result.banner)?.name || result.banner}` : '';
+    showToast(`⚑ ${boss.name} gugur · +${result.sigils} Sigil${banner}`, 3000);
+  }
+  if (boss.final) {
+    recordCrusadeRun(crusadeState(), Math.max(1, (performance.now() - crusadeStartedAt) / 1000), { won: true });
+    saveProgress();
+    updateMenuProgress();
+    openCrusadeClear();
+  }
+}
+
+function openCrusadeClear() {
+  crusadeClearOpen = true;
+  const summary = crusadeSummary(crusadeState());
+  $('crusade-clear-title').textContent = 'ZIRAHTU KOSONG';
+  $('crusade-clear-body').innerHTML = `
+    <p>Paladin Templar jatuh. Zirahnya kosong, dan di dalamnya ada nyala merah yang tidak pernah berasal dari surga.</p>
+    <div class="crusade-rift">
+      <strong>CELAH TERBUKA</strong>
+      <p>Sebuah garis merah membelah langit di atas Gerbang Penghakiman. Paduan suara berhenti di tengah nada. Dari celah itu, satu suara berkata: <em>“Terima kasih telah membuka pintunya.”</em></p>
+    </div>
+    <p class="crusade-card-meta">${summary.levelsCleared}/5 tingkat · ${summary.bossesCleared}/5 bos · ${summary.banners}/5 panji · ${summary.sigils} Sigil · Arc IV: The Devilish Scum masih terkunci.</p>`;
+  $('crusade-clear-options').innerHTML = `
+    <button class="btn btn-primary" type="button" id="crusade-clear-camp"><span>KEMBALI KE KEMAH PERANG</span></button>
+    <button class="btn btn-ghost" type="button" id="crusade-clear-heaven"><span>MENU LANGIT</span></button>`;
+  $('crusade-clear-camp').addEventListener('click', () => {
+    crusadeClearOpen = false;
+    crusadeRun = null;
+    showCrusadeMenu();
+  });
+  $('crusade-clear-heaven').addEventListener('click', () => {
+    crusadeClearOpen = false;
+    crusadeRun = null;
+    showFallenMenu();
+  });
+  syncScreens();
+}
+
+function crusadeStrike() {
+  if (activeRunKind !== 'crusade' || !crusadeRun) return { ok: false };
+  const result = crusaderStrike(crusadeRun);
+  if (!result.ok) {
+    showToast(`Valor Chain butuh ${result.need || 5} untuk Crusader Strike. Pukul tanpa terkena.`, 2200);
+    updateCrusadeHud(true);
+    return result;
+  }
+  const boss = game.boss;
+  if (boss && !boss.dying) {
+    if (boss.purityShield > 0) boss.purityShield = Math.max(0, boss.purityShield - result.shieldBreak);
+    const broken = boss.kind === 'crusade_giant_paladin' && boss.phase >= 2 ? breakPaladinChain(boss) : null;
+    game.hurtBoss(result.damage);
+    if (broken?.broke) showToast('Chain Paladin pecah — ia terhuyung!', 2200);
+  }
+  showToast(`⚔ CRUSADER STRIKE — ${result.damage} damage · chain ${Math.floor(result.valor)}`, 2200);
+  updateCrusadeHud(true);
+  return result;
+}
+
+function tickCrusade(dt) {
+  if (activeRunKind !== 'crusade' || !crusadeRun) return;
+  const player = game.player;
+  const boss = game.boss;
+  if (boss && !boss.dying) {
+    if (crusadeLastBossHp < 0) crusadeLastBossHp = boss.hp;
+    if (boss.hp < crusadeLastBossHp) {
+      const damage = crusadeLastBossHp - boss.hp;
+      crusadeLastBossHp = boss.hp;
+      valorHit(crusadeRun, { damage });
+    }
+    if (boss.kind === 'crusade_giant_paladin' && boss.phase >= 2) {
+      paladinChainTick(boss, dt, true);
+    }
+  } else {
+    crusadeLastBossHp = -1;
+  }
+  if (player.hp < crusadeLastHp - 0.01) {
+    const broke = valorBreak(crusadeRun);
+    const now = performance.now();
+    if (broke.lost >= 3 && now - crusadeBreakHintAt > 4000) {
+      crusadeBreakHintAt = now;
+      showToast(`Valor Chain patah (−${Math.floor(broke.lost)}). Jangan terkena.`, 1800);
+    }
+  }
+  crusadeLastHp = player.hp;
+  player.damageMult = crusadeBaseDamage * valorMultiplier(crusadeRun);
+}
+
+function updateCrusadeHud(force = false) {
+  const hud = $('crusade-hud');
+  if (!hud) return;
+  if (activeRunKind !== 'crusade' || !crusadeRun) {
+    hud.classList.add('hidden');
+    return;
+  }
+  hud.classList.remove('hidden');
+  const bossChain = game.boss?.kind === 'crusade_giant_paladin' ? (game.boss.valorChain || 0) : 0;
+  const key = `${Math.floor(crusadeRun.valor)}|${crusadeRun.valorMax}|${crusadeRun.strikes}|${crusadeRun.banners.length}|${bossChain}|${crusadeState().sigils}`;
+  if (!force && key === crusadeHudKey) return;
+  crusadeHudKey = key;
+  const pct = Math.max(0, Math.min(1, crusadeRun.valor / (crusadeRun.valorMax || 10))) * 100;
+  $('crusade-valor-fill').style.width = `${pct}%`;
+  $('crusade-valor-text').textContent = valorStrikeReady(crusadeRun) ? `⚔ STRIKE ${Math.floor(crusadeRun.valor)}` : `CHAIN ${Math.floor(crusadeRun.valor)}`;
+  $('crusade-sigils').textContent = `⚑ ${crusadeState().sigils || 0}`;
+  $('crusade-banners').textContent = crusadeRun.banners.length ? `PANJI ${crusadeRun.banners.length}` : 'TANPA PANJI';
+  $('crusade-boss-chain').textContent = bossChain ? `CHAIN PALADIN ${bossChain}/5` : '';
+  const strike = hud.querySelector('[data-crusade-action="strike"]');
+  if (strike) strike.disabled = !valorStrikeReady(crusadeRun);
+}
+
+function crusadeKeydown(event) {
+  if (activeRunKind !== 'crusade' || !started || menuView !== 'none' || crusadeClearOpen) return;
+  if (event.code === 'KeyG') {
+    event.preventDefault();
+    crusadeStrike();
+  }
+}
+window.addEventListener('keydown', crusadeKeydown);
+
 // ── debug hooks (used by automated smoke tests) ─────────────────────────
 window.__ashen = {
   get speedrun() {
@@ -10261,6 +10930,51 @@ window.__ashen = {
       endingOpen: fallenEndingOpen,
       menuTheme: fallenState().menuTheme,
     };
+  },
+  get crusade() {
+    return {
+      state: crusadeState(),
+      summary: crusadeSummary(crusadeState()),
+      archive: crusadeArchive(crusadeState()),
+      camp: crusadeCampFigure(crusadeState()),
+      tab: crusadeTab,
+      run: crusadeRun
+        ? {
+            hp: crusadeRun.maxHp,
+            valor: Math.round(crusadeRun.valor),
+            valorMax: crusadeRun.valorMax,
+            strikes: crusadeRun.strikes,
+            banners: [...crusadeRun.banners],
+          }
+        : null,
+      activeLevel: activeCrusadeLevel,
+      activeBoss: activeCrusadeBoss,
+      clearOpen: crusadeClearOpen,
+      rift: CRUSADE_RIFT,
+    };
+  },
+  showCrusadeMenu,
+  showCrusade,
+  buildCrusadeMenu,
+  buildCrusadeScreen,
+  startCrusadeLevel,
+  startCrusadeBoss,
+  crusadeStrike,
+  unlockCrusadeNow() {
+    const result = unlockCrusade(progress);
+    if (result.ok) saveProgress();
+    updateMenuProgress();
+    return result;
+  },
+  buyCrusadeUpgrade(id) {
+    const result = buyCrusadeUpgrade(crusadeState(), id);
+    if (result.ok) saveProgress();
+    return result;
+  },
+  addCrusadeSigils(n) {
+    const result = addCrusadeSigils(crusadeState(), n);
+    saveProgress();
+    return result;
   },
   showFallenMenu,
   showFallen,
@@ -10631,7 +11345,14 @@ window.__ashen = {
   step(seconds = 0.1, input = {}) {
     const frames = Math.max(1, Math.round(seconds / FIXED));
     const merged = { ...inputSnapshot(), ...input };
-    for (let i = 0; i < frames; i++) game.update(FIXED, merged);
+    for (let i = 0; i < frames; i++) {
+      game.update(FIXED, merged);
+      // Match the render loop so arc resources advance under test too.
+      if (activeRunKind === 'atlas') tickAtlasRun(FIXED);
+      if (activeRunKind === 'labyrinth') tickLabyrinth(FIXED);
+      if (activeRunKind === 'fallen') tickFallen(FIXED);
+      if (activeRunKind === 'crusade') tickCrusade(FIXED);
+    }
     syncScreens();
     updateHud();
   },
@@ -10710,7 +11431,10 @@ updateMenuProgress();
 buildLevelCards();
 applyCharacterToGame();
 applySettings();
-if (fallenIsAscended(progress) && fallenState().menuTheme !== 'base') {
+if (progress.crusade?.cleared) {
+  menuView = 'crusadeMenu';
+  buildCrusadeMenu();
+} else if (fallenIsAscended(progress) && fallenState().menuTheme !== 'base') {
   menuView = 'fallenMenu';
   buildFallenMenu();
 }
