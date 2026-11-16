@@ -28,9 +28,26 @@ test('update log is complete and ordered newest first', () => {
   }
 });
 
-test('the latest update documents fishing, bait tiers and the fish index', () => {
+test('the latest update documents The Fallen Ones arc', () => {
   const latest = LATEST_UPDATE;
-  assert.equal(latest.version, '0.12.0');
+  assert.equal(latest.version, '0.13.0');
+  const text = [latest.summary, ...latest.highlights, ...(latest.fixes || [])].join(' ');
+  assert.match(text, /The Fallen Ones/i);
+  assert.match(text, /tujuh wilayah|7 wilayah/i);
+  assert.match(text, /sebelas bos|11 bos/i);
+  assert.match(text, /39 ruang|tiga puluh sembilan/i);
+  assert.match(text, /Radiance/i);
+  assert.match(text, /Judgment Mark/i);
+  assert.match(text, /Purity Shield/i);
+  assert.match(text, /Shadow Stance/i);
+  assert.match(text, /Eclipse/i);
+  assert.match(text, /progress\.fallen/i);
+  assert.match(text, /322 test/i);
+});
+
+test('the update log still documents fishing, bait tiers and the fish index', () => {
+  const latest = UPDATE_LOG.find((entry) => entry.version === '0.12.0');
+  assert.ok(latest);
   const text = [latest.summary, ...latest.highlights, ...(latest.fixes || [])].join(' ');
   assert.match(text, /umpan/i);
   assert.match(text, /25 ikan|dua puluh lima ikan/i);

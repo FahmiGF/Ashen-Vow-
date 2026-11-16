@@ -83,13 +83,13 @@ test('court defines 6 zones, 60 rooms, 24 enemies, 12 bosses, 8 weapons and 12 t
   assert.equal(HOUSE_ROOMS.length, 6);
   assert.equal(HOUSE_FURNISHINGS.length, 24);
   assert.equal(HOUSE_RESIDENTS.length, 8);
-  assert.equal(ALL_ROOMS.length, 14 + 100 + 240 + 60 + 12);
+  assert.equal(ALL_ROOMS.length, 14 + 100 + 240 + 60 + 12 + 39);
   assert.equal(ALL_ROOMS[COURT_ROOM_START], COURT_ROOMS[0]);
   assert.equal(ALL_ROOMS[COURT_ROOM_START + 59], COURT_ROOMS[59]);
-  assert.equal(Object.keys(ALL_ENEMY_INFO).length, 7 + 100 + Object.keys(ATLAS_ENEMY_INFO).length + 24 + 10);
+  assert.equal(Object.keys(ALL_ENEMY_INFO).length, 7 + 100 + Object.keys(ATLAS_ENEMY_INFO).length + 24 + 10 + 17);
   assert.equal(
     Object.keys(ALL_BOSS_INFO).length,
-    6 + 30 + Object.keys(ATLAS_BOSS_INFO).length + 12 + Object.keys(PACK_BOSS_INFO).length + 2,
+    6 + 30 + Object.keys(ATLAS_BOSS_INFO).length + 12 + Object.keys(PACK_BOSS_INFO).length + 2 + 11,
   );
   for (const weapon of COURT_WEAPONS) {
     assert.ok(WEAPONS[weapon.id], `${weapon.id} must be exposed by core`);

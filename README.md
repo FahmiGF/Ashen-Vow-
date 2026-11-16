@@ -1,4 +1,23 @@
-# Ashen Vow — v0.12.0
+# Ashen Vow — v0.13.0
+
+## The Fallen Ones — Yang Terjatuh (v0.13.0)
+
+Setelah The Oathbreaker gugur, langit terbuka. Ashen Vow menjadi dua game dalam satu simpanan: menu kedua bertema surgawi, tujuh wilayah langit, sebelas bos, empat mekanisme tempur baru, dan tiga akhiran.
+
+- **Menu kedua:** begitu ruang 7 dunia bawah tuntas, layar utama digantikan **THE FALLEN ONES** — tema surgawi, sosok berlutut yang berubah pose mengikuti progres dan akhiran, serta opsi **NEW DESCENT**, **CONTINUE**, **THE ARCHIVE**, **THE BELOW**, **OPTIONS**, dan **QUIT**. Dunia bawah tetap bisa dimainkan lewat **THE BELOW**, dan tombol `THE FALLEN ONES` muncul di menu dasar setelah ascensi.
+- **Tujuh wilayah, 39 ruang:** The Gilded Ruins, Cloudspire Steppes, The Choir Hollow, Seraph Foundry, Mirror Aviary, Pale Cathedral, dan Last Heaven. Setiap wilayah punya empat ruang plus ruang bos; empat ruang bos opsional membuka akhiran rahasia. Semua ruang memakai id **426–464** di `ALL_ROOMS` dan tidak menyentuh 14 ruang lama.
+- **Sebelas bos:** tujuh bos cerita (Aurelian, Zephyria, Cantor, Aurum, Specula, Sanctus, Seraphiel) dan empat bos opsional. Setiap bos punya 2–3 fase, **Purity Shield**, dan dialog `intro`/`phaseN`/`defeat`.
+- **Enam kemampuan berurutan:** Halo Dash, Feather Glide, Resonance Strike, Gilded Guard, Reflect Step, dan Absolution. Kemampuan di-reset saat masuk arc; hanya Echoes, bestiary, kosmetik, dan identitas simpanan yang dibawa.
+- **Radiance & Blinding Burst:** kerusakan ke bos mengisi Radiance; saat penuh, Burst menghancurkan Purity Shield dan menstun bos. Tombol HUD atau `B`.
+- **Judgment Mark:** mark menempel saat kau terkena dan meledak bila kau diam; bergerak atau menyerang membatalkannya, dan Absolution membersihkan semuanya (`N`).
+- **Shadow Stance:** damage +35% sambil menguras nyawa dengan lantai 15% HP. Terbuka setelah Aurelian atau lima kemampuan (`V`).
+- **Purity Shield nyata di engine:** selama shield hidup, serangan biasa hanya meneruskan 15% damage ke HP; Burst, parry, dan Shadow adalah jawabannya. Shield pecah memicu efek dan toast.
+- **Tiga akhiran:** **Dawn**, **Dusk**, dan **Eclipse**. Eclipse mensyaratkan keempat bos opsional; sanitizer menolak Eclipse palsu pada save yang belum menuntaskan semuanya.
+- **Echoes carry-over:** lima gema permanen dihitung dari progres dunia bawah — ruang 8, ruang 13, 14 ruang ditemukan, 20 koleksi ekspansi, dan uji court — dibatasi lima dan disimpan di `progress.fallen`.
+- **Shards of Halo:** mata uang meta dari bos pertama-kali, dipakai untuk empat peningkatan permanen (health, radiance, damage, weapon) dan senjata langit di tab **SERPIHAN**.
+- **Hub lima tab:** Wilayah, Bestiary (17 musuh nyata + 6 elite), Gema, Serpihan, dan Arsip (tiga akhiran, statistik, kemampuan).
+- **Musik tanpa aset baru:** wilayah memakai track yang sudah ada (`reliquary`, `stormexpanse`, `hollowcourt`, `cinderworks`, `glassorchard`, `lastvigil`, `forgotten`) dan bos memakai `bossDawn`/`bossJudge`.
+- **Test & smoke:** `tests/fallen.test.js` menambah **30 test** deterministik (geometri 39 ruang, validasi gerbang, dialog bos, aturan unlock, sanitizer, akhiran, gema, ekonomi serpihan, mekanik Radiance/Judgment/Shadow/Purity, integrasi bos nyata), sehingga total suite menjadi **322 test deterministik**. `npm run smoke:fallen` menjalankan **39 check** di browser nyata: menu surgawi, hub, run wilayah, bos dengan Purity Shield, kill nyata, hadiah serpihan, gerbang akhiran, dan persistensi setelah reload tanpa error konsol.
 
 ## Pondok Umpan — Memancing (v0.12.0)
 

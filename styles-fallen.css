@@ -1,0 +1,612 @@
+/* Ashen Vow — The Fallen Ones (Arc II) UI.
+   Loaded last so the heavenly menu takeover, the arc hub, the ending screen,
+   and the in-run Radiance HUD can be styled without touching older screens.
+   Everything is fluid: single-column below 520 px, no horizontal scroll. */
+
+/* ── Second menu screen ─────────────────────────────────────────────────── */
+.fallen-menu-screen {
+  background:
+    radial-gradient(circle at 50% 12%, rgba(255, 228, 168, 0.16), transparent 42%),
+    radial-gradient(circle at 20% 80%, rgba(120, 92, 180, 0.14), transparent 55%),
+    linear-gradient(180deg, #08060f 0%, #151022 55%, #241a18 100%);
+}
+
+.fallen-menu-inner {
+  width: min(1120px, 100%);
+}
+
+.fallen-eyebrow {
+  color: #e8c46a;
+  letter-spacing: 0.22em;
+}
+
+.fallen-title {
+  margin: 6px 0 4px;
+  font-family: var(--font-display, 'Cinzel'), serif;
+  font-size: clamp(2rem, 6vw, 4rem);
+  letter-spacing: 0.06em;
+  color: #f6ecd8;
+  text-shadow: 0 0 26px rgba(255, 220, 150, 0.35);
+}
+
+.fallen-title span {
+  display: inline-block;
+  margin-left: 0.32em;
+  color: #e8c46a;
+}
+
+.fallen-subtitle {
+  margin: 0 0 18px;
+  color: #cdbfa8;
+  font-style: italic;
+}
+
+.fallen-menu-layout {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.9fr) minmax(280px, 1.1fr);
+  gap: clamp(14px, 3vw, 28px);
+  align-items: start;
+}
+
+@media (max-width: 760px) {
+  .fallen-menu-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.fallen-figure-wrap {
+  display: grid;
+  gap: 6px;
+  justify-items: center;
+  padding: 12px;
+  border: 1px solid rgba(232, 196, 106, 0.24);
+  border-radius: 14px;
+  background: rgba(10, 8, 16, 0.55);
+}
+
+#fallen-menu-figure {
+  width: 100%;
+  height: auto;
+  max-width: 360px;
+  border-radius: 10px;
+}
+
+.fallen-caption {
+  margin: 0;
+  color: #d8c8a8;
+  font-style: italic;
+  text-align: center;
+}
+
+.fallen-movement-label {
+  margin: 0;
+  color: #e8c46a;
+  font-size: 0.78rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.fallen-menu-side {
+  display: grid;
+  gap: 12px;
+}
+
+.fallen-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(112px, 100%), 1fr));
+  gap: 8px;
+}
+
+.fallen-stat {
+  display: grid;
+  gap: 2px;
+  padding: 8px 10px;
+  border: 1px solid rgba(232, 196, 106, 0.22);
+  border-radius: 10px;
+  background: rgba(12, 9, 18, 0.6);
+}
+
+.fallen-stat span {
+  font-size: 0.66rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #a89878;
+}
+
+.fallen-stat strong {
+  font-size: 1.06rem;
+  color: #f4e6c8;
+}
+
+.fallen-options {
+  display: grid;
+  gap: 7px;
+}
+
+.fallen-option {
+  display: grid;
+  gap: 2px;
+  padding: 10px 14px;
+  text-align: left;
+  border: 1px solid rgba(232, 196, 106, 0.28);
+  border-radius: 10px;
+  background: linear-gradient(180deg, rgba(42, 32, 20, 0.8), rgba(16, 12, 22, 0.9));
+  color: #f2e6ce;
+  cursor: pointer;
+  transition: border-color 0.16s ease, transform 0.16s ease, background 0.16s ease;
+}
+
+.fallen-option:hover,
+.fallen-option:focus-visible {
+  border-color: #e8c46a;
+  background: linear-gradient(180deg, rgba(62, 48, 26, 0.92), rgba(20, 14, 26, 0.95));
+  transform: translateY(-1px);
+  outline: none;
+}
+
+.fallen-option span {
+  letter-spacing: 0.16em;
+  font-size: 0.92rem;
+}
+
+.fallen-option em {
+  font-size: 0.74rem;
+  color: #b9a888;
+  font-style: normal;
+}
+
+.fallen-theme-btn {
+  justify-self: start;
+}
+
+.fallen-menu-progress {
+  margin-top: 6px;
+  color: #d8b878;
+}
+
+/* ── Arc hub ────────────────────────────────────────────────────────────── */
+.fallen-inner {
+  width: min(1180px, 100%);
+}
+
+.fallen-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 12px 0;
+}
+
+.fallen-tab {
+  padding: 7px 12px;
+  border: 1px solid rgba(232, 196, 106, 0.26);
+  border-radius: 999px;
+  background: rgba(14, 10, 20, 0.7);
+  color: #cdbd9c;
+  font-size: 0.74rem;
+  letter-spacing: 0.12em;
+  cursor: pointer;
+}
+
+.fallen-tab.active {
+  border-color: #e8c46a;
+  color: #1a1208;
+  background: linear-gradient(180deg, #f0d68e, #d8b060);
+}
+
+.fallen-body {
+  display: grid;
+  gap: 14px;
+  margin-top: 6px;
+}
+
+.fallen-regions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
+  gap: 12px;
+}
+
+.fallen-region {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid rgba(232, 196, 106, 0.26);
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(30, 24, 18, 0.82), rgba(12, 10, 18, 0.92));
+}
+
+.fallen-region.cleared {
+  border-color: rgba(150, 220, 190, 0.4);
+}
+
+.fallen-region.locked {
+  opacity: 0.55;
+  filter: grayscale(0.5);
+}
+
+.fallen-region header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.fallen-region header div {
+  flex: 1;
+  display: grid;
+  gap: 1px;
+}
+
+.fallen-region header strong {
+  color: #f4e6c8;
+}
+
+.fallen-region header em {
+  font-size: 0.72rem;
+  color: #a89878;
+  font-style: normal;
+}
+
+.fallen-region-glyph {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.fallen-region-state {
+  font-size: 0.66rem;
+  letter-spacing: 0.12em;
+  color: #d8b878;
+}
+
+.fallen-region p {
+  margin: 0;
+  color: #bfb098;
+  font-size: 0.82rem;
+}
+
+.fallen-room-dots {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+.fallen-room-dots i {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  border: 1px solid rgba(232, 196, 106, 0.5);
+}
+
+.fallen-room-dots i.done {
+  background: #e8c46a;
+  box-shadow: 0 0 8px rgba(232, 196, 106, 0.6);
+}
+
+.fallen-room-dots b {
+  font-size: 0.7rem;
+  color: #a89878;
+  font-weight: 500;
+}
+
+.fallen-room-dots b.done {
+  color: #9fe0c0;
+}
+
+.fallen-region-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.fallen-mini {
+  min-width: 0;
+  padding: 7px 10px;
+  font-size: 0.7rem;
+}
+
+.fallen-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
+  gap: 10px;
+}
+
+.fallen-card {
+  display: grid;
+  gap: 4px;
+  align-content: start;
+  padding: 11px;
+  border: 1px solid rgba(232, 196, 106, 0.22);
+  border-radius: 10px;
+  background: rgba(14, 11, 20, 0.72);
+  color: #e8dcc4;
+  text-align: left;
+}
+
+.fallen-card.earned {
+  border-color: rgba(232, 196, 106, 0.5);
+}
+
+.fallen-card.unseen {
+  opacity: 0.55;
+}
+
+.fallen-card strong {
+  color: #f4e6c8;
+  font-size: 0.9rem;
+}
+
+.fallen-card em {
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  color: #c8a860;
+  font-style: normal;
+}
+
+.fallen-card p {
+  margin: 0;
+  font-size: 0.78rem;
+  color: #b3a48c;
+}
+
+.fallen-card-meta {
+  font-size: 0.68rem;
+  color: #8f8168;
+}
+
+.fallen-card.weapon {
+  cursor: pointer;
+  font: inherit;
+}
+
+.fallen-section-title {
+  margin: 6px 0 0;
+  font-size: 0.82rem;
+  letter-spacing: 0.16em;
+  color: #d8b878;
+  text-transform: uppercase;
+}
+
+.fallen-note {
+  margin: 0;
+  padding: 9px 12px;
+  border-left: 2px solid rgba(232, 196, 106, 0.5);
+  background: rgba(232, 196, 106, 0.06);
+  color: #cfc0a4;
+  font-size: 0.82rem;
+}
+
+.fallen-movement {
+  margin: 0;
+  color: #e8c46a;
+  font-style: italic;
+}
+
+.fallen-stat-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: baseline;
+  color: #a89878;
+  font-size: 0.78rem;
+}
+
+.fallen-stat-row strong {
+  color: #f4e6c8;
+  margin-right: 8px;
+}
+
+.fallen-abilities {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.fallen-abilities span {
+  padding: 4px 9px;
+  border: 1px solid rgba(232, 196, 106, 0.22);
+  border-radius: 999px;
+  color: #8f8168;
+  font-size: 0.72rem;
+}
+
+.fallen-abilities span.earned {
+  border-color: rgba(232, 196, 106, 0.55);
+  color: #f0d898;
+}
+
+/* ── Ending ─────────────────────────────────────────────────────────────── */
+.overlay-screen.fallen-ending-screen,
+#fallen-ending-screen {
+  background:
+    radial-gradient(circle at 50% 30%, rgba(255, 214, 140, 0.16), transparent 55%),
+    rgba(6, 5, 10, 0.94);
+}
+
+.fallen-ending-body {
+  display: grid;
+  gap: 14px;
+  margin: 12px 0;
+  color: #d6c8b0;
+}
+
+.fallen-ending-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(210px, 100%), 1fr));
+  gap: 10px;
+}
+
+.fallen-ending-card {
+  display: grid;
+  gap: 4px;
+  padding: 14px;
+  text-align: left;
+  border: 1px solid rgba(232, 196, 106, 0.3);
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(34, 26, 20, 0.9), rgba(10, 8, 16, 0.94));
+  color: #efe2c8;
+  cursor: pointer;
+}
+
+.fallen-ending-card[disabled] {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.fallen-ending-card:hover:not([disabled]) {
+  border-color: #e8c46a;
+}
+
+.fallen-ending-card strong {
+  font-size: 1rem;
+  letter-spacing: 0.06em;
+}
+
+.fallen-ending-card em {
+  font-style: normal;
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  color: #c8a860;
+}
+
+.fallen-ending-card p {
+  margin: 4px 0;
+  font-size: 0.8rem;
+  color: #b9ab93;
+}
+
+.fallen-ending-glyph {
+  font-size: 1.7rem;
+  line-height: 1;
+}
+
+.fallen-ending-result {
+  font-size: 1.02rem;
+  color: #f4e6c8;
+}
+
+.fallen-ending-summary {
+  color: #d8b878;
+  letter-spacing: 0.08em;
+  font-size: 0.8rem;
+}
+
+/* ── In-run HUD ─────────────────────────────────────────────────────────── */
+.fallen-hud {
+  display: grid;
+  gap: 5px;
+  margin-top: 8px;
+  padding: 7px 9px;
+  border: 1px solid rgba(232, 196, 106, 0.3);
+  border-radius: 9px;
+  background: rgba(10, 8, 16, 0.62);
+}
+
+.fallen-radiance-row,
+.fallen-resource-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.fallen-radiance-label {
+  font-size: 0.6rem;
+  letter-spacing: 0.16em;
+  color: #d8b878;
+}
+
+.fallen-radiance-track {
+  flex: 1;
+  min-width: 86px;
+  height: 7px;
+  border-radius: 999px;
+  background: rgba(232, 196, 106, 0.16);
+  overflow: hidden;
+}
+
+.fallen-radiance-fill {
+  height: 100%;
+  width: 0;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #b8863c, #ffe6a0);
+  box-shadow: 0 0 10px rgba(255, 224, 154, 0.55);
+  transition: width 0.18s ease;
+}
+
+.fallen-radiance-text {
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  color: #f0d898;
+}
+
+.fallen-shard-badge {
+  font-size: 0.68rem;
+  color: #ffe6a0;
+}
+
+.fallen-marks {
+  display: inline-flex;
+  gap: 3px;
+}
+
+.fallen-marks i {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  border: 1px solid rgba(255, 180, 140, 0.5);
+}
+
+.fallen-marks i.on {
+  background: #ff9a6a;
+  box-shadow: 0 0 7px rgba(255, 140, 90, 0.8);
+}
+
+.fallen-shadow-state {
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  color: #9fc8e0;
+}
+
+.fallen-shadow-state.on {
+  color: #c8a8f0;
+  text-shadow: 0 0 8px rgba(180, 140, 255, 0.8);
+}
+
+.fallen-ability-list {
+  font-size: 0.72rem;
+  color: #d8c8a8;
+}
+
+.fallen-actions {
+  display: inline-flex;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.fallen-hud-btn {
+  padding: 3px 7px;
+  border: 1px solid rgba(232, 196, 106, 0.4);
+  border-radius: 6px;
+  background: rgba(30, 22, 14, 0.8);
+  color: #f0d898;
+  font-size: 0.6rem;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+}
+
+.fallen-hud-btn:hover,
+.fallen-hud-btn:focus-visible {
+  border-color: #ffe6a0;
+  outline: none;
+}
+
+@media (max-width: 520px) {
+  .fallen-regions,
+  .fallen-grid,
+  .fallen-ending-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .fallen-title {
+    font-size: clamp(1.7rem, 9vw, 2.6rem);
+  }
+}

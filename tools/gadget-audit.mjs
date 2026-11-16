@@ -189,6 +189,11 @@ async function main() {
       { id: 'fishing', open: 'window.__ashen.showFishing()' },
       { id: 'baitShop', open: 'window.__ashen.openBaitShop()' },
       { id: 'fishIndex', open: 'window.__ashen.openFishIndex()' },
+      {
+        id: 'fallenMenu',
+        open: '(() => { const A = window.__ashen; A.progress.cleared[7] = true; A.ascendNow(); A.showFallenMenu(); })()',
+      },
+      { id: 'fallenHub', open: 'window.__ashen.showFallen("regions")' },
     ];
 
     let first = true;

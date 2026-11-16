@@ -326,6 +326,55 @@ import {
   fairyProgressSummary,
 } from './fairy.js';
 import {
+  FALLEN_NAME,
+  FALLEN_LOCAL_NAME,
+  FALLEN_SUBTITLE,
+  FALLEN_ROOM_START,
+  FALLEN_ROOMS_PER_REGION,
+  FALLEN_REGION_COUNT,
+  FALLEN_REGIONS,
+  FALLEN_ROOM_BY_ID,
+  FALLEN_ENEMY_INFO,
+  FALLEN_ENEMY_IDS,
+  FALLEN_BOSSES,
+  FALLEN_BOSS_BY_ID,
+  FALLEN_OPTIONAL_BOSSES,
+  FALLEN_ABILITIES,
+  FALLEN_ENDINGS,
+  FALLEN_UPGRADES,
+  FALLEN_WEAPONS,
+  FALLEN_MOVEMENTS,
+  FALLEN_MENU_OPTIONS,
+  defaultFallenProgress,
+  sanitizeFallenProgress,
+  ascendProgress,
+  fallenIsAscended,
+  fallenRegionUnlocked,
+  fallenRoomUnlocked,
+  fallenBossUnlocked,
+  recordFallenRoom,
+  recordFallenBoss,
+  recordFallenEnding,
+  recordFallenDeath,
+  recordFallenRun,
+  buyFallenUpgrade,
+  equipFallenWeapon,
+  addFallenShards,
+  setFallenMenuTheme,
+  fallenSummary,
+  fallenMenuFigure,
+  fallenArchive,
+  fallenEchoesFor,
+  fallenRunConfig,
+  radianceFull,
+  blindingBurst,
+  applyJudgment,
+  judgmentTick,
+  toggleShadow,
+  shadowTick,
+  shadowDamageMul,
+} from './fallen.js';
+import {
   LABYRINTH_VERSION,
   LABYRINTH_NAME,
   LABYRINTH_MODES,
@@ -415,7 +464,7 @@ const mapView = new MapView($('map-canvas'));
 
 let started = false;
 let paused = false;
-let menuView = 'title'; // title | levels | credits | updates | character | expansion | frontier | overdrive | mode3d | court | labyrinth | fairy | speedrun | fishing | baitShop | fishIndex | none
+let menuView = 'title'; // title | fallenMenu | fallen | levels | credits | updates | character | expansion | frontier | overdrive | mode3d | court | labyrinth | fairy | speedrun | fishing | baitShop | fishIndex | none
 let fishingReel = null;
 let fishingReelFrame = 0;
 let fishIndexTab = 0;
@@ -672,6 +721,7 @@ function defaultProgress() {
     fairy: defaultFairyProgress(),
     speedrun: defaultSpeedrunProgress(),
     fishing: defaultFishingProgress(),
+    fallen: defaultFallenProgress(),
     stageTimes: {},
   };
 }
@@ -709,7 +759,7 @@ function loadProgress() {
         };
     // Keep every unknown top-level field. v0.3.0 adds `expansion` without
     // changing the storage key or discarding future/legacy save data.
-    const { version, unlocked: _unlocked, cleared: _cleared, map: _map, expansion: _expansion, atlas: _atlas, labyrinth: _labyrinth, court: _court, skills: _skills, pack: _pack, fairy: _fairy, speedrun: _speedrun, fishing: _fishing, stageTimes: _stageTimes, ...extras } = parsed;
+    const { version, unlocked: _unlocked, cleared: _cleared, map: _map, expansion: _expansion, atlas: _atlas, labyrinth: _labyrinth, court: _court, skills: _skills, pack: _pack, fairy: _fairy, speedrun: _speedrun, fishing: _fishing, fallen: _fallen, stageTimes: _stageTimes, ...extras } = parsed;
     return {
       ...extras,
       version: 1,
@@ -725,6 +775,7 @@ function loadProgress() {
       fairy: sanitizeFairyProgress(parsed.fairy),
       speedrun: sanitizeSpeedrunProgress(parsed.speedrun),
       fishing: sanitizeFishingProgress(parsed.fishing),
+      fallen: sanitizeFallenProgress(parsed.fallen),
       stageTimes: sanitizeStageTimes(parsed.stageTimes),
     };
   } catch {
@@ -909,6 +960,15 @@ function updateMenuProgress() {
   if (expansion) {
     const summary = expansionCompletion(expState());
     expansion.textContent = `ECHOES · ${summary.cleared}/${summary.total} LEVEL · BAB ${(expState().unlockedChapter || 0) + 1}/10 · ${expState().echoes} GEMA`;
+  }
+  const fallenButton = $('btn-fallen-menu');
+  if (fallenButton) {
+    const ascended = fallenIsAscended(progress);
+    fallenButton.classList.toggle('hidden', !ascended);
+    if (ascended) {
+      const arc = fallenSummary(fallenState());
+      $('fallen-menu-progress').textContent = `${FALLEN_LOCAL_NAME.toUpperCase()} · ${arc.regionsCleared}/${arc.regionTotal} WILAYAH · ${arc.bossesCleared}/${arc.bossTotal} BOS · ${arc.shards} SERPIHAN`;
+    }
   }
 }
 
@@ -3957,6 +4017,13 @@ function retryRun() {
     startCourtTrial(activeCourtTrial.id);
     return;
   }
+  if (activeRunKind === 'fallen') {
+    recordFallenDeath(fallenState());
+    saveProgress();
+    if (activeFallenBoss) startFallenBoss(activeFallenBoss);
+    else startFallenRegion(Math.max(0, activeFallenRegion), { slot: Math.max(0, activeFallenSlot) });
+    return;
+  }
   if (activeRunKind === 'pack' && activePackIndex >= 0) {
     startPackRun(activePackIndex);
     return;
@@ -4045,11 +4112,16 @@ function showMenu() {
   closeDialogue(true);
   spectating = false;
   spectateGame = null;
-  menuView = 'title';
+  fallenEndingOpen = false;
+  fallenRun = null;
+  activeFallenRegion = -1;
+  activeFallenBoss = null;
+  menuView = fallenMenuDefault();
   game.reset();
   game.events.length = 0;
   clearHeldKeys();
   updateMenuProgress();
+  if (menuView === 'fallenMenu') buildFallenMenu();
   syncScreens();
 }
 
@@ -8456,6 +8528,16 @@ $('speedrun-summary-menu')?.addEventListener('click', () => {
   speedrunSummaryOpen = false;
   showMenu();
 });
+$('btn-fallen-menu')?.addEventListener('click', () => showFallenMenu());
+$('btn-fallen-back')?.addEventListener('click', () => showFallenMenu());
+$('fallen-hud')?.addEventListener('click', (event) => {
+  const button = event.target.closest('[data-fallen-action]');
+  if (!button) return;
+  const action = button.dataset.fallenAction;
+  if (action === 'burst') fallenBurst();
+  else if (action === 'shadow') fallenShadow();
+  else if (action === 'cleanse') fallenCleanse();
+});
 $('btn-fishing-menu')?.addEventListener('click', () => showFishing());
 $('btn-fishing-back')?.addEventListener('click', () => closeFishing());
 $('fishing-cast-start')?.addEventListener('click', () => beginFishingCast());
@@ -8964,6 +9046,9 @@ function syncScreens() {
   $('labyrinth-screen')?.classList.toggle('hidden', menuView !== 'labyrinth' || covered);
   $('court-screen')?.classList.toggle('hidden', menuView !== 'court' || covered);
   $('fairy-screen')?.classList.toggle('hidden', menuView !== 'fairy' || covered);
+  $('fallen-menu-screen')?.classList.toggle('hidden', menuView !== 'fallenMenu' || covered);
+  $('fallen-screen')?.classList.toggle('hidden', menuView !== 'fallen' || covered);
+  $('fallen-ending-screen')?.classList.toggle('hidden', !(fallenEndingOpen && started));
   $('speedrun-screen')?.classList.toggle('hidden', menuView !== 'speedrun' || covered);
   $('fishing-screen')?.classList.toggle('hidden', menuView !== 'fishing' || covered);
   $('bait-shop-screen')?.classList.toggle('hidden', menuView !== 'baitShop' || covered);
@@ -8985,7 +9070,7 @@ function syncScreens() {
   $('shop-screen').classList.toggle('hidden', !(inRun && shopOpen));
   $('blessing-screen').classList.toggle('hidden', !(inRun && !paused && !shopOpen && s === 'blessing'));
   $('dead-screen').classList.toggle('hidden', !(inRun && s === 'dead' && activeRunKind !== 'labyrinth' && activeRunKind !== 'speedrun'));
-  $('victory-screen').classList.toggle('hidden', !(inRun && s === 'victory'));
+  $('victory-screen').classList.toggle('hidden', !(inRun && s === 'victory' && activeRunKind !== 'fallen'));
 
   const hudVisible = inRun && !paused && !shopOpen && !mapOpen && !codexOpen && !inventoryOpen && !dialogueOpen
     && !settingsOpen && !cutsceneActive
@@ -9211,9 +9296,44 @@ function drainEvents() {
         }
       } else if (activeRunKind === 'labyrinth') {
         handleLabEvent(ev);
+      } else if (activeRunKind === 'fallen') {
+        if (ev.type === 'gatePass') {
+          const from = FALLEN_ROOM_BY_ID[ev.from];
+          if (from && !from.fallenBoss && !from.fallenOptional) {
+            recordFallenRoom(fallenState(), from.id);
+            saveProgress();
+          }
+          const to = FALLEN_ROOM_BY_ID[ev.to];
+          if (to) {
+            activeFallenRegion = to.fallenRegion ? to.fallenRegion - 1 : 6;
+            activeFallenBoss = to.fallenBoss || to.fallenOptional || null;
+            if (typeof to.fallenSlot === 'number' && to.fallenSlot >= 0) activeFallenSlot = to.fallenSlot;
+          }
+        } else if (ev.type === 'bossDown') {
+          handleFallenBoss(ev);
+        } else if (ev.type === 'roomEnter') {
+          const room = FALLEN_ROOM_BY_ID[ev.room];
+          if (room) {
+            activeFallenRegion = room.fallenRegion ? room.fallenRegion - 1 : 6;
+            activeFallenBoss = room.fallenBoss || room.fallenOptional || null;
+            if (typeof room.fallenSlot === 'number' && room.fallenSlot >= 0) activeFallenSlot = room.fallenSlot;
+            for (const enemy of room.enemies || []) {
+              const state = fallenState();
+              if (FALLEN_ENEMY_INFO[enemy.type] && !state.archive.bestiary.includes(enemy.type)) {
+                state.archive.bestiary.push(enemy.type);
+                saveProgress();
+              }
+            }
+          }
+        } else if (ev.type === 'purityHit' && ev.broke) {
+          showToast('Purity Shield pecah — cahaya pelindungnya padam.', 1800);
+        }
       } else {
         if (ev.type === 'gatePass') markCleared(ev.from, ev.to);
-        else if (ev.type === 'bossDown') markCleared(ev.room, ev.next);
+        else if (ev.type === 'bossDown') {
+          markCleared(ev.room, ev.next);
+          if (ev.room === 7) ascendIfEligible();
+        }
       }
     }
     if (!started) continue;
@@ -9266,6 +9386,8 @@ function desiredTrack() {
   if (cutsceneActive) return cutsceneScene?.music || 'faewood';
   if (menuView === 'court') return 'hearth';
   if (menuView === 'fairy') return 'faewood';
+  if (menuView === 'fallenMenu') return 'forgotten';
+  if (menuView === 'fallen') return 'lastvigil';
   if (started && !spectating && menuView === 'none') {
     if (game.state === 'victory') {
       if (activeRunKind === 'fairy' && game.roomIndex >= FAIRY_ROOM_START) return 'celebration';
@@ -9274,6 +9396,10 @@ function desiredTrack() {
     if (activeRunKind === 'labyrinth' && labRun) {
       if (game.boss) return 'boss';
       return LABYRINTH_ZONE_BY_ID[labRun.zoneId]?.music || 'ashen';
+    }
+    if (activeRunKind === 'fallen') {
+      if (game.boss && game.state === 'playing') return bossTrackFor(game.boss.kind, game.boss._info?.music || 'bossDawn');
+      return FALLEN_ROOM_BY_ID[game.roomIndex]?.music || 'forgotten';
     }
     if (game.boss && game.state === 'playing') {
       return bossTrackFor(game.boss.kind, zoneForRoom(game.roomIndex).bossMusic || 'boss');
@@ -9336,6 +9462,7 @@ function frame(now) {
 
   pollGamepad();
   syncMusic(raw);
+  if (activeRunKind === 'fallen' && started && !fallenEndingOpen) updateFallenHud();
 
   if (prologueActive) {
     const dt = Math.min(raw, 0.1);
@@ -9384,6 +9511,7 @@ function frame(now) {
         game.update(FIXED, inputSnapshot());
         if (activeRunKind === 'atlas') tickAtlasRun(FIXED);
         if (activeRunKind === 'labyrinth') tickLabyrinth(FIXED);
+        if (activeRunKind === 'fallen') tickFallen(FIXED);
         accumulator -= FIXED;
         steps += 1;
         if (game.state !== 'playing') {
@@ -9438,6 +9566,662 @@ function frame(now) {
 
 window.addEventListener('resize', () => renderer.resize());
 
+// ── The Fallen Ones (Arc II: Heavenly Descent) ──────────────────────────
+// A second, ascended campaign. All rules live in src/fallen.js; this layer
+// only paints the heavenly hub, starts real core rooms, and drains events.
+let fallenTab = 'regions';
+let activeFallenRegion = -1;
+let activeFallenSlot = 0;
+let activeFallenBoss = null;
+let fallenRun = null;
+let fallenStartedAt = 0;
+let fallenEndingOpen = false;
+let fallenHudKey = '';
+let fallenLastBossHp = -1;
+let fallenLastHp = -1;
+let fallenBaseDamage = 1;
+const fallenHints = new Set();
+
+function fallenState() {
+  if (!progress.fallen || typeof progress.fallen !== 'object') progress.fallen = defaultFallenProgress();
+  return progress.fallen;
+}
+
+function fallenMenuDefault() {
+  return fallenIsAscended(progress) && fallenState().menuTheme !== 'base' ? 'fallenMenu' : 'title';
+}
+
+function ascendIfEligible() {
+  const before = fallenState().ascended;
+  const result = ascendProgress(progress);
+  if (!result.ok) return result;
+  if (!before) {
+    fallenState().echoes = fallenEchoesFor(progress);
+    saveProgress();
+    updateMenuProgress();
+    showToast(`☼ LANGIT TERBUKA — ${FALLEN_LOCAL_NAME} dimulai.`, 4200);
+  }
+  return result;
+}
+
+function showFallenMenu() {
+  cancelPrologue();
+  started = false;
+  paused = false;
+  shopOpen = false;
+  mapOpen = false;
+  codexOpen = false;
+  inventoryOpen = false;
+  settingsOpen = false;
+  fallenEndingOpen = false;
+  fallenRun = null;
+  closeDialogue(true);
+  spectating = false;
+  spectateGame = null;
+  menuView = 'fallenMenu';
+  game.reset();
+  game.events.length = 0;
+  clearHeldKeys();
+  buildFallenMenu();
+  updateMenuProgress();
+  syncScreens();
+}
+
+function showFallen(tab = 'regions') {
+  cancelPrologue();
+  started = false;
+  paused = false;
+  shopOpen = false;
+  mapOpen = false;
+  codexOpen = false;
+  inventoryOpen = false;
+  settingsOpen = false;
+  fallenEndingOpen = false;
+  closeDialogue(true);
+  spectating = false;
+  spectateGame = null;
+  fallenTab = tab;
+  menuView = 'fallen';
+  game.reset();
+  game.events.length = 0;
+  clearHeldKeys();
+  buildFallenScreen();
+  syncScreens();
+}
+
+function showBaseMenu() {
+  menuView = 'title';
+  game.reset();
+  game.events.length = 0;
+  updateMenuProgress();
+  syncScreens();
+}
+
+function fallenMenuAction(id) {
+  if (id === 'descent') {
+    startFallenRegion(0);
+  } else if (id === 'continue') {
+    showFallen('regions');
+  } else if (id === 'archive') {
+    showFallen('archive');
+  } else if (id === 'below') {
+    showBaseMenu();
+  } else if (id === 'options') {
+    showSettings();
+  } else if (id === 'quit') {
+    showToast('Tutup tab ini untuk menutup Ashen Vow.', 2400);
+    try { window.close(); } catch { /* browsers refuse for non-scripted tabs */ }
+  }
+}
+
+function drawFallenFigure(canvas, figure) {
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+  const w = canvas.width;
+  const h = canvas.height;
+  const sky = ctx.createLinearGradient(0, 0, 0, h);
+  sky.addColorStop(0, '#0a0a16');
+  sky.addColorStop(0.45, '#241a2e');
+  sky.addColorStop(1, '#4a3620');
+  ctx.fillStyle = sky;
+  ctx.fillRect(0, 0, w, h);
+  // Broken halo / sun behind the figure.
+  const halo = ctx.createRadialGradient(w * 0.5, h * 0.34, 4, w * 0.5, h * 0.34, h * 0.74);
+  halo.addColorStop(0, 'rgba(255,232,170,0.55)');
+  halo.addColorStop(0.45, 'rgba(255,196,110,0.14)');
+  halo.addColorStop(1, 'rgba(255,196,110,0)');
+  ctx.fillStyle = halo;
+  ctx.fillRect(0, 0, w, h);
+  ctx.strokeStyle = 'rgba(255,236,190,0.6)';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.arc(w * 0.5, h * 0.34, h * 0.3, Math.PI * 0.15, Math.PI * 0.85);
+  ctx.stroke();
+  // Feathers drifting down from the wound in the sky.
+  for (let i = 0; i < 16; i += 1) {
+    const fx = ((i * 97) % w) + Math.sin(i) * 12;
+    const fy = ((i * 53) % (h * 0.7)) + 10;
+    ctx.fillStyle = i % 2 ? 'rgba(255,240,214,0.5)' : 'rgba(232,196,106,0.4)';
+    ctx.beginPath();
+    ctx.ellipse(fx, fy, 4, 1.6, i * 0.6, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  // The kneeling/rising/crowned figure.
+  const baseY = h * 0.86;
+  const cx = w * 0.5;
+  ctx.fillStyle = figure.color || '#2a1414';
+  ctx.strokeStyle = 'rgba(255,228,180,0.75)';
+  ctx.lineWidth = 2;
+  const rising = figure.pose === 'rising';
+  const crowned = figure.pose === 'crowned';
+  const headY = baseY - (rising ? 74 : crowned ? 80 : 54);
+  ctx.beginPath();
+  ctx.arc(cx, headY, 14, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+  // Torso.
+  ctx.beginPath();
+  ctx.moveTo(cx - 16, headY + 14);
+  ctx.lineTo(cx + 16, headY + 14);
+  ctx.lineTo(cx + (rising ? 22 : 18), baseY - 8);
+  ctx.lineTo(cx - (rising ? 22 : 18), baseY - 8);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  // Legs: kneeling tucks one under, rising stands tall.
+  if (rising) {
+    ctx.beginPath();
+    ctx.moveTo(cx - 16, baseY - 10);
+    ctx.lineTo(cx - 20, baseY + 12);
+    ctx.moveTo(cx + 16, baseY - 10);
+    ctx.lineTo(cx + 20, baseY + 12);
+    ctx.stroke();
+  } else {
+    ctx.beginPath();
+    ctx.moveTo(cx - 18, baseY - 10);
+    ctx.lineTo(cx + 26, baseY + 10);
+    ctx.lineTo(cx + 40, baseY + 12);
+    ctx.stroke();
+  }
+  // Wings: cracked and dim until the arc advances.
+  ctx.strokeStyle = 'rgba(255,240,210,0.45)';
+  ctx.beginPath();
+  ctx.moveTo(cx - 14, headY + 20);
+  ctx.quadraticCurveTo(cx - 62, headY + 6, cx - 74, baseY - 6);
+  ctx.moveTo(cx + 14, headY + 20);
+  ctx.quadraticCurveTo(cx + 62, headY + 6, cx + 74, baseY - 6);
+  ctx.stroke();
+  if (crowned) {
+    ctx.fillStyle = '#ffd98a';
+    ctx.beginPath();
+    ctx.moveTo(cx - 16, headY - 12);
+    ctx.lineTo(cx - 8, headY - 26);
+    ctx.lineTo(cx, headY - 14);
+    ctx.lineTo(cx + 8, headY - 26);
+    ctx.lineTo(cx + 16, headY - 12);
+    ctx.closePath();
+    ctx.fill();
+  }
+  ctx.fillStyle = 'rgba(0,0,0,0.5)';
+  ctx.beginPath();
+  ctx.ellipse(cx, baseY + 16, 84, 12, 0, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function buildFallenMenu() {
+  const el = $('fallen-menu-screen');
+  if (!el) return;
+  const state = fallenState();
+  const summary = fallenSummary(state);
+  const figure = fallenMenuFigure(state);
+  drawFallenFigure($('fallen-menu-figure'), figure);
+  const caption = figure.ending
+    ? `Akhir: ${FALLEN_ENDINGS.find((e) => e.id === figure.ending)?.name || figure.ending}`
+    : figure.pose === 'rising'
+      ? 'Ia berdiri. Langit gemetar.'
+      : figure.pose === 'kneeling_alert'
+        ? 'Ia mengangkat kepala.'
+        : 'Ia masih berlutut.';
+  $('fallen-menu-caption').textContent = caption;
+  $('fallen-menu-summary').innerHTML = [
+    ['WILAYAH', `${summary.regionsCleared}/${summary.regionTotal}`],
+    ['BOS', `${summary.bossesCleared}/${summary.bossTotal}`],
+    ['RUANG', `${summary.roomsCleared}/${summary.roomTotal}`],
+    ['SERPIHAN', String(summary.shards)],
+    ['AKHIRAN', `${summary.endingsFound}/${summary.endingTotal}`],
+  ].map(([label, value]) => `<div class="fallen-stat"><span>${label}</span><strong>${value}</strong></div>`).join('');
+  $('fallen-menu-movement').textContent = FALLEN_MOVEMENTS[summary.movement]?.name || FALLEN_MOVEMENTS[0].name;
+  $('fallen-menu-theme').textContent = state.menuTheme === 'base' ? 'TEMA: DUNIA BAWAH' : 'TEMA: LANGIT';
+  $('fallen-menu-options').innerHTML = FALLEN_MENU_OPTIONS.map((option) => `
+    <button class="fallen-option" type="button" data-fallen-menu="${option.id}">
+      <span>${esc(option.label)}</span>
+      <em>${esc(option.note)}</em>
+    </button>`).join('');
+  el.querySelectorAll('[data-fallen-menu]').forEach((button) => {
+    button.addEventListener('click', () => fallenMenuAction(button.dataset.fallenMenu));
+  });
+  $('fallen-menu-theme').addEventListener('click', () => {
+    const next = fallenState().menuTheme === 'base' ? 'heavenly' : 'base';
+    setFallenMenuTheme(fallenState(), next);
+    saveProgress();
+    buildFallenMenu();
+  });
+}
+
+function fallenTabBody(tab, state) {
+  if (tab === 'regions') {
+    const regions = FALLEN_REGIONS.map((region) => {
+      const unlocked = fallenRegionUnlocked(state, region.index);
+      const cleared = state.bosses[region.boss] === true;
+      const rooms = FALLEN_ROOMS_PER_REGION;
+      let done = 0;
+      for (let slot = 0; slot < rooms; slot += 1) {
+        if (state.rooms[region.roomStart + slot - FALLEN_ROOM_START]) done += 1;
+      }
+      const bossUnlocked = fallenBossUnlocked(state, region.boss);
+      return `
+        <article class="fallen-region ${unlocked ? '' : 'locked'} ${cleared ? 'cleared' : ''}">
+          <header>
+            <span class="fallen-region-glyph" style="color:${region.color}">${region.glyph}</span>
+            <div>
+              <strong>${esc(region.localName)}</strong>
+              <em>${esc(region.name)} · ${region.subtitle}</em>
+            </div>
+            <span class="fallen-region-state">${cleared ? 'TUNTAS' : unlocked ? 'TERBUKA' : 'TERKUNCI'}</span>
+          </header>
+          <p>${esc(region.gimmick)}</p>
+          <div class="fallen-room-dots">${Array.from({ length: rooms - 1 }, (_, slot) => `<i class="${state.rooms[region.roomStart + slot - FALLEN_ROOM_START] ? 'done' : ''}"></i>`).join('')}<b class="${cleared ? 'done' : ''}">${esc(FALLEN_BOSS_BY_ID[region.boss].localName)}</b></div>
+          <div class="fallen-region-actions">
+            <button class="btn btn-primary fallen-mini" type="button" data-fallen-region="${region.index}" ${unlocked ? '' : 'disabled'}><span>MASUK WILAYAH</span></button>
+            <button class="btn btn-ghost fallen-mini" type="button" data-fallen-boss="${region.boss}" ${bossUnlocked ? '' : 'disabled'}><span>${cleared ? 'ULANGI BOS' : 'HADAPI BOS'}</span></button>
+          </div>
+        </article>`;
+    }).join('');
+    const optional = FALLEN_OPTIONAL_BOSSES.map((boss) => {
+      const unlocked = fallenBossUnlocked(state, boss.id);
+      const cleared = state.bosses[boss.id] === true;
+      return `<article class="fallen-region optional ${cleared ? 'cleared' : ''}">
+        <header><span class="fallen-region-glyph" style="color:${boss.color}">${boss.glyph}</span><div><strong>${esc(boss.localName)}</strong><em>${esc(boss.title)}</em></div><span class="fallen-region-state">${cleared ? 'TUNTAS' : 'OPSIONAL'}</span></header>
+        <p>${esc(boss.name)} — ${boss.optional ? 'bos opsional, bagian dari akhir rahasia.' : ''}</p>
+        <div class="fallen-region-actions"><button class="btn btn-ghost fallen-mini" type="button" data-fallen-boss="${boss.id}" ${unlocked ? '' : 'disabled'}><span>${cleared ? 'ULANGI' : 'HADAPI'}</span></button></div>
+      </article>`;
+    }).join('');
+    return `<div class="fallen-regions">${regions}</div><h3 class="fallen-section-title">GERBANG OPSIONAL</h3><div class="fallen-regions optional-grid">${optional}</div>`;
+  }
+  if (tab === 'bestiary') {
+    const archive = fallenArchive(state);
+    return `<div class="fallen-grid">${archive.bestiary.map((enemy) => `
+      <article class="fallen-card ${enemy.seen ? '' : 'unseen'}">
+        <strong>${esc(enemy.name)}</strong>
+        <em>${esc(enemy.title)}${enemy.elite ? ' · ELITE' : ''}</em>
+        <p>${esc(enemy.desc)}</p>
+        <span class="fallen-card-meta">${enemy.seen ? `HP ${enemy.hp} · DMG ${enemy.dmg} · ${enemy.behavior}` : 'Belum terlihat'}</span>
+      </article>`).join('')}</div>`;
+  }
+  if (tab === 'echoes') {
+    const archive = fallenArchive(state);
+    return `<p class="fallen-note">Gema dibawa dari dunia bawah. Setiap gema permanen, maksimal lima, dan tidak bisa hilang saat kau jatuh.</p>
+      <div class="fallen-grid">${archive.echoes.map((echo) => `
+        <article class="fallen-card ${echo.earned ? 'earned' : 'unseen'}">
+          <strong>${esc(echo.name)}</strong>
+          <em>${echo.earned ? 'TERBUKA' : 'TERKUNCI'}</em>
+          <p>${esc(echo.desc || '')}</p>
+        </article>`).join('')}</div>`;
+  }
+  if (tab === 'upgrades') {
+    const weapons = FALLEN_WEAPONS.map((weapon) => `
+      <button class="fallen-card weapon ${state.weapon === weapon.id ? 'earned' : ''}" type="button" data-fallen-weapon="${weapon.id}">
+        <strong>${esc(weapon.name)}</strong><em>${weapon.cost ? `${weapon.cost} SERPIHAN` : 'BAWAAN'}</em><p>${esc(weapon.desc || '')}</p>
+      </button>`).join('');
+    const upgrades = FALLEN_UPGRADES.map((upgrade) => {
+      const tier = state.upgrades[upgrade.id] || 0;
+      const maxed = tier >= upgrade.tiers.length;
+      const cost = maxed ? 0 : upgrade.tiers[tier].cost;
+      return `<article class="fallen-card earned">
+        <strong>${esc(upgrade.name)}</strong><em>${tier}/${upgrade.tiers.length}${maxed ? ' · MAKS' : ` · ${cost} SERPIHAN`}</em>
+        <p>${esc(upgrade.desc || '')}</p>
+        <button class="btn btn-ghost fallen-mini" type="button" data-fallen-upgrade="${upgrade.id}" ${maxed ? 'disabled' : ''}><span>NAIKKAN</span></button>
+      </article>`;
+    }).join('');
+    return `<p class="fallen-note">Serpihan Halo: <strong>${state.shards}</strong>. Dibawa dari bos dan dipakai permanen.</p>
+      <div class="fallen-grid">${upgrades}</div><h3 class="fallen-section-title">SENJATA LANGIT</h3><div class="fallen-grid">${weapons}</div>`;
+  }
+  const archive = fallenArchive(state);
+  const summary = fallenSummary(state);
+  return `<div class="fallen-archive">
+    <p class="fallen-note">${esc(FALLEN_SUBTITLE)}</p>
+    <p class="fallen-movement">${esc(FALLEN_MOVEMENTS[summary.movement]?.localName || '')}</p>
+    <div class="fallen-grid">${archive.endings.map((ending) => `<article class="fallen-card ${ending.found ? 'earned' : 'unseen'}"><strong>${ending.glyph} ${esc(ending.name)}</strong><em>${ending.found ? 'DITEMUKAN' : 'BELUM'}</em><p>${esc(ending.condition)}</p><span class="fallen-card-meta">${esc(ending.result)}</span></article>`).join('')}</div>
+    <h3 class="fallen-section-title">STATISTIK TURUN</h3>
+    <div class="fallen-stat-row"><span>Turun</span><strong>${summary.runs}</strong><span>Gugur</span><strong>${summary.deaths}</strong><span>Rekor</span><strong>${summary.bestTime ? `${summary.bestTime}s` : '—'}</strong></div>
+    <h3 class="fallen-section-title">KEMAMPUAN</h3>
+    <div class="fallen-abilities">${FALLEN_ABILITIES.map((ability) => `<span class="${state.abilities.includes(ability.id) ? 'earned' : ''}">${ability.glyph} ${esc(ability.localName)}</span>`).join('')}</div>
+    <p class="micro">The Fallen Ones · ${summary.roomsCleared}/${summary.roomTotal} ruang · ${summary.percent}% arsip lengkap · arc ${FALLEN_NAME}.</p>
+  </div>`;
+}
+
+function buildFallenScreen() {
+  const el = $('fallen-screen');
+  if (!el) return;
+  const state = fallenState();
+  const summary = fallenSummary(state);
+  $('fallen-summary').innerHTML = [
+    ['WILAYAH', `${summary.regionsCleared}/${summary.regionTotal}`],
+    ['BOS UTAMA', `${summary.mainCleared}/${summary.mainTotal}`],
+    ['OPSIONAL', `${summary.optionalCleared}/${summary.optionalTotal}`],
+    ['SERPIHAN', String(summary.shards)],
+    ['GERMA', `${state.echoes.length}/5`],
+  ].map(([label, value]) => `<div class="fallen-stat"><span>${label}</span><strong>${value}</strong></div>`).join('');
+  const tabs = [
+    ['regions', 'WILAYAH'],
+    ['bestiary', 'BESTIARY'],
+    ['echoes', 'GEMA'],
+    ['upgrades', 'SERPIHAN'],
+    ['archive', 'ARSIP'],
+  ];
+  $('fallen-tabs').innerHTML = tabs.map(([id, label]) => `<button class="fallen-tab ${fallenTab === id ? 'active' : ''}" type="button" data-fallen-tab="${id}">${label}</button>`).join('');
+  const body = $('fallen-body');
+  body.innerHTML = fallenTabBody(fallenTab, state);
+  $('fallen-tabs').querySelectorAll('[data-fallen-tab]').forEach((button) => {
+    button.addEventListener('click', () => { fallenTab = button.dataset.fallenTab; buildFallenScreen(); });
+  });
+  body.querySelectorAll('[data-fallen-region]').forEach((button) => {
+    button.addEventListener('click', () => startFallenRegion(Number(button.dataset.fallenRegion)));
+  });
+  body.querySelectorAll('[data-fallen-boss]').forEach((button) => {
+    button.addEventListener('click', () => startFallenBoss(button.dataset.fallenBoss));
+  });
+  body.querySelectorAll('[data-fallen-upgrade]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const result = buyFallenUpgrade(fallenState(), button.dataset.fallenUpgrade);
+      if (!result.ok) {
+        showToast(result.reason === 'shards' ? `Butuh ${result.cost} Serpihan Halo.` : 'Sudah maksimal.', 1800);
+        return;
+      }
+      saveProgress();
+      showToast(`Peningkatan dibeli · ${result.value}`, 1800);
+      buildFallenScreen();
+    });
+  });
+  body.querySelectorAll('[data-fallen-weapon]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const result = equipFallenWeapon(fallenState(), button.dataset.fallenWeapon);
+      if (!result.ok) { showToast('Serpihan Halo tidak cukup.', 1600); return; }
+      saveProgress();
+      buildFallenScreen();
+    });
+  });
+}
+
+function startFallenRegion(regionIndex, { slot = 0 } = {}) {
+  const state = fallenState();
+  if (!fallenRegionUnlocked(state, regionIndex)) {
+    showToast('Wilayah itu masih tertutup — jatuhkan bos sebelumnya.', 2000);
+    return;
+  }
+  const config = fallenRunConfig(state, regionIndex);
+  activeFallenRegion = config.region.index;
+  activeFallenBoss = null;
+  let entry = clamp(Number(slot) || 0, 0, FALLEN_ROOMS_PER_REGION - 1);
+  while (entry > 0 && !fallenRoomUnlocked(state, config.region.roomStart + entry)) entry -= 1;
+  activeFallenSlot = entry;
+  beginFallenRun(config.region.roomStart + entry, config.run);
+}
+
+function startFallenBoss(bossId) {
+  const state = fallenState();
+  const boss = FALLEN_BOSS_BY_ID[bossId];
+  if (!boss) return;
+  if (!fallenBossUnlocked(state, bossId)) {
+    showToast('Bos itu masih tersegel.', 1800);
+    return;
+  }
+  const regionIndex = boss.optional ? FALLEN_REGION_COUNT - 1 : FALLEN_REGIONS.findIndex((region) => region.boss === bossId);
+  const config = fallenRunConfig(state, regionIndex);
+  activeFallenRegion = Math.max(0, regionIndex);
+  activeFallenBoss = boss.id;
+  activeFallenSlot = boss.optional ? -1 : FALLEN_ROOMS_PER_REGION - 1;
+  beginFallenRun(boss.roomIndex, config.run);
+}
+
+function beginFallenRun(roomIndex, run) {
+  audio.init();
+  attempts = 1;
+  coopGuestMode = false;
+  coopGuestRoom = -1;
+  labRun = null;
+  labDirector = null;
+  speedrunRun = null;
+  fallenEndingOpen = false;
+  activeRunKind = 'fallen';
+  fallenRun = run;
+  fallenStartedAt = performance.now();
+  fallenLastBossHp = -1;
+  fallenHudKey = '';
+  game.labyrinth = false;
+  game.reset();
+  applyCharacterToGame();
+  applySkinToGame();
+  game.player.relic = true;
+  game.enterRoom(roomIndex);
+  game.player.maxHp = fallenRun.maxHp;
+  game.player.hp = fallenRun.maxHp;
+  fallenBaseDamage = game.player.damageMult || 1;
+  game.player.damageMult = fallenBaseDamage;
+  game.ash = Math.max(game.ash, 45);
+  fallenLastHp = game.player.hp;
+  game.events.length = 0;
+  started = true;
+  paused = false;
+  shopOpen = false;
+  mapOpen = false;
+  codexOpen = false;
+  inventoryOpen = false;
+  settingsOpen = false;
+  closeDialogue(true);
+  spectating = false;
+  spectateGame = null;
+  menuView = 'none';
+  lastGameState = 'playing';
+  accumulator = 0;
+  lastTime = performance.now();
+  clearHeldKeys();
+  discoverCurrentRoom(roomIndex);
+  showBanner(game.room.name, game.room.subtitle);
+  showToast(`☼ ${FALLEN_LOCAL_NAME} — ${FALLEN_REGIONS[activeFallenRegion]?.localName || 'Langit'}`, 2600);
+  syncScreens();
+  updateHud();
+  updateFallenHud(true);
+}
+
+function handleFallenBoss(ev) {
+  const room = FALLEN_ROOM_BY_ID[ev.room];
+  const bossId = room?.fallenBoss || room?.fallenOptional;
+  if (!bossId) return;
+  const boss = FALLEN_BOSS_BY_ID[bossId];
+  const result = recordFallenBoss(fallenState(), bossId);
+  activeFallenBoss = null;
+  if (!result.ok) return;
+  if (result.firstClear) {
+    saveProgress();
+    showToast(`✧ ${boss.name} gugur · +${result.shards} Serpihan Halo${result.ability ? ' · kemampuan baru' : ''}`, 3000);
+  }
+  if (boss.final) {
+    const optionalCleared = FALLEN_OPTIONAL_BOSSES.every((b) => fallenState().bosses[b.id]);
+    recordFallenRun(fallenState(), Math.max(1, (performance.now() - fallenStartedAt) / 1000), { won: optionalCleared });
+    saveProgress();
+    openFallenEnding();
+  }
+}
+
+function openFallenEnding() {
+  const state = fallenState();
+  fallenEndingOpen = true;
+  $('fallen-ending-title').textContent = 'LANGIT MENUNGGU KEPUTUSANMU';
+  $('fallen-ending-body').innerHTML = `
+    <p>Seraphiel jatuh dari singgasananya. Tiga jalan terbuka, dan hanya satu yang bisa kau ambil.</p>
+    <div class="fallen-ending-grid">${FALLEN_ENDINGS.map((ending) => {
+      const locked = ending.id === 'eclipse' && !FALLEN_OPTIONAL_BOSSES.every((b) => state.bosses[b.id]);
+      return `<button class="fallen-ending-card ${ending.found ? 'found' : ''}" type="button" data-fallen-ending="${ending.id}" ${locked ? 'disabled' : ''}>
+        <span class="fallen-ending-glyph" style="color:${ending.color}">${ending.glyph}</span>
+        <strong>${esc(ending.localName)}</strong>
+        <em>${esc(ending.name)}</em>
+        <p>${esc(ending.result)}</p>
+        <span class="fallen-card-meta">${locked ? 'Butuh keempat bos opsional' : esc(ending.condition)}</span>
+      </button>`;
+    }).join('')}</div>`;
+  $('fallen-ending-options').innerHTML = '';
+  $('fallen-ending-body').querySelectorAll('[data-fallen-ending]').forEach((button) => {
+    button.addEventListener('click', () => chooseFallenEnding(button.dataset.fallenEnding));
+  });
+  syncScreens();
+}
+
+function chooseFallenEnding(endingId) {
+  const result = recordFallenEnding(fallenState(), endingId);
+  if (!result.ok) {
+    showToast(result.reason === 'optional_required' ? 'Gerhana butuh keempat bos opsional.' : 'Akhiran itu belum terbuka.', 2200);
+    return result;
+  }
+  const ending = result.ending;
+  saveProgress();
+  $('fallen-ending-title').textContent = `${ending.glyph} ${ending.localName.toUpperCase()} — ${ending.name.toUpperCase()}`;
+  $('fallen-ending-body').innerHTML = `
+    <p class="fallen-ending-result">${esc(ending.result)}</p>
+    <div class="fallen-ending-summary">${fallenSummary(fallenState()).regionsCleared}/${FALLEN_REGION_COUNT} wilayah · ${fallenSummary(fallenState()).bossesCleared}/${FALLEN_BOSSES.length} bos · ${fallenSummary(fallenState()).endingsFound}/3 akhiran</div>
+    <p class="micro">The Fallen Ones selesai. Arsip, bestiary, kosmetik, dan Serpihan Halo tetap tersimpan di browser ini.</p>`;
+  $('fallen-ending-options').innerHTML = '<button class="btn btn-primary" type="button" id="fallen-ending-return"><span>KEMBALI KE GERBANG LANGIT</span></button>';
+  $('fallen-ending-return').addEventListener('click', () => {
+    fallenEndingOpen = false;
+    fallenRun = null;
+    fallenBaseDamage = 1;
+    showFallenMenu();
+  });
+  return result;
+}
+
+function fallenBurst() {
+  if (activeRunKind !== 'fallen' || !fallenRun) return { ok: false };
+  const result = blindingBurst(fallenRun);
+  if (!result.ok) {
+    showToast('Radiance belum penuh — pukul bos untuk mengisinya.', 1800);
+    return result;
+  }
+  const boss = game.boss;
+  if (boss && !boss.dying) {
+    boss.purityShield = 0;
+    game.hurtBoss(result.damage);
+    boss.stunTimer = Math.max(boss.stunTimer || 0, result.stun);
+  }
+  showToast(`☼ BLINDING BURST — ${Math.round(result.damage)} kerusakan · Purity Shield hancur`, 2400);
+  updateFallenHud(true);
+  return result;
+}
+
+function fallenShadow() {
+  if (activeRunKind !== 'fallen' || !fallenRun) return { ok: false };
+  const result = toggleShadow(fallenRun);
+  if (!result.ok) {
+    showToast('Shadow Stance belum terbuka — kalahkan Aurelian atau ambil lima kemampuan.', 2200);
+    return result;
+  }
+  showToast(result.shadow ? '☾ SHADOW STANCE — damage naik, nyawa terkuras.' : '☀ Bayangan padam.', 1800);
+  updateFallenHud(true);
+  return result;
+}
+
+function fallenCleanse() {
+  if (activeRunKind !== 'fallen' || !fallenRun) return false;
+  fallenRun.marks = 0;
+  game.player.invuln = Math.max(game.player.invuln || 0, 1);
+  showToast('✧ Absolution — semua Judgment Mark dibersihkan.', 2000);
+  updateFallenHud(true);
+  return true;
+}
+
+function tickFallen(dt) {
+  if (activeRunKind !== 'fallen' || !fallenRun) return;
+  const player = game.player;
+  const boss = game.boss;
+  if (boss && !boss.dying) {
+    if (fallenLastBossHp < 0) fallenLastBossHp = boss.hp;
+    if (boss.hp < fallenLastBossHp) {
+      const damage = fallenLastBossHp - boss.hp;
+      fallenLastBossHp = boss.hp;
+      const gain = radianceGain(fallenRun, damage);
+      if (gain.full && !fallenHints.has('radiance')) {
+        fallenHints.add('radiance');
+        showToast('☼ RADIANCE PENUH — tekan B untuk Blinding Burst.', 2400);
+      }
+    }
+  } else {
+    fallenLastBossHp = -1;
+  }
+  if (player.hp < fallenLastHp) {
+    applyJudgment(fallenRun, boss?.phase >= 2 ? 2 : 1);
+  }
+  fallenLastHp = player.hp;
+  const judge = judgmentTick(fallenRun, dt, {
+    moved: Math.abs(player.vx || 0) > 14,
+    acted: !!player.attack,
+  });
+  if (judge.detonated) {
+    player.hp = Math.max(0, player.hp - judge.damage);
+    game.shake = Math.max(game.shake || 0, 0.4);
+    showToast(`JUDGMENT — ${judge.damage} kerusakan. Bergerak atau menyerang untuk membatalkan.`, 2200);
+  }
+  if (fallenRun.shadow) {
+    const drain = shadowTick(fallenRun, dt, fallenRun.maxHp);
+    const floor = fallenRun.hpFloor || Math.max(1, fallenRun.maxHp * 0.15);
+    player.hp = Math.max(floor, player.hp - drain.drain);
+    if (player.hp <= floor + 0.01) {
+      toggleShadow(fallenRun);
+      showToast('☀ Bayangan padam — nyawa terlalu tipis.', 1800);
+    }
+  }
+  player.damageMult = fallenBaseDamage * shadowDamageMul(fallenRun);
+  if (fallenRun.stun > 0) fallenRun.stun = Math.max(0, fallenRun.stun - dt);
+}
+
+function updateFallenHud(force = false) {
+  const hud = $('fallen-hud');
+  if (!hud) return;
+  if (activeRunKind !== 'fallen' || !fallenRun) {
+    hud.classList.add('hidden');
+    return;
+  }
+  hud.classList.remove('hidden');
+  const key = `${Math.round(fallenRun.radiance)}|${fallenRun.radianceMax}|${fallenRun.marks}|${fallenRun.shadow}|${fallenRun.shards}|${fallenRun.bursts}`;
+  if (!force && key === fallenHudKey) return;
+  fallenHudKey = key;
+  const pct = Math.max(0, Math.min(1, fallenRun.radiance / (fallenRun.radianceMax || 100))) * 100;
+  $('fallen-radiance-fill').style.width = `${pct}%`;
+  $('fallen-radiance-text').textContent = radianceFull(fallenRun) ? '☼ BURST SIAP' : `RADIANCE ${Math.floor(fallenRun.radiance)}`;
+  $('fallen-marks').innerHTML = Array.from({ length: 5 }, (_, i) => `<i class="${i < fallenRun.marks ? 'on' : ''}"></i>`).join('');
+  $('fallen-shards').textContent = `✧ ${fallenRun.shards + (fallenState().shards || 0)}`;
+  $('fallen-shadow-state').textContent = fallenRun.shadow ? '☾ SHADOW' : '☀ TERANG';
+  $('fallen-shadow-state').classList.toggle('on', fallenRun.shadow);
+  $('fallen-abilities').textContent = fallenRun.abilitySet.length
+    ? fallenRun.abilitySet.map((id) => FALLEN_ABILITIES.find((a) => a.id === id)?.glyph || '✦').join(' ')
+    : 'kemampuan belum terbuka';
+}
+
+function fallenKeydown(event) {
+  if (activeRunKind !== 'fallen' || !started || menuView !== 'none' || fallenEndingOpen) return;
+  if (event.code === 'KeyB') {
+    event.preventDefault();
+    fallenBurst();
+  } else if (event.code === 'KeyV') {
+    event.preventDefault();
+    fallenShadow();
+  } else if (event.code === 'KeyN') {
+    event.preventDefault();
+    fallenCleanse();
+  }
+}
+window.addEventListener('keydown', fallenKeydown);
+
 // ── debug hooks (used by automated smoke tests) ─────────────────────────
 window.__ashen = {
   get speedrun() {
@@ -9453,6 +10237,62 @@ window.__ashen = {
   showSpeedrun,
   startSpeedrun,
   finishSpeedrun,
+  get fallen() {
+    return {
+      state: fallenState(),
+      summary: fallenSummary(fallenState()),
+      archive: fallenArchive(fallenState()),
+      figure: fallenMenuFigure(fallenState()),
+      tab: fallenTab,
+      run: fallenRun
+        ? {
+            hp: fallenRun.maxHp,
+            radiance: Math.round(fallenRun.radiance),
+            radianceMax: fallenRun.radianceMax,
+            marks: fallenRun.marks,
+            shadow: fallenRun.shadow,
+            abilities: [...fallenRun.abilitySet],
+            echoes: [...fallenRun.echoes],
+            bursts: fallenRun.bursts,
+          }
+        : null,
+      activeRegion: activeFallenRegion,
+      activeBoss: activeFallenBoss,
+      endingOpen: fallenEndingOpen,
+      menuTheme: fallenState().menuTheme,
+    };
+  },
+  showFallenMenu,
+  showFallen,
+  buildFallenMenu,
+  buildFallenScreen,
+  startFallenRegion,
+  startFallenBoss,
+  fallenBurst,
+  fallenShadow,
+  fallenCleanse,
+  chooseFallenEnding,
+  ascendIfEligible,
+  ascendNow() {
+    const result = ascendProgress(progress);
+    if (result.ok) {
+      const state = fallenState();
+      state.echoes = fallenEchoesFor(progress);
+      saveProgress();
+      updateMenuProgress();
+    }
+    return result;
+  },
+  buyFallenUpgrade(id) {
+    const result = buyFallenUpgrade(fallenState(), id);
+    if (result.ok) saveProgress();
+    return result;
+  },
+  addFallenShards(n) {
+    const result = addFallenShards(fallenState(), n);
+    saveProgress();
+    return result;
+  },
   get fishing() {
     return {
       state: fishingState(),
@@ -9864,10 +10704,16 @@ window.__ashen = {
 };
 
 // kick off
+// A save that already felled The Oathbreaker ascends into the second menu.
+if (ascendProgress(progress).ok) saveProgress();
 updateMenuProgress();
 buildLevelCards();
 applyCharacterToGame();
 applySettings();
+if (fallenIsAscended(progress) && fallenState().menuTheme !== 'base') {
+  menuView = 'fallenMenu';
+  buildFallenMenu();
+}
 renderer.render(game);
 setInterval(updateLiveClock, 250);
 updateLiveClock();

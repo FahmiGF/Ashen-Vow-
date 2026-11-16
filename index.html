@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#0b0807" />
-    <title>Ashen Vow — v0.12.0</title>
+    <title>Ashen Vow — v0.13.0</title>
     <meta
       name="description"
       content="Ashen Vow adalah metroidvania medieval 2D dengan combat pedang real-time, 426 ruang, 72 boss, mode Speedrun satu nyawa, 100 level ekspansi, Thornveil Haven, peta, jam langsung, dan indeks sumpah."
@@ -19,6 +19,7 @@
     <link rel="stylesheet" href="./styles-labyrinth.css" />
     <link rel="stylesheet" href="./styles-court.css" />
     <link rel="stylesheet" href="./styles-fishing.css" />
+    <link rel="stylesheet" href="./styles-fallen.css" />
     <link
       rel="icon"
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%230b0807'/%3E%3Cpath d='M32 6l7 18 18 8-18 8-7 18-7-18-18-8 18-8z' fill='%23d08a45'/%3E%3C/svg%3E"
@@ -80,6 +81,24 @@
                   <span id="ability-badge" class="ability-badge ready">⚡ SKILL [U]</span>
                 </div>
                 <div id="atlas-quickbar" class="atlas-quickbar hidden" aria-label="Slot cepat Atlas"></div>
+                <div id="fallen-hud" class="fallen-hud hidden" aria-label="Sumber daya Yang Terjatuh">
+                  <div class="fallen-radiance-row">
+                    <span class="fallen-radiance-label">RADIANCE</span>
+                    <div class="fallen-radiance-track"><div id="fallen-radiance-fill" class="fallen-radiance-fill"></div></div>
+                    <span id="fallen-radiance-text" class="fallen-radiance-text">RADIANCE 0</span>
+                    <span id="fallen-shards" class="fallen-shard-badge">✧ 0</span>
+                  </div>
+                  <div class="fallen-resource-row">
+                    <span id="fallen-marks" class="fallen-marks" title="Judgment Mark"></span>
+                    <span id="fallen-shadow-state" class="fallen-shadow-state">☀ TERANG</span>
+                    <span id="fallen-abilities" class="fallen-ability-list"></span>
+                    <span class="fallen-actions">
+                      <button type="button" class="fallen-hud-btn" data-fallen-action="burst" title="Blinding Burst (B)">☼ BURST</button>
+                      <button type="button" class="fallen-hud-btn" data-fallen-action="shadow" title="Shadow Stance (V)">☾ SHADOW</button>
+                      <button type="button" class="fallen-hud-btn" data-fallen-action="cleanse" title="Absolution (N)">✧ BERSIH</button>
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
             <div class="hud-right">
@@ -183,7 +202,7 @@
         <!-- ══ MAIN MENU ══ -->
         <section id="title-screen" class="screen title-screen">
           <div class="screen-inner title-inner">
-            <p class="eyebrow">SEBUAH SUMPAH DI ANTARA ABU · v0.12.0</p>
+            <p class="eyebrow">SEBUAH SUMPAH DI ANTARA ABU · v0.13.0</p>
             <h1 class="game-title">ASHEN<span>VOW</span></h1>
             <div class="title-rule"><i></i><b>✦</b><i></i></div>
             <p class="lede">
@@ -256,6 +275,10 @@
                 <span>PONDOK UMPAN — MEMANCING</span>
                 <em>9 umpan · 25/50/100 koin · indeks 25 ikan</em>
               </button>
+              <button id="btn-fallen-menu" class="btn btn-ghost menu-btn fallen-menu-btn hidden" type="button">
+                <span>THE FALLEN ONES — YANG TERJATUH</span>
+                <em>Arc II · 7 wilayah langit · 11 bos · 3 akhiran</em>
+              </button>
               <button id="btn-expansion-menu" class="btn btn-ghost menu-btn expansion-menu-btn" type="button">
                 <span>ECHOES OF THE FORGOTTEN WORLD</span>
                 <em>100 level · Thornveil Haven · Chronicle · v0.3.0</em>
@@ -266,7 +289,7 @@
               </button>
               <button id="btn-updates" class="btn btn-ghost menu-btn" type="button">
                 <span>CATATAN UPDATE</span>
-                <em>Riwayat rilis · v0.12.0 · Pondok Umpan</em>
+                <em>Riwayat rilis · v0.13.0 · Yang Terjatuh</em>
               </button>
             </nav>
 
@@ -276,6 +299,7 @@
               <span>Progres tersimpan otomatis</span>
             </div>
             <p id="menu-expansion-progress" class="menu-expansion-progress">ECHOES · 0/100 LEVEL · BAB 1/10 · 0 GEMA</p>
+            <p id="fallen-menu-progress" class="menu-expansion-progress fallen-menu-progress">YANG TERJATUH · 0/7 WILAYAH · 0/11 BOS · 0 SERPIHAN</p>
 
             <p class="menu-controls">
               <kbd>A</kbd><kbd>D</kbd> gerak · <kbd>SPACE</kbd> lompat · <kbd>J</kbd> serang ·
@@ -343,7 +367,7 @@
             </div>
 
             <div id="credits-times" class="credits-times"></div>
-            <p class="credit-version">ASHEN VOW · v0.12.0 · 13 PENJAGA · 72 BOSS · 426 RUANG</p>
+            <p class="credit-version">ASHEN VOW · v0.13.0 · 13 PENJAGA · 83 BOSS · 465 RUANG</p>
             <div class="screen-links">
               <button id="btn-credits-back" class="link-btn" type="button">← KEMBALI KE MENU</button>
             </div>
@@ -360,7 +384,7 @@
               Catatan ini ikut tersimpan di dalam game.
             </p>
             <div class="updates-meta">
-              <span id="updates-version">VERSI SAAT INI · v0.12.0</span>
+              <span id="updates-version">VERSI SAAT INI · v0.13.0</span>
               <span>DIPERBARUI 15 NOVEMBER 2026</span>
             </div>
             <div id="update-log" class="update-log"></div>
@@ -596,6 +620,57 @@
               <button id="btn-fairy-back" class="link-btn" type="button">← KEMBALI KE MENU</button>
             </div>
             <p class="micro">Tahap dan bos terbuka berurutan. Progres Taman Peri tersimpan di browser ini bersama progres lain.</p>
+          </div>
+        </section>
+
+        <!-- ══ THE FALLEN ONES — SECOND MENU ══ -->
+        <section id="fallen-menu-screen" class="screen fallen-menu-screen hidden">
+          <div class="screen-inner fallen-menu-inner">
+            <p class="eyebrow fallen-eyebrow">ARC II · HEAVENLY DESCENT · SEBUAH GAME KEDUA</p>
+            <h1 class="fallen-title">THE FALLEN<span>ONES</span></h1>
+            <p class="fallen-subtitle">Langit membuka gerbangnya. Cahaya datang untuk menghakimi.</p>
+            <div class="fallen-menu-layout">
+              <div class="fallen-figure-wrap">
+                <canvas id="fallen-menu-figure" width="320" height="200" aria-label="Sosok di gerbang langit"></canvas>
+                <p id="fallen-menu-caption" class="fallen-caption">Ia masih berlutut.</p>
+                <p id="fallen-menu-movement" class="fallen-movement-label">I. The Descent</p>
+              </div>
+              <div class="fallen-menu-side">
+                <div id="fallen-menu-summary" class="fallen-summary"></div>
+                <nav id="fallen-menu-options" class="fallen-options" aria-label="Menu Yang Terjatuh"></nav>
+                <button id="fallen-menu-theme" class="link-btn fallen-theme-btn" type="button">TEMA: LANGIT</button>
+              </div>
+            </div>
+            <p id="fallen-menu-progress-secondary" class="micro">Progres dasar, kosmetik, dan Serpihan Halo dibawa dari dunia bawah. Kemampuan di-reset.</p>
+          </div>
+        </section>
+
+        <!-- ══ THE FALLEN ONES — HUB ══ -->
+        <section id="fallen-screen" class="screen hidden">
+          <div class="screen-inner fallen-inner">
+            <p class="eyebrow fallen-eyebrow">THE ARCHIVE OF HEAVEN · 7 WILAYAH · 11 BOS</p>
+            <h2 class="screen-title">THE FALLEN ONES</h2>
+            <p class="screen-sub">
+              Tujuh wilayah langit, satu perjalanan tanpa jalan kembali. Radiance mengisi Blinding Burst,
+              Judgment Mark menghukum yang diam, dan Purity Shield hanya pecah oleh alat yang tepat.
+            </p>
+            <div id="fallen-summary" class="fallen-summary"></div>
+            <div id="fallen-tabs" class="fallen-tabs"></div>
+            <div id="fallen-body" class="fallen-body"></div>
+            <div class="screen-links">
+              <button id="btn-fallen-back" class="link-btn" type="button">← KEMBALI KE GERBANG LANGIT</button>
+            </div>
+            <p class="micro">Progres Yang Terjatuh tersimpan di kunci simpanan yang sama dengan dunia bawah.</p>
+          </div>
+        </section>
+
+        <!-- ══ THE FALLEN ONES — ENDING ══ -->
+        <section id="fallen-ending-screen" class="screen overlay-screen hidden">
+          <div class="screen-inner narrow">
+            <p class="eyebrow fallen-eyebrow">SERAPIEL GUGUR · TIGA JALAN</p>
+            <h2 id="fallen-ending-title" class="screen-title">LANGIT MENUNGGU KEPUTUSANMU</h2>
+            <div id="fallen-ending-body" class="fallen-ending-body"></div>
+            <div id="fallen-ending-options" class="screen-links"></div>
           </div>
         </section>
 

@@ -31,6 +31,11 @@ import {
   FAIRY_ENEMY_INFO,
   FAIRY_BOSS_INFO,
 } from './fairy.js';
+import {
+  FALLEN_ROOMS,
+  FALLEN_ENEMY_INFO,
+  FALLEN_BOSS_INFO,
+} from './fallen.js';
 import { DEFAULT_SKILL_BONUSES } from './skills.js';
 
 export const VIEW_W = 960;
@@ -1063,8 +1068,8 @@ export const ROOMS = [
 
 // Legacy rooms stay exactly as they were so old saves, map layout and tests keep
 // their meaning. The campaign is a second set of rooms appended at indices 14+.
-export const ALL_ROOMS = [...ROOMS, ...EXPANSION_ROOMS, ...ATLAS_ROOMS, ...COURT_ROOMS, ...FAIRY_ROOMS];
-export const ALL_ENEMY_INFO = { ...ENEMY_INFO, ...EXPANSION_ENEMY_INFO, ...ATLAS_ENEMY_INFO, ...COURT_ENEMY_INFO, ...FAIRY_ENEMY_INFO };
+export const ALL_ROOMS = [...ROOMS, ...EXPANSION_ROOMS, ...ATLAS_ROOMS, ...COURT_ROOMS, ...FAIRY_ROOMS, ...FALLEN_ROOMS];
+export const ALL_ENEMY_INFO = { ...ENEMY_INFO, ...EXPANSION_ENEMY_INFO, ...ATLAS_ENEMY_INFO, ...COURT_ENEMY_INFO, ...FAIRY_ENEMY_INFO, ...FALLEN_ENEMY_INFO };
 
 const BOSS_INFO = {
   warden: {
@@ -1236,7 +1241,7 @@ const BOSS_INFO = {
   },
 };
 
-export const ALL_BOSS_INFO = { ...BOSS_INFO, ...EXPANSION_BOSS_INFO, ...ATLAS_BOSS_INFO, ...COURT_BOSS_INFO, ...PACK_BOSS_INFO, ...FAIRY_BOSS_INFO };
+export const ALL_BOSS_INFO = { ...BOSS_INFO, ...EXPANSION_BOSS_INFO, ...ATLAS_BOSS_INFO, ...COURT_BOSS_INFO, ...PACK_BOSS_INFO, ...FAIRY_BOSS_INFO, ...FALLEN_BOSS_INFO };
 export const EXPANSION_BOSS_IDS = Object.keys(EXPANSION_BOSS_INFO);
 
 export const CODEX = {
@@ -1840,6 +1845,10 @@ export class AshenGame {
       dying: false,
       deathTimer: 0,
       intro: 1.0,
+      // The Fallen Ones: Purity Shields soak almost all damage until broken by
+      // the right tool (Blinding Burst, parry) rather than brute force.
+      purityShield: Math.max(0, info.purityShield || 0),
+      purityMax: Math.max(0, info.purityShield || 0),
     };
     if (info.atlas) {
       b.atlas = true;
@@ -3216,6 +3225,20 @@ export class AshenGame {
     const b = this.boss;
     if (!b || b.dying || b.invuln > 0) return;
     amount *= this._abilityScale || 1;
+    // Purity Shield: the boss loses shield equal to the incoming blow but only
+    // bleeds 15% of it to HP, so breaking the shield is the real objective.
+    if (b.purityShield > 0) {
+      b.purityShield = Math.max(0, b.purityShield - amount);
+      amount *= 0.15;
+      this.emit({
+        type: 'purityHit',
+        kind: b.kind,
+        shield: b.purityShield,
+        max: b.purityMax || 0,
+        broke: b.purityShield <= 0,
+      });
+      if (b.purityShield <= 0) this.burst(b.x + b.w / 2, b.y + b.h / 2, 20, '#eaf6ff', 240);
+    }
     crit = crit || !!this._abilityCrit;
     b.hp = Math.max(0, b.hp - amount);
     this.damageDealt = (this.damageDealt || 0) + amount;

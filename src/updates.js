@@ -1,9 +1,37 @@
 // Ashen Vow — release history shown in the in-game Update Log.
 // Keep the newest entry first. `GAME_VERSION` is the single source of truth
 // for the version shown by the Update Log screen and the debug hooks.
-export const GAME_VERSION = '0.12.0';
+export const GAME_VERSION = '0.13.0';
 
 export const UPDATE_LOG = [
+  {
+    version: '0.13.0',
+    date: '16 November 2026',
+    title: 'THE FALLEN ONES — YANG TERJATUH',
+    tag: 'ARC II · 7 WILAYAH · 11 BOS · 3 AKHIRAN · v0.13.0',
+    summary:
+      'Setelah The Oathbreaker gugur, langit terbuka. Menu utama digantikan layar kedua bertema surgawi, dan Ashen Vow menjadi dua game dalam satu simpanan: tujuh wilayah langit, tiga puluh sembilan ruang baru, sebelas bos, empat mekanisme tempur baru, dan tiga akhiran yang ditentukan oleh pilihanmu — bukan oleh RNG.',
+    highlights: [
+      'Layar menu kedua: THE FALLEN ONES dengan tema surgawi, sosok berlutut yang berubah pose mengikuti progres dan akhiran, serta opsi NEW DESCENT, CONTINUE, THE ARCHIVE, THE BELOW, OPTIONS, dan QUIT. Menu dunia bawah tetap ada lewat THE BELOW.',
+      'Tujuh wilayah: The Gilded Ruins, Cloudspire Steppes, The Choir Hollow, Seraph Foundry, Mirror Aviary, Pale Cathedral, dan Last Heaven — masing-masing empat ruang plus satu ruang bos, ditambah empat ruang bos opsional (39 ruang, id 426–464).',
+      'Sebelas bos: tujuh bos cerita (Aurelian, Zephyria, Cantor, Aurum, Specula, Sanctus, Seraphiel) dan empat bos opsional (Throne of Thorns, Auditor Vael, dan dua lainnya). Setiap bos punya 2–3 fase, Purity Shield, dan dialog intro/fase/defeat.',
+      'Enam kemampuan baru yang terbuka berurutan: Halo Dash, Feather Glide, Resonance Strike, Gilded Guard, Reflect Step, dan Absolution. Kemampuan di-reset saat masuk arc, sesuai aturan carry-over.',
+      'Radiance Meter dan Blinding Burst: kerusakan ke bos mengisi Radiance; saat penuh, Burst menghancurkan Purity Shield dan menstun bos. Judgment Mark menempel saat kau terkena dan meledak bila kau diam terlalu lama; bergerak atau menyerang membatalkannya.',
+      'Shadow Stance: damage naik 35% sambil menguras nyawa dengan lantai 15% HP, terbuka setelah Aurelian atau lima kemampuan. Purity Shield hanya pecah cepat oleh Burst, parry, atau Shadow.',
+      'Tiga akhiran: Dawn, Dusk, dan Eclipse. Eclipse adalah akhiran rahasia yang mensyaratkan keempat bos opsional; sanitizer menolak Eclipse palsu pada save yang belum menuntaskan semuanya.',
+      'Echoes carry-over: lima gema permanen (echo_resolve, echo_hunters, echo_memory, echo_ash, echo_below) dihitung dari progres dunia bawah — ruang 8, ruang 13, 14 ruang ditemukan, 20 koleksi ekspansi, dan uji court.',
+      'Shards of Halo dan Thornveil-sized progression hub: empat peningkatan permanen (health, radiance, damage, weapon) dan senjata langit, ditambah tab Wilayah, Bestiary, Gema, Serpihan, dan Arsip.',
+      'Progres baru di progress.fallen dengan sanitizer penuh: ruang mustahil dibuang, bos tanpa empat ruang dicabut, kemampuan tak sah dihapus, gema dibatasi lima, Eclipse diverifikasi, dan menuTheme dipertahankan.',
+      'Ascensi terjadi otomatis saat ruang 7 dunia bawah tuntas; simpanan lama yang sudah menamatkan game langsung dibawa ke menu langit tanpa menghapus progres dasar, kosmetik, atau setelan.',
+      'Musik memakai track yang sudah ada (reliquary, stormexpanse, hollowcourt, cinderworks, glassorchard, lastvigil, forgotten, bossDawn, bossJudge) sehingga tidak ada aset audio baru dan tidak ada track yatim.',
+      'Test suite bertambah menjadi 322 test deterministik, termasuk 30 test The Fallen Ones: geometri 39 ruang, validasi gerbang, dialog tiap bos, aturan unlock, sanitizer, akhiran, gema, ekonomi serpihan, mekanik Radiance/Judgment/Shadow/Purity, dan integrasi bos nyata di src/core.js.',
+    ],
+    fixes: [
+      'Purity Shield dihurtBoss: serangan biasa hanya menggores 15% damage ke HP selama shield hidup, sehingga burst/parry menjadi jawaban yang benar alih-alih spam serangan.',
+      'Indeks ruang fallen memakai offset id-426 secara konsisten; unlock ruang dan bos tidak lagi membaca slot absolut yang membuat ruang opsional selalu terbuka.',
+      'Layar kemenangan dasar disembunyikan untuk run fallen agar tidak bertumpuk dengan layar akhiran tiga pilihan.',
+    ],
+  },
   {
     version: '0.12.0',
     date: '16 November 2026',

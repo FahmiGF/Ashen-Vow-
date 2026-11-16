@@ -36,7 +36,17 @@
 - Optimization: `AshenGame.compactRemoved()` replaces `Array#filter` in projectile/fx/enemy hot loops; `tools/sim-bench.mjs` measures **1.27×** step throughput (25,091 vs 19,683 steps/s at 120 Hz).
 - Tests: `tests/skills.test.js` (12 deterministic tests: model, economy, core ultimate scaling, reset re-apply, pack metadata/dialogue/music, pack progress, MusicManager safety) + 2 updated count assertions. Total suite **251/251**. Browser smoke `node tools/skill-smoke.mjs` passes 18 checks (v0.9.0 boot, 6-node panel, spend/persist, 6 pack cards, locked progression, boss theme, full gauntlet, reload persistence, no console errors).
 
-## 0. v0.7.0 — Infinite Labyrinth & Co-op
+## 0. v0.13.0 — The Fallen Ones (Arc II: Heavenly Descent)
+
+- `src/fallen.js` — pure, deterministic second campaign: 7 regions, 39 rooms (`FALLEN_ROOM_START = 426`, ids 426–464), 17 enemies + 6 elites, 11 bosses (7 story + 4 optional), 6 abilities, 4 upgrades, sky weapons, 5 Echoes, 3 endings, and a complete progress model under `progress.fallen`.
+- Ascension: `ascendProgress(progress)` requires base `cleared[7]`; boot calls it, so an old save that already felled The Oathbreaker lands in the heavenly menu. `THE BELOW` returns to the original title screen.
+- Mechanics: Radiance → Blinding Burst, Judgment Mark (detonate while still, clear on move/attack), Shadow Stance (+35% damage, HP drain, 15% floor), and **Purity Shield implemented in `core.hurtBoss()`** — while `b.purityShield > 0`, raw damage drains the shield but passes only 15% to HP and emits `purityHit`. `spawnBoss()` seeds `purityShield`/`purityMax` from `FALLEN_BOSS_INFO`.
+- Echoes carry over from base progress (`fallenEchoesFor`, cap 5); abilities reset. Eclipse requires all four optional bosses and is re-checked by the sanitizer.
+- UI: `#fallen-menu-screen` (six options, figure canvas, theme toggle), `#fallen-screen` (tabs regions/bestiary/echoes/upgrades/archive), `#fallen-ending-screen`, `#fallen-hud` (radiance, marks, shadow, shards, abilities), and `styles-fallen.css`. Keys: `B` burst, `V` shadow, `N` cleanse.
+- Debug hooks: `__ashen.showFallenMenu`, `showFallen`, `buildFallenMenu`, `buildFallenScreen`, `startFallenRegion`, `startFallenBoss`, `fallenBurst`, `fallenShadow`, `fallenCleanse`, `chooseFallenEnding`, `ascendNow`, `ascendIfEligible`, `buyFallenUpgrade`, `addFallenShards`, and `__ashen.fallen`.
+- Tests: `tests/fallen.test.js` (30) + `tools/fallen-smoke.mjs` (39 browser checks). Room totals in `tests/court|fairy|expansion` include the 39 new rooms; `ALL_BOSS_INFO` includes 11 new bosses.
+
+## 0b. v0.7.0 — Infinite Labyrinth & Co-op
 
 - `src/labyrinth.js` — pure, deterministic Cursed Realms data and logic: 20 zones, 40 named enemies, 30 bosses (3–7 phases, Common–Mythic rarity, phase dialogue), 40 cursed/ritual/corrupted items across 8 categories, 8 rituals, 6 Forbidden Synergies, 11 cycle modifiers, 10 modes, 10 elite tiers, reward chambers, checkpoint serialization, local leaderboard, mastery and save sanitizer (under `progress.labyrinth`).
 - `src/coop.js` — transport-agnostic co-op: lobby (room code/password/ready/leader), party scaling, downed/revive rules, quantized snapshot codec, delta frames, interest management, interpolation buffer, movement validation, rate limits, fair personal loot, session registry and reconnect tokens.
@@ -94,7 +104,8 @@ Non-negotiable v0.1.0 requirements (v0.0.7/v0.0.8 scope preserved):
 20. **Mycelial Hollow branch** — entered from room 2 after the Warden falls; 6 rooms, spore trampolines, climbable mycelium, Sporeling/Stalker/Brood Mother, The Sporebound, optional Root of the First Vow behind a 120-HP breakable wall, and a return gate to room 2.
 21. **Sigil & Ritual (v0.2.0)** — 4 permanent Sigils, 4 counted Ritual items, 6 consumables, quick-item cycling (`R`), an in-run Inventory overlay (`I`), a Whetstone damage buff, and an in-game Update Log (`src/updates.js`) reachable from the main menu.
 22. **Echoes of the Forgotten World (v0.3.0)** — 100 expansion levels in 10 chapters (7 standard + 1 environmental + 1 elite mini-boss + 1 major boss each), 10 biomes, 100 enemy base types with 300 variants, 20 mini-bosses, 10 major bosses, 5 difficulties, 6 modifiers, 5 NG+ tiers, 8 repeatable modes, 4 endgame trials, Thornveil Haven with 10 fixed NPCs / 8 upgrades / 12 quests, 8 settlements, 52 NPCs, 6 seasonal events, 32 visual-only skins, 12 collectible categories with 120 entries, and save-compatible progress under `progress.expansion`.
-23. **Expansion hub** (`X` or the main-menu button) with four tabs: **Kampanye**, **Thornveil Haven**, **Ashen Chronicle**, and **Lemari & Jurnal**. All expansion content is real playable data, not documentation-only.
+25. **The Fallen Ones (v0.13.0)** — Arc II second campaign: heavenly menu takeover after room 7, 7 regions, 39 rooms (426–464), 17 enemies + 6 elites, 11 bosses (7 story + 4 optional), 6 abilities, Radiance/Blinding Burst, Judgment Mark, Shadow Stance, Purity Shield, Echoes carry-over, Shards of Halo upgrades, and Dawn/Dusk/Eclipse endings. Progress lives at `progress.fallen` in the existing save key.
+24. **Expansion hub** (`X` or the main-menu button) with four tabs: **Kampanye**, **Thornveil Haven**, **Ashen Chronicle**, and **Lemari & Jurnal**. All expansion content is real playable data, not documentation-only.
 24. **Infinite Frontiers: Beyond the Veil (v0.4.0)** — Dedicated third-person **3D Mode** (Thornveil Forest vertical slice with interactive tribal village, NPCs Elder Tova / Scout Rian / Shaman Lyra, 3 enemies, Thornveil Alpha elite mob, Elder Yggvar colossal boss, 3D traversal, lock-on combat, parry); **Levels 101–200** across 10 chapters (11–20); **15 playable classes** with 4 abilities and 3 specializations each; **15 Elite Mobs** across 7 ranks (E1–E7) with 10 modifiers; **15 weapon categories** and 8 regional materials; **12-layer visual customization** with 10 dyes; **Kingdom Defense** tower defense (10 towers); **10 mounts and 10 companions**; **2D & 3D Map Editor** with visual scripting nodes; and complete **30-point release checklist**. Accessible from main menu via **ASHEN VOW: 3D MODE** and **INFINITE FRONTIERS**.
 
 ## 2. Stack and constraints
@@ -137,6 +148,10 @@ Do **not** add a framework, bundler, or asset pipeline unless the product scope 
 | `tests/core.test.js` | 65 deterministic Node tests |
 | `tests/expansion.test.js` | 10 tests for expansion data counts, room/boss lookups, unlocks, save migration, quests, events, haven bonuses, modifiers, collectibles |
 | `tests/foundations.test.js` | 15 tests for settings, bindings, persistence, gamepad, map fog/pins/stats, zones, music safety |
+| `src/fallen.js` | Arc II data and pure rules: 7 regions, 39 rooms, 17 enemies, 11 bosses, abilities, Echoes, endings, upgrades, mechanics, progress sanitizer/API |
+| `styles-fallen.css` | Heavenly second menu, arc hub tabs, ending screen, and in-run Radiance HUD |
+| `tests/fallen.test.js` | 30 tests for The Fallen Ones, including real-core boss and enemy integration |
+| `tools/fallen-smoke.mjs` | 39-check CDP smoke: second menu, hub, region run, boss kill, rewards, ending gating, persistence |
 | `tests/fairy.test.js` | 12 tests for Faewood content, stage chain, boss seal, progress sanitizer, heaven/hell forms, cutscene timing and real core boss fights |
 | `tests/speedrun.test.js` | 11 tests for speedrun multipliers, records, run history, deep stats/ladder, sanitizer, substep budget and core one-life behaviour |
 | `tests/fishing.test.js` | 14 tests for bait tiers and prices, odds normalization, catch rolls, reel windows, starter grant, shop economy, catch records and the index |
@@ -357,6 +372,8 @@ Boss rooms 2, 3, 5, 7, and 13, plus mycelial rooms 8 and 10, define `checkpoint`
 - `character` (`characterId`, `race`, `armor`, `skin`, `outfit`), persisted in `localStorage` key `ashen-vow-character-v1`
 - `prologueActive`, `prologueIndex`, `prologueTimer`, `prologueTotal`, `prologueVoice`; `prologueDone` is the deferred start callback
 - `spectateGame` is a separate `AshenGame` instance, never the live run.
+- Boot into `fallenMenu` when `progress.fallen.ascended` and `menuTheme !== 'base'`; `THE BELOW` and `showBaseMenu()` return to the original title. While `fallenEndingOpen`, the base victory screen is suppressed in favour of `#fallen-ending-screen`.
+- Fallen runs set `activeRunKind = 'fallen'`, override player HP from `createFallenRun`, route `gatePass`/`bossDown`/`roomEnter`/`purityHit` in `drainEvents`, and tick Radiance/Judgment/Shadow per fixed step via `tickFallen`.
 
 Rules:
 
@@ -393,7 +410,9 @@ Rules:
 npm test
 ```
 
-Current result: **291/291 passing** across the legacy, expansion, Atlas, Overdrive, Hearthfall, Skill Point, Faewood, speedrun, fishing, labyrinth/co-op and update-log suites. Coverage includes:
+Current result: **322/322 passing** across the legacy, expansion, Atlas, Overdrive, Hearthfall, Skill Point, Faewood, speedrun, fishing, Fallen Ones, labyrinth/co-op and update-log suites. Coverage includes:
+
+- **The Fallen Ones: 39 contiguous rooms and a valid gate graph; 17 enemies on the six engine archetypes; 11 bosses with 2–3 phases and intro/phase/defeat dialogue; region and boss unlock chaining; sanitizer repairs (out-of-order halls, phantom bosses, unearned abilities, capped echoes, forged Eclipse); Echoes derivation from base progress; Shards of Halo upgrades and weapons; Radiance/Burst, Judgment, Shadow and Purity formulas; deterministic boon rolls; a real `AshenGame` boss fight proving the Purity Shield absorbs raw damage and breaks.**
 
 - **court: 60 rooms / 24 enemies / 12 bosses (3–4 phases) / 8 weapons / 12 tools / 13 selectable classes / 6 house rooms / 24 furnishings / 8 NPCs**;
 - **stage timing: `progress.stageTimes` records best/last/clear count per stage; live clock and timer in the top-right; inventory shows loadout and active keybinds; graphics settings control AA, FOV, render distance, particle density, and quality bias**;
@@ -550,7 +569,8 @@ Verified through Chrome DevTools Protocol (v0.0.7):
 
 `window.__ashen` exists for smoke tests:
 
-- Getters: `game`, `renderer`, `started`, `paused`, `spectating`, `menuView`, `progress`, `expansion`, `atlas`, `labyrinth`, `court`, `settings`, `musicTrack`, `audioState`, `mapData`, `shopOpen`, `mapOpen`, `codexOpen`, `dialogueOpen`, `prologueActive`, `prologueIndex`, `prologueBeat`, `prologueVoice`, `character`.
+- Getters: `game`, `renderer`, `started`, `paused`, `spectating`, `menuView`, `progress`, `expansion`, `atlas`, `labyrinth`, `court`, `settings`, `musicTrack`, `audioState`, `mapData`, `shopOpen`, `mapOpen`, `codexOpen`, `dialogueOpen`, `prologueActive`, `prologueIndex`, `prologueBeat`, `prologueVoice`, `character`, `fallen`.
+- Fallen: `showFallenMenu`, `showFallen`, `buildFallenMenu`, `buildFallenScreen`, `startFallenRegion`, `startFallenBoss`, `fallenBurst`, `fallenShadow`, `fallenCleanse`, `chooseFallenEnding`, `ascendNow`, `ascendIfEligible`, `buyFallenUpgrade`, `addFallenShards`.
 - Hearthfall: `showCourt`, `closeCourt`, `buildCourtScreen`, `startCourtRoom`, `startCourtTrial`, `courtAction(action, data)`.
 - Navigation: `start`, `restart`, `retry`, `showMenu`, `showLevels`, `showExpansion`, `showCredits`, `showSettings`, `closeSettings`, `showCharacter`, `closeCharacter`, `enterRoom`, `clearProgress`.
 - Expansion: `buildExpansionScreen`, `startExpansionLevel`, `startExpansionMode`, `startExpansionTrial`, `claimQuest`, `buyHavenUpgrade`, `equipSkin`, `claimEventMission`, `claimEventTier`, `buyEventShop`.
