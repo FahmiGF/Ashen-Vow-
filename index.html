@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#0b0807" />
-    <title>Ashen Vow — v0.11.0</title>
+    <title>Ashen Vow — v0.12.0</title>
     <meta
       name="description"
       content="Ashen Vow adalah metroidvania medieval 2D dengan combat pedang real-time, 426 ruang, 72 boss, mode Speedrun satu nyawa, 100 level ekspansi, Thornveil Haven, peta, jam langsung, dan indeks sumpah."
@@ -18,6 +18,7 @@
     <link rel="stylesheet" href="./styles.css" />
     <link rel="stylesheet" href="./styles-labyrinth.css" />
     <link rel="stylesheet" href="./styles-court.css" />
+    <link rel="stylesheet" href="./styles-fishing.css" />
     <link
       rel="icon"
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%230b0807'/%3E%3Cpath d='M32 6l7 18 18 8-18 8-7 18-7-18-18-8 18-8z' fill='%23d08a45'/%3E%3C/svg%3E"
@@ -182,7 +183,7 @@
         <!-- ══ MAIN MENU ══ -->
         <section id="title-screen" class="screen title-screen">
           <div class="screen-inner title-inner">
-            <p class="eyebrow">SEBUAH SUMPAH DI ANTARA ABU · v0.11.0</p>
+            <p class="eyebrow">SEBUAH SUMPAH DI ANTARA ABU · v0.12.0</p>
             <h1 class="game-title">ASHEN<span>VOW</span></h1>
             <div class="title-rule"><i></i><b>✦</b><i></i></div>
             <p class="lede">
@@ -241,7 +242,7 @@
               </button>
               <button id="btn-court-menu" class="btn btn-ghost menu-btn court-menu-btn" type="button">
                 <span>HEARTHFALL — THE HOLLOW COURT</span>
-                <em>6 zona · 60 level · 12 bos · +6 Panggung Abadi · Skill Point · v0.11.0</em>
+                <em>6 zona · 60 level · 12 bos · +6 Panggung Abadi · Skill Point · v0.12.0</em>
               </button>
               <button id="btn-fairy-menu" class="btn btn-ghost menu-btn fairy-menu-btn" type="button">
                 <span>FAEWOOD — TAMAN PERI</span>
@@ -250,6 +251,10 @@
               <button id="btn-speedrun-menu" class="btn btn-ghost menu-btn speedrun-menu-btn" type="button">
                 <span>SPEEDRUN — SATU NYAWA</span>
                 <em>2× → 3× → 4× · tanpa checkpoint</em>
+              </button>
+              <button id="btn-fishing-menu" class="btn btn-ghost menu-btn fishing-menu-btn" type="button">
+                <span>PONDOK UMPAN — MEMANCING</span>
+                <em>9 umpan · 25/50/100 koin · indeks 25 ikan</em>
               </button>
               <button id="btn-expansion-menu" class="btn btn-ghost menu-btn expansion-menu-btn" type="button">
                 <span>ECHOES OF THE FORGOTTEN WORLD</span>
@@ -261,7 +266,7 @@
               </button>
               <button id="btn-updates" class="btn btn-ghost menu-btn" type="button">
                 <span>CATATAN UPDATE</span>
-                <em>Riwayat rilis · v0.11.0 · Speedrun</em>
+                <em>Riwayat rilis · v0.12.0 · Pondok Umpan</em>
               </button>
             </nav>
 
@@ -338,7 +343,7 @@
             </div>
 
             <div id="credits-times" class="credits-times"></div>
-            <p class="credit-version">ASHEN VOW · v0.11.0 · 13 PENJAGA · 72 BOSS · 426 RUANG</p>
+            <p class="credit-version">ASHEN VOW · v0.12.0 · 13 PENJAGA · 72 BOSS · 426 RUANG</p>
             <div class="screen-links">
               <button id="btn-credits-back" class="link-btn" type="button">← KEMBALI KE MENU</button>
             </div>
@@ -355,7 +360,7 @@
               Catatan ini ikut tersimpan di dalam game.
             </p>
             <div class="updates-meta">
-              <span id="updates-version">VERSI SAAT INI · v0.11.0</span>
+              <span id="updates-version">VERSI SAAT INI · v0.12.0</span>
               <span>DIPERBARUI 15 NOVEMBER 2026</span>
             </div>
             <div id="update-log" class="update-log"></div>
@@ -624,6 +629,94 @@
               <button id="speedrun-summary-again" class="btn btn-primary" type="button"><span>MULAI LAGI 2×</span></button>
               <button id="speedrun-summary-menu" class="link-btn" type="button">KEMBALI KE MENU</button>
             </div>
+          </div>
+        </section>
+
+        <!-- ══ FISHING HUB ══ -->
+        <section id="fishing-screen" class="screen hidden">
+          <div class="screen-inner fishing-inner">
+            <p class="eyebrow">PONDOK UMPAN · DANAU ABU · 9 UMPAN · 25 IKAN</p>
+            <h2 class="screen-title">Kail, UMPAN, DAN KESABARAN</h2>
+            <p class="screen-sub">
+              Pondok kayu di tepi danau menjual umpan 25, 50, dan 100 koin. Umpan yang lebih baik
+              menarik ikan yang lebih besar — dan indeks mencatat setiap peluangnya.
+            </p>
+            <div id="fishing-summary" class="exp-summary fishing-summary"></div>
+            <div id="fishing-body" class="fishing-body"></div>
+            <div class="screen-links">
+              <button id="fishing-cast-start" class="btn btn-primary" type="button"><span>LEMPAR KAIL</span></button>
+              <button id="fishing-shop-open" class="btn btn-ghost" type="button"><span>TOKO UMPAN</span></button>
+              <button id="fishing-index-open" class="btn btn-ghost" type="button"><span>INDEKS IKAN</span></button>
+              <button id="btn-fishing-back" class="link-btn" type="button">← KEMBALI KE MENU</button>
+            </div>
+
+            <div id="fishing-cast" class="fishing-cast hidden">
+              <div class="fishing-cast-card">
+                <p class="eyebrow">TARIKAN DI UJUNG KAIL</p>
+                <div class="fishing-cast-top">
+                  <canvas id="fishing-cast-canvas" width="240" height="140" aria-hidden="true"></canvas>
+                  <div>
+                    <h3 id="fishing-cast-name">—</h3>
+                    <p id="fishing-cast-sub" class="micro"></p>
+                  </div>
+                </div>
+                <div class="reel-track" id="fishing-reel-track">
+                  <div id="fishing-reel-zone" class="reel-zone"></div>
+                  <div id="fishing-reel-marker" class="reel-marker"></div>
+                </div>
+                <p id="fishing-cast-result" class="fishing-cast-result"></p>
+                <div class="fishing-cast-actions">
+                  <button id="fishing-strike" class="btn btn-primary" type="button"><span>TARIK!</span></button>
+                  <button id="fishing-cast-close" class="link-btn" type="button">TUTUP</button>
+                </div>
+              </div>
+            </div>
+
+            <p class="micro">Koin dari tangkapan membeli umpan berikutnya. Indeks, rekor berat, dan koleksi tersimpan di browser ini.</p>
+          </div>
+        </section>
+
+        <!-- ══ BAIT SHACK ══ -->
+        <section id="bait-shop-screen" class="screen overlay-screen hidden">
+          <div class="screen-inner fishing-inner">
+            <div class="bait-shack">
+              <div class="bait-shack-roof" aria-hidden="true"><i></i><b>PONDOK UMPAN</b><i></i></div>
+              <div class="bait-shack-body">
+                <p class="eyebrow">TOKO KAYU TEPI DANAU · BUKA SIANG MALAM</p>
+                <h2 class="screen-title shack-title">UMPAN SEGAR, LANGSUNG DARI EMBER</h2>
+                <p class="screen-sub">
+                  Tiga rak: umpan dasar 25 koin, lanjutan 50 koin, dan premium 100 koin.
+                  Semakin tinggi tingkatnya, semakin besar peluang ikan langka dan mitos.
+                </p>
+                <div id="bait-shop-wallet" class="bait-wallet"></div>
+                <div id="bait-shop-body" class="bait-shop-body"></div>
+              </div>
+            </div>
+            <div class="screen-links">
+              <button id="bait-shop-index" class="btn btn-ghost" type="button"><span>LIHAT INDEKS IKAN</span></button>
+              <button id="btn-bait-shop-back" class="link-btn" type="button">← KEMBALI KE PONDOK</button>
+            </div>
+            <p class="micro">Harga per unit. Umpan tersimpan bersama progres memancing dan tidak hilang saat reload.</p>
+          </div>
+        </section>
+
+        <!-- ══ FISH INDEX ══ -->
+        <section id="fish-index-screen" class="screen overlay-screen hidden">
+          <div class="screen-inner fishing-inner">
+            <p class="eyebrow">INDEKS IKAN · 25 SPESIES · 9 UMPAN</p>
+            <h2 class="screen-title">SETIAP PELUANG, SETIAP GAMBAR</h2>
+            <p class="screen-sub">
+              Setiap ikan punya gambar, tipe, rentang berat, nilai koin, dan peluang tangkap
+              untuk kesembilan umpan. Ikan yang belum tertangkap tetap menampilkan peluangnya.
+            </p>
+            <div id="fish-index-summary" class="exp-summary fishing-summary"></div>
+            <div id="fish-index-tabs" class="fish-index-tabs"></div>
+            <div id="fish-index-body" class="fish-index-body"></div>
+            <div class="screen-links">
+              <button id="fish-index-shop" class="btn btn-ghost" type="button"><span>KE TOKO UMPAN</span></button>
+              <button id="btn-fish-index-back" class="link-btn" type="button">← KEMBALI KE PONDOK</button>
+            </div>
+            <p class="micro">Peluang dihitung dari tabel umpan: setiap kolom umpan berjumlah tepat 100%.</p>
           </div>
         </section>
 

@@ -28,9 +28,26 @@ test('update log is complete and ordered newest first', () => {
   }
 });
 
-test('the latest update documents Speedrun and its one-life escalation', () => {
+test('the latest update documents fishing, bait tiers and the fish index', () => {
   const latest = LATEST_UPDATE;
-  assert.equal(latest.version, '0.11.0');
+  assert.equal(latest.version, '0.12.0');
+  const text = [latest.summary, ...latest.highlights, ...(latest.fixes || [])].join(' ');
+  assert.match(text, /umpan/i);
+  assert.match(text, /25 ikan|dua puluh lima ikan/i);
+  assert.match(text, /indeks/i);
+  assert.match(text, /25 koin/i);
+  assert.match(text, /50 koin/i);
+  assert.match(text, /100 koin/i);
+  assert.match(text, /Cacing Tanah/i);
+  assert.match(text, /progress\.fishing/i);
+  assert.match(text, /peluang/i);
+  assert.match(text, /Speedrun/i);
+  assert.match(text, /290 test/i);
+});
+
+test('the update log still documents Speedrun and its one-life escalation', () => {
+  const latest = UPDATE_LOG.find((entry) => entry.version === '0.11.0');
+  assert.ok(latest);
   const text = [latest.summary, ...latest.highlights, ...(latest.fixes || [])].join(' ');
   assert.match(text, /Speedrun/i);
   assert.match(text, /satu nyawa/i);

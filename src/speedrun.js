@@ -118,6 +118,72 @@ export function speedrunSummary(progress) {
   };
 }
 
+// One row per speed reached, newest/highest first, built from the run history.
+// `attempts` counts every attempt that reached that multiplier, `bestCycles`
+// and `bestTime` are the best numbers seen there, and `reached` marks a speed
+// the player has actually stood at.
+export function speedrunLadder(progress) {
+  const p = sanitizeSpeedrunProgress(progress);
+  const rows = new Map();
+  for (const entry of p.history) {
+    if (entry.multiplier <= 0) continue;
+    const row = rows.get(entry.multiplier) || {
+      multiplier: entry.multiplier,
+      cycle: Math.max(0, entry.multiplier - SPEEDRUN_START_MULTIPLIER),
+      attempts: 0,
+      deaths: 0,
+      clears: 0,
+      bestCycles: 0,
+      bestTime: 0,
+      lastAt: 0,
+      reached: true,
+    };
+    row.attempts += 1;
+    if (entry.died) row.deaths += 1;
+    else row.clears += 1;
+    row.bestCycles = Math.max(row.bestCycles, entry.clears);
+    row.bestTime = Math.max(row.bestTime, entry.time);
+    row.lastAt = Math.max(row.lastAt, entry.at);
+    rows.set(entry.multiplier, row);
+  }
+  return [...rows.values()].sort((a, b) => b.multiplier - a.multiplier);
+}
+
+// Deeper aggregate stats for the hub panel. Everything derives from the same
+// sanitized save, so a corrupt history can never produce a nonsense rate.
+export function speedrunStats(progress) {
+  const p = sanitizeSpeedrunProgress(progress);
+  const history = p.history;
+  const attempts = history.length;
+  const deaths = history.filter((entry) => entry.died).length;
+  const clearedRuns = attempts - deaths;
+  const totalTime = Math.round(history.reduce((sum, entry) => sum + entry.time, 0) * 10) / 10;
+  const averageTime = attempts ? Math.round((totalTime / attempts) * 10) / 10 : 0;
+  const averageClears = attempts
+    ? Math.round((history.reduce((sum, entry) => sum + entry.clears, 0) / attempts) * 10) / 10
+    : 0;
+  const longestClear = history.reduce((best, entry) => (entry.clears > best ? entry.clears : best), 0);
+  const best = p.bestMultiplier;
+  return {
+    attempts,
+    deaths,
+    clearedRuns,
+    totalTime,
+    averageTime,
+    averageClears,
+    longestClear,
+    clearRate: attempts ? Math.round((clearedRuns / attempts) * 1000) / 10 : 0,
+    deathRate: attempts ? Math.round((deaths / attempts) * 1000) / 10 : 0,
+    bestMultiplier: best,
+    bestCycles: p.bestCycles,
+    bestTime: p.bestTime,
+    bestRooms: p.bestRooms,
+    nextMultiplier: best ? Math.min(SPEEDRUN_MAX_MULTIPLIER, best + SPEEDRUN_STEP) : SPEEDRUN_START_MULTIPLIER,
+    stepsToNext: best ? Math.max(0, Math.min(SPEEDRUN_MAX_MULTIPLIER, best + SPEEDRUN_STEP) - best) : 0,
+    ladder: speedrunLadder(p),
+  };
+}
+
 // Records one finished run (death) or one cleared cycle (boss down). Returns a
 // summary of the attempt plus whether it set a new multiplier record.
 export function recordSpeedrun(progress, attempt = {}) {

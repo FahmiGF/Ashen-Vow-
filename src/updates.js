@@ -1,9 +1,36 @@
 // Ashen Vow — release history shown in the in-game Update Log.
 // Keep the newest entry first. `GAME_VERSION` is the single source of truth
 // for the version shown by the Update Log screen and the debug hooks.
-export const GAME_VERSION = '0.11.0';
+export const GAME_VERSION = '0.12.0';
 
 export const UPDATE_LOG = [
+  {
+    version: '0.12.0',
+    date: '16 November 2026',
+    title: 'PONDOK UMPAN — MEMANCING',
+    tag: '9 UMPAN · 25 IKAN · INDEKS · v0.12.0',
+    summary:
+      'Pondok kayu di tepi Danau Abu membuka pintunya: sembilan umpan dalam tiga tingkat harga, dua puluh lima ikan dalam lima tingkat kelangkaan, dan indeks yang menuliskan peluang setiap ikan untuk setiap umpan. Umpan yang lebih mahal memanggil ikan yang lebih besar.',
+    highlights: [
+      'Sembilan umpan dalam tiga rak: umpan dasar 25 koin (Cacing Tanah, Jangkrik, Keju), lanjutan 50 koin (Minnow, Kerang, Cumi-cumi), dan premium 100 koin (Irisan Ikan, Udang, Cacing Cahaya).',
+      'Pemain baru langsung membawa 10 Cacing Tanah sebagai umpan awal, dan toko menjual semua umpan per unit maupun lima unit sekaligus selama koin cukup.',
+      'Dua puluh lima ikan di lima tingkat: Umum, Tidak Umum, Langka, Epik, dan Mitos — dari Ikan Teri 8 koin sampai Leviathan Kecil 900 koin.',
+      'Peluang tangkap nyata per umpan: tabel umpan membagi 100% ke lima tingkat, lalu ke setiap spesies. Cacing memberi 4% peluang ikan Epik/Mitos, Cacing Cahaya memberi 38%; indeks menampilkan setiap angka itu.',
+      'Pondok Umpan berbentuk gubuk kayu dengan atap sirap, papan harga, dan rak umpan; koin dari tangkapan langsung bisa dibelanjakan di sana.',
+      'Mini-game tarik: penanda menyapu rel dan kau harus menekan TARIK (tombol, Space, Enter, atau ketuk) saat berada di zona terang; zona menyempit untuk ikan yang lebih langka.',
+      'Indeks Ikan: setiap spesies punya gambar prosedural (bentuk, warna, corak), tipe tubuh, rentang berat, nilai koin, jumlah tangkapan, rekor berat, dan peluang pada kesembilan umpan.',
+      'Ekonomi memancing: setiap tangkapan membayar nilainya, rekor berat disimpan per spesies, dan koleksi dihitung sampai 100%.',
+      'Progress baru di progress.fishing dengan sanitizer: koin, stok umpan, koleksi, rekor, lemparan, tangkapan, dan kegagalan; hadiah 10 cacing hanya diberikan sekali.',
+      'Statistik Speedrun lebih dalam: rasio tuntas, rata-rata waktu bertahan, putaran terpanjang, langkah kecepatan berikutnya, dan rincian per multiplier (percobaan, tuntas, putaran terbaik, waktu terbaik).',
+      'Penghematan render: HUD tidak lagi menulis ulang lebar HP, nama ruang, dan badge kecepatan setiap frame — hanya saat nilainya berubah.',
+      'Test suite bertambah menjadi 290 test deterministik, termasuk 14 test memancing (tabel peluang, reka ulang, ekonomi, sanitizer, indeks) dan 2 test statistik Speedrun.',
+    ],
+    fixes: [
+      'Tabel peluang ikan dibulatkan dengan metode sisa terbesar, sehingga setiap kolom umpan di indeks berjumlah tepat 100% alih-alih meleset 0,2% karena pembulatan per baris.',
+      'Hadiah umpan awal tidak lagi mengisi ulang cacing yang sudah habis: sanitizer menandai `starter` dan hanya menyuntik 10 cacing pada save yang belum pernah menerimanya.',
+      'Layar memancing, toko, dan indeks memakai grid minmax(min(...)) serta satu kolom di bawah 420 px, jadi tidak ada gulir horizontal di ponsel 320 px sekalipun.',
+    ],
+  },
   {
     version: '0.11.0',
     date: '15 November 2026',

@@ -1,4 +1,20 @@
-# Ashen Vow — v0.11.0
+# Ashen Vow — v0.12.0
+
+## Pondok Umpan — Memancing (v0.12.0)
+
+Gubuk kayu di tepi Danau Abu: sembilan umpan bertingkat harga, dua puluh lima ikan, dan indeks yang menuliskan setiap peluang.
+
+- **Jalankan:** menu utama → **PONDOK UMPAN — MEMANCING**.
+- **Sembilan umpan, tiga rak:** umpan dasar **25 koin** (Cacing Tanah, Jangkrik Hidup, Umpan Keju), lanjutan **50 koin** (Ikan Kecil/Minnow, Kerang Segar, Cumi-cumi), premium **100 koin** (Irisan Ikan, Udang Mentah, Cacing Cahaya).
+- **Mulai dengan 10 Cacing Tanah:** pemain baru langsung memegang sepuluh umpan termurah, jadi kail bisa dilempar tanpa membeli apa pun. Hadiah ini hanya diberikan sekali — cacing yang habis tidak diisi ulang diam-diam.
+- **Dua puluh lima ikan, lima tingkat:** Umum, Tidak Umum, Langka, Epik, dan Mitos — dari Ikan Teri 8 koin sampai Leviathan Kecil 900 koin. Setiap spesies punya rentang berat, nilai, bentuk tubuh, dan corak gambar sendiri.
+- **Umpan mahal memanggil ikan besar:** tabel umpan membagi tepat 100% ke lima tingkat. Cacing memberi **4%** peluang ikan Epik/Mitos, Cacing Cahaya memberi **38%** — angka itu terlihat langsung di rak umpan dan di indeks.
+- **Toko berbentuk gubuk kayu:** layar toko memakai atap sirap, papan harga, dan rak umpan; semua umpan dijual per unit maupun lima unit sekaligus selama koin cukup.
+- **Mini-game tarik:** setelah umpan dilempar, penanda menyapu rel dan kau harus menekan **TARIK** (tombol, `Space`, `Enter`, atau ketuk) saat berada di zona terang. Zona menyempit untuk ikan yang lebih langka: 30% lebar rel untuk ikan Umum, 7% untuk Mitos.
+- **Indeks Ikan:** setiap spesies menampilkan gambar prosedural (bentuk, warna, corak), tipe tubuh, rentang berat, nilai koin, jumlah tangkapan, rekor berat, dan peluang tangkap untuk **kesembilan umpan**. Tab rarity menyaring daftar; ikan yang belum tertangkap tetap menampilkan peluangnya.
+- **Ekonomi koin:** setiap tangkapan langsung membayar nilainya, rekor berat disimpan per spesies, dan koleksi dihitung sampai 100%.
+- **Rekor tersimpan:** `progress.fishing` di `ashen-vow-progress-v1` menyimpan koin, stok umpan, koleksi, rekor, lemparan, tangkapan, dan kegagalan; sanitizer membatasi semua angka, menyaring ID tak dikenal, dan mempertahankan field masa depan.
+- **Test & smoke:** `tests/fishing.test.js` menambah **14 test** (tabel peluang per umpan, pemotongan 100%, reka ulang tangkapan, zona tarik, ekonomi, sanitizer, indeks) sehingga total suite menjadi **291 test deterministik**. `npm run smoke:fishing` menjalankan alur nyata di browser (10 cacing, harga 25/50/100, pembelian, tangkapan, kegagalan, indeks bergambar, reload), dan `npm run audit:gadgets` memeriksa **207 layout check di 10 viewport** dari 320×568 sampai 1920×1080.
 
 ## Speedrun — Satu Nyawa (v0.11.0)
 
@@ -11,7 +27,8 @@ Satu nyawa, tanpa checkpoint, dan tempo yang terus menderas sampai kau jatuh.
 - **HUD:** badge `⚡ 2× · 1 NYAWA · PUTARAN 1` di kanan atas, berubah merah mulai 5×.
 - **Hub & ringkasan:** hub menampilkan rekor multiplier, putaran tuntas, waktu terbaik, jumlah run, lima aturan mode, dan tangga kecepatan 2× sampai ∞. Kematian membuka layar ringkasan berisi kecepatan akhir, putaran, ruang yang dilewati, dan waktu bertahan, dengan tombol mulai lagi 2×.
 - **Rekor & riwayat run:** `progress.speedrun` di `ashen-vow-progress-v1` menyimpan `bestMultiplier`, `bestCycles`, `bestTime`, `bestRooms`, `runs`, `deaths`, dan `clears`, plus `history` berisi 10 percobaan terakhir (multiplier, putaran tuntas, ruang, waktu, hasil, dan stempel waktu). Hub merender riwayat itu di bawah tangga kecepatan — terbaru di atas, ditandai **GUGUR** atau **TUNTAS**; sanitizer membatasi angka, memotong daftar, dan mempertahankan field masa depan.
-- **Test & smoke:** `tests/speedrun.test.js` menambah 9 test; total suite **274 test deterministik**. `npm run smoke:speedrun` memverifikasi start 2×, tempo yang lebih cepat dari jam dinding, jurang mematikan, ringkasan satu nyawa, eskalasi Oathbreaker ke 3×, kematian kedua di 3×, riwayat run, dan persistensi setelah reload. `npm run smoke:speedrun:mobile` mengulang alur itu di viewport potret 390×844 (hub, badge HUD, layar ringkasan, baris riwayat).
+- **Statistik mendalam:** hub juga menghitung rasio tuntas, rata-rata waktu bertahan, putaran terpanjang, langkah kecepatan berikutnya, dan rincian per multiplier (percobaan, tuntas, putaran terbaik, waktu terbaik).
+- **Test & smoke:** `tests/speedrun.test.js` menambah 11 test; total suite **291 test deterministik**. `npm run smoke:speedrun` (**55 check**) memverifikasi start 2×, tempo yang lebih cepat dari jam dinding, jurang mematikan, ringkasan satu nyawa, eskalasi Oathbreaker ke 3×, kematian kedua di 3×, riwayat run, dan persistensi setelah reload. `npm run smoke:speedrun:mobile` (**54 check**) mengulang alur itu di viewport potret 390×844 (hub, badge HUD, layar ringkasan, baris riwayat).
 
 ## Taman Peri — Faewood (v0.10.0)
 

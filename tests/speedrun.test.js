@@ -11,6 +11,8 @@ import {
   recordSpeedrun,
   sanitizeSpeedrunHistory,
   sanitizeSpeedrunProgress,
+  speedrunLadder,
+  speedrunStats,
   speedrunMaxSubsteps,
   speedrunMultiplier,
   speedrunSummary,
@@ -176,4 +178,57 @@ test('history entries are clamped and junk is dropped', () => {
   assert.deepEqual(sanitizeSpeedrunProgress({ history: 'x' }).history, []);
   assert.deepEqual(sanitizeSpeedrunHistory(null), []);
   assert.equal(sanitizeSpeedrunHistory([{ multiplier: 2 }], 1).length, 1);
+});
+
+test('deeper stats group the history by speed and keep the best per rung', () => {
+  const p = defaultSpeedrunProgress();
+  recordSpeedrun(p, { multiplier: 2, clears: 0, rooms: 3, time: 40, died: true, at: 1 });
+  recordSpeedrun(p, { multiplier: 3, clears: 1, rooms: 6, time: 90, died: true, at: 2 });
+  recordSpeedrun(p, { multiplier: 3, clears: 2, rooms: 9, time: 120, died: false, at: 3 });
+  recordSpeedrun(p, { multiplier: 4, clears: 2, rooms: 9, time: 30, died: true, at: 4 });
+  const ladder = speedrunLadder(p);
+  assert.deepEqual(ladder.map((row) => row.multiplier), [4, 3, 2]);
+  const three = ladder.find((row) => row.multiplier === 3);
+  assert.equal(three.attempts, 2);
+  assert.equal(three.deaths, 1);
+  assert.equal(three.clears, 1);
+  assert.equal(three.bestCycles, 2);
+  assert.equal(three.bestTime, 120);
+  assert.equal(three.cycle, 1);
+  assert.equal(ladder[0].cycle, 2);
+  assert.equal(ladder[2].attempts, 1);
+  assert.deepEqual(speedrunLadder(null), []);
+});
+
+test('deep stats derive rates, averages and the next rung safely', () => {
+  const empty = speedrunStats(null);
+  assert.equal(empty.attempts, 0);
+  assert.equal(empty.clearRate, 0);
+  assert.equal(empty.averageTime, 0);
+  assert.equal(empty.nextMultiplier, SPEEDRUN_START_MULTIPLIER);
+  assert.deepEqual(empty.ladder, []);
+
+  const p = defaultSpeedrunProgress();
+  recordSpeedrun(p, { multiplier: 2, clears: 0, rooms: 2, time: 20, died: true, at: 1 });
+  recordSpeedrun(p, { multiplier: 3, clears: 1, rooms: 7, time: 60, died: false, at: 2 });
+  const stats = speedrunStats(p);
+  assert.equal(stats.attempts, 2);
+  assert.equal(stats.deaths, 1);
+  assert.equal(stats.clearedRuns, 1);
+  assert.equal(stats.clearRate, 50);
+  assert.equal(stats.deathRate, 50);
+  assert.equal(stats.totalTime, 80);
+  assert.equal(stats.averageTime, 40);
+  assert.equal(stats.averageClears, 0.5);
+  assert.equal(stats.longestClear, 1);
+  assert.equal(stats.bestMultiplier, 3);
+  assert.equal(stats.nextMultiplier, 4);
+  assert.equal(stats.ladder.length, 2);
+
+  // A corrupt history cannot inflate the rates or the ladder.
+  const cooked = speedrunStats({ history: [{ multiplier: 900, clears: -5, time: 'x' }, null, 'nope'] });
+  assert.equal(cooked.attempts, 1);
+  assert.equal(cooked.bestMultiplier <= SPEEDRUN_MAX_MULTIPLIER, true);
+  assert.equal(cooked.clearRate <= 100, true);
+  assert.equal(cooked.ladder.length, 1);
 });

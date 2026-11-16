@@ -215,8 +215,8 @@ async function main() {
         rule: window.__fit('.speedrun-rules li'),
         rung: window.__fit('.speedrun-rung'),
         start: window.__fit('#speedrun-start'),
-        empty: window.__fit('.speedrun-empty'),
-        emptyText: document.querySelector('.speedrun-empty')?.textContent || '',
+        empty: window.__fit('#speedrun-body .exp-section:last-child .speedrun-empty'),
+        emptyText: [...document.querySelectorAll('.speedrun-empty')].map((node) => node.textContent).join(' '),
         startText: document.getElementById('speedrun-start').textContent.trim(),
       };
     })()`);
@@ -355,7 +355,7 @@ async function main() {
       };
     })()`);
     check('game boots again at the phone size', reloaded.booted, true);
-    check('reload reports v0.11.0', reloaded.version, '0.11.0');
+    check('reload reports v0.12.0', reloaded.version, '0.12.0');
     check('reload lands on the phone speedrun hub', reloaded.view, 'speedrun');
     check('history survives the reload', reloaded.rows, 1);
     check('reloaded history row fits the phone', reloaded.row.fitsWidth, true);

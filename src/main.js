@@ -85,10 +85,36 @@ import {
   defaultSpeedrunProgress,
   recordSpeedrun,
   sanitizeSpeedrunProgress,
+  speedrunLadder,
   speedrunMaxSubsteps,
   speedrunMultiplier,
+  speedrunStats,
   speedrunSummary,
 } from './speedrun.js';
+import {
+  FISHING_BAITS,
+  FISHING_BAIT_TIERS,
+  FISHING_LOCATION,
+  FISHING_SUBTITLE,
+  FISH_TOTAL,
+  baitHighTierChance,
+  defaultFishingProgress,
+  drawFishingIcon,
+  fishRarity,
+  fishingBaitById,
+  fishingBuyBait,
+  fishingCast,
+  fishingEscape,
+  fishingFishById,
+  fishingIndex,
+  fishingLandCatch,
+  fishingSelectBait,
+  fishingShopItems,
+  fishingSummary,
+  reelHit,
+  reelZone,
+  sanitizeFishingProgress,
+} from './fishing.js';
 import { UPDATE_LOG, GAME_VERSION } from './updates.js';
 import {
   EXPANSION_NAME,
@@ -389,7 +415,10 @@ const mapView = new MapView($('map-canvas'));
 
 let started = false;
 let paused = false;
-let menuView = 'title'; // title | levels | credits | updates | character | expansion | frontier | overdrive | mode3d | court | labyrinth | fairy | none
+let menuView = 'title'; // title | levels | credits | updates | character | expansion | frontier | overdrive | mode3d | court | labyrinth | fairy | speedrun | fishing | baitShop | fishIndex | none
+let fishingReel = null;
+let fishingReelFrame = 0;
+let fishIndexTab = 0;
 let expansionTab = 'campaign';
 let expansionChapter = 0;
 let havenNpcId = 'sari';
@@ -642,6 +671,7 @@ function defaultProgress() {
     pack: defaultPackProgress(),
     fairy: defaultFairyProgress(),
     speedrun: defaultSpeedrunProgress(),
+    fishing: defaultFishingProgress(),
     stageTimes: {},
   };
 }
@@ -679,7 +709,7 @@ function loadProgress() {
         };
     // Keep every unknown top-level field. v0.3.0 adds `expansion` without
     // changing the storage key or discarding future/legacy save data.
-    const { version, unlocked: _unlocked, cleared: _cleared, map: _map, expansion: _expansion, atlas: _atlas, labyrinth: _labyrinth, court: _court, skills: _skills, pack: _pack, fairy: _fairy, speedrun: _speedrun, stageTimes: _stageTimes, ...extras } = parsed;
+    const { version, unlocked: _unlocked, cleared: _cleared, map: _map, expansion: _expansion, atlas: _atlas, labyrinth: _labyrinth, court: _court, skills: _skills, pack: _pack, fairy: _fairy, speedrun: _speedrun, fishing: _fishing, stageTimes: _stageTimes, ...extras } = parsed;
     return {
       ...extras,
       version: 1,
@@ -694,6 +724,7 @@ function loadProgress() {
       pack: sanitizePackProgress(parsed.pack),
       fairy: sanitizeFairyProgress(parsed.fairy),
       speedrun: sanitizeSpeedrunProgress(parsed.speedrun),
+      fishing: sanitizeFishingProgress(parsed.fishing),
       stageTimes: sanitizeStageTimes(parsed.stageTimes),
     };
   } catch {
@@ -1906,6 +1937,7 @@ function showSpeedrun() {
 
 function buildSpeedrunScreen() {
   const summary = speedrunSummary(speedrunState());
+  const stats = speedrunStats(speedrunState());
   const history = summary.history || [];
   const box = $('speedrun-summary');
   if (box) {
@@ -1940,6 +1972,26 @@ function buildSpeedrunScreen() {
           }).join('')}
           <div class="speedrun-rung endless"><span>DAN SETERUSNYA</span><strong>∞</strong></div>
         </div>
+      </section>
+      <section class="exp-section">
+        <div class="exp-section-head">
+          <h3>STATISTIK MENDALAM</h3>
+          <span>${stats.attempts ? `${stats.attempts} percobaan tercatat` : 'belum ada data'}</span>
+        </div>
+        <div class="speedrun-stats">
+          <div class="sr-stat"><span>RASIO TUNTAS</span><strong>${stats.clearRate}%</strong><em>${stats.clearedRuns} dari ${stats.attempts} percobaan</em></div>
+          <div class="sr-stat"><span>RATA-RATA BERTAHAN</span><strong>${stats.averageTime ? formatTime(stats.averageTime) : '—'}</strong><em>total ${formatTime(stats.totalTime)}</em></div>
+          <div class="sr-stat"><span>PUTARAN TERPANJANG</span><strong>${stats.longestClear}</strong><em>rata-rata ${stats.averageClears} putaran</em></div>
+          <div class="sr-stat"><span>LANGKAH BERIKUT</span><strong>${stats.nextMultiplier}×</strong><em>${stats.bestMultiplier ? `${stats.bestMultiplier}× sudah tercapai` : 'belum ada rekor'}</em></div>
+        </div>
+        ${stats.ladder.length ? `<div class="speedrun-ladder-detail">
+          ${stats.ladder.map((row) => `<div class="sr-rung-row${row.multiplier === stats.bestMultiplier ? ' record' : ''}">
+            <strong>${row.multiplier}×</strong>
+            <span>${row.attempts} percobaan · ${row.clears} tuntas</span>
+            <span>putaran terbaik ${row.bestCycles}</span>
+            <span>${row.bestTime ? formatTime(row.bestTime) : '—'}</span>
+          </div>`).join('')}
+        </div>` : '<p class="speedrun-empty">Statistik per kecepatan muncul setelah percobaan pertamamu.</p>'}
       </section>
       <section class="exp-section">
         <div class="exp-section-head">
@@ -2084,6 +2136,437 @@ function handleSpeedrunClear() {
   speedrunLastSummary = attempt;
   startSpeedrun(nextCycle, { silent: true });
   showToast(`⚡ ${cleared}× tuntas — naik ke ${nextMultiplier}×`, 2800);
+}
+
+// ── Fishing: bait shack, reel minigame, illustrated index ───────────────
+const FISH_SHAPE_LABELS = {
+  slender: 'MEMANJANG',
+  round: 'BUNDAR',
+  flat: 'PIPIH',
+  eel: 'BELUT',
+  shell: 'BERCANGKANG',
+  squid: 'BERKAKI',
+  spiky: 'BERTARING',
+};
+
+function fishingState() {
+  if (!progress.fishing) progress.fishing = defaultFishingProgress();
+  return progress.fishing;
+}
+
+function fishingKg(value) {
+  const n = Number(value) || 0;
+  if (!n) return '—';
+  return n >= 10 ? `${n.toFixed(1)} kg` : `${n.toFixed(2)} kg`;
+}
+
+function closeFishingOverlays() {
+  cancelAnimationFrame(fishingReelFrame);
+  fishingReelFrame = 0;
+  fishingReel = null;
+  $('fishing-cast')?.classList.add('hidden');
+}
+
+function showFishing() {
+  cancelPrologue();
+  started = false;
+  paused = false;
+  shopOpen = false;
+  mapOpen = false;
+  codexOpen = false;
+  inventoryOpen = false;
+  settingsOpen = false;
+  closeDialogue(true);
+  spectating = false;
+  spectateGame = null;
+  speedrunSummaryOpen = false;
+  closeFishingOverlays();
+  menuView = 'fishing';
+  fishIndexTab = 0;
+  clearHeldKeys();
+  buildFishingScreen();
+  syncScreens();
+}
+
+function closeFishing() {
+  closeFishingOverlays();
+  showMenu();
+}
+
+function buildFishingScreen() {
+  const p = fishingState();
+  const summary = fishingSummary(p);
+  const selected = fishingBaitById(summary.selectedBait) || FISHING_BAITS[0];
+  const owned = p.bait[selected.id] || 0;
+  const summaryBox = $('fishing-summary');
+  if (summaryBox) {
+    summaryBox.innerHTML = `
+      <div><span>KOIN</span><strong>${summary.coins}</strong><em>${summary.earned} koin dari tangkapan</em></div>
+      <div><span>UMPAN</span><strong>${summary.owned}</strong><em>${summary.baitKinds} jenis di tas</em></div>
+      <div><span>INDEKS</span><strong>${summary.discovered} / ${summary.total}</strong><em>${summary.completion}% koleksi</em></div>
+      <div><span>TANGKAPAN</span><strong>${summary.successRate}%</strong><em>${summary.catches} berhasil · ${summary.escapes} lepas</em></div>
+    `;
+  }
+  const body = $('fishing-body');
+  if (body) {
+    body.innerHTML = `
+      <section class="exp-section">
+        <div class="exp-section-head">
+          <h3>PILIH UMPAN</h3>
+          <span>${summary.hasStarterBait ? 'cacing siap dipakai' : 'umban habis — beli di pondok'}</span>
+        </div>
+        <div class="bait-rack">
+          ${FISHING_BAITS.map((bait) => {
+            const count = p.bait[bait.id] || 0;
+            const active = summary.selectedBait === bait.id;
+            return `<button class="bait-chip tier-${bait.tier}${active ? ' active' : ''}${count ? '' : ' empty'}" type="button" data-fishing-bait="${bait.id}">
+              <span class="bait-glyph" style="--bait:${bait.color};--bait-accent:${bait.accent}" aria-hidden="true">${bait.glyph}</span>
+              <span class="bait-copy"><strong>${esc(bait.short)}</strong><em>${bait.price} koin · ${count} tersisa</em></span>
+              <small>${baitHighTierChance(bait.id)}% langka+</small>
+            </button>`;
+          }).join('')}
+        </div>
+      </section>
+      <section class="exp-section">
+        <div class="exp-section-head">
+          <h3>DANAU ABU</h3>
+          <span>${summary.casts} lemparan · rekor ${fishingKg(summary.bestKg)}</span>
+        </div>
+        <div class="fishing-pond">
+          <div class="fishing-pond-art" aria-hidden="true">
+            <span class="pond-sun"></span>
+            <span class="pond-wave w1"></span>
+            <span class="pond-wave w2"></span>
+            <span class="pond-float"></span>
+            <span class="pond-hut"></span>
+          </div>
+          <div class="fishing-pond-copy">
+            <h4>${esc(FISHING_LOCATION)}</h4>
+            <p>${esc(FISHING_SUBTITLE)}</p>
+            <div class="fishing-pond-meta">
+              <span>UMPAN AKTIF<b>${esc(selected.short)} ×${owned}</b></span>
+              <span>PELUANG LANGKA+<b>${baitHighTierChance(selected.id)}%</b></span>
+              <span>TERTANGKAP<b>${summary.catches}</b></span>
+            </div>
+          </div>
+        </div>
+      </section>
+    `;
+  }
+  const cast = $('fishing-cast-start');
+  if (cast) {
+    const label = cast.querySelector('span');
+    if (label) label.textContent = owned ? `LEMPAR KAIL (${selected.short} ×${owned})` : 'UMPAN HABIS';
+    cast.disabled = owned <= 0;
+  }
+}
+
+function selectFishingBait(baitId) {
+  if (!fishingSelectBait(fishingState(), baitId)) return false;
+  saveProgress();
+  buildFishingScreen();
+  return true;
+}
+
+function paintFishingCastArt(fish, landed) {
+  const canvas = $('fishing-cast-canvas');
+  const ctx = canvas?.getContext('2d');
+  if (!ctx) return;
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.setTransform(2, 0, 0, 2, 0, 0);
+  if (fish && landed) {
+    drawFishingIcon(ctx, fish, 60, 35, 58);
+    return;
+  }
+  ctx.strokeStyle = 'rgba(150, 205, 220, 0.45)';
+  ctx.lineWidth = 1.5;
+  for (let i = 0; i < 3; i += 1) {
+    ctx.beginPath();
+    ctx.ellipse(60, 44, 18 + i * 13, 5 + i * 4, 0, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  ctx.beginPath();
+  ctx.fillStyle = '#e0b06a';
+  ctx.arc(60, 44, 6, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#8a5a2a';
+  ctx.fillRect(59, 16, 2, 22);
+}
+
+function fishingReelLoop(now) {
+  if (!fishingReel || fishingReel.resolved) {
+    fishingReelFrame = 0;
+    return;
+  }
+  const delta = Math.min(0.05, Math.max(0, (now - (fishingReel.last || now)) / 1000));
+  fishingReel.last = now;
+  fishingReel.position += (fishingReel.dir * delta) / 0.85;
+  if (fishingReel.position >= 1) {
+    fishingReel.position = 1;
+    fishingReel.dir = -1;
+  } else if (fishingReel.position <= 0) {
+    fishingReel.position = 0;
+    fishingReel.dir = 1;
+  }
+  const marker = $('fishing-reel-marker');
+  if (marker) marker.style.left = `${Math.round(fishingReel.position * 1000) / 10}%`;
+  fishingReelFrame = requestAnimationFrame(fishingReelLoop);
+}
+
+function beginFishingCast() {
+  const p = fishingState();
+  const cast = fishingCast(p, p.selectedBait, Math.random());
+  if (!cast.ok) {
+    showToast(cast.reason === 'empty' ? 'Umpan habis — beli di pondok umpan.' : 'Umpan itu tidak dikenal.', 2200);
+    return false;
+  }
+  saveProgress();
+  const bait = fishingBaitById(cast.bait);
+  fishingReel = {
+    fish: cast.fish,
+    zone: reelZone(cast.fish),
+    bait: bait ? bait.short : 'umpan',
+    position: 0,
+    dir: 1,
+    last: performance.now(),
+    resolved: false,
+    result: '',
+  };
+  buildFishingScreen();
+  const overlay = $('fishing-cast');
+  if (!overlay) return false;
+  overlay.classList.remove('hidden');
+  const name = $('fishing-cast-name');
+  const sub = $('fishing-cast-sub');
+  const result = $('fishing-cast-result');
+  if (name) name.textContent = 'SESUATU MENGGIGIT!';
+  if (sub) sub.textContent = `Umpan ${fishingReel.bait} · tekan TARIK saat penanda di zona terang`;
+  if (result) {
+    result.textContent = '';
+    result.className = 'fishing-cast-result';
+  }
+  const zoneEl = $('fishing-reel-zone');
+  if (zoneEl) {
+    zoneEl.style.left = `${(fishingReel.zone.center - fishingReel.zone.half) * 100}%`;
+    zoneEl.style.width = `${fishingReel.zone.half * 2 * 100}%`;
+  }
+  const marker = $('fishing-reel-marker');
+  if (marker) marker.style.left = '0%';
+  const strike = $('fishing-strike');
+  if (strike) {
+    const label = strike.querySelector('span');
+    if (label) label.textContent = 'TARIK!';
+  }
+  paintFishingCastArt(null, false);
+  cancelAnimationFrame(fishingReelFrame);
+  fishingReelFrame = requestAnimationFrame(fishingReelLoop);
+  return true;
+}
+
+function strikeFishingReel(position) {
+  if (!fishingReel || fishingReel.resolved) return false;
+  fishingReel.resolved = true;
+  cancelAnimationFrame(fishingReelFrame);
+  fishingReelFrame = 0;
+  const at = typeof position === 'number' ? position : fishingReel.position;
+  const p = fishingState();
+  const fish = fishingReel.fish;
+  const rarity = fishRarity(fish.tier);
+  const hit = reelHit(fish, at);
+  const name = $('fishing-cast-name');
+  const sub = $('fishing-cast-sub');
+  const result = $('fishing-cast-result');
+  const strike = $('fishing-strike');
+  if (strike) {
+    const label = strike.querySelector('span');
+    if (label) label.textContent = 'LEMPAR LAGI';
+  }
+  if (hit) {
+    const landed = fishingLandCatch(p, fish, Math.random());
+    saveProgress();
+    fishingReel.result = 'hit';
+    if (name) name.textContent = `${fish.name} · ${fishingKg(landed.kg)}`;
+    if (sub) {
+      sub.textContent = `${rarity.name} · ${fish.value} koin${landed.isRecord ? ' · REKOR BERAT BARU' : ''} · tertangkap ${landed.caughtCount}×`;
+    }
+    if (result) {
+      result.textContent = 'TERTARIK!';
+      result.className = 'fishing-cast-result hit';
+    }
+    paintFishingCastArt(fish, true);
+    showToast(`🎣 ${fish.name} — ${fishingKg(landed.kg)} (+${fish.value} koin)`, 2400);
+  } else {
+    fishingEscape(p);
+    saveProgress();
+    fishingReel.result = 'miss';
+    if (name) name.textContent = 'IKAN ITU LEPAS';
+    if (sub) sub.textContent = `${rarity.name} · penanda meleset dari zona — umpan tetap terpakai`;
+    if (result) {
+      result.textContent = 'LEPAS';
+      result.className = 'fishing-cast-result miss';
+    }
+    paintFishingCastArt(fish, true);
+  }
+  return hit;
+}
+
+function openBaitShop() {
+  closeFishingOverlays();
+  menuView = 'baitShop';
+  buildBaitShop();
+  syncScreens();
+}
+
+function closeBaitShop() {
+  menuView = 'fishing';
+  buildFishingScreen();
+  syncScreens();
+}
+
+function buildBaitShop() {
+  const p = fishingState();
+  const summary = fishingSummary(p);
+  const wallet = $('bait-shop-wallet');
+  if (wallet) {
+    wallet.innerHTML = `
+      <span class="wallet-coin" aria-hidden="true">◉</span>
+      <strong>${summary.coins}</strong>
+      <em>koin · ${summary.owned} umpan di tas</em>
+    `;
+  }
+  const body = $('bait-shop-body');
+  if (!body) return;
+  body.innerHTML = FISHING_BAIT_TIERS.map((tier) => `
+    <section class="bait-shelf tier-${tier.tier}">
+      <div class="exp-section-head">
+        <h3>${esc(tier.name)}</h3>
+        <span>${tier.price} koin / unit · ${esc(tier.note)}</span>
+      </div>
+      <div class="bait-shelf-grid">
+        ${FISHING_BAITS.filter((bait) => bait.tier === tier.tier).map((bait) => {
+          const count = p.bait[bait.id] || 0;
+          const canOne = summary.coins >= bait.price;
+          const canFive = summary.coins >= bait.price * 5;
+          return `<article class="bait-shop-card${count ? '' : ' unbought'}">
+            <span class="bait-shop-glyph" style="--bait:${bait.color};--bait-accent:${bait.accent}" aria-hidden="true">${bait.glyph}</span>
+            <div class="bait-shop-copy">
+              <h4>${esc(bait.name)}</h4>
+              <em>${baitHighTierChance(bait.id)}% peluang ikan langka+</em>
+              <p>${esc(bait.blurb)}</p>
+              <div class="bait-shop-meta">
+                <span>HARGA<b>${bait.price}</b></span>
+                <span>DIMILIKI<b>${count}</b></span>
+              </div>
+            </div>
+            <div class="bait-shop-actions">
+              <button class="btn btn-primary btn-compact" type="button" data-buy-bait="${bait.id}" data-bait-qty="1"${canOne ? '' : ' disabled'}>BELI ×1</button>
+              <button class="btn btn-ghost btn-compact" type="button" data-buy-bait="${bait.id}" data-bait-qty="5"${canFive ? '' : ' disabled'}>BELI ×5</button>
+            </div>
+          </article>`;
+        }).join('')}
+      </div>
+    </section>
+  `).join('');
+}
+
+function buyFishingBait(baitId, qty = 1) {
+  const result = fishingBuyBait(fishingState(), baitId, qty);
+  if (!result.ok) {
+    showToast(
+      result.reason === 'coins'
+        ? `Koin kurang: ${result.name || 'umpan'} butuh ${result.total}, kau punya ${result.coins}.`
+        : result.reason === 'full'
+          ? 'Tas umpan penuh untuk jenis ini.'
+          : 'Umpan itu tidak dijual di sini.',
+      2200,
+    );
+    return result;
+  }
+  saveProgress();
+  buildBaitShop();
+  showToast(`+${result.qty} ${result.name} · ${result.total} koin`, 2000);
+  return result;
+}
+
+function openFishIndex() {
+  closeFishingOverlays();
+  menuView = 'fishIndex';
+  buildFishIndex();
+  syncScreens();
+}
+
+function closeFishIndex() {
+  menuView = 'fishing';
+  buildFishingScreen();
+  syncScreens();
+}
+
+function setFishIndexTab(tier) {
+  fishIndexTab = Math.max(0, Math.min(5, Math.floor(Number(tier) || 0)));
+  buildFishIndex();
+}
+
+function paintFishIcons() {
+  for (const canvas of document.querySelectorAll('#fish-index-body canvas[data-fish-icon]')) {
+    const fish = fishingFishById(canvas.dataset.fishIcon);
+    const ctx = canvas.getContext('2d');
+    if (!fish || !ctx) continue;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.setTransform(2, 0, 0, 2, 0, 0);
+    drawFishingIcon(ctx, fish, 60, 35, 60);
+  }
+}
+
+function buildFishIndex() {
+  const p = fishingState();
+  const index = fishingIndex(p);
+  const summary = fishingSummary(p);
+  const summaryBox = $('fish-index-summary');
+  if (summaryBox) {
+    summaryBox.innerHTML = `
+      <div><span>SPESIES</span><strong>${summary.discovered} / ${FISH_TOTAL}</strong><em>${summary.completion}% indeks</em></div>
+      <div><span>TANGKAPAN</span><strong>${summary.catches}</strong><em>${summary.casts} lemparan</em></div>
+      <div><span>REKOR BERAT</span><strong>${fishingKg(summary.bestKg)}</strong><em>${summary.bestFish ? esc(fishingFishById(summary.bestFish)?.name || '—') : 'belum ada'}</em></div>
+      <div><span>KOIN</span><strong>${summary.coins}</strong><em>${summary.earned} total didapat</em></div>
+    `;
+  }
+  const tabs = $('fish-index-tabs');
+  if (tabs) {
+    tabs.innerHTML = [0, 1, 2, 3, 4, 5].map((tier) => `<button class="fish-tab${fishIndexTab === tier ? ' active' : ''}" type="button" data-fish-tier="${tier}">${tier ? fishRarity(tier).name : `SEMUA ${FISH_TOTAL}`}</button>`).join('');
+  }
+  const body = $('fish-index-body');
+  if (!body) return;
+  const rows = fishIndexTab ? index.filter((row) => row.fish.tier === fishIndexTab) : index;
+  body.innerHTML = rows.map((row) => {
+    const fish = row.fish;
+    return `<article class="fish-card tier-${fish.tier}${row.discovered ? '' : ' unknown'}">
+      <div class="fish-card-art" style="--fish:${fish.body};--fish-accent:${fish.fin}">
+        <canvas data-fish-icon="${fish.id}" width="240" height="140" role="img" aria-label="Gambar ${esc(fish.name)}"></canvas>
+      </div>
+      <div class="fish-card-body">
+        <div class="fish-card-head">
+          <h4>${esc(fish.name)}</h4>
+          <span class="fish-rarity">${row.rarity.name}</span>
+        </div>
+        <p class="fish-card-note">${esc(fish.note)}</p>
+        <div class="fish-meta">
+          <span>TIPE<b>${FISH_SHAPE_LABELS[fish.shape] || fish.shape}</b></span>
+          <span>BERAT<b>${fish.minKg}–${fish.maxKg} kg</b></span>
+          <span>NILAI<b>${fish.value} koin</b></span>
+          <span>TERBUKA<b>${row.count > 0 ? 'YA' : 'BELUM'}</b></span>
+          <span>TERTANGKAP<b>${row.count}</b></span>
+          <span>REKOR<b>${fishingKg(row.bestKg)}</b></span>
+        </div>
+        <div class="fish-odds">
+          <span class="fish-odds-head">PELUANG PER UMPAN</span>
+          ${row.chances.map((entry) => `<span class="fish-odds-chip${entry.baitId === row.bestBait ? ' best' : ''}">${esc(entry.baitName)}<b>${entry.chance}%</b></span>`).join('')}
+        </div>
+      </div>
+    </article>`;
+  }).join('');
+  paintFishIcons();
 }
 
 function fairyStageStatus(state, index) {
@@ -3549,6 +4032,7 @@ function showMenu() {
   speedrunRun = null;
   speedrunSummaryOpen = false;
   speedrunCleared = false;
+  closeFishingOverlays();
   labRun = null;
   labDirector = null;
   started = false;
@@ -7972,6 +8456,49 @@ $('speedrun-summary-menu')?.addEventListener('click', () => {
   speedrunSummaryOpen = false;
   showMenu();
 });
+$('btn-fishing-menu')?.addEventListener('click', () => showFishing());
+$('btn-fishing-back')?.addEventListener('click', () => closeFishing());
+$('fishing-cast-start')?.addEventListener('click', () => beginFishingCast());
+$('fishing-shop-open')?.addEventListener('click', () => openBaitShop());
+$('fishing-index-open')?.addEventListener('click', () => openFishIndex());
+$('fishing-strike')?.addEventListener('click', () => {
+  if (fishingReel && !fishingReel.resolved) strikeFishingReel();
+  else beginFishingCast();
+});
+$('fishing-cast-close')?.addEventListener('click', () => {
+  closeFishingOverlays();
+  buildFishingScreen();
+});
+$('btn-bait-shop-back')?.addEventListener('click', () => closeBaitShop());
+$('bait-shop-index')?.addEventListener('click', () => openFishIndex());
+$('btn-fish-index-back')?.addEventListener('click', () => closeFishIndex());
+$('fish-index-shop')?.addEventListener('click', () => openBaitShop());
+$('fishing-screen')?.addEventListener('click', (event) => {
+  const bait = event.target.closest('[data-fishing-bait]');
+  if (bait) selectFishingBait(bait.dataset.fishingBait);
+});
+$('bait-shop-screen')?.addEventListener('click', (event) => {
+  const buy = event.target.closest('[data-buy-bait]');
+  if (buy) buyFishingBait(buy.dataset.buyBait, Number(buy.dataset.baitQty) || 1);
+});
+$('fish-index-screen')?.addEventListener('click', (event) => {
+  const tab = event.target.closest('[data-fish-tier]');
+  if (tab) setFishIndexTab(tab.dataset.fishTier);
+});
+window.addEventListener('keydown', (event) => {
+  if (menuView !== 'fishing' || $('fishing-cast')?.classList.contains('hidden')) return;
+  if (event.code === 'Space' || event.code === 'Enter') {
+    if (fishingReel && !fishingReel.resolved) {
+      event.preventDefault();
+      event.stopPropagation();
+      strikeFishingReel();
+    }
+  } else if (event.code === 'Escape') {
+    event.preventDefault();
+    closeFishingOverlays();
+    buildFishingScreen();
+  }
+}, true);
 $('btn-fairy-back')?.addEventListener('click', () => closeFairy());
 $('btn-cutscene-skip')?.addEventListener('click', () => finishCutscene(true));
 $('btn-court-back')?.addEventListener('click', closeCourt);
@@ -8438,6 +8965,9 @@ function syncScreens() {
   $('court-screen')?.classList.toggle('hidden', menuView !== 'court' || covered);
   $('fairy-screen')?.classList.toggle('hidden', menuView !== 'fairy' || covered);
   $('speedrun-screen')?.classList.toggle('hidden', menuView !== 'speedrun' || covered);
+  $('fishing-screen')?.classList.toggle('hidden', menuView !== 'fishing' || covered);
+  $('bait-shop-screen')?.classList.toggle('hidden', menuView !== 'baitShop' || covered);
+  $('fish-index-screen')?.classList.toggle('hidden', menuView !== 'fishIndex' || covered);
   $('speedrun-summary-screen')?.classList.toggle('hidden', !speedrunSummaryOpen);
   $('lab-reward-screen')?.classList.toggle('hidden', !labRewardsOpen);
   $('lab-summary-screen')?.classList.toggle('hidden', !labSummaryOpen);
@@ -8480,13 +9010,21 @@ function syncScreens() {
 
 let flaskCache = -1;
 let relicCache = null;
+let hpCache = '';
+let roomHudCache = '';
+let speedBadgeCache = '';
 
 function updateHud() {
   if (!started || menuView !== 'none' || spectating) return;
   const hud = game.hud;
   const pct = Math.max(0, Math.min(1, hud.hp / hud.maxHp)) * 100;
-  $('hp-fill').style.width = `${pct}%`;
-  $('hp-text').textContent = `${hud.hp} / ${hud.maxHp}`;
+  // The HUD updates every frame, so only touch the DOM when a value changed.
+  const hpKey = `${hud.hp}/${hud.maxHp}/${Math.round(pct * 10)}`;
+  if (hpKey !== hpCache) {
+    hpCache = hpKey;
+    $('hp-fill').style.width = `${pct}%`;
+    $('hp-text').textContent = `${hud.hp} / ${hud.maxHp}`;
+  }
 
   if (flaskCache !== hud.flasks) {
     flaskCache = hud.flasks;
@@ -8503,16 +9041,25 @@ function updateHud() {
     $('relic-badge').textContent = hud.relic ? '✦ BULU BARA' : '✦ TERKUNCI';
   }
 
-  $('room-name').textContent = hud.roomName;
-  $('room-sub').textContent = (game.room.subtitle || '').toUpperCase();
+  const roomKey = `${hud.roomName}|${game.room.subtitle || ''}`;
+  if (roomKey !== roomHudCache) {
+    roomHudCache = roomKey;
+    $('room-name').textContent = hud.roomName;
+    $('room-sub').textContent = (game.room.subtitle || '').toUpperCase();
+  }
 
   const speedBadge = $('speedrun-badge');
   if (speedBadge) {
     if (activeRunKind === 'speedrun' && speedrunRun) {
       speedBadge.classList.remove('hidden');
-      speedBadge.textContent = `⚡ ${speedrunRun.multiplier}× · ${SPEEDRUN_LIVES} NYAWA · PUTARAN ${speedrunRun.cycle + 1}`;
+      const badgeKey = `${speedrunRun.multiplier}/${speedrunRun.cycle}`;
+      if (badgeKey !== speedBadgeCache) {
+        speedBadgeCache = badgeKey;
+        speedBadge.textContent = `⚡ ${speedrunRun.multiplier}× · ${SPEEDRUN_LIVES} NYAWA · PUTARAN ${speedrunRun.cycle + 1}`;
+      }
       speedBadge.classList.toggle('danger', speedrunRun.multiplier >= 5);
     } else {
+      speedBadgeCache = '';
       speedBadge.classList.add('hidden');
     }
   }
@@ -8761,6 +9308,8 @@ function syncMusic(raw) {
   }
 }
 
+let menuRenderGate = 0;
+
 function frame(now) {
   // Schedule first so an exception in a handler cannot permanently stop the loop.
   requestAnimationFrame(frame);
@@ -8847,7 +9396,14 @@ function frame(now) {
     }
     if (labGuestMode && started && activeRunKind === 'labyrinth') applyGuestSnapshot();
     if (coopGuestMode && started) applyCoopSnapshot();
-    renderer.render(game);
+    // A full-screen menu hides the playfield, so redraw the canvas at ~20 fps
+    // instead of 60 while nothing is simulated. That leaves the main thread to
+    // the DOM menus, which keeps them responsive on low-end phones.
+    const menuCoversGame = !started && !prologueActive && !cutsceneActive && menuView !== 'none';
+    if (!menuCoversGame || now - menuRenderGate >= 1000 / 20 - 0.6) {
+      menuRenderGate = menuCoversGame ? now : 0;
+      renderer.render(game);
+    }
     if (mapOpen) mapView.draw(now / 1000);
 
     if (menuView === 'character' && previewCtx) {
@@ -8897,6 +9453,33 @@ window.__ashen = {
   showSpeedrun,
   startSpeedrun,
   finishSpeedrun,
+  get fishing() {
+    return {
+      state: fishingState(),
+      summary: fishingSummary(fishingState()),
+      index: fishingIndex(fishingState()),
+      shop: fishingShopItems(),
+      reel: fishingReel
+        ? {
+            fish: fishingReel.fish.id,
+            position: fishingReel.position,
+            zone: fishingReel.zone,
+            resolved: fishingReel.resolved,
+            result: fishingReel.result,
+          }
+        : null,
+      tab: fishIndexTab,
+    };
+  },
+  showFishing,
+  closeFishing,
+  openBaitShop,
+  openFishIndex,
+  buyBait: buyFishingBait,
+  selectFishingBait,
+  beginFishingCast,
+  strikeFishingReel,
+  setFishIndexTab,
   get game() {
     return game;
   },

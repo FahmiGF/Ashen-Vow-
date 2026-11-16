@@ -1,7 +1,7 @@
 # Ashen Vow — Claude Master Plan
 
 > Compressed handoff for continuing **Ashen Vow v0.11.0**.
-> Status: **playable, browser-verified; Milestones A and B plus Sigil & Ritual, Echoes of the Forgotten World, Infinite Frontiers, Overdrive, The Sundered Atlas, Infinite Labyrinth co-op, Hearthfall (The Hollow Court), Skill Points + Panggung Abadi, Taman Peri (Faewood), and Speedrun (one life, escalating game speed) complete**.
+> Status: **playable, browser-verified; Milestones A and B plus Sigil & Ritual, Echoes of the Forgotten World, Infinite Frontiers, Overdrive, The Sundered Atlas, Infinite Labyrinth co-op, Hearthfall (The Hollow Court), Skill Points + Panggung Abadi, Taman Peri (Faewood), Speedrun (one life, escalating game speed), and Pondok Umpan (fishing, bait shack, illustrated index) complete**.
 > Roadmap: [`MASTERPLAN.md`](MASTERPLAN.md).
 > Repo: `https://github.com/FahmiGF/Ashen-Vow-` · branch `main` · push account `isshinAshinaSeal`.
 
@@ -56,6 +56,14 @@
 - `index.html` / `styles-court.css` — **HEARTHFALL — THE HOLLOW COURT** menu entry and responsive hub.
 - `tools/court-bench.mjs` — measured hot paths. On the dev machine: room lookup **5.82×** faster than `Array.find`, cached house bonus aggregate **7.85×** faster than the cold path, resident lookup roughly equal (0.98×) because the roster is only eight entries.
 - Tests: `tests/court.test.js` has 22 deterministic tests (content counts, room validator, boss 3–4 phases/dialogue, phase-IV transition, zone gates, zones/music, enemy/boss integration, weapons, house economy/cache, tools, NPC dialogue/quests, trials/NG+, mark pacing, save sanitizer, loadout, real simulation). Total suite **237/237**. Browser smoke `npm run smoke:court` passes the real 60-room/12-boss hub, house/NPC actions, room 354 run, clear + save, reload persistence, and the first two bosses of the twelve-boss rush with no console errors.
+
+## 0.06 v0.12.0 — Pondok Umpan (fishing)
+
+- `src/fishing.js` — pure data and arithmetic: **9 baits** in 3 price tiers (25/50/100 coins: worm, cricket, cheese / minnow, clam, squid / sliced fish, shrimp, glowworm), **25 fish** in 5 rarities (`FISH_RARITIES`), `fishingCatchTable(baitId)` (exact per-fish odds, each bait column sums to exactly 100 via largest-remainder rounding), `baitTierChances`, `baitHighTierChance`, `rollFishingCatch`, `reelZone`/`reelHit` (hit half-width 30% → 7% of the bar by rarity), `rollFishWeight`, `defaultFishingProgress`, `sanitizeFishingProgress` (starter grant happens once, `starter: true`), `fishingCast` (spends one bait), `fishingLandCatch` (pays value, records heaviest), `fishingEscape`, `fishingBuyBait`, `fishingSummary`, `fishingIndex`, and `drawFishingIcon(ctx, …)` procedural canvas art (6 body shapes, patterns). No DOM access.
+- `src/main.js` — `menuView` gains `fishing | baitShop | fishIndex`; `fishingState()` lazily owns `progress.fishing`. Functions: `showFishing`/`closeFishing`, `buildFishingScreen` (bait rack, pond card, cast button label), `selectFishingBait`, `beginFishingCast`/`fishingReelLoop`/`strikeFishingReel` (marker sweeps 1.35 s; TARIK button, `Space`, `Enter` or tap), `openBaitShop`/`buildBaitShop`/`buyFishingBait`, `openFishIndex`/`buildFishIndex`/`setFishIndexTab`/`paintFishIcons`. The index cards hold `<canvas data-fish-icon>` art plus the nine per-bait odds. HUD writes are cached (`hpCache`, `roomHudCache`, `speedBadgeCache`) so the frame loop only touches the DOM when values change.
+- `index.html` / `styles-fishing.css` — **PONDOK UMPAN — MEMANCING** menu entry, `#fishing-screen` hub with `#fishing-cast` reel overlay, `#bait-shop-screen` wooden shack (plank roof, wallet), and `#fish-index-screen` with rarity tabs. Every grid uses `minmax(min(Npx, 100%), 1fr)` with a single-column fallback under 420 px.
+- Save: `progress.fishing` (`coins`, `bait{}`, `caught{}`, `records{}`, `selectedBait`, `starter`, `casts`, `catches`, `escapes`, `earned`, `bestKg`, `bestFish`) inside `ashen-vow-progress-v1`, sanitized on load. A new save starts with **10 worms and 250 coins**.
+- Tests: `tests/fishing.test.js` (14 tests: bait prices/pools, odds normalize to 100, higher bait favours rarities, weighted rolls, reel windows, weight ranges, starter grant once, shop economy, cast bait consumption, catch records, summary rates, index columns, defensive ids). Speedrun gained `speedrunLadder` + `speedrunStats` with 2 extra tests. Total suite **291/291**. Browser smoke `node tools/fishing-smoke.mjs` (**84 checks**) drives the real hub, shack, purchases, reel hit/miss, index canvases and reload; `node tools/gadget-audit.mjs` (**207 checks / 10 viewports**, 320×568 → 1920×1080) proves zero horizontal overflow and ≥20 fps pacing.
 
 ## 1. Product definition
 
@@ -120,7 +128,9 @@ Do **not** add a framework, bundler, or asset pipeline unless the product scope 
 | `src/court.js` | Hearthfall: 6 zones / 60 court rooms, 24 enemies, 12 bosses (3–4 phases), 8 weapons + profiles, 12 tools, 6 house rooms, 24 furnishings, 8 NPC residents, `progress.court` save logic |
 | `src/fairy.js` | Faewood finale: 10 sequential stages + 2 boss arenas at rooms 414–425, 10 enemies, 4 tiny NPCs, 2 four-phase bosses, dragon heaven/hell forms, `progress.fairy` |
 | `src/cutscene.js` | 20-second final-boss portrait and 30-second post-credit epilogue timelines plus procedural `drawCutscene` art |
-| `src/speedrun.js` | Speedrun rules, 2×+ multiplier ladder, record/history sanitizer and substep budget for the one-life challenge mode |
+| `src/speedrun.js` | Speedrun rules, 2×+ multiplier ladder, record/history sanitizer, deeper stats/ladder and substep budget for the one-life challenge mode |
+| `src/fishing.js` | Fishing data and rules: 9 baits, 25 fish, exact catch odds, reel windows, bait-shack economy, save sanitizer, index rows and procedural fish art |
+| `styles-fishing.css` | Fishing hub, bait shack, reel overlay, fish index and Speedrun deep-stats styles with phone/tablet/landscape fallbacks |
 | `src/map.js` | Map model (fog, adjacency, pins, stats, 14-node layout) + `MapView` canvas renderer |
 | `src/prologue.js` | 12-beat, 60-second prologue timeline plus procedural cutscene art (`drawPrologue`) |
 | `src/main.js` | Menus, character customization, prologue playback, progress, settings UI, music sync, map/shop/codex/dialogue UI, fixed-step loop, input, HUD, debug hooks |
@@ -128,7 +138,8 @@ Do **not** add a framework, bundler, or asset pipeline unless the product scope 
 | `tests/expansion.test.js` | 10 tests for expansion data counts, room/boss lookups, unlocks, save migration, quests, events, haven bonuses, modifiers, collectibles |
 | `tests/foundations.test.js` | 15 tests for settings, bindings, persistence, gamepad, map fog/pins/stats, zones, music safety |
 | `tests/fairy.test.js` | 12 tests for Faewood content, stage chain, boss seal, progress sanitizer, heaven/hell forms, cutscene timing and real core boss fights |
-| `tests/speedrun.test.js` | 9 tests for speedrun multipliers, records, run history, sanitizer, substep budget and core one-life behaviour |
+| `tests/speedrun.test.js` | 11 tests for speedrun multipliers, records, run history, deep stats/ladder, sanitizer, substep budget and core one-life behaviour |
+| `tests/fishing.test.js` | 14 tests for bait tiers and prices, odds normalization, catch rolls, reel windows, starter grant, shop economy, catch records and the index |
 | `tests/court.test.js` | 22 tests for Hearthfall content, rooms, bosses/phases, zone gates, weapons, house, tools, classes, NPC quests, save, pacing, loadout and simulation |
 | `tools/court-bench.mjs` | Measured room/resident lookup and house-bonus cache benchmark |
 | `server.js` | Static server on port 4300 |
@@ -382,7 +393,7 @@ Rules:
 npm test
 ```
 
-Current result: **274/274 passing** across the legacy, expansion, Atlas, Overdrive, Hearthfall, Skill Point, Faewood, speedrun, labyrinth/co-op and update-log suites. Coverage includes:
+Current result: **291/291 passing** across the legacy, expansion, Atlas, Overdrive, Hearthfall, Skill Point, Faewood, speedrun, fishing, labyrinth/co-op and update-log suites. Coverage includes:
 
 - **court: 60 rooms / 24 enemies / 12 bosses (3–4 phases) / 8 weapons / 12 tools / 13 selectable classes / 6 house rooms / 24 furnishings / 8 NPCs**;
 - **stage timing: `progress.stageTimes` records best/last/clear count per stage; live clock and timer in the top-right; inventory shows loadout and active keybinds; graphics settings control AA, FOV, render distance, particle density, and quality bias**;
@@ -400,6 +411,10 @@ Current result: **274/274 passing** across the legacy, expansion, Atlas, Overdri
 - **one life disables `respawnAtCheckpoint()` and makes pit falls lethal in core, while the same pit stays survivable outside the mode**;
 - **the speedrun substep budget grows with the multiplier but stays capped, so the 120 Hz simulation keeps its determinism at high speed**;
 - **speedrun history keeps the newest ten attempts first, clamps junk entries, drops non-objects, and survives a save round-trip**;
+- **speedrun deep stats group the ladder by multiplier, report clear rate/averages and ignore corrupt history**;
+- **nine baits cost 25/50/100 coins, every bait's fish odds and every bait column in the index total exactly 100, and better bait measurably raises the tier-4/5 share**;
+- **a fresh fisherman starts with 10 worms and 250 coins, the starter grant never refills spent worms, and buying refuses unaffordable or unknown baits without touching the wallet**;
+- **casting spends exactly one bait, a centred strike lands and pays the fish value, a wild strike escapes but still consumes the bait, and the index marks only caught species**;
 
 - gravity, floor landing, movement and world bounds;
 - single jump vs double jump after relic;
@@ -525,6 +540,12 @@ Verified through Chrome DevTools Protocol (v0.0.7):
 
 > `requestAnimationFrame` is throttled when the Chrome page is backgrounded. Call `Page.bringToFront` in CDP before asserting anything that depends on the game loop.
 
+### v0.12.0 fishing + gadget verification
+
+- `npm run smoke:fishing` (**84 checks**): starts with 10 worms/250 coins, nine-bait rack, wooden shack with 25/50/100 shelves, buying one cricket/2 glowworms, refused unaffordable purchase, bait selection, real cast → reel overlay, centred strike catch (coins + index + save), wild strike escape (bait spent), illustrated index (25 painted canvases, 6 tabs, 9 odds per fish, mythic filter), reload persistence, no console errors.
+- `npm run audit:gadgets` (**207 checks / 10 viewports**): title, Speedrun hub, fishing hub, bait shack and fish index at 320×568, 360×640, 390×844, 414×896, 844×390, 768×1024, 1024×768, 1366×768, 1440×900 and 1920×1080 — no horizontal overflow, no off-screen screen-links buttons, ≥20 fps menu/run pacing on phone and desktop.
+- `npm run smoke:speedrun` (**55**) and `npm run smoke:speedrun:mobile` (**54**) still pass with the new deep-stats panel; Faewood smokes (**57** / **44**) unchanged.
+
 ## 8. Debug hooks
 
 `window.__ashen` exists for smoke tests:
@@ -537,6 +558,7 @@ Verified through Chrome DevTools Protocol (v0.0.7):
 - Character/prologue: `buildCharacterScreen`, `setCharacter`, `setCharacterField`, `saveCharacter`, `beginJourney`, `startPrologue`, `advancePrologue`, `finishPrologue`, `togglePrologueVoice`.
 - Overlays: `openMap`, `closeMap`, `toggleMap`, `openCodex`, `closeCodex`, `advanceDialogue`.
 - Spectate: `startSpectate`, `stopSpectate`.
+- Fishing: `fishing` (getter: state, summary, index, shop, reel, tab), `showFishing`, `closeFishing`, `openBaitShop`, `openFishIndex`, `buyBait`, `selectFishingBait`, `beginFishingCast`, `strikeFishingReel`, `setFishIndexTab`.
 - Simulation: `step`, `tap`, `damageBoss`, `chooseBlessing`, `togglePause`.
 - Shop/economy: `openShop`, `closeShop`, `buyShopItem`, `respawnAtCheckpoint`, `giveAsh`.
 - Inspect: `snap()` returns state, room, HP, relics, ash, weapon/ammo, checkpoint room, boss phase/state, gate, view flags, progress.
@@ -556,6 +578,8 @@ Verified through Chrome DevTools Protocol (v0.0.7):
 - Boss tuning lives in constants inside `src/core.js`; the data tables (`BOSS_INFO`, `ENEMY_INFO`, `CODEX`) are the extension point.
 - Enemy AI is platform-aware but not a full navmesh; complex multi-level layouts may still need hand-tuned jumps.
 - Codex screens are informational; no unlock tracking or per-entry discovery gating yet.
+- Fishing is a single lake with fixed species data: no weather, season or time-of-day modifiers yet, and the pond art is CSS rather than a simulated body of water.
+- Bait stock and coins are local save data; there is no server-authoritative fishing economy.
 
 ## 10. Working agreements for future changes
 
@@ -579,3 +603,5 @@ Verified through Chrome DevTools Protocol (v0.0.7):
 18. Cosmetics are visual-only. Never add combat stats to `COSMETIC_SKINS`, event rewards, or wardrobe items.
 19. Event rewards that were already claimed must survive event expiry and save reloads; test this whenever event logic changes.
 20. New expansion data belongs in `src/expansion.js`; keep `src/core.js` free of hardcoded chapter tables.
+21. Fishing odds must stay normalized: every bait's tier split and every bait column in the index must total exactly 100.0 (largest-remainder rounding), and `tests/fishing.test.js` must prove it.
+22. The ten-worm starter grant is one-shot (`starter: true`); sanitizers must never refill consumed bait.
