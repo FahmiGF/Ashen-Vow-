@@ -9549,6 +9549,35 @@ function syncMusic(raw) {
 }
 
 let menuRenderGate = 0;
+let uiTimer = 0;
+let slowFpsSamples = 0;
+let fastFpsSamples = 0;
+
+function adaptResolution() {
+  const playing = started && menuView === 'none' && !paused && game.state === 'playing';
+  if (!playing) {
+    slowFpsSamples = 0;
+    fastFpsSamples = 0;
+    return;
+  }
+  if (fpsValue < 45) {
+    slowFpsSamples += 1;
+    fastFpsSamples = 0;
+  } else if (fpsValue > 56) {
+    fastFpsSamples += 1;
+    slowFpsSamples = 0;
+  } else {
+    slowFpsSamples = 0;
+    fastFpsSamples = 0;
+  }
+  if (slowFpsSamples >= 4 && renderer.pixelScale > 0.71) {
+    renderer.setPixelScale(Math.max(0.7, renderer.pixelScale - 0.15));
+    slowFpsSamples = 0;
+  } else if (fastFpsSamples >= 6 && renderer.pixelScale < 0.99) {
+    renderer.setPixelScale(Math.min(1, renderer.pixelScale + 0.1));
+    fastFpsSamples = 0;
+  }
+}
 
 function frame(now) {
   // Schedule first so an exception in a handler cannot permanently stop the loop.
@@ -9572,6 +9601,7 @@ function frame(now) {
     fpsFrames = 0;
     const badge = $('fps-badge');
     if (badge) badge.textContent = `${fpsValue} FPS`;
+    adaptResolution();
   }
 
   pollGamepad();
@@ -9676,8 +9706,14 @@ function frame(now) {
   }
   labSendHostSnapshot();
   labSendGuestInput();
-  syncScreens();
-  updateHud();
+  // HUD and overlay visibility change slowly; 15 Hz is imperceptible and avoids
+  // forcing style/layout work on every rendered frame.
+  uiTimer += raw;
+  if (uiTimer >= 1 / 15) {
+    uiTimer = 0;
+    syncScreens();
+    updateHud();
+  }
 }
 
 window.addEventListener('resize', () => renderer.resize());

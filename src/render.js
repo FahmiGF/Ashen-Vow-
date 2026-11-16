@@ -41,6 +41,11 @@ export class Renderer {
     this.previewTransition = 0;
     this.lastPreviewChar = null;
     this.lastPreviewLook = null;
+    // Pre-rendered layers (sky, parallax silhouettes, vignette) keyed by palette.
+    // They are static art, so paying for the gradients once instead of every
+    // frame removes the largest slice of the frame budget.
+    this._layers = new Map();
+    this.pixelScale = 1;
     this.options = {
       shakeScale: 1,
       reduceFlashing: false,
@@ -57,11 +62,37 @@ export class Renderer {
 
   resize() {
     const bias = clamp(Number(this.options?.qualityBias ?? 55), 0, 100);
-    const cap = bias < 25 ? 1 : bias < 65 ? 1.5 : 2;
-    const dpr = Math.min(cap, window.devicePixelRatio || 1);
+    // Canvas is CSS-scaled anyway; 2x backing stores burn 4x the pixels for art
+    // that is already soft. High quality gets a mild 1.25x for crispness.
+    const cap = bias < 25 ? 0.85 : bias < 65 ? 1 : 1.25;
+    const base = Math.min(cap, window.devicePixelRatio || 1);
+    // pixelScale lets the loop trade resolution for frame rate on slow GPUs.
+    const dpr = clamp(base * (this.pixelScale || 1), 0.6, 2);
     this.dpr = dpr;
     this.canvas.width = Math.round(VIEW_W * dpr);
     this.canvas.height = Math.round(VIEW_H * dpr);
+  }
+
+  setPixelScale(scale) {
+    const next = clamp(Number(scale) || 1, 0.7, 1);
+    if (Math.abs(next - this.pixelScale) < 0.01) return;
+    this.pixelScale = next;
+    this.resize();
+  }
+
+  /** Build (or reuse) a 1x offscreen canvas for static artwork. */
+  layer(key, w, h, paint) {
+    let cached = this._layers.get(key);
+    if (cached) return cached;
+    if (typeof document === 'undefined') return null;
+    cached = document.createElement('canvas');
+    cached.width = Math.max(1, Math.ceil(w));
+    cached.height = Math.max(1, Math.ceil(h));
+    const c = cached.getContext('2d');
+    paint(c, cached.width, cached.height);
+    if (this._layers.size > 24) this._layers.clear();
+    this._layers.set(key, cached);
+    return cached;
   }
 
   render(game, opts = {}) {
@@ -69,7 +100,7 @@ export class Renderer {
     const dpr = this.dpr;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, VIEW_W, VIEW_H);
-    ctx.imageSmoothingEnabled = this.options?.antiAliasing !== false;
+    ctx.imageSmoothingEnabled = this.options?.antiAliasing !== false && this.pixelScale > 0.99;
 
     const spectate = !!opts.spectate;
     const t = game.time;
@@ -81,6 +112,14 @@ export class Renderer {
       ...(room.palette || {}),
       ...(game.arenaTheme?.palette || {}),
     };
+    // Palette background is a CSS gradient; changing it only on room change
+    // avoids a full-screen canvas fill while keeping per-zone colours.
+    const skyKey = `${pal.top}|${pal.mid}|${pal.low}`;
+    if (skyKey !== this._skyKey) {
+      this._skyKey = skyKey;
+      this.canvas.style.background = `linear-gradient(180deg, ${pal.top} 0%, ${pal.mid} 55%, ${pal.low} 100%)`;
+    }
+
     const p = game.player;
     const followCam = clamp(p.x + p.w / 2 - VIEW_W / 2, 0, WORLD_W - VIEW_W);
     const targetCam =
@@ -140,14 +179,66 @@ export class Renderer {
   }
 
   // ── background ───────────────────────────────────────────────────────────
-  drawBackground(ctx, room, pal, camX, t, game) {
-    const grad = ctx.createLinearGradient(0, 0, 0, VIEW_H);
-    grad.addColorStop(0, pal.top);
-    grad.addColorStop(0.55, pal.mid);
-    grad.addColorStop(1, pal.low);
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+  _moonLayer(pal) {
+    return this.layer(`moon|${pal.glow}|${pal.top}`, 400, 400, (c) => {
+      const halo = c.createRadialGradient(200, 200, 8, 200, 200, 190);
+      halo.addColorStop(0, this.alpha(pal.glow, 0.34));
+      halo.addColorStop(0.4, this.alpha(pal.glow, 0.1));
+      halo.addColorStop(1, this.alpha(pal.glow, 0));
+      c.fillStyle = halo;
+      c.fillRect(0, 0, 400, 400);
+      c.beginPath();
+      c.arc(200, 200, 46, 0, Math.PI * 2);
+      c.fillStyle = this.alpha('#e8c895', 0.22);
+      c.fill();
+      c.beginPath();
+      c.arc(186, 192, 38, 0, Math.PI * 2);
+      c.fillStyle = this.alpha(pal.top, 0.55);
+      c.fill();
+    });
+  }
 
+  _archesLayer(pal) {
+    // Moon, arches and columns share one strip and one parallax factor: a single
+    // cropped alpha blit per frame instead of three full-screen composites.
+    return this.layer(`backdrop|${pal.fog}|${pal.glow}|${pal.top}`, 2600, VIEW_H, (c) => {
+      const moon = this._moonLayer(pal);
+      if (moon) c.drawImage(moon, 560, -96);
+      for (let i = 0; i < 9; i++) {
+        const x = i * 300 - 120;
+        this.drawArch(c, x, 120, 190, 400, '#0f0c0b', 0.9);
+        this.drawArch(c, x + 46, 180, 100, 350, this.alpha(pal.fog, 0.35), 1);
+      }
+      for (let i = 0; i < 7; i++) {
+        const x = i * 360 + 80;
+        c.fillStyle = '#0d0a09';
+        c.fillRect(x, 80, 34, 390);
+        c.fillStyle = this.alpha('#4a3a2c', 0.5);
+        c.fillRect(x + 4, 80, 4, 390);
+        c.fillStyle = '#0b0808';
+        c.fillRect(x - 10, 70, 54, 18);
+        c.strokeStyle = this.alpha('#5b4d3c', 0.55);
+        c.lineWidth = 2;
+        c.beginPath();
+        c.moveTo(x + 16, 86);
+        c.quadraticCurveTo(x + 22, 150, x + 16, 214);
+        c.stroke();
+      }
+    });
+  }
+
+  /** Blit the visible slice of a parallax strip instead of the whole 2600px image. */
+  _blitParallax(ctx, image, offset) {
+    if (!image) return;
+    const sx = Math.max(0, -offset);
+    const sw = Math.min(VIEW_W, image.width - sx);
+    if (sw <= 0) return;
+    ctx.drawImage(image, sx, 0, sw, VIEW_H, offset + sx, 0, sw, VIEW_H);
+  }
+
+  drawBackground(ctx, room, pal, camX, t, game) {
+    // The sky gradient lives in CSS (`background` set in render), so the canvas
+    // stays transparent and skips a full-screen fill every frame.
     if (room.biome && room.parallax) {
       this.drawBiomeBackground(ctx, room, pal, camX, t, game);
       return;
@@ -158,66 +249,7 @@ export class Renderer {
       return;
     }
 
-    // distant ember moon / rift
-    const moonX = 760 - camX * 0.12;
-    const moonY = 104;
-    const halo = ctx.createRadialGradient(moonX, moonY, 8, moonX, moonY, 190);
-    halo.addColorStop(0, this.alpha(pal.glow, 0.34));
-    halo.addColorStop(0.4, this.alpha(pal.glow, 0.1));
-    halo.addColorStop(1, this.alpha(pal.glow, 0));
-    ctx.fillStyle = halo;
-    ctx.fillRect(0, 0, VIEW_W, VIEW_H);
-    ctx.beginPath();
-    ctx.arc(moonX, moonY, 46, 0, Math.PI * 2);
-    ctx.fillStyle = this.alpha('#e8c895', 0.22);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc(moonX - 14, moonY - 8, 38, 0, Math.PI * 2);
-    ctx.fillStyle = this.alpha(pal.top, 0.55);
-    ctx.fill();
-
-    // parallax cathedral arches
-    ctx.save();
-    ctx.translate(-camX * 0.28, 0);
-    for (let i = 0; i < 7; i++) {
-      const x = i * 300 - 120;
-      this.drawArch(ctx, x, 120, 190, 400, '#0f0c0b', 0.9);
-      this.drawArch(ctx, x + 46, 180, 100, 350, this.alpha(pal.fog, 0.35), 1);
-    }
-    ctx.restore();
-
-    // mid columns + chains
-    ctx.save();
-    ctx.translate(-camX * 0.55, 0);
-    for (let i = 0; i < 6; i++) {
-      const x = i * 360 + 80;
-      ctx.fillStyle = '#0d0a09';
-      ctx.fillRect(x, 80, 34, 390);
-      ctx.fillStyle = this.alpha('#4a3a2c', 0.5);
-      ctx.fillRect(x + 4, 80, 4, 390);
-      ctx.fillStyle = '#0b0808';
-      ctx.fillRect(x - 10, 70, 54, 18);
-      // chain
-      ctx.strokeStyle = this.alpha('#5b4d3c', 0.55);
-      ctx.lineWidth = 2;
-      const sway = Math.sin(t * 0.8 + i) * 6;
-      ctx.beginPath();
-      ctx.moveTo(x + 16, 86);
-      ctx.quadraticCurveTo(x + 16 + sway, 150, x + 16 + sway, 214);
-      ctx.stroke();
-    }
-    ctx.restore();
-
-    // fog bands
-    for (let i = 0; i < 3; i++) {
-      const y = 300 + i * 70;
-      const fg = ctx.createLinearGradient(0, y, 0, y + 80);
-      fg.addColorStop(0, this.alpha(pal.fog, 0));
-      fg.addColorStop(0.5, this.alpha(pal.fog, 0.1));
-      fg.addColorStop(1, this.alpha(pal.fog, 0));
-      ctx.fillStyle = fg;
-      ctx.fillRect(0, y, VIEW_W, 80);
-    }
+    this._blitParallax(ctx, this._archesLayer(pal), -camX * 0.38);
 
     // drifting ash
     ctx.fillStyle = this.alpha('#e5b678', 0.5);
@@ -242,7 +274,8 @@ export class Renderer {
     halo.addColorStop(0.45, this.alpha(pal.glow, 0.1));
     halo.addColorStop(1, this.alpha(pal.glow, 0));
     ctx.fillStyle = halo;
-    ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+    // Fill only the halo's bounding box; the rest of the screen is transparent.
+    ctx.fillRect(glowX - 260, glowY - 260, 520, 520);
 
     // Distant mushroom silhouettes.
     ctx.save();
@@ -345,7 +378,7 @@ export class Renderer {
     halo.addColorStop(0.45, this.alpha(glow, 0.08));
     halo.addColorStop(1, this.alpha(glow, 0));
     ctx.fillStyle = halo;
-    ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+    ctx.fillRect(moonX - 220, 108 - 220, 440, 440);
     ctx.beginPath();
     ctx.arc(moonX, 108, style === 'throne' ? 62 : 44, 0, Math.PI * 2);
     ctx.fillStyle = this.alpha('#f0d9a8', 0.18);
@@ -4512,27 +4545,19 @@ export class Renderer {
     if (game.room?.biome) this.drawWeather(ctx, game, pal, t, camX);
 
     if (game.fog) {
-      const fog = ctx.createRadialGradient(VIEW_W / 2, VIEW_H / 2, 90, VIEW_W / 2, VIEW_H / 2, 460);
-      fog.addColorStop(0, 'rgba(8,8,10,0)');
-      fog.addColorStop(0.55, 'rgba(8,8,10,0.45)');
-      fog.addColorStop(1, 'rgba(8,8,10,0.88)');
-      ctx.fillStyle = fog;
-      ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+      const fog = this.layer('fogOverlay', VIEW_W, VIEW_H, (c) => {
+        const g = c.createRadialGradient(VIEW_W / 2, VIEW_H / 2, 90, VIEW_W / 2, VIEW_H / 2, 460);
+        g.addColorStop(0, 'rgba(8,8,10,0)');
+        g.addColorStop(0.55, 'rgba(8,8,10,0.45)');
+        g.addColorStop(1, 'rgba(8,8,10,0.88)');
+        c.fillStyle = g;
+        c.fillRect(0, 0, VIEW_W, VIEW_H);
+      });
+      if (fog) ctx.drawImage(fog, 0, 0);
     }
 
-    // vignette
-    const v = ctx.createRadialGradient(VIEW_W / 2, VIEW_H / 2, 220, VIEW_W / 2, VIEW_H / 2, 620);
-    v.addColorStop(0, 'rgba(0,0,0,0)');
-    v.addColorStop(1, 'rgba(0,0,0,0.62)');
-    ctx.fillStyle = v;
-    ctx.fillRect(0, 0, VIEW_W, VIEW_H);
-
-    // bottom haze
-    const hz = ctx.createLinearGradient(0, VIEW_H - 120, 0, VIEW_H);
-    hz.addColorStop(0, 'rgba(0,0,0,0)');
-    hz.addColorStop(1, this.alpha(pal.glow, 0.05));
-    ctx.fillStyle = hz;
-    ctx.fillRect(0, VIEW_H - 120, VIEW_W, 120);
+    // Vignette and bottom haze are CSS layers over the canvas now; keeping them
+    // out of the 2D context avoids two full-screen alpha blends every frame.
 
     // damage vignette when low hp
     const p = game.player;

@@ -1,5 +1,6 @@
 import { createServer } from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
+import { gzipSync } from 'node:zlib';
 import { extname, join, normalize, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
@@ -23,6 +24,29 @@ const MIME = {
   '.woff2': 'font/woff2',
 };
 
+// Small asset cache: avoids re-reading and re-compressing unchanged files on
+// every reload. Keyed by path + mtime + size, so editing a file invalidates it.
+const assetCache = new Map();
+const COMPRESSIBLE = new Set(['.html', '.css', '.js', '.mjs', '.json', '.svg']);
+
+async function loadAsset(target, ext) {
+  const info = await stat(target);
+  if (!info.isFile()) throw new Error('not a file');
+  const key = `${target}|${info.mtimeMs}|${info.size}`;
+  const cached = assetCache.get(key);
+  if (cached) return cached;
+  const raw = await readFile(target);
+  const asset = {
+    raw,
+    gzip: COMPRESSIBLE.has(ext) && raw.length > 1024 ? gzipSync(raw, { level: 6 }) : null,
+    etag: `W/"${info.size.toString(16)}-${Math.round(info.mtimeMs).toString(16)}"`,
+    type: MIME[ext] || 'application/octet-stream',
+  };
+  assetCache.set(key, asset);
+  if (assetCache.size > 80) assetCache.delete(assetCache.keys().next().value);
+  return asset;
+}
+
 const server = createServer(async (req, res) => {
   try {
     const url = new URL(req.url || '/', `http://${req.headers.host}`);
@@ -33,14 +57,25 @@ const server = createServer(async (req, res) => {
       res.writeHead(403).end('Forbidden');
       return;
     }
-    const info = await stat(target);
-    if (!info.isFile()) throw new Error('not a file');
-    const body = await readFile(target);
-    res.writeHead(200, {
-      'Content-Type': MIME[extname(target).toLowerCase()] || 'application/octet-stream',
+    const ext = extname(target).toLowerCase();
+    const asset = await loadAsset(target, ext);
+    // Revalidation instead of a full re-download keeps the hot reload path cheap.
+    if (req.headers['if-none-match'] === asset.etag) {
+      res.writeHead(304, { ETag: asset.etag, 'Cache-Control': 'no-cache' });
+      res.end();
+      return;
+    }
+    const useGzip = asset.gzip && /\bgzip\b/.test(req.headers['accept-encoding'] || '');
+    const headers = {
+      'Content-Type': asset.type,
       'Cache-Control': 'no-cache',
-    });
-    res.end(body);
+      ETag: asset.etag,
+      Vary: 'Accept-Encoding',
+      'Content-Length': (useGzip ? asset.gzip : asset.raw).length,
+    };
+    if (useGzip) headers['Content-Encoding'] = 'gzip';
+    res.writeHead(200, headers);
+    res.end(useGzip ? asset.gzip : asset.raw);
   } catch {
     res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
     res.end('Not found');

@@ -114,6 +114,28 @@ body::before {
   background: #0b0806;
 }
 
+/* Static vignette, fog bands and bottom haze. Composited by the browser, so
+   the 2D context no longer blends three full-screen gradients every frame. */
+.canvas-shade {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at center, rgba(0, 0, 0, 0) 38%, rgba(0, 0, 0, 0.62) 100%),
+    linear-gradient(
+      180deg,
+      rgba(58, 42, 31, 0) 55.5%,
+      rgba(58, 42, 31, 0.1) 59%,
+      rgba(58, 42, 31, 0) 62.5%,
+      rgba(58, 42, 31, 0.09) 66%,
+      rgba(58, 42, 31, 0) 69.5%,
+      rgba(58, 42, 31, 0.08) 73%,
+      rgba(58, 42, 31, 0) 76.5%
+    ),
+    linear-gradient(0deg, rgba(208, 122, 53, 0.05), rgba(208, 122, 53, 0) 22%);
+}
+
 .hidden {
   display: none !important;
 }
