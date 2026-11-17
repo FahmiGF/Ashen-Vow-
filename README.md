@@ -1,4 +1,13 @@
-# Ashen Vow — v0.14.0
+# Ashen Vow — v0.15.0
+
+## The Fivefold Trials & Puzzle Adventure (v0.15.0)
+
+Dua jalur baru dibuka dari menu utama.
+
+- **THE FIVEFOLD TRIALS:** 20 biome Infinite Labyrinth kini punya lima level sebelum bosnya — total **100 level**, **2.000 musuh terjadwal**, dan **100 elite dijamin**. Setiap level memakai template data-driven: tepat 20 musuh, empat arketipe, dan satu elite (19 normal + 1 elite). Musuh datang dalam empat wave berisi lima; bos biome baru terbuka setelah kelima level selesai dan hanya memberi hadiah sekali.
+- **PUZZLE ADVENTURE — THE LOST MECHANISM:** Arc 1 berisi 10 tahap yang benar-benar bisa dimainkan di papan interaktif. Ada **23 kategori teka-teki** di atas delapan mesin nyata: jalur titik, pipa berotasi, gambar teracak, urutan, cermin laser, roda gigi, sakelar, dan geser balok. Setiap puzzle dibuat dari solusi yang diketahui lalu diacak dengan langkah yang bisa dibalik, sehingga selalu bisa diselesaikan; validator otomatis menolak layout yang rusak.
+- **Progres Metroidvania:** 10 kemampuan (Rune Scanner sampai Ancient Compass), lima bos teka-teki, snapshot co-op deterministik, dan save di `progress.trials` / `progress.puzzle` tanpa mengubah key save lama.
+- **Verifikasi:** `npm test` mencakup validasi 20/4/1 untuk seluruh 100 encounter, seluruh 23 generator puzzle di lima tingkat kesulitan, replay solusi, editor gate, dan sanitizer; `npm run smoke:fivefold` memainkan level trial nyata, membuka bos biome, menyelesaikan 10 tahap puzzle, dan memuat ulang save.
 
 ## The Radiant Crusade — Perang Salib Bersinar (v0.14.0)
 

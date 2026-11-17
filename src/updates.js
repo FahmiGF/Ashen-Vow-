@@ -1,9 +1,25 @@
 // Ashen Vow — release history shown in the in-game Update Log.
 // Keep the newest entry first. `GAME_VERSION` is the single source of truth
 // for the version shown by the Update Log screen and the debug hooks.
-export const GAME_VERSION = '0.14.0';
+export const GAME_VERSION = '0.15.0';
 
 export const UPDATE_LOG = [
+  {
+    version: '0.15.0',
+    date: '17 November 2026',
+    title: 'THE FIVEFOLD TRIALS — PUZZLEBOUND REALMS',
+    tag: 'BIOME EXPANSION · PUZZLE ADVENTURE · v0.15.0',
+    summary:
+      'Setiap biome kini punya lima level tempur sebelum bosnya, dan Puzzle Adventure membuka Arc 1: The Lost Mechanism — 23 jenis teka-teki yang benar-benar bisa dimainkan, 10 kemampuan Metroidvania, dan bos teka-teki.',
+    highlights: [
+      'The Fivefold Trials: 20 biome x 5 level = 100 level baru. Setiap level berisi tepat 20 musuh, 4 arketipe, dan 1 elite yang dijamin; bos biome hanya terbuka setelah kelima level selesai. Progres tersimpan di progress.trials.',
+      'Encounter memakai template data-driven dengan wave 5 musuh, validasi 20/4/1, dan hadiah bos sekali saja.',
+      'Puzzle Adventure: 23 kategori teka-teki (connect the dots, pipa, gambar teracak, gear, cermin, rune, memori, dan 16 lainnya) di atas delapan mesin puzzle nyata.',
+      'Setiap puzzle dibuat dari solusi yang diketahui lalu diacak dengan langkah yang bisa dibalik, sehingga selalu bisa diselesaikan; editor menolak layout yang tidak valid.',
+      'Arc 1 berisi 10 tahap, 10 kemampuan, lima bos teka-teki, dan progres di progress.puzzle yang tersimpan aman di save yang sama.',
+      'Snapshot puzzle deterministic untuk co-op dan sanitizer yang menolak progres palsu.',
+    ],
+  },
   {
     version: '0.14.0',
     date: '16 November 2026',

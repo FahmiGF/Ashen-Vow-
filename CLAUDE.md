@@ -1,9 +1,16 @@
 # Ashen Vow — Claude Master Plan
 
-> Compressed handoff for continuing **Ashen Vow v0.11.0**.
+> Compressed handoff for continuing **Ashen Vow v0.15.0**.
 > Status: **playable, browser-verified; Milestones A and B plus Sigil & Ritual, Echoes of the Forgotten World, Infinite Frontiers, Overdrive, The Sundered Atlas, Infinite Labyrinth co-op, Hearthfall (The Hollow Court), Skill Points + Panggung Abadi, Taman Peri (Faewood), Speedrun (one life, escalating game speed), and Pondok Umpan (fishing, bait shack, illustrated index) complete**.
 > Roadmap: [`MASTERPLAN.md`](MASTERPLAN.md).
 > Repo: `https://github.com/FahmiGF/Ashen-Vow-` · branch `main` · push account `isshinAshinaSeal`.
+
+## 0.0 v0.15.0 — The Fivefold Trials & Puzzle Adventure
+
+- `src/trials.js` — pure biome-combat expansion for all 20 labyrinth biomes: 100 standard levels generated from a data-driven 20-enemy / 4-archetype / 1-elite template (19 normal + 1 guaranteed elite), four 5-enemy waves, per-biome bosses, one-shot boss rewards, arena builder and boss overrides, and `progress.trials` with a sanitizer that rejects out-of-order clears and forged bosses.
+- `src/puzzle.js` — pure Puzzle Adventure framework: 23 puzzle categories over 8 real engines (path, pipes, image, sequence, beam, gear, toggle, swap), deterministic generation from a known solution, automatic solvability validation, an editor publish gate, a co-op snapshot codec, 10 Arc 1 stages, 10 Metroidvania abilities, five puzzle bosses, and `progress.puzzle`.
+- UI: **THE FIVEFOLD TRIALS** hub (20 biome cards, five levels each plus a gated boss arena) and **PUZZLE ADVENTURE — THE LOST MECHANISM** hub with an interactive board for every engine. Trial levels run through `game.loadArena` + `spawnEnemy`; puzzle stages are solved on the DOM board.
+- Tests: `tests/trials.test.js` + `tests/puzzle.test.js`; browser smoke `npm run smoke:fivefold`.
 
 ## 0.05 v0.11.0 — Speedrun: Satu Nyawa
 

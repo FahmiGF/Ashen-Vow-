@@ -463,6 +463,41 @@ import {
   MASTERY_TRACKS,
 } from './labyrinth.js';
 import {
+  TRIAL_BIOMES,
+  TRIAL_BIOME_BY_ID,
+  TRIAL_BOSS_BY_ID,
+  TRIAL_LEVELS_PER_BIOME,
+  trialSummary,
+  biomeProgress,
+  trialLevelUnlocked,
+  trialBossUnlocked,
+  buildEncounter,
+  waveForEncounter,
+  trialArena,
+  trialBossOverrides,
+  defaultTrialProgress,
+  sanitizeTrialProgress,
+  recordTrialClear,
+  recordTrialBoss,
+} from './trials.js';
+import {
+  PUZZLE_ARC1,
+  PUZZLE_ABILITIES,
+  PUZZLE_TYPES,
+  PUZZLE_TYPE_BY_ID,
+  PUZZLE_BOSS_BY_ID,
+  generateStagePuzzle,
+  generatePuzzle,
+  applyPuzzleMove,
+  puzzleIsSolved,
+  puzzleStageUnlocked,
+  puzzleSummary,
+  defaultPuzzleProgress,
+  sanitizePuzzleProgress,
+  recordPuzzleSolve,
+  recordPuzzleBoss,
+} from './puzzle.js';
+import {
   COOP_MODES,
   COOP_MAX_PLAYERS,
   createLobby,
@@ -555,6 +590,9 @@ let courtTalkLine = '';
 // ── Infinite Labyrinth state ──────────────────────────────────────────────
 let labTab = 'run';
 let labRun = null;
+let trialRun = null;
+let puzzleRun = null;
+let puzzleSelected = -1;
 let labDirector = null;
 let labBaseStats = null;
 let labWaveTimer = 0;
@@ -766,6 +804,8 @@ function defaultProgress() {
     fishing: defaultFishingProgress(),
     fallen: defaultFallenProgress(),
     crusade: defaultCrusadeProgress(),
+    trials: defaultTrialProgress(),
+    puzzle: defaultPuzzleProgress(),
     stageTimes: {},
   };
 }
@@ -803,7 +843,7 @@ function loadProgress() {
         };
     // Keep every unknown top-level field. v0.3.0 adds `expansion` without
     // changing the storage key or discarding future/legacy save data.
-    const { version, unlocked: _unlocked, cleared: _cleared, map: _map, expansion: _expansion, atlas: _atlas, labyrinth: _labyrinth, court: _court, skills: _skills, pack: _pack, fairy: _fairy, speedrun: _speedrun, fishing: _fishing, fallen: _fallen, crusade: _crusade, stageTimes: _stageTimes, ...extras } = parsed;
+    const { version, unlocked: _unlocked, cleared: _cleared, map: _map, expansion: _expansion, atlas: _atlas, labyrinth: _labyrinth, court: _court, skills: _skills, pack: _pack, fairy: _fairy, speedrun: _speedrun, fishing: _fishing, fallen: _fallen, crusade: _crusade, trials: _trials, puzzle: _puzzle, stageTimes: _stageTimes, ...extras } = parsed;
     return {
       ...extras,
       version: 1,
@@ -821,6 +861,8 @@ function loadProgress() {
       fishing: sanitizeFishingProgress(parsed.fishing),
       fallen: sanitizeFallenProgress(parsed.fallen),
       crusade: sanitizeCrusadeProgress(parsed.crusade),
+      trials: sanitizeTrialProgress(parsed.trials),
+      puzzle: sanitizePuzzleProgress(parsed.puzzle),
       stageTimes: sanitizeStageTimes(parsed.stageTimes),
     };
   } catch {
@@ -4166,6 +4208,9 @@ function showMenu() {
   speedrunCleared = false;
   closeFishingOverlays();
   labRun = null;
+  trialRun = null;
+  puzzleRun = null;
+  puzzleSelected = -1;
   labDirector = null;
   started = false;
   paused = false;
@@ -7383,6 +7428,16 @@ window.addEventListener('keydown', (e) => {
     return;
   }
 
+  if (menuView === 'trials' || menuView === 'puzzle') {
+    if (e.code === 'Escape' || e.code === 'Backspace') showMenu();
+    return;
+  }
+
+  if (menuView === 'puzzlePlay') {
+    if (e.code === 'Escape' || e.code === 'Backspace') showPuzzleAdventure();
+    return;
+  }
+
   if (labRewardsOpen) {
     if (/^Digit[1-4]$/.test(e.code)) chooseLabReward(Number(e.code.slice(5)) - 1);
     return;
@@ -8029,6 +8084,495 @@ function closeLabSummary() {
   showLabyrinth('records');
 }
 
+// ── Fivefold Trials ───────────────────────────────────────────────────────
+function trialsState() {
+  if (!progress.trials) progress.trials = defaultTrialProgress();
+  return progress.trials;
+}
+
+function showTrials() {
+  cancelPrologue();
+  started = false;
+  paused = false;
+  shopOpen = false;
+  mapOpen = false;
+  codexOpen = false;
+  inventoryOpen = false;
+  settingsOpen = false;
+  closeDialogue(true);
+  spectating = false;
+  spectateGame = null;
+  trialRun = null;
+  activeRunKind = 'legacy';
+  menuView = 'trials';
+  clearHeldKeys();
+  buildTrialsScreen();
+  syncScreens();
+}
+
+function buildTrialsScreen() {
+  const p = trialsState();
+  const summary = trialSummary(p);
+  const head = $('trials-summary');
+  if (head) {
+    head.innerHTML = `
+      <div class="lab-stat"><span>LEVEL SELESAI</span><strong>${summary.clearedLevels}/${summary.levels}</strong></div>
+      <div class="lab-stat"><span>BIOME</span><strong>${summary.biomes}</strong></div>
+      <div class="lab-stat"><span>MUSUH DIJADWALKAN</span><strong>${summary.enemies}</strong></div>
+      <div class="lab-stat"><span>ELITE DIJAMIN</span><strong>${summary.elites}</strong></div>
+      <div class="lab-stat"><span>BOS GUGUR</span><strong>${summary.bosses}/${summary.biomes}</strong></div>
+      <div class="lab-stat"><span>PROGRES</span><strong>${summary.completion}%</strong></div>`;
+  }
+  const body = $('trials-body');
+  if (!body) return;
+  body.innerHTML = TRIAL_BIOMES.map((biome) => {
+    const state = biomeProgress(p, biome.id);
+    const zone = LABYRINTH_ZONE_BY_ID[biome.id];
+    const levels = biome.levels.map((level, index) => {
+      const cleared = p.cleared[biome.id][index];
+      const unlocked = trialLevelUnlocked(p, biome.id, index);
+      return `<button class="trial-level ${cleared ? 'cleared' : ''}" type="button"
+        data-trial-biome="${biome.id}" data-trial-level="${index}" ${unlocked ? '' : 'disabled'}>
+        <b>${index + 1}. ${esc(level.name)}</b>
+        <span>${cleared ? 'SELESAI' : unlocked ? '20 MUSUH · 4 ARKETIPE · 1 ELITE' : 'TERKUNCI'}</span>
+        <span>ELITE: ${esc(level.elite.name)}</span>
+      </button>`;
+    }).join('');
+    return `<article class="trials-biome" style="--zone:${zone?.color || '#d8b06a'}">
+      <div class="trials-biome-head">
+        <h3>${esc(biome.name)}</h3>
+        <em>${esc(biome.localName)} · ${state.cleared}/${TRIAL_LEVELS_PER_BIOME}</em>
+        <span class="trials-boss">BOS: ${esc(biome.boss.name)} · ${biome.boss.phases} FASE</span>
+      </div>
+      <div class="trials-levels">${levels}
+        <button class="trial-level boss ${state.bossCleared ? 'cleared' : ''}" type="button" data-trial-boss="${biome.id}" ${state.bossUnlocked ? '' : 'disabled'}>
+          <b>${state.bossCleared ? '✔ ' : ''}${esc(biome.boss.name)}</b>
+          <span>${state.bossCleared ? 'BOS GUGUR' : state.bossUnlocked ? 'ARENA BOS TERBUKA' : 'SELESAIKAN 5 LEVEL'}</span>
+          <span>${biome.boss.phases} fase · ${biome.boss.hp} HP dasar</span>
+        </button>
+      </div>
+    </article>`;
+  }).join('');
+}
+
+function startTrialLevel(biomeId, levelIndex) {
+  audio.init();
+  const biome = TRIAL_BIOME_BY_ID[biomeId];
+  const level = biome?.levels[levelIndex];
+  if (!level || !trialLevelUnlocked(trialsState(), biomeId, levelIndex)) return false;
+  activeRunKind = 'trials';
+  activeExpansionIndex = null;
+  game.reset();
+  applyCharacterToGame();
+  applySkinToGame();
+  game.labyrinth = true;
+  game.player.relic = true;
+  game.ash = Math.max(game.ash, 80);
+  trialRun = {
+    mode: 'level', biomeId, levelIndex, biome, level,
+    encounter: buildEncounter(level), wave: -1, finished: false, clearTimer: 0,
+    startedAt: performance.now(), hudTimer: 0,
+  };
+  game.loadArena(trialArena(biome, level));
+  spawnTrialWave();
+  started = true;
+  paused = false;
+  shopOpen = false;
+  mapOpen = false;
+  codexOpen = false;
+  inventoryOpen = false;
+  settingsOpen = false;
+  closeDialogue(true);
+  spectating = false;
+  menuView = 'none';
+  lastGameState = 'playing';
+  accumulator = 0;
+  lastTime = performance.now();
+  clearHeldKeys();
+  showBanner(level.name, `${biome.localName} · 20 musuh · 4 arketipe · 1 elite`);
+  syncScreens();
+  updateHud();
+  updateTrialHud();
+  return true;
+}
+
+function startTrialBoss(biomeId) {
+  audio.init();
+  const biome = TRIAL_BIOME_BY_ID[biomeId];
+  if (!biome || !trialBossUnlocked(trialsState(), biomeId)) return false;
+  activeRunKind = 'trials';
+  game.reset();
+  applyCharacterToGame();
+  applySkinToGame();
+  game.labyrinth = true;
+  game.player.relic = true;
+  game.ash = Math.max(game.ash, 160);
+  trialRun = {
+    mode: 'boss', biomeId, biome, level: biome.levels[biome.levels.length - 1],
+    encounter: null, wave: 0, finished: false, clearTimer: 0,
+    startedAt: performance.now(), hudTimer: 0,
+  };
+  game.loadArena(trialArena(biome, biome.levels[biome.levels.length - 1]));
+  game.spawnBoss('trial_boss', trialBossOverrides(biome.boss));
+  started = true;
+  paused = false;
+  shopOpen = false;
+  mapOpen = false;
+  codexOpen = false;
+  inventoryOpen = false;
+  settingsOpen = false;
+  closeDialogue(true);
+  spectating = false;
+  menuView = 'none';
+  lastGameState = 'playing';
+  accumulator = 0;
+  lastTime = performance.now();
+  clearHeldKeys();
+  showBanner(biome.boss.name, `${biome.boss.title} · ${biome.boss.phases} fase`);
+  syncScreens();
+  updateHud();
+  updateTrialHud();
+  return true;
+}
+
+function spawnTrialWave() {
+  if (!trialRun?.encounter) return;
+  trialRun.wave += 1;
+  const units = waveForEncounter(trialRun.encounter, trialRun.wave);
+  units.forEach((unit, index) => {
+    game.spawnEnemy({
+      type: unit.type,
+      name: unit.name,
+      x: clamp(260 + index * 230, 80, WORLD_W - 120),
+      minX: 40,
+      maxX: WORLD_W - 80,
+      elite: unit.elite,
+      eliteRank: unit.eliteRank,
+      hpScale: unit.hpScale,
+      dmgScale: unit.dmgScale,
+    });
+  });
+  showToast(`Wave ${trialRun.wave + 1}/${trialRun.encounter.waves.length}${units.some((unit) => unit.elite) ? ' — ELITE' : ''}`, 1600);
+  updateTrialHud();
+}
+
+function trialAliveCount() {
+  return game.enemies.filter((enemy) => !enemy.dead && enemy.hp > 0).length;
+}
+
+function tickTrials(dt) {
+  if (!trialRun) return;
+  if (game.state === 'dead') {
+    trialsState().stats.deaths += 1;
+    saveProgress();
+    trialRun = null;
+    showTrials();
+    showToast('Trial gagal — coba lagi.', 2200);
+    return;
+  }
+  if (trialRun.clearTimer > 0) {
+    trialRun.clearTimer -= dt;
+    if (trialRun.clearTimer <= 0) {
+      trialRun = null;
+      showTrials();
+    }
+    return;
+  }
+  if (trialRun.mode === 'boss') return;
+  trialRun.hudTimer += dt;
+  if (trialRun.hudTimer >= 0.25) {
+    trialRun.hudTimer = 0;
+    updateTrialHud();
+  }
+  if (trialAliveCount() > 0) return;
+  if (trialRun.wave < trialRun.encounter.waves.length - 1) {
+    spawnTrialWave();
+    return;
+  }
+  if (!trialRun.finished) {
+    trialRun.finished = true;
+    const record = recordTrialClear(progress.trials, trialRun.level.id, { time: (performance.now() - trialRun.startedAt) / 1000 });
+    progress.trials = record.progress;
+    if (record.firstClear) {
+      game.ash += 120;
+      labState().currencies.shards += 2;
+      showToast(`${trialRun.level.name} selesai — 20 musuh, 1 elite. Boss ${record.bossUnlocked ? 'terbuka' : 'terkunci'}.`, 2600);
+    } else {
+      showToast('Level ini sudah pernah diselesaikan.', 1800);
+    }
+    saveProgress();
+    trialRun.clearTimer = 1.2;
+  }
+}
+
+function handleTrialBoss(ev) {
+  if (!trialRun || trialRun.mode !== 'boss') return;
+  const record = recordTrialBoss(progress.trials, trialRun.biomeId);
+  progress.trials = record.progress;
+  if (record.firstClear && record.reward) {
+    game.ash += record.reward.ash;
+    labState().currencies.shards += record.reward.shards;
+    showToast(`${ev.name} gugur — ${record.reward.name} diraih.`, 2600);
+  }
+  saveProgress();
+  trialRun.clearTimer = 1.8;
+}
+
+function updateTrialHud() {
+  const hud = $('trial-hud');
+  const show = started && !spectating && menuView === 'none' && activeRunKind === 'trials' && !!trialRun;
+  if (hud) hud.classList.toggle('hidden', !show);
+  if (!show) return;
+  const levelEl = $('trial-hud-level');
+  const biomeEl = $('trial-hud-biome');
+  const waveEl = $('trial-hud-wave');
+  const enemyEl = $('trial-hud-enemies');
+  const eliteEl = $('trial-hud-elite');
+  if (levelEl) levelEl.textContent = trialRun.mode === 'boss' ? 'BOSS' : `LEVEL ${trialRun.levelIndex + 1} / 5`;
+  if (biomeEl) biomeEl.textContent = trialRun.biome?.localName || '';
+  if (waveEl) waveEl.textContent = trialRun.mode === 'boss' ? 'ARENA BOS' : `WAVE ${Math.max(1, trialRun.wave + 1)} / 4`;
+  if (enemyEl) enemyEl.textContent = trialRun.mode === 'boss' ? (game.boss ? `${game.boss.hp}/${game.boss.maxHp}` : 'BOS') : `${Math.max(0, 20 - Math.max(0, trialRun.wave) * 5 - trialAliveCount())} / 20 MUSUH`;
+  if (eliteEl) eliteEl.textContent = trialRun.mode === 'boss' ? `${trialRun.biome?.boss?.phases || 3} FASE` : '1 ELITE DIJAMIN';
+}
+
+// ── Puzzle Adventure ──────────────────────────────────────────────────────
+function puzzleState() {
+  if (!progress.puzzle) progress.puzzle = defaultPuzzleProgress();
+  return progress.puzzle;
+}
+
+function showPuzzleAdventure() {
+  cancelPrologue();
+  started = false;
+  paused = false;
+  shopOpen = false;
+  mapOpen = false;
+  codexOpen = false;
+  inventoryOpen = false;
+  settingsOpen = false;
+  closeDialogue(true);
+  spectating = false;
+  puzzleRun = null;
+  puzzleSelected = -1;
+  menuView = 'puzzle';
+  clearHeldKeys();
+  buildPuzzleScreen();
+  syncScreens();
+}
+
+function buildPuzzleScreen() {
+  const p = puzzleState();
+  const summary = puzzleSummary(p);
+  const head = $('puzzle-summary');
+  if (head) {
+    head.innerHTML = `
+      <div class="lab-stat"><span>TAHAP</span><strong>${summary.solved}/${summary.stages}</strong></div>
+      <div class="lab-stat"><span>JENIS TEKA-TEKI</span><strong>${summary.types}</strong></div>
+      <div class="lab-stat"><span>KEMAMPUAN</span><strong>${summary.abilities}/${summary.abilityTotal}</strong></div>
+      <div class="lab-stat"><span>PROGRES</span><strong>${summary.percent}%</strong></div>
+      <div class="lab-stat"><span>BOSS</span><strong>${summary.bosses}</strong></div>
+      <div class="lab-stat"><span>BERIKUTNYA</span><strong>${summary.next ? summary.next.name : 'SELESAI'}</strong></div>`;
+  }
+  const body = $('puzzle-body');
+  if (!body) return;
+  const abilities = PUZZLE_ABILITIES.map((ability) => `<span class="puzzle-ability ${p.abilities.includes(ability.id) ? '' : 'locked'}">${p.abilities.includes(ability.id) ? '✦' : '◇'} ${esc(ability.name)}</span>`).join('');
+  const stages = PUZZLE_ARC1.map((stage) => {
+    const solved = p.solved.includes(stage.id);
+    const unlocked = puzzleStageUnlocked(p, stage.index);
+    const type = PUZZLE_TYPE_BY_ID[stage.typeId];
+    return `<article class="puzzle-stage ${solved ? 'cleared' : ''} ${unlocked ? '' : 'locked'}">
+      <span class="puzzle-stage-index">${String(stage.index + 1).padStart(2, '0')}</span>
+      <div>
+        <h3>${esc(stage.name)}</h3>
+        <p>${esc(stage.location)} · ${esc(type?.name || stage.typeId)}${stage.boss ? ' · BOS TEKA-TEKI' : ''}</p>
+      </div>
+      <button class="btn btn-ghost btn-compact" type="button" data-puzzle-stage="${stage.index}" ${unlocked ? '' : 'disabled'}>
+        ${solved ? 'SELESAI' : unlocked ? 'MAINKAN' : 'TERKUNCI'}
+      </button>
+    </article>`;
+  }).join('');
+  body.innerHTML = `<div class="puzzle-abilities">${abilities}</div>${stages}`;
+}
+
+function startPuzzleStage(index) {
+  const stage = PUZZLE_ARC1[index];
+  if (!stage || !puzzleStageUnlocked(puzzleState(), index)) return false;
+  const phases = stage.boss ? (PUZZLE_BOSS_BY_ID[stage.boss]?.phases || [stage.typeId]) : [stage.typeId];
+  puzzleRun = {
+    stageIndex: index, stage, phase: 0, phases,
+    puzzle: generatePuzzle(phases[0], stage.difficulty, `arc|${stage.id}|0`), done: false,
+  };
+  puzzleSelected = -1;
+  menuView = 'puzzlePlay';
+  buildPuzzlePlay();
+  syncScreens();
+  return true;
+}
+
+function buildPuzzlePlay() {
+  if (!puzzleRun) return;
+  const { stage, puzzle, phase, phases } = puzzleRun;
+  const eyebrow = $('puzzle-play-eyebrow');
+  const title = $('puzzle-play-title');
+  const desc = $('puzzle-play-desc');
+  const status = $('puzzle-status');
+  if (eyebrow) eyebrow.textContent = `${stage.location.toUpperCase()} · STAGE ${stage.index + 1} / ${PUZZLE_ARC1.length}${phases.length > 1 ? ` · FASE ${phase + 1}/${phases.length}` : ''}`;
+  if (title) title.textContent = puzzle.typeName;
+  if (desc) desc.textContent = PUZZLE_TYPE_BY_ID[puzzle.typeId]?.desc || '';
+  if (status) status.textContent = `Langkah: ${puzzle.moves} · Susun sampai mekanisme menyala.`;
+  const board = $('puzzle-board');
+  if (!board) return;
+  board.innerHTML = puzzleBoardMarkup(puzzle);
+}
+
+function puzzleBoardMarkup(puzzle) {
+  if (puzzle.engine === 'path') {
+    const pathCells = new Set(puzzle.state.path.map(([x, y]) => `${x},${y}`));
+    const blocked = new Set(puzzle.blocked);
+    const cells = [];
+    for (let y = 0; y < puzzle.h; y += 1) {
+      for (let x = 0; x < puzzle.w; x += 1) {
+        const key = `${x},${y}`;
+        const isStart = x === puzzle.start[0] && y === puzzle.start[1];
+        const isGoal = x === puzzle.goal[0] && y === puzzle.goal[1];
+        const classes = ['puzzle-cell'];
+        if (blocked.has(key)) classes.push('blocked');
+        if (pathCells.has(key)) classes.push('path');
+        if (isStart) classes.push('start');
+        if (isGoal) classes.push('goal');
+        cells.push(`<button class="${classes.join(' ')}" type="button" data-cell="${x},${y}" ${blocked.has(key) ? 'disabled' : ''}>${isStart ? '●' : isGoal ? '□' : pathCells.has(key) ? '·' : ''}</button>`);
+      }
+    }
+    return `<div class="puzzle-board" style="grid-template-columns:repeat(${puzzle.w},minmax(0,1fr))">${cells.join('')}</div>`;
+  }
+  if (puzzle.engine === 'pipes') {
+    const glyph = { straight: '│', elbow: '└', tee: '┬', cross: '┼', deadend: '╵' };
+    const cells = puzzle.pieces.map((kind, index) => {
+      const rotation = puzzle.state.rotations[index] || 0;
+      const source = index === 0;
+      const sink = index === puzzle.base.length - 1;
+      return `<button class="puzzle-cell ${source ? 'source' : ''} ${sink ? 'target' : ''}" type="button" data-rotate="${index}" title="Putar pipa">
+        <span style="display:inline-block;transform:rotate(${rotation * 90}deg)">${glyph[kind] || '┼'}</span>
+      </button>`;
+    }).join('');
+    return `<div class="puzzle-board" style="grid-template-columns:repeat(${puzzle.w},minmax(0,1fr))">${cells}</div>`;
+  }
+  if (puzzle.engine === 'beam') {
+    const cells = [];
+    for (let y = 0; y < puzzle.h; y += 1) {
+      for (let x = 0; x < puzzle.w; x += 1) {
+        const mirrorIndex = (puzzle.mirrorPositions || []).findIndex(([mx, my]) => mx === x && my === y);
+        const isSource = x === puzzle.source[0] && y === puzzle.source[1];
+        const isTarget = x === puzzle.target[0] && y === puzzle.target[1];
+        if (mirrorIndex >= 0) {
+          const glyph = puzzle.mirrors[mirrorIndex] === '/' ? '/' : '\\';
+          const rotation = puzzle.state.rotations[mirrorIndex] || 0;
+          cells.push(`<button class="puzzle-cell mirror" type="button" data-rotate="${mirrorIndex}"><span style="display:inline-block;transform:rotate(${rotation * 90}deg)">${glyph}</span></button>`);
+        } else {
+          cells.push(`<button class="puzzle-cell ${isSource ? 'source' : ''} ${isTarget ? 'target' : ''}" type="button" disabled>${isSource ? '◉' : isTarget ? '◈' : ''}</button>`);
+        }
+      }
+    }
+    return `<div class="puzzle-board" style="grid-template-columns:repeat(${puzzle.w},minmax(0,1fr))">${cells.join('')}</div>`;
+  }
+  if (puzzle.engine === 'sequence' || puzzle.engine === 'image' || puzzle.engine === 'swap') {
+    const labels = puzzle.engine === 'image'
+      ? puzzle.state.order.map((value) => `PETAK ${value + 1}`)
+      : puzzle.state.order.map((value) => String(value).replace('rune_', 'RUNE '));
+    const tiles = labels.map((label, index) => `<button class="puzzle-tile ${puzzleSelected === index ? 'selected' : ''}" type="button" data-swap="${index}">${esc(label)}</button>`).join('');
+    return `<div class="puzzle-sequence">${tiles}</div>`;
+  }
+  if (puzzle.engine === 'gear' || puzzle.engine === 'toggle') {
+    const cells = puzzle.state.state.map((value, index) => `<button class="puzzle-cell ${value ? 'on' : ''}" type="button" data-toggle="${index}">${value ? '✦' : '◇'}<span style="font-size:9px;display:block">${index + 1}</span></button>`).join('');
+    return `<div class="puzzle-board" style="grid-template-columns:repeat(${Math.min(6, puzzle.count)},minmax(0,1fr))">${cells}</div>`;
+  }
+  return '<p class="puzzle-status">Teka-teki ini belum punya papan.</p>';
+}
+
+function handlePuzzleBoardClick(event) {
+  if (!puzzleRun || puzzleRun.done) return;
+  const puzzle = puzzleRun.puzzle;
+  let move = null;
+  const cell = event.target.closest('[data-cell]');
+  if (cell) {
+    const [x, y] = cell.dataset.cell.split(',').map(Number);
+    move = { cell: [x, y] };
+  }
+  const rotate = event.target.closest('[data-rotate]');
+  if (rotate) move = { rotate: Number(rotate.dataset.rotate), turns: 1 };
+  const swap = event.target.closest('[data-swap]');
+  if (swap) {
+    const index = Number(swap.dataset.swap);
+    if (puzzleSelected < 0) {
+      puzzleSelected = index;
+      buildPuzzlePlay();
+      return;
+    }
+    if (puzzleSelected === index) {
+      puzzleSelected = -1;
+      buildPuzzlePlay();
+      return;
+    }
+    move = { a: puzzleSelected, b: index };
+    puzzleSelected = -1;
+  }
+  const toggle = event.target.closest('[data-toggle]');
+  if (toggle) move = { index: Number(toggle.dataset.toggle) };
+  if (!move) return;
+  const result = applyPuzzleMove(puzzle, move);
+  if (!result.ok) {
+    const status = $('puzzle-status');
+    if (status) status.textContent = 'Langkah itu tidak valid untuk mekanisme ini.';
+    return;
+  }
+  puzzleRun.puzzle = result.puzzle;
+  buildPuzzlePlay();
+  if (puzzleIsSolved(result.puzzle)) finishPuzzleStage();
+}
+
+function finishPuzzleStage() {
+  if (!puzzleRun) return;
+  const run = puzzleRun;
+  if (run.phase < run.phases.length - 1) {
+    run.phase += 1;
+    puzzleSelected = -1;
+    run.puzzle = generatePuzzle(run.phases[run.phase], run.stage.difficulty, `arc|${run.stage.id}|${run.phase}`);
+    buildPuzzlePlay();
+    showToast(`Mekanisme fase ${run.phase + 1} aktif — lanjut.`, 2000);
+    return;
+  }
+  run.done = true;
+  const record = recordPuzzleSolve(progress.puzzle, run.stage.id, { moves: run.puzzle.moves });
+  progress.puzzle = record.progress;
+  if (run.stage.boss) {
+    const boss = recordPuzzleBoss(progress.puzzle, run.stage.boss);
+    progress.puzzle = boss.progress;
+    if (boss.firstClear) showToast(`${PUZZLE_BOSS_BY_ID[run.stage.boss]?.name || 'Bos'} dikalahkan — Ancient Compass diraih.`, 3000);
+  }
+  saveProgress();
+  const status = $('puzzle-status');
+  if (status) status.textContent = 'Mekanisme menyala. Jalan terbuka.';
+  setTimeout(() => {
+    if (menuView === 'puzzlePlay') showPuzzleAdventure();
+  }, 900);
+}
+
+function resetPuzzleBoard() {
+  if (!puzzleRun) return;
+  puzzleRun.puzzle = generatePuzzle(puzzleRun.puzzle.typeId, puzzleRun.puzzle.difficulty, puzzleRun.puzzle.seed);
+  puzzleSelected = -1;
+  buildPuzzlePlay();
+}
+
+function showPuzzleHint() {
+  if (!puzzleRun) return;
+  const status = $('puzzle-status');
+  const left = Math.max(0, (puzzleRun.puzzle.solution?.length || 0) - puzzleRun.puzzle.moves);
+  if (status) status.textContent = `Petunjuk: ${left} langkah tersisa dari solusi kuno.`;
+  puzzleState().stats.hints += 1;
+  saveProgress();
+}
+
 function updateLabHud() {
   const hud = $('lab-hud');
   if (!hud) return;
@@ -8672,6 +9216,27 @@ $('court-screen')?.addEventListener('click', (event) => {
 $('btn-coop-menu')?.addEventListener('click', () => showCoop());
 $('btn-labyrinth-menu')?.addEventListener('click', () => showLabyrinth('run'));
 $('btn-lab-back')?.addEventListener('click', () => { teardownLabCoop(); showMenu(); });
+$('btn-trials-menu')?.addEventListener('click', showTrials);
+$('btn-trials-back')?.addEventListener('click', showMenu);
+$('btn-puzzle-menu')?.addEventListener('click', showPuzzleAdventure);
+$('btn-puzzle-back')?.addEventListener('click', showMenu);
+$('btn-puzzle-leave')?.addEventListener('click', showPuzzleAdventure);
+$('btn-puzzle-reset')?.addEventListener('click', resetPuzzleBoard);
+$('btn-puzzle-hint')?.addEventListener('click', showPuzzleHint);
+$('trials-screen')?.addEventListener('click', (event) => {
+  const level = event.target.closest('[data-trial-level]');
+  if (level && !level.disabled) {
+    startTrialLevel(level.dataset.trialBiome, Number(level.dataset.trialLevel));
+    return;
+  }
+  const boss = event.target.closest('[data-trial-boss]');
+  if (boss && !boss.disabled) startTrialBoss(boss.dataset.trialBoss);
+});
+$('puzzle-screen')?.addEventListener('click', (event) => {
+  const stage = event.target.closest('[data-puzzle-stage]');
+  if (stage && !stage.disabled) startPuzzleStage(Number(stage.dataset.puzzleStage));
+});
+$('puzzle-board')?.addEventListener('click', handlePuzzleBoardClick);
 $('lab-quit')?.addEventListener('click', () => finishLabRun('quit'));
 $('lab-summary-again')?.addEventListener('click', () => {
   const mode = labSummary?.modeId || 'standard';
@@ -9119,6 +9684,9 @@ function syncScreens() {
   $('overdrive-screen')?.classList.toggle('hidden', menuView !== 'overdrive' || covered);
   $('atlas-screen')?.classList.toggle('hidden', menuView !== 'atlas' || covered);
   $('labyrinth-screen')?.classList.toggle('hidden', menuView !== 'labyrinth' || covered);
+  $('trials-screen')?.classList.toggle('hidden', menuView !== 'trials' || covered);
+  $('puzzle-screen')?.classList.toggle('hidden', menuView !== 'puzzle' || covered);
+  $('puzzle-play-screen')?.classList.toggle('hidden', menuView !== 'puzzlePlay' || covered);
   $('court-screen')?.classList.toggle('hidden', menuView !== 'court' || covered);
   $('fairy-screen')?.classList.toggle('hidden', menuView !== 'fairy' || covered);
   $('fallen-menu-screen')?.classList.toggle('hidden', menuView !== 'fallenMenu' || covered);
@@ -9154,6 +9722,7 @@ function syncScreens() {
     && !settingsOpen && !cutsceneActive
     && (s === 'playing' || s === 'blessing');
   $('hud').classList.toggle('hidden', !hudVisible);
+  $('trial-hud')?.classList.toggle('hidden', !(inRun && activeRunKind === 'trials' && !paused && s === 'playing'));
   $('touch').classList.toggle(
     'hidden',
     !(touchEnabled && inRun && !paused && !shopOpen && !mapOpen && !codexOpen && !inventoryOpen && !dialogueOpen && !settingsOpen && s === 'playing'),
@@ -9372,6 +9941,8 @@ function drainEvents() {
             if (room.fairyBoss === 'dragon') playFinalBossCutscene();
           }
         }
+      } else if (activeRunKind === 'trials') {
+        if (ev.type === 'labyrinthBossDown') handleTrialBoss(ev);
       } else if (activeRunKind === 'labyrinth') {
         handleLabEvent(ev);
       } else if (activeRunKind === 'crusade') {
@@ -9656,6 +10227,7 @@ function frame(now) {
         game.update(FIXED, inputSnapshot());
         if (activeRunKind === 'atlas') tickAtlasRun(FIXED);
         if (activeRunKind === 'labyrinth') tickLabyrinth(FIXED);
+        if (activeRunKind === 'trials') tickTrials(FIXED);
         if (activeRunKind === 'fallen') tickFallen(FIXED);
         if (activeRunKind === 'crusade') tickCrusade(FIXED);
         accumulator -= FIXED;
@@ -11285,6 +11857,32 @@ window.__ashen = {
       trialResult: courtTrialResult ? { ...courtTrialResult, trial: courtTrialResult.trial.name } : null,
     };
   },
+  showTrials,
+  buildTrialsScreen,
+  startTrialLevel,
+  startTrialBoss,
+  get trials() {
+    return { progress: trialsState(), summary: trialSummary(trialsState()), run: trialRun };
+  },
+  showPuzzleAdventure,
+  buildPuzzleScreen,
+  startPuzzleStage,
+  solveCurrentPuzzle() {
+    if (!puzzleRun || puzzleRun.done) return false;
+    let current = puzzleRun.puzzle;
+    for (const move of current.solution || []) {
+      const result = applyPuzzleMove(current, move);
+      if (!result.ok) return false;
+      current = result.puzzle;
+    }
+    if (!puzzleIsSolved(current)) return false;
+    puzzleRun.puzzle = current;
+    finishPuzzleStage();
+    return true;
+  },
+  get puzzle() {
+    return { progress: puzzleState(), summary: puzzleSummary(puzzleState()), run: puzzleRun };
+  },
   showLabyrinth,
   buildLabyrinthScreen,
   startLabyrinth,
@@ -11386,6 +11984,7 @@ window.__ashen = {
       // Match the render loop so arc resources advance under test too.
       if (activeRunKind === 'atlas') tickAtlasRun(FIXED);
       if (activeRunKind === 'labyrinth') tickLabyrinth(FIXED);
+      if (activeRunKind === 'trials') tickTrials(FIXED);
       if (activeRunKind === 'fallen') tickFallen(FIXED);
       if (activeRunKind === 'crusade') tickCrusade(FIXED);
     }

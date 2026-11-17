@@ -28,9 +28,23 @@ test('update log is complete and ordered newest first', () => {
   }
 });
 
-test('the latest update documents the Radiant Crusade', () => {
+test('the latest update documents the Fivefold Trials and Puzzle Adventure', () => {
   const latest = LATEST_UPDATE;
-  assert.equal(latest.version, '0.14.0');
+  assert.equal(latest.version, '0.15.0');
+  const text = [latest.title, latest.summary, ...latest.highlights, ...(latest.fixes || [])].join(' ');
+  assert.match(text, /Fivefold Trials/i);
+  assert.match(text, /Puzzle Adventure/i);
+  assert.match(text, /20 musuh/i);
+  assert.match(text, /1 elite/i);
+  assert.match(text, /23 kategori/i);
+  assert.match(text, /10 tahap/i);
+  assert.match(text, /progress\.trials/);
+  assert.match(text, /progress\.puzzle/i);
+});
+
+test('the Radiant Crusade release remains documented in the log', () => {
+  const latest = UPDATE_LOG.find((entry) => entry.version === '0.14.0');
+  assert.ok(latest);
   const text = [latest.title, latest.summary, ...latest.highlights, ...(latest.fixes || [])].join(' ');
   assert.match(text, /The Radiant Crusade/i);
   assert.match(text, /Valor Chain/i);

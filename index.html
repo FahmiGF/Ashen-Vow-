@@ -17,6 +17,7 @@
     />
     <link rel="stylesheet" href="./styles.css" />
     <link rel="stylesheet" href="./styles-labyrinth.css" />
+    <link rel="stylesheet" href="./styles-adventure.css" />
     <link rel="stylesheet" href="./styles-court.css" />
     <link rel="stylesheet" href="./styles-fishing.css" />
     <link rel="stylesheet" href="./styles-fallen.css" />
@@ -196,6 +197,18 @@
             <strong id="banner-name" class="banner-name"></strong>
           </div>
           <div id="toast" class="toast"></div>
+          <div id="trial-hud" class="lab-hud trial-hud hidden" aria-live="polite">
+            <div class="lab-hud-cycle">
+              <span>THE FIVEFOLD TRIALS</span>
+              <strong id="trial-hud-level">LEVEL 1 / 5</strong>
+              <em id="trial-hud-biome">The Forgotten Crypt</em>
+            </div>
+            <div class="lab-hud-wave">
+              <span id="trial-hud-enemies">0 / 20 MUSUH</span>
+              <b id="trial-hud-wave">WAVE 1 / 4</b>
+              <em id="trial-hud-elite">1 ELITE DIJAMIN</em>
+            </div>
+          </div>
           <div id="lab-hud" class="lab-hud hidden" aria-live="polite">
             <div class="lab-hud-cycle">
               <span>INFINITE LABYRINTH</span>
@@ -219,7 +232,7 @@
         <!-- ══ MAIN MENU ══ -->
         <section id="title-screen" class="screen title-screen">
           <div class="screen-inner title-inner">
-            <p class="eyebrow">SEBUAH SUMPAH DI ANTARA ABU · v0.14.0</p>
+            <p class="eyebrow">SEBUAH SUMPAH DI ANTARA ABU · v0.15.0</p>
             <h1 class="game-title">ASHEN<span>VOW</span></h1>
             <div class="title-rule"><i></i><b>✦</b><i></i></div>
             <p class="lede">
@@ -276,6 +289,14 @@
                 <span>INFINITE LABYRINTH — CURSED REALMS</span>
                 <em>20 zona · 30 bos · barang terkutuk · co-op 4 pemain · v0.7.0</em>
               </button>
+              <button id="btn-trials-menu" class="btn btn-ghost menu-btn trials-menu-btn" type="button">
+                <span>THE FIVEFOLD TRIALS</span>
+                <em>20 biome · 100 level · 20 musuh per level · 1 elite · bos biome</em>
+              </button>
+              <button id="btn-puzzle-menu" class="btn btn-ghost menu-btn puzzle-menu-btn" type="button">
+                <span>PUZZLE ADVENTURE — THE LOST MECHANISM</span>
+                <em>23 jenis teka-teki · Arc 1 · 10 kemampuan · bos teka-teki</em>
+              </button>
               <button id="btn-court-menu" class="btn btn-ghost menu-btn court-menu-btn" type="button">
                 <span>HEARTHFALL — THE HOLLOW COURT</span>
                 <em>6 zona · 60 level · 12 bos · +6 Panggung Abadi · Skill Point · v0.12.0</em>
@@ -310,7 +331,7 @@
               </button>
               <button id="btn-updates" class="btn btn-ghost menu-btn" type="button">
                 <span>CATATAN UPDATE</span>
-                <em>Riwayat rilis · v0.14.0 · Perang Salib</em>
+                <em>Riwayat rilis · v0.15.0 · Fivefold Trials</em>
               </button>
             </nav>
 
@@ -582,6 +603,56 @@
               <button id="btn-lab-back" class="link-btn" type="button">← KEMBALI KE MENU</button>
             </div>
             <p class="micro">Kutukan dan barang hanya berlaku di dalam run. Mastery, discovery, dan mata uang tersimpan permanen.</p>
+          </div>
+        </section>
+
+        <!-- ══ FIVEFOLD TRIALS ══ -->
+        <section id="trials-screen" class="screen hidden">
+          <div class="screen-inner trials-inner">
+            <p class="eyebrow">BIOME EXPANSION · 100 LEVEL · 2.000 MUSUH · THE FIVEFOLD TRIALS</p>
+            <h2 class="screen-title">THE FIVEFOLD TRIALS</h2>
+            <p class="screen-sub">
+              Setiap biome kini punya lima level sebelum bosnya. Dua puluh musuh per level,
+              empat arketipe, dan tepat satu elite. Bos hanya terbuka setelah kelima level selesai.
+            </p>
+            <div id="trials-summary" class="lab-summary"></div>
+            <div id="trials-body" class="trials-body"></div>
+            <div class="screen-links">
+              <button id="btn-trials-back" class="link-btn" type="button">← KEMBALI KE MENU</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- ══ PUZZLE ADVENTURE ══ -->
+        <section id="puzzle-screen" class="screen hidden">
+          <div class="screen-inner puzzle-inner">
+            <p class="eyebrow">PUZZLE ADVENTURE · THE LOST MECHANISM · ARC 1</p>
+            <h2 class="screen-title">THE LOST MECHANISM</h2>
+            <p class="screen-sub">
+              Tiga belas sistem kuno menahan jantung dunia. Hubungkan titik, putar pipa,
+              pulihkan gambar, dan buka jalan menuju Ancient Heart.
+            </p>
+            <div id="puzzle-summary" class="lab-summary"></div>
+            <div id="puzzle-body" class="puzzle-body"></div>
+            <div class="screen-links">
+              <button id="btn-puzzle-back" class="link-btn" type="button">← KEMBALI KE MENU</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- ══ PUZZLE BOARD ══ -->
+        <section id="puzzle-play-screen" class="screen hidden">
+          <div class="screen-inner puzzle-play-inner">
+            <p id="puzzle-play-eyebrow" class="eyebrow">FORGOTTEN ENTRANCE · STAGE 1 / 10</p>
+            <h2 id="puzzle-play-title" class="screen-title">CONNECT THE DOTS</h2>
+            <p id="puzzle-play-desc" class="screen-sub"></p>
+            <div id="puzzle-board" class="puzzle-board"></div>
+            <p id="puzzle-status" class="puzzle-status">Hubungkan titik hijau ke kotak tujuan.</p>
+            <div class="puzzle-actions">
+              <button id="btn-puzzle-reset" class="btn btn-ghost btn-compact" type="button">ULANGI</button>
+              <button id="btn-puzzle-hint" class="btn btn-ghost btn-compact" type="button">PETUNJUK</button>
+              <button id="btn-puzzle-leave" class="btn btn-ghost btn-compact" type="button">KELUAR</button>
+            </div>
           </div>
         </section>
 

@@ -148,7 +148,7 @@ async function main() {
       A.clearProgress();
       return { version: A.version, title: document.title, crusade: !!A.progress.crusade };
     })()`);
-    check('boot reports v0.14.0', boot.version, '0.14.0');
+    check('boot reports v0.15.0', boot.version, '0.15.0');
     assert.match(boot.title, /0\.14\.0/);
     check('fresh saves carry a crusade progress block', boot.crusade, true);
 
