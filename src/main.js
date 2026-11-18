@@ -481,7 +481,11 @@ import {
   recordTrialBoss,
 } from './trials.js';
 import {
-  PUZZLE_ARC1,
+  PUZZLE_STAGES,
+  PUZZLE_ARCS,
+  PUZZLE_LORE,
+  PUZZLE_TYPE_LORE,
+  PUZZLE_BOSSES,
   PUZZLE_ABILITIES,
   PUZZLE_TYPES,
   PUZZLE_TYPE_BY_ID,
@@ -496,7 +500,78 @@ import {
   sanitizePuzzleProgress,
   recordPuzzleSolve,
   recordPuzzleBoss,
+  PUZZLE_HINT_COST,
+  puzzleHintText,
+  payPuzzleHint,
+  puzzleBossTimer,
+  formatPuzzleTime,
 } from './puzzle.js';
+import {
+  MOBA_HEROES,
+  MOBA_HERO_BY_ID,
+  MOBA_HERO_COUNT,
+  MOBA_MAPS,
+  MOBA_MAP_BY_ID,
+  MOBA_MINION_TYPES,
+  MOBA_JUNGLE_MOBS,
+  MOBA_EPIC_BOSSES,
+  MOBA_EPIC_BY_ID,
+  MOBA_DIFFICULTIES,
+  MOBA_LANES,
+  MOBA_ROLES,
+  createMobaMatch,
+  updateMobaMatch,
+  mobaCast,
+  mobaSetOrder,
+  mobaSnapshot,
+  mobaHeroStats,
+  mobaScreenToWorld,
+  renderMoba,
+  endMobaMatch,
+  mobaSummary,
+  defaultMobaProgress,
+  sanitizeMobaProgress,
+  recordMobaMatch,
+} from './moba.js';
+import {
+  WAVE_DEFENSE_MAPS,
+  WAVE_DEFENSE_MAP_BY_ID,
+  WAVE_DEFENSE_TOWERS,
+  WAVE_DEFENSE_TOWER_BY_ID,
+  WAVE_DEFENSE_DIFFICULTIES,
+  WAVE_DEFENSE_ENEMY_TYPES,
+  WAVE_DEFENSE_BOSSES,
+  WAVE_DEFENSE_TOTAL_WAVES,
+  createWaveDefense,
+  updateWaveDefense,
+  waveDefenseBuild,
+  waveDefenseUpgrade,
+  waveDefenseUpgradeCost,
+  waveDefenseSell,
+  waveDefenseSellValue,
+  waveDefenseSelect,
+  waveDefenseSelectTower,
+  waveDefenseNextWave,
+  waveDefenseSetSpeed,
+  waveDefenseSnapshot,
+  waveDefenseSummary,
+  defaultWaveDefenseProgress,
+  sanitizeWaveDefenseProgress,
+  recordWaveDefense,
+  endWaveDefense,
+  renderWaveDefense,
+} from './wavedefense.js';
+import { RealmsUI } from './realms_ui.js';
+import {
+  ASTRAL_ROOM_START,
+  ASTRAL_LOCAL_NAME,
+  ASTRAL_NAME,
+  defaultAstralProgress,
+  sanitizeAstralProgress,
+  recordAstralRoomClear,
+  astralSummary,
+} from './astral.js';
+import { defaultRealmsProgress, sanitizeRealmsProgress } from './realms.js';
 import {
   COOP_MODES,
   COOP_MAX_PLAYERS,
@@ -593,6 +668,35 @@ let labRun = null;
 let trialRun = null;
 let puzzleRun = null;
 let puzzleSelected = -1;
+let puzzleTab = 'stages';
+let puzzleTimerInterval = null;
+// ── Riftwar (MOBA 5v5) state ────────────────────────────────────────────
+let mobaActive = false;
+let mobaPaused = false;
+let mobaMatch = null;
+let mobaResult = null;
+let mobaRecorded = false;
+let mobaHeroId = 'core_sera';
+let mobaMapId = 'ashen_rift';
+let mobaLane = 'mid';
+let mobaDifficulty = 'knight';
+let mobaRoleFilter = 'all';
+let mobaUiTimer = 0;
+let mobaAim = { x: 0, y: 0 };
+const mobaInput = { moveX: 0, moveY: 0, moveTarget: null, castSlot: -1, aimX: 0, aimY: 0, recall: false };
+const mobaHeld = new Set();
+let wdActive = false;
+let wdPaused = false;
+let wdMatch = null;
+let wdResult = null;
+let wdRecorded = false;
+let wdMapId = 'ashen_keep';
+let wdDifficulty = 'knight';
+let wdSelectedTowerId = 'ballista';
+let wdUiTimer = 0;
+let wdRenderDirty = true;
+let wdSelectionKey = '';
+let wdFeedKey = '';
 let labDirector = null;
 let labBaseStats = null;
 let labWaveTimer = 0;
@@ -806,6 +910,10 @@ function defaultProgress() {
     crusade: defaultCrusadeProgress(),
     trials: defaultTrialProgress(),
     puzzle: defaultPuzzleProgress(),
+    moba: defaultMobaProgress(),
+    wavedefense: defaultWaveDefenseProgress(),
+    astral: defaultAstralProgress(),
+    realms: defaultRealmsProgress(),
     stageTimes: {},
   };
 }
@@ -843,7 +951,7 @@ function loadProgress() {
         };
     // Keep every unknown top-level field. v0.3.0 adds `expansion` without
     // changing the storage key or discarding future/legacy save data.
-    const { version, unlocked: _unlocked, cleared: _cleared, map: _map, expansion: _expansion, atlas: _atlas, labyrinth: _labyrinth, court: _court, skills: _skills, pack: _pack, fairy: _fairy, speedrun: _speedrun, fishing: _fishing, fallen: _fallen, crusade: _crusade, trials: _trials, puzzle: _puzzle, stageTimes: _stageTimes, ...extras } = parsed;
+    const { version, unlocked: _unlocked, cleared: _cleared, map: _map, expansion: _expansion, atlas: _atlas, labyrinth: _labyrinth, court: _court, skills: _skills, pack: _pack, fairy: _fairy, speedrun: _speedrun, fishing: _fishing, fallen: _fallen, crusade: _crusade, trials: _trials, puzzle: _puzzle, moba: _moba, wavedefense: _wavedefense, astral: _astral, realms: _realms, stageTimes: _stageTimes, ...extras } = parsed;
     return {
       ...extras,
       version: 1,
@@ -863,6 +971,10 @@ function loadProgress() {
       crusade: sanitizeCrusadeProgress(parsed.crusade),
       trials: sanitizeTrialProgress(parsed.trials),
       puzzle: sanitizePuzzleProgress(parsed.puzzle),
+      moba: sanitizeMobaProgress(parsed.moba),
+      wavedefense: sanitizeWaveDefenseProgress(parsed.wavedefense),
+      astral: sanitizeAstralProgress(parsed.astral),
+      realms: sanitizeRealmsProgress(parsed.realms),
       stageTimes: sanitizeStageTimes(parsed.stageTimes),
     };
   } catch {
@@ -871,6 +983,7 @@ function loadProgress() {
 }
 
 function saveProgress() {
+  if (activeRunKind === 'hack' && hackSnapshot) return;
   try {
     progress.version = 1;
     localStorage.setItem(PROGRESS_KEY, JSON.stringify(progress));
@@ -882,6 +995,7 @@ function saveProgress() {
 let progress = loadProgress();
 
 function discoverCurrentRoom(index = game.roomIndex) {
+  if (activeRunKind === 'hack') return;
   if (!Number.isInteger(index) || index < 0 || index >= ROOMS.length) return;
   const next = discoverRoom(progress.map, index, ROOMS.length);
   if (next !== progress.map) {
@@ -920,6 +1034,149 @@ function loadCharacter() {
 }
 
 let character = loadCharacter();
+
+// ── Infinite Realms / Stage Access / Arc VI shell ──────────────────────────
+let hackSnapshot = null;
+let hackConfig = null;
+let hackTeleportIndex = 0;
+let playerSyncAt = 0;
+
+function prepareSpecialStage(index, kind) {
+  coopGuestMode = false;
+  coopGuestRoom = -1;
+  attempts = 1;
+  activeRunKind = kind;
+  activeCourtTrial = null;
+  speedrunRun = null;
+  speedrunSummaryOpen = false;
+  activeFairyStage = -1;
+  activeFairyBoss = null;
+  labRun = null;
+  labDirector = null;
+  activeExpansionIndex = null;
+  activeModeId = null;
+  activeTrialId = null;
+  game.labyrinth = false;
+  game.reset();
+  applyCharacterToGame();
+  applySkinToGame();
+  game.enterRoom(index);
+  game.events.length = 0;
+  started = true;
+  paused = false;
+  shopOpen = false;
+  mapOpen = false;
+  codexOpen = false;
+  inventoryOpen = false;
+  settingsOpen = false;
+  closeDialogue(true);
+  spectating = false;
+  spectateGame = null;
+  menuView = 'none';
+  lastGameState = 'playing';
+  accumulator = 0;
+  lastTime = performance.now();
+  clearHeldKeys();
+  showBanner(game.room.name, game.room.subtitle);
+  syncScreens();
+  updateHud();
+}
+
+function startHackStage(config) {
+  if (!config || !Number.isInteger(config.roomId)) return;
+  if (!hackSnapshot) hackSnapshot = JSON.parse(JSON.stringify(progress));
+  hackConfig = { ...config };
+  hackTeleportIndex = 0;
+  prepareSpecialStage(config.roomId, 'hack');
+  showToast(`HACK · ${game.room.name} — save terisolasi. Tidak ada progres yang ditulis.`, 2800);
+}
+
+function exitHackStage() {
+  if (hackSnapshot) progress = hackSnapshot;
+  hackSnapshot = null;
+  hackConfig = null;
+  started = false;
+  paused = false;
+  game.reset();
+  game.events.length = 0;
+  menuView = 'stage';
+  clearHeldKeys();
+  syncScreens();
+}
+
+function hackTool(action) {
+  if (activeRunKind !== 'hack' || !started) return;
+  if (action === 'restart' || action === 'enemies') {
+    game.enterRoom(game.roomIndex);
+    game.events.length = 0;
+    showToast(action === 'restart' ? 'Stage di-restart.' : 'Encounter musuh di-reset.', 1400);
+  } else if (action === 'phase') {
+    const boss = game.boss;
+    if (!boss) { showToast('Tidak ada boss di stage ini.', 1400); return; }
+    const maxPhases = boss.maxPhases || boss.phaseThresholds?.length + 1 || 2;
+    boss.phase = (boss.phase % maxPhases) + 1;
+    const threshold = boss.phaseThresholds?.[boss.phase - 2];
+    boss.hp = boss.phase === 1 ? boss.maxHp : Math.max(1, Math.round(boss.maxHp * (threshold ?? 0.5) - 1));
+    boss.intro = 0;
+    boss.state = boss.flying ? 'hover' : 'chase';
+    showToast(`Boss phase ${boss.phase}/${maxPhases}.`, 1400);
+  } else if (action === 'teleport') {
+    const room = game.room || {};
+    const points = [room.checkpoint, room.spawn, { x: WORLD_W - 160, y: (room.spawn?.y || 420) }].filter(Boolean);
+    const point = points[hackTeleportIndex++ % points.length];
+    game.player.x = point.x;
+    game.player.y = point.y;
+    game.player.vx = 0;
+    game.player.vy = 0;
+    showToast(`Teleport ke checkpoint ${hackTeleportIndex % points.length || points.length}/${points.length}.`, 1200);
+  }
+  updateHud();
+}
+
+function startAstralStage(roomId) {
+  progress.astral = sanitizeAstralProgress(progress.astral);
+  progress.astral.unlocked = true;
+  progress.astral.arcId = 'astral';
+  prepareSpecialStage(roomId, 'astral');
+  game.player.relic = true;
+  game.player.maxHp = Math.max(game.player.maxHp, 220);
+  game.player.hp = game.player.maxHp;
+  game.player.maxFlasks = Math.max(game.player.maxFlasks, 4);
+  game.player.flasks = game.player.maxFlasks;
+  game.ash = Math.max(game.ash, 260);
+  saveProgress();
+  showToast(`${ASTRAL_LOCAL_NAME} · ${game.room.name}`, 2400);
+}
+
+const realmsUI = new RealmsUI({
+  getProgress: () => progress,
+  saveProgress: () => saveProgress(),
+  character: () => character,
+  playerName: () => CHARACTERS[character.characterId]?.name || 'Penjaga',
+  toast: (message, duration) => showToast(message, duration),
+  onMenu: () => showMenu(),
+  onCoop: () => showCoop(),
+  onOpenMenu: (view) => {
+    menuView = view;
+    started = false;
+    paused = false;
+    shopOpen = false;
+    mapOpen = false;
+    codexOpen = false;
+    inventoryOpen = false;
+    settingsOpen = false;
+    closeDialogue(true);
+    clearHeldKeys();
+    syncScreens();
+  },
+  onHackStage: (config) => startHackStage(config),
+  onExitHack: () => exitHackStage(),
+  onHackTool: (action) => hackTool(action),
+  onPlayAstral: (roomId) => startAstralStage(roomId),
+  getGame: () => game,
+  getCameraX: () => clamp(game.player.x - 360, 0, Math.max(0, WORLD_W - VIEW_W)),
+});
+realmsUI.runDifficulty = 'normal';
 
 function saveCharacter() {
   try {
@@ -4194,6 +4451,10 @@ function retryRun() {
 
 function showMenu() {
   cancelPrologue();
+  if (activeRunKind === 'hack' && hackSnapshot) progress = hackSnapshot;
+  hackSnapshot = null;
+  hackConfig = null;
+  realmsUI?.hideAll();
   if (labRun && !labRun.ended && started) finishLabRun('quit');
   teardownLabCoop(false);
   labGuestMode = false;
@@ -4209,6 +4470,18 @@ function showMenu() {
   closeFishingOverlays();
   labRun = null;
   trialRun = null;
+  mobaActive = false;
+  mobaPaused = false;
+  mobaMatch = null;
+  mobaResult = null;
+  mobaRecorded = false;
+  wdActive = false;
+  wdPaused = false;
+  wdMatch = null;
+  wdResult = null;
+  wdRecorded = false;
+  wdRenderDirty = true;
+  stopPuzzleTimer();
   puzzleRun = null;
   puzzleSelected = -1;
   labDirector = null;
@@ -4325,6 +4598,565 @@ function showFrontier(tab = 'campaign200') {
 
 function closeFrontier() {
   showMenu();
+}
+
+// ── Riftwar: hub, battlefield and result handling ───────────────────────
+function mobaState() {
+  if (!progress.moba) progress.moba = defaultMobaProgress();
+  return progress.moba;
+}
+
+function showMoba() {
+  cancelPrologue();
+  started = false;
+  paused = false;
+  shopOpen = false;
+  mapOpen = false;
+  codexOpen = false;
+  inventoryOpen = false;
+  settingsOpen = false;
+  closeDialogue(true);
+  spectating = false;
+  spectateGame = null;
+  menuView = 'moba';
+  clearHeldKeys();
+  buildMobaScreen();
+  syncScreens();
+}
+
+function mobaHeroCard(hero) {
+  const selected = hero.id === mobaHeroId;
+  return `<button class="moba-hero-card${selected ? ' active' : ''}" type="button" data-moba-hero="${hero.id}" style="--hero:${hero.color}" aria-pressed="${selected}">
+    <span class="mh-glyph">${hero.glyph}</span>
+    <span class="mh-name">${esc(hero.name)}</span>
+    <span class="mh-meta"><span>${MOBA_ROLES[hero.role]?.name || hero.role}</span><span>L1</span></span>
+    <span class="mh-origin">${hero.source === 'core' ? 'KAMPANYE' : 'FRONTIER'} · ${esc(hero.className)}</span>
+  </button>`;
+}
+
+function buildMobaScreen() {
+  const state = mobaState();
+  const summary = mobaSummary(state);
+  const content = $('moba-summary');
+  if (content) {
+    content.innerHTML = `
+      <div class="moba-stat"><span>PERTEMPURAN</span><strong>${summary.matches}</strong></div>
+      <div class="moba-stat"><span>KEMENANGAN</span><strong>${summary.wins}</strong></div>
+      <div class="moba-stat"><span>WIN RATE</span><strong>${summary.winRate}%</strong></div>
+      <div class="moba-stat"><span>HERO DIMAINKAN</span><strong>${summary.heroesPlayed}/${summary.heroes}</strong></div>
+      <div class="moba-stat"><span>REKOR TERCEPAT</span><strong>${summary.bestTime ? formatPuzzleTime(summary.bestTime) : '—'}</strong></div>`;
+  }
+  if (!MOBA_HERO_BY_ID[mobaHeroId]) mobaHeroId = MOBA_HEROES[0].id;
+  if (!MOBA_MAP_BY_ID[mobaMapId]) mobaMapId = MOBA_MAPS[0].id;
+  if (!MOBA_LANES.includes(mobaLane)) mobaLane = 'mid';
+  if (!MOBA_DIFFICULTIES.some((entry) => entry.id === mobaDifficulty)) mobaDifficulty = 'knight';
+  const roles = $('moba-role-filter');
+  if (roles) {
+    roles.innerHTML = ['all', ...Object.keys(MOBA_ROLES)].map((role) => `<button class="${mobaRoleFilter === role ? 'active' : ''}" type="button" data-moba-role="${role}">${role === 'all' ? 'SEMUA' : MOBA_ROLES[role].name.toUpperCase()}</button>`).join('');
+  }
+  const roster = $('moba-roster');
+  if (roster) {
+    const filtered = MOBA_HEROES.filter((hero) => mobaRoleFilter === 'all' || hero.role === mobaRoleFilter);
+    roster.innerHTML = filtered.map(mobaHeroCard).join('');
+  }
+  const count = $('moba-hero-count');
+  if (count) count.textContent = `${MOBA_HEROES.length} HERO · ${MOBA_ROLES[MOBA_HERO_BY_ID[mobaHeroId]?.role]?.name || 'SEMUA'}`;
+  const maps = $('moba-maps');
+  if (maps) {
+    maps.innerHTML = MOBA_MAPS.map((map) => `<button class="moba-map-card${map.id === mobaMapId ? ' active' : ''}" type="button" data-moba-map="${map.id}">
+      <strong>${esc(map.name)}</strong><em>${esc(map.subtitle)}</em><span>${esc(map.lore)}</span>
+      <span>${map.epics.length} BOS EPIK · ${map.camps.length} JUNGLE CAMP</span>
+    </button>`).join('');
+  }
+  const lanes = $('moba-lanes');
+  if (lanes) lanes.innerHTML = MOBA_LANES.map((lane) => `<button class="${lane === mobaLane ? 'active' : ''}" type="button" data-moba-lane="${lane}">${lane.toUpperCase()}</button>`).join('');
+  const difficulties = $('moba-difficulties');
+  if (difficulties) difficulties.innerHTML = MOBA_DIFFICULTIES.map((entry) => `<button class="${entry.id === mobaDifficulty ? 'active' : ''}" type="button" data-moba-difficulty="${entry.id}" title="${esc(entry.desc)}">${entry.name.toUpperCase()}</button>`).join('');
+  const codex = $('moba-codex');
+  if (codex) {
+    const map = MOBA_MAP_BY_ID[mobaMapId];
+    codex.innerHTML = `
+      <article><h4>MINION &amp; MENARA</h4><p>${MOBA_MINION_TYPES.length} tipe minion · ${map.towers.filter((tower) => tower.tier !== 'guard').length} menara lane + ${map.towers.filter((tower) => tower.tier === 'guard').length} penjaga nexus. Gelombang berjalan di tiga jalur.</p></article>
+      <article><h4>JUNGLE &amp; BOS</h4><p>${MOBA_JUNGLE_MOBS.length} mob jungle · ${MOBA_EPIC_BOSSES.length} bos epik. Bunuh bos untuk memberi seluruh tim buff damage.</p></article>
+      <article><h4>${esc(map.name)}</h4><p>${map.epics.map((pit) => esc(MOBA_EPIC_BY_ID[pit.boss]?.name || pit.boss)).join(' · ')}. ${esc(map.lore)}</p></article>`;
+  }
+  const button = $('btn-moba-start');
+  if (button) button.innerHTML = `<span>MULAI PERTEMPURAN</span><em>${esc(MOBA_HERO_BY_ID[mobaHeroId]?.name)} · ${esc(MOBA_MAP_BY_ID[mobaMapId]?.name)} · ${mobaLane.toUpperCase()}</em>`;
+}
+
+function startMobaBattle() {
+  if (!MOBA_HERO_BY_ID[mobaHeroId]) mobaHeroId = MOBA_HEROES[0].id;
+  if (!MOBA_MAP_BY_ID[mobaMapId]) mobaMapId = MOBA_MAPS[0].id;
+  mobaMatch = createMobaMatch({
+    heroId: mobaHeroId,
+    mapId: mobaMapId,
+    lane: mobaLane,
+    difficulty: mobaDifficulty,
+    seed: (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0,
+  });
+  mobaActive = true;
+  mobaPaused = false;
+  mobaResult = null;
+  mobaRecorded = false;
+  mobaUiTimer = 0;
+  mobaAim = { x: mobaMatch.player.x, y: mobaMatch.player.y };
+  mobaInput.moveX = 0;
+  mobaInput.moveY = 0;
+  mobaInput.moveTarget = null;
+  mobaInput.castSlot = -1;
+  mobaInput.recall = false;
+  mobaHeld.clear();
+  started = false;
+  paused = false;
+  shopOpen = false;
+  mapOpen = false;
+  codexOpen = false;
+  inventoryOpen = false;
+  settingsOpen = false;
+  menuView = 'mobaBattle';
+  accumulator = 0;
+  lastTime = performance.now();
+  $('moba-result')?.classList.add('hidden');
+  $('moba-pause')?.classList.add('hidden');
+  updateMobaHud(true);
+  syncScreens();
+}
+
+function syncMobaAxes() {
+  const left = mobaHeld.has('ArrowLeft') || mobaHeld.has('KeyA');
+  const right = mobaHeld.has('ArrowRight') || mobaHeld.has('KeyD');
+  const up = mobaHeld.has('ArrowUp');
+  const down = mobaHeld.has('ArrowDown');
+  mobaInput.moveX = (right ? 1 : 0) - (left ? 1 : 0);
+  mobaInput.moveY = (down ? 1 : 0) - (up ? 1 : 0);
+  if (mobaInput.moveX || mobaInput.moveY) mobaInput.moveTarget = null;
+}
+
+function toggleMobaPause(next = !mobaPaused) {
+  if (!mobaActive || !mobaMatch) return;
+  mobaPaused = !!next;
+  mobaHeld.clear();
+  mobaInput.moveX = 0;
+  mobaInput.moveY = 0;
+  lastTime = performance.now();
+  syncScreens();
+  updateMobaHud(true);
+}
+
+function leaveMoba() {
+  mobaActive = false;
+  mobaPaused = false;
+  mobaMatch = null;
+  mobaResult = null;
+  mobaRecorded = false;
+  mobaHeld.clear();
+  showMoba();
+}
+
+function completeMobaMatch() {
+  if (!mobaMatch || mobaMatch.phase !== 'ended' || mobaRecorded) return;
+  mobaRecorded = true;
+  const win = mobaMatch.winner === 'blue';
+  const p = mobaMatch.player;
+  const saved = recordMobaMatch(mobaState(), {
+    win,
+    heroId: mobaMatch.heroId,
+    mapId: mobaMatch.mapId,
+    lane: mobaMatch.playerLane,
+    duration: mobaMatch.time,
+    kills: p?.kills || 0,
+    deaths: p?.deaths || 0,
+    assists: p?.assists || 0,
+  });
+  progress.moba = saved.progress;
+  saveProgress();
+  mobaResult = {
+    ...saved,
+    win,
+    mapName: mobaMatch.map.name,
+    heroName: p?.name || 'Penjaga',
+    snapshot: mobaSnapshot(mobaMatch),
+    heroes: mobaHeroStats(mobaMatch),
+    score: { blue: mobaMatch.teams.blue.kills, red: mobaMatch.teams.red.kills },
+  };
+  renderMobaResult();
+  updateMobaHud(true);
+}
+
+function renderMobaResult() {
+  const overlay = $('moba-result');
+  if (!overlay || !mobaResult) return;
+  const r = mobaResult;
+  const blue = r.heroes.filter((hero) => hero.team === 'blue').sort((a, b) => b.kills - a.kills);
+  const red = r.heroes.filter((hero) => hero.team === 'red').sort((a, b) => b.kills - a.kills);
+  overlay.innerHTML = `<div class="moba-modal-card moba-result-card ${r.win ? 'victory' : 'defeat'}">
+    <p class="eyebrow">RIFTWAR · ${esc(r.mapName)} · ${formatPuzzleTime(r.snapshot.time)}</p>
+    <h3 class="moba-result-title">${r.win ? 'NEXUS MUSUH JATUH' : 'NEXUS KITA TERBELAH'}</h3>
+    <p>${r.win ? `${esc(r.heroName)} memimpin Penjaga Sumpah menutup celah.` : `${esc(r.heroName)} bertahan sampai nexus terakhir, tetapi pasukan Rift menang.`}</p>
+    <div class="moba-result-stats">
+      <div><span>KILL</span><b>${r.snapshot.player?.kills || 0}</b></div>
+      <div><span>DEATH</span><b>${r.snapshot.player?.deaths || 0}</b></div>
+      <div><span>ASSIST</span><b>${r.snapshot.player?.assists || 0}</b></div>
+      <div><span>SKOR</span><b>${r.score.blue} : ${r.score.red}</b></div>
+    </div>
+    <div class="moba-team-table">${blue.map((hero) => `<div><b>${esc(hero.name)}</b><span>${hero.kills}/${hero.deaths}/${hero.assists}</span><span>L${hero.level}</span></div>`).join('')}</div>
+    <div class="moba-team-table">${red.map((hero) => `<div><b>${esc(hero.name)}</b><span>${hero.kills}/${hero.deaths}/${hero.assists}</span><span>L${hero.level}</span></div>`).join('')}</div>
+    <div class="moba-result-actions">
+      <button class="btn btn-primary" type="button" data-moba-action="rematch">COBA LAGI</button>
+      <button class="btn btn-ghost" type="button" data-moba-action="leave">KEMBALI KE HUB</button>
+    </div>
+  </div>`;
+  overlay.classList.remove('hidden');
+}
+
+function updateMobaHud(force = false) {
+  if (!mobaMatch) return;
+  if (mobaMatch.phase === 'ended' && !mobaRecorded) completeMobaMatch();
+  if (!force && mobaUiTimer < 1 / 15) return;
+  mobaUiTimer = 0;
+  const p = mobaMatch.player;
+  const setText = (id, value) => { const node = $(id); if (node) node.textContent = value; };
+  setText('moba-map-name', mobaMatch.map.name.toUpperCase());
+  setText('moba-clock', formatPuzzleTime(mobaMatch.time));
+  setText('moba-wave', `GELOMBANG ${mobaMatch.wave}`);
+  setText('moba-blue-score', mobaMatch.teams.blue.kills);
+  setText('moba-red-score', mobaMatch.teams.red.kills);
+  if (p) {
+    setText('moba-player-name', p.name);
+    setText('moba-player-glyph', p.glyph);
+    setText('moba-player-role', MOBA_ROLES[p.role]?.name || p.role);
+    setText('moba-player-level', `L${p.level}`);
+    setText('moba-player-gold', `◈ ${p.gold}`);
+    setText('moba-player-hp-text', `${Math.ceil(p.hp)} / ${p.maxHp}`);
+    setText('moba-player-mana-text', `${Math.ceil(p.mana)} / ${p.maxMana}`);
+    setText('moba-player-kda', `${p.kills} / ${p.deaths} / ${p.assists}`);
+    const hp = $('moba-player-hp'); if (hp) hp.style.width = `${Math.max(0, p.hp / p.maxHp) * 100}%`;
+    const mana = $('moba-player-mana'); if (mana) mana.style.width = `${Math.max(0, p.mana / p.maxMana) * 100}%`;
+    const respawn = $('moba-respawn');
+    if (respawn) {
+      respawn.classList.toggle('hidden', !p.dead);
+      respawn.textContent = p.dead ? `RESPAWN ${Math.max(0, p.respawnTimer || 0).toFixed(1)}` : '';
+    }
+    const abilities = $('moba-abilities');
+    if (abilities) {
+      abilities.innerHTML = p.abilities.map((ability, index) => `<button class="moba-ability${p.cooldowns[index] > 0 ? ' cooling' : ''}" type="button" data-moba-cast="${index}">
+        <span class="ma-key">${ability.slot}</span><span class="ma-name">${esc(ability.name)}</span><span class="ma-cost">${ability.mana} MP</span><span class="ma-cd">${p.cooldowns[index] > 0 ? `${p.cooldowns[index].toFixed(1)}s` : 'SIAP'}</span>
+      </button>`).join('');
+    }
+  }
+  const teamHtml = (team) => mobaHeroStats(mobaMatch).filter((hero) => hero.team === team).map((hero) => `<div class="mt-row${hero.dead ? ' dead' : ''}"><b>${esc(hero.name)}</b><i>L${hero.level}</i><span>${hero.kills}/${hero.deaths}</span></div>`).join('');
+  const blue = $('moba-team-blue'); if (blue) blue.innerHTML = teamHtml('blue');
+  const red = $('moba-team-red'); if (red) red.innerHTML = teamHtml('red');
+  const feed = $('moba-feed');
+  if (feed) {
+    const events = mobaMatch.texts.slice(-4).reverse();
+    feed.innerHTML = events.map((event) => `<span style="color:${event.color}">${esc(event.text)}</span>`).join('');
+  }
+  const pause = $('moba-pause');
+  if (pause) pause.classList.toggle('hidden', !mobaPaused);
+}
+
+function mobaPointerWorld(event) {
+  const canvas = $('moba-canvas');
+  if (!canvas || !mobaMatch) return null;
+  const rect = canvas.getBoundingClientRect();
+  const x = ((event.clientX - rect.left) / Math.max(1, rect.width)) * canvas.width;
+  const y = ((event.clientY - rect.top) / Math.max(1, rect.height)) * canvas.height;
+  return mobaScreenToWorld(mobaMatch, x, y, canvas.width, canvas.height);
+}
+
+// ── Wave Defense: hub, castle battlefield and result handling ──────
+function waveDefenseState() {
+  if (!progress.wavedefense) progress.wavedefense = defaultWaveDefenseProgress();
+  return progress.wavedefense;
+}
+
+function showWaveDefense() {
+  cancelPrologue();
+  started = false;
+  paused = false;
+  shopOpen = false;
+  mapOpen = false;
+  codexOpen = false;
+  inventoryOpen = false;
+  settingsOpen = false;
+  closeDialogue(true);
+  spectating = false;
+  spectateGame = null;
+  wdActive = false;
+  wdPaused = false;
+  wdMatch = null;
+  wdResult = null;
+  wdRecorded = false;
+  wdRenderDirty = true;
+  menuView = 'wavedefense';
+  clearHeldKeys();
+  buildWaveDefenseScreen();
+  syncScreens();
+}
+
+function buildWaveDefenseScreen() {
+  const state = waveDefenseState();
+  const summary = waveDefenseSummary(state);
+  const summaryEl = $('wd-summary');
+  if (summaryEl) {
+    summaryEl.innerHTML = `
+      <div class="wd-stat"><span>PERTAHANAN</span><strong>${summary.runs}</strong><em>${summary.wins} menang · ${summary.losses} kalah</em></div>
+      <div class="wd-stat"><span>WIN RATE</span><strong>${summary.winRate}%</strong><em>${summary.mapsPlayed}/${summary.mapsTotal} benteng</em></div>
+      <div class="wd-stat"><span>GELOMBANG</span><strong>${summary.bestWave}/${WAVE_DEFENSE_TOTAL_WAVES}</strong><em>rekor tertinggi</em></div>
+      <div class="wd-stat"><span>SKOR</span><strong>${summary.bestScore}</strong><em>rekor benteng</em></div>
+      <div class="wd-stat"><span>TOTAL KILL</span><strong>${summary.totalKills}</strong><em>${summary.totalLeaks} bocor</em></div>
+      <div class="wd-stat"><span>MENARA</span><strong>${summary.towers}</strong><em>${summary.enemies} musuh · ${summary.bosses} bos</em></div>`;
+  }
+  if (!WAVE_DEFENSE_MAP_BY_ID[wdMapId]) wdMapId = WAVE_DEFENSE_MAPS[0].id;
+  if (!WAVE_DEFENSE_DIFFICULTIES.some((entry) => entry.id === wdDifficulty)) wdDifficulty = 'knight';
+  if (!WAVE_DEFENSE_TOWER_BY_ID[wdSelectedTowerId]) wdSelectedTowerId = WAVE_DEFENSE_TOWERS[0].id;
+  const maps = $('wd-maps');
+  if (maps) {
+    maps.innerHTML = WAVE_DEFENSE_MAPS.map((map) => {
+      const record = state.maps?.[map.id] || {};
+      return `<button class="wd-map-card${map.id === wdMapId ? ' active' : ''}" type="button" data-wd-map="${map.id}">
+        <strong>${esc(map.name)}</strong><em>${esc(map.subtitle)}</em><span>${esc(map.lore)}</span>
+        <b>${map.slots.length} POS · REKOR GEL ${record.bestWave || 0} · SKOR ${record.bestScore || 0}</b>
+      </button>`;
+    }).join('');
+  }
+  const diffs = $('wd-difficulties');
+  if (diffs) diffs.innerHTML = WAVE_DEFENSE_DIFFICULTIES.map((entry) => `<button class="${entry.id === wdDifficulty ? 'active' : ''}" type="button" data-wd-difficulty="${entry.id}" title="${esc(entry.desc)}">${entry.name} · ${entry.castle} HP</button>`).join('');
+  const towers = $('wd-towers');
+  if (towers) {
+    towers.innerHTML = WAVE_DEFENSE_TOWERS.map((tower) => `<button class="wd-tower-card${tower.id === wdSelectedTowerId ? ' active' : ''}" type="button" data-wd-tower="${tower.id}" style="--tower-color:${tower.color}">
+      <span class="wt-top"><span class="wt-glyph">${tower.glyph}</span><strong>${esc(tower.name)}</strong></span>
+      <em>${tower.cost} EMAS</em>
+      <span>${esc(tower.desc)}</span>
+      <span class="wt-stats">DMG ${tower.damage} · RANGE ${tower.range} · ${tower.rate.toFixed(2)}/s${tower.splash ? ` · AREA ${tower.splash}` : ''}</span>
+    </button>`).join('');
+  }
+  const count = $('wd-tower-count');
+  if (count) count.textContent = `${WAVE_DEFENSE_TOWERS.length} JENIS · ${WAVE_DEFENSE_ENEMY_TYPES.length} MUSUH · ${WAVE_DEFENSE_BOSSES.length} BOS`;
+  const button = $('btn-wd-start');
+  if (button) button.innerHTML = `<span>MULAI PERTAHANAN</span><em>${esc(WAVE_DEFENSE_MAP_BY_ID[wdMapId]?.name || 'ASHEN KEEP')} · ${WAVE_DEFENSE_TOWER_BY_ID[wdSelectedTowerId]?.name || 'BALLISTA'} · ${WAVE_DEFENSE_DIFFICULTIES.find((entry) => entry.id === wdDifficulty)?.name || 'KNIGHT'}</em>`;
+}
+
+function buildWaveDefensePalette() {
+  const palette = $('wd-palette');
+  if (!palette) return;
+  palette.innerHTML = WAVE_DEFENSE_TOWERS.map((tower) => `<button type="button" data-wd-tower="${tower.id}" style="--tower-color:${tower.color}">
+    <span class="wp-glyph">${tower.glyph}</span><span class="wp-name">${esc(tower.name)}</span><span class="wp-cost">${tower.cost}</span>
+  </button>`).join('');
+  wdSelectionKey = '';
+  wdFeedKey = '';
+}
+
+function startWaveDefenseBattle() {
+  if (!WAVE_DEFENSE_MAP_BY_ID[wdMapId]) wdMapId = WAVE_DEFENSE_MAPS[0].id;
+  if (!WAVE_DEFENSE_TOWER_BY_ID[wdSelectedTowerId]) wdSelectedTowerId = WAVE_DEFENSE_TOWERS[0].id;
+  wdMatch = createWaveDefense({
+    mapId: wdMapId,
+    difficulty: wdDifficulty,
+    seed: (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0,
+  });
+  waveDefenseSelectTower(wdMatch, wdSelectedTowerId);
+  wdActive = true;
+  wdPaused = false;
+  wdResult = null;
+  wdRecorded = false;
+  wdUiTimer = 0;
+  wdRenderDirty = true;
+  started = false;
+  paused = false;
+  shopOpen = false;
+  mapOpen = false;
+  codexOpen = false;
+  inventoryOpen = false;
+  settingsOpen = false;
+  menuView = 'wavedefenseBattle';
+  accumulator = 0;
+  lastTime = performance.now();
+  $('wd-result')?.classList.add('hidden');
+  $('wd-pause')?.classList.add('hidden');
+  buildWaveDefensePalette();
+  updateWaveDefenseHud(true);
+  syncScreens();
+  const canvas = $('wd-canvas');
+  const ctx = canvas?.getContext('2d');
+  if (canvas && ctx) renderWaveDefense(ctx, wdMatch, { width: canvas.width, height: canvas.height, time: performance.now() / 1000 });
+}
+
+function toggleWaveDefensePause(next = !wdPaused) {
+  if (!wdActive || !wdMatch) return;
+  wdPaused = !!next;
+  lastTime = performance.now();
+  wdRenderDirty = true;
+  syncScreens();
+  updateWaveDefenseHud(true);
+}
+
+function leaveWaveDefense() {
+  wdActive = false;
+  wdPaused = false;
+  wdMatch = null;
+  wdResult = null;
+  wdRecorded = false;
+  wdRenderDirty = true;
+  showWaveDefense();
+}
+
+function completeWaveDefense() {
+  if (!wdMatch || wdMatch.phase !== 'ended' || wdRecorded) return;
+  wdRecorded = true;
+  const saved = recordWaveDefense(waveDefenseState(), wdMatch);
+  progress.wavedefense = saved.progress;
+  saveProgress();
+  wdResult = {
+    ...saved,
+    mapName: wdMatch.map.name,
+    difficultyName: WAVE_DEFENSE_DIFFICULTIES.find((entry) => entry.id === wdMatch.difficulty)?.name || 'KNIGHT',
+    snapshot: waveDefenseSnapshot(wdMatch),
+  };
+  renderWaveDefenseResult();
+  updateWaveDefenseHud(true);
+}
+
+function renderWaveDefenseResult() {
+  const overlay = $('wd-result');
+  if (!overlay || !wdResult) return;
+  const r = wdResult;
+  const win = r.win || r.snapshot?.result === 'victory';
+  overlay.innerHTML = `<div class="wd-modal wd-result-card ${win ? 'victory' : 'defeat'}">
+    <p class="eyebrow">WAVE DEFENSE · ${esc(r.mapName)} · ${formatPuzzleTime(r.snapshot?.time || 0)}</p>
+    <h3 class="wd-result-title">${win ? 'MAHKOTA BERTAHAN' : 'GERBANG TERBELAH'}</h3>
+    <p>${win ? 'Dua puluh empat gelombang hancur. Benteng terakhir masih berdiri.' : `Benteng jatuh pada gelombang ${r.snapshot?.wave || 0}. Bangun lebih awal dan tutup jalur dengan area damage.`}</p>
+    <div class="wd-result-stats">
+      <div><span>GELOMBANG</span><b>${r.snapshot?.wave || 0}/${WAVE_DEFENSE_TOTAL_WAVES}</b></div>
+      <div><span>KILL</span><b>${r.snapshot?.stats?.kills || 0}</b></div>
+      <div><span>BOCOR</span><b>${r.snapshot?.stats?.leaks || 0}</b></div>
+      <div><span>SKOR</span><b>${r.snapshot?.score || 0}</b></div>
+    </div>
+    <div class="wd-result-actions">
+      <button class="btn btn-primary" type="button" data-wd-action="rematch">COBA LAGI</button>
+      <button class="btn btn-ghost" type="button" data-wd-action="leave">KEMBALI KE HUB</button>
+    </div>
+  </div>`;
+  overlay.classList.remove('hidden');
+}
+
+function waveDefenseSelectionKey() {
+  if (!wdMatch) return '';
+  const tower = wdMatch.selectedSlot >= 0 ? wdMatch.towers.find((entry) => entry.slot === wdMatch.selectedSlot) : null;
+  return tower ? `${tower.id}:${tower.level}:${wdMatch.gold >= waveDefenseUpgradeCost(tower)}` : `slot:${wdMatch.selectedSlot}:${wdMatch.gold}`;
+}
+
+function updateWaveDefenseHud(force = false) {
+  if (!wdMatch) return;
+  if (wdMatch.phase === 'ended' && !wdRecorded) completeWaveDefense();
+  if (!force && wdUiTimer < 1 / 8) return;
+  wdUiTimer = 0;
+  const m = wdMatch;
+  const setText = (id, value) => { const node = $(id); if (node) node.textContent = value; };
+  const hpRatio = Math.max(0, m.castle.hp / m.castle.maxHp);
+  setText('wd-castle-text', `${Math.ceil(m.castle.hp)} / ${m.castle.maxHp}`);
+  const fill = $('wd-castle-fill');
+  if (fill) fill.style.width = `${hpRatio * 100}%`;
+  const bar = $('wd-castle-bar');
+  if (bar) bar.classList.toggle('low', hpRatio <= 0.3);
+  setText('wd-map-name', m.map.name);
+  setText('wd-wave', m.phase === 'prep' ? 'SIAP' : `GELOMBANG ${m.wave}`);
+  setText('wd-phase', m.phase === 'prep' ? `GELOMBANG ${Math.min(m.totalWaves, m.wave + 1)} DALAM ${Math.max(0, m.prepTimer).toFixed(1)}` : m.phase === 'wave' ? `${m.enemies.length} MUSUH · ${m.stats.kills} KILL` : 'PERTAHANAN SELESAI');
+  setText('wd-gold', m.gold);
+  setText('wd-score', m.score);
+  setText('wd-kills', m.stats.kills);
+
+  const next = $('btn-wd-next');
+  if (next) {
+    next.disabled = m.phase !== 'prep';
+    next.textContent = m.phase === 'prep' ? `KIRIM GELOMBANG ${Math.min(m.totalWaves, m.wave + 1)}` : m.phase === 'wave' ? `GELOMBANG ${m.wave} BERJALAN` : 'PERTAHANAN SELESAI';
+  }
+  document.querySelectorAll('#wd-speed [data-wd-speed]').forEach((button) => button.classList.toggle('active', Number(button.dataset.wdSpeed) === m.speed));
+  document.querySelectorAll('#wd-palette [data-wd-tower]').forEach((button) => {
+    const def = WAVE_DEFENSE_TOWER_BY_ID[button.dataset.wdTower];
+    button.classList.toggle('active', button.dataset.wdTower === m.buildTowerId);
+    button.classList.toggle('disabled', !def || m.gold < def.cost);
+  });
+
+  const boss = m.enemies.find((enemy) => enemy.boss);
+  const bossPanel = $('wd-boss-panel');
+  if (bossPanel) {
+    bossPanel.classList.toggle('hidden', !boss);
+    if (boss) {
+      setText('wd-boss-name', `${boss.name} · ${Math.ceil(boss.hp)} / ${boss.maxHp}`);
+      const bossFill = $('wd-boss-fill');
+      if (bossFill) bossFill.style.width = `${Math.max(0, boss.hp / boss.maxHp) * 100}%`;
+    }
+  }
+
+  const selection = $('wd-selection');
+  const key = waveDefenseSelectionKey();
+  if (selection && key !== wdSelectionKey) {
+    wdSelectionKey = key;
+    const tower = m.selectedSlot >= 0 ? m.towers.find((entry) => entry.slot === m.selectedSlot) : null;
+    if (tower) {
+      const def = WAVE_DEFENSE_TOWER_BY_ID[tower.towerId];
+      const cost = waveDefenseUpgradeCost(tower);
+      const maxed = tower.level >= 3;
+      selection.innerHTML = `<div class="ws-line"><strong>${esc(def.name)} · POS ${tower.slot + 1}</strong><span>LEVEL ${tower.level}/3</span><em>${def.cost} emas</em></div>
+        <p>${esc(def.desc)}</p>
+        <div class="wd-selection-actions">
+          <button type="button" data-wd-action="upgrade" ${maxed || m.gold < cost ? 'disabled' : ''}>${maxed ? 'LEVEL MAKSIMUM' : `TINGKATKAN · ${cost} EMAS`}</button>
+          <button type="button" data-wd-action="sell">JUAL +${waveDefenseSellValue(tower)}</button>
+        </div>`;
+    } else {
+      const def = WAVE_DEFENSE_TOWER_BY_ID[m.buildTowerId];
+      selection.innerHTML = `<div class="ws-line"><strong>POS ${m.selectedSlot >= 0 ? m.selectedSlot + 1 : '—'}</strong><span>${def?.name || 'PILIH MENARA'}</span><em>${def?.cost || 0} emas</em></div>
+        <p>Klik pos kosong untuk membangun. Pilih menara di panel kiri, lalu klik pos di sepanjang jalan.</p>
+        <div class="wd-selection-actions"><button type="button" data-wd-action="hint" disabled>MENUNGGU POS</button></div>`;
+    }
+  }
+
+  const feedKey = m.texts.map((entry) => entry.text).join('|');
+  if (feedKey !== wdFeedKey) {
+    wdFeedKey = feedKey;
+    const feed = $('wd-feed');
+    if (feed) feed.innerHTML = m.texts.slice(-5).reverse().map((entry) => `<span style="color:${entry.color}">${esc(entry.text)}</span>`).join('');
+  }
+  const pause = $('wd-pause');
+  if (pause) pause.classList.toggle('hidden', !wdPaused);
+}
+
+function waveDefensePointerWorld(event) {
+  const canvas = $('wd-canvas');
+  if (!canvas) return null;
+  const rect = canvas.getBoundingClientRect();
+  return {
+    x: ((event.clientX - rect.left) / Math.max(1, rect.width)) * canvas.width,
+    y: ((event.clientY - rect.top) / Math.max(1, rect.height)) * canvas.height,
+  };
+}
+
+function waveDefenseSlotAt(x, y) {
+  if (!wdMatch) return -1;
+  let best = -1;
+  let bestDist = 27;
+  for (const slot of wdMatch.slots) {
+    const dist = Math.hypot(slot.x - x, slot.y - y);
+    if (dist < bestDist) { bestDist = dist; best = slot.index; }
+  }
+  return best;
+}
+
+function handleWaveDefenseSlot(index) {
+  if (!wdMatch || wdMatch.phase === 'ended' || index < 0) return;
+  const slot = wdMatch.slots[index];
+  if (!slot) return;
+  if (slot.towerId === null) {
+    const def = WAVE_DEFENSE_TOWER_BY_ID[wdMatch.buildTowerId];
+    if (def && wdMatch.gold >= def.cost) waveDefenseBuild(wdMatch, index, wdMatch.buildTowerId);
+    else waveDefenseSelect(wdMatch, index);
+  } else {
+    waveDefenseSelect(wdMatch, index);
+  }
+  wdRenderDirty = true;
+  updateWaveDefenseHud(true);
 }
 
 // ── Overdrive Hub ─────────────────────────────────────────────────
@@ -7362,6 +8194,61 @@ window.addEventListener('keydown', (e) => {
     e.preventDefault();
   }
 
+  if (wdActive) {
+    e.preventDefault();
+    if (wdMatch?.phase === 'ended') {
+      if (e.code === 'Escape' || e.code === 'Enter') leaveWaveDefense();
+      return;
+    }
+    if (e.code === 'Escape') {
+      toggleWaveDefensePause();
+      return;
+    }
+    if (wdPaused) return;
+    if (e.code === 'Space') {
+      if (waveDefenseNextWave(wdMatch)) {
+        wdRenderDirty = true;
+        updateWaveDefenseHud(true);
+      }
+      return;
+    }
+    const towerIndex = Number(e.code.replace('Digit', '')) - 1;
+    if (Number.isInteger(towerIndex) && towerIndex >= 0 && towerIndex < 9) {
+      wdSelectedTowerId = WAVE_DEFENSE_TOWERS[towerIndex].id;
+      waveDefenseSelectTower(wdMatch, wdSelectedTowerId);
+      wdRenderDirty = true;
+      updateWaveDefenseHud(true);
+    }
+    return;
+  }
+
+  if (mobaActive) {
+    e.preventDefault();
+    if (mobaMatch?.phase === 'ended') {
+      if (e.code === 'Escape' || e.code === 'Enter') leaveMoba();
+      return;
+    }
+    if (e.code === 'Escape') {
+      toggleMobaPause();
+      return;
+    }
+    if (mobaPaused) return;
+    const cast = { KeyQ: 0, KeyW: 1, KeyE: 2, KeyR: 3, Digit1: 0, Digit2: 1, Digit3: 2, Digit4: 3 }[e.code];
+    if (cast !== undefined) {
+      mobaCast(mobaMatch, cast, mobaAim);
+      return;
+    }
+    if (e.code === 'KeyB') {
+      mobaInput.recall = true;
+      return;
+    }
+    if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'KeyA', 'KeyD'].includes(e.code)) {
+      mobaHeld.add(e.code);
+      syncMobaAxes();
+    }
+    return;
+  }
+
   // A running cutscene owns the keyboard: Space/Enter/Escape skips it.
   if (cutsceneActive) {
     if (e.code === 'Space' || e.code === 'Enter' || e.code === 'Escape' || e.code === 'Backspace') {
@@ -7428,7 +8315,7 @@ window.addEventListener('keydown', (e) => {
     return;
   }
 
-  if (menuView === 'trials' || menuView === 'puzzle') {
+  if (menuView === 'trials' || menuView === 'puzzle' || menuView === 'moba' || menuView === 'wavedefense') {
     if (e.code === 'Escape' || e.code === 'Backspace') showMenu();
     return;
   }
@@ -7598,6 +8485,13 @@ window.addEventListener('keydown', (e) => {
 });
 
 window.addEventListener('keyup', (e) => {
+  if (wdActive) return;
+  if (mobaActive) {
+    mobaHeld.delete(e.code);
+    syncMobaAxes();
+    if (e.code === 'KeyB') mobaInput.recall = false;
+    return;
+  }
   if (menuView === 'mode3d') {
     if (['KeyW', 'ArrowUp'].includes(e.code)) input3D.up = false;
     if (['KeyS', 'ArrowDown'].includes(e.code)) input3D.down = false;
@@ -7796,6 +8690,7 @@ function buildLabyrinthScreen() {
         <div class="lab-coop-fields">
           <label>ROOM CODE<input id="lab-room-code" maxlength="8" placeholder="KOSONG = ACAK" value="${esc(labCoop.code || '')}" /></label>
           <label>KATA SANDI<input id="lab-room-pass" type="password" placeholder="opsional" /></label>
+          <label>START ROOM<input id="lab-start-room" type="number" min="0" max="${ALL_ROOMS.length - 1}" value="${Number(labCoop.campaignStart) || 0}" /></label>
         </div>
         <div class="lab-coop-actions">
           <button class="btn btn-primary btn-compact" type="button" data-lab-action="host">HOST PARTY</button>
@@ -8341,7 +9236,9 @@ function puzzleState() {
   return progress.puzzle;
 }
 
-function showPuzzleAdventure() {
+function showPuzzleAdventure(tab) {
+  const nextTab = typeof tab === 'string' ? tab : puzzleTab;
+  stopPuzzleTimer();
   cancelPrologue();
   started = false;
   paused = false;
@@ -8354,6 +9251,7 @@ function showPuzzleAdventure() {
   spectating = false;
   puzzleRun = null;
   puzzleSelected = -1;
+  puzzleTab = nextTab;
   menuView = 'puzzle';
   clearHeldKeys();
   buildPuzzleScreen();
@@ -8363,28 +9261,47 @@ function showPuzzleAdventure() {
 function buildPuzzleScreen() {
   const p = puzzleState();
   const summary = puzzleSummary(p);
+  const wallet = expState();
   const head = $('puzzle-summary');
   if (head) {
     head.innerHTML = `
       <div class="lab-stat"><span>TAHAP</span><strong>${summary.solved}/${summary.stages}</strong></div>
+      <div class="lab-stat"><span>ARC</span><strong>${summary.arcs}</strong></div>
       <div class="lab-stat"><span>JENIS TEKA-TEKI</span><strong>${summary.types}</strong></div>
       <div class="lab-stat"><span>KEMAMPUAN</span><strong>${summary.abilities}/${summary.abilityTotal}</strong></div>
       <div class="lab-stat"><span>PROGRES</span><strong>${summary.percent}%</strong></div>
       <div class="lab-stat"><span>BOSS</span><strong>${summary.bosses}</strong></div>
+      <div class="lab-stat"><span>GEMA</span><strong>✦ ${wallet.echoes}</strong></div>
       <div class="lab-stat"><span>BERIKUTNYA</span><strong>${summary.next ? summary.next.name : 'SELESAI'}</strong></div>`;
   }
+  document.querySelectorAll('[data-puzzle-tab]').forEach((button) => {
+    button.classList.toggle('active', button.dataset.puzzleTab === puzzleTab);
+  });
   const body = $('puzzle-body');
   if (!body) return;
+  if (puzzleTab === 'index') {
+    body.innerHTML = puzzleIndexMarkup(p);
+    return;
+  }
+  if (puzzleTab === 'lore') {
+    body.innerHTML = puzzleLoreMarkup();
+    return;
+  }
   const abilities = PUZZLE_ABILITIES.map((ability) => `<span class="puzzle-ability ${p.abilities.includes(ability.id) ? '' : 'locked'}">${p.abilities.includes(ability.id) ? '✦' : '◇'} ${esc(ability.name)}</span>`).join('');
-  const stages = PUZZLE_ARC1.map((stage) => {
+  let currentArc = 0;
+  const stages = PUZZLE_STAGES.map((stage) => {
     const solved = p.solved.includes(stage.id);
     const unlocked = puzzleStageUnlocked(p, stage.index);
     const type = PUZZLE_TYPE_BY_ID[stage.typeId];
-    return `<article class="puzzle-stage ${solved ? 'cleared' : ''} ${unlocked ? '' : 'locked'}">
+    const heading = stage.arc !== currentArc
+      ? `<div class="puzzle-arc-head"><span>ARC ${stage.arc}</span><strong>${esc(stage.arcTitle)}</strong><em>${stage.arc === 1 ? '10 TAHAP' : '10 TAHAP · BOS'}</em></div>`
+      : '';
+    currentArc = stage.arc;
+    return `${heading}<article class="puzzle-stage ${solved ? 'cleared' : ''} ${stage.timed ? 'timed' : ''} ${unlocked ? '' : 'locked'}">
       <span class="puzzle-stage-index">${String(stage.index + 1).padStart(2, '0')}</span>
       <div>
         <h3>${esc(stage.name)}</h3>
-        <p>${esc(stage.location)} · ${esc(type?.name || stage.typeId)}${stage.boss ? ' · BOS TEKA-TEKI' : ''}</p>
+        <p>${esc(stage.location)} · ${esc(type?.name || stage.typeId)}${stage.boss ? ` · BOS-TIMED ${formatPuzzleTime(stage.timeLimit)}` : ''}</p>
       </div>
       <button class="btn btn-ghost btn-compact" type="button" data-puzzle-stage="${stage.index}" ${unlocked ? '' : 'disabled'}>
         ${solved ? 'SELESAI' : unlocked ? 'MAINKAN' : 'TERKUNCI'}
@@ -8394,17 +9311,47 @@ function buildPuzzleScreen() {
   body.innerHTML = `<div class="puzzle-abilities">${abilities}</div>${stages}`;
 }
 
+function puzzleIndexMarkup(progress) {
+  const counts = {};
+  for (const stage of PUZZLE_STAGES) counts[stage.typeId] = (counts[stage.typeId] || 0) + 1;
+  const cards = PUZZLE_TYPES.map((type) => `<article class="puzzle-lore-card">
+    <div class="puzzle-lore-head"><span>${String(type.index + 1).padStart(2, '0')} · ${esc(type.engine)}</span><strong>${esc(type.name)}</strong><em>${counts[type.id] || 0}x TAHAP</em></div>
+    <p>${esc(type.desc)}</p>
+    <blockquote>${esc(PUZZLE_TYPE_LORE[type.id] || '')}</blockquote>
+  </article>`).join('');
+  return `<div class="puzzle-lore-intro"><span>INDEKS MEKANISME</span><p>${esc(PUZZLE_LORE.intro)}</p><em>${PUZZLE_TYPES.length} sistem · ${PUZZLE_STAGES.length} tahap · ${progress.solved.length} tuntas</em></div>
+    <div class="puzzle-lore-grid">${cards}</div>`;
+}
+
+function puzzleLoreMarkup() {
+  const arcs = PUZZLE_ARCS.map((arc) => {
+    const stages = PUZZLE_STAGES.filter((stage) => stage.arc === arc.arc);
+    const boss = PUZZLE_BOSS_BY_ID[arc.boss];
+    return `<article class="puzzle-arc-lore">
+      <div class="puzzle-lore-head"><span>ARC ${arc.arc} · ${stages.length} TAHAP</span><strong>${esc(arc.title)}</strong><em>${esc(boss?.name || 'BOS')}</em></div>
+      <p>${esc(arc.story)}</p>
+      <blockquote>${esc(arc.secret)}</blockquote>
+      <small>${esc(boss?.lore || '')}</small>
+    </article>`;
+  }).join('');
+  return `<div class="puzzle-lore-intro"><span>CATATAN LORE</span><p>${esc(PUZZLE_LORE.intro)}</p><em>${PUZZLE_ARCS.length} arc · ${PUZZLE_BOSSES.length} bos</em></div>
+    <div class="puzzle-lore-stack">${arcs}</div>
+    <div class="puzzle-lore-epilogue"><span>EPILOG</span><p>${esc(PUZZLE_LORE.epilogue)}</p></div>`;
+}
+
 function startPuzzleStage(index) {
-  const stage = PUZZLE_ARC1[index];
+  const stage = PUZZLE_STAGES[index];
   if (!stage || !puzzleStageUnlocked(puzzleState(), index)) return false;
   const phases = stage.boss ? (PUZZLE_BOSS_BY_ID[stage.boss]?.phases || [stage.typeId]) : [stage.typeId];
   puzzleRun = {
     stageIndex: index, stage, phase: 0, phases,
     puzzle: generatePuzzle(phases[0], stage.difficulty, `arc|${stage.id}|0`), done: false,
+    timeLimit: puzzleBossTimer(stage), deadline: 0,
   };
   puzzleSelected = -1;
   menuView = 'puzzlePlay';
   buildPuzzlePlay();
+  startPuzzleTimer();
   syncScreens();
   return true;
 }
@@ -8416,10 +9363,13 @@ function buildPuzzlePlay() {
   const title = $('puzzle-play-title');
   const desc = $('puzzle-play-desc');
   const status = $('puzzle-status');
-  if (eyebrow) eyebrow.textContent = `${stage.location.toUpperCase()} · STAGE ${stage.index + 1} / ${PUZZLE_ARC1.length}${phases.length > 1 ? ` · FASE ${phase + 1}/${phases.length}` : ''}`;
+  if (eyebrow) eyebrow.textContent = `ARC ${stage.arc} · ${stage.location.toUpperCase()} · STAGE ${stage.index + 1} / ${PUZZLE_STAGES.length}${phases.length > 1 ? ` · FASE ${phase + 1}/${phases.length}` : ''}`;
   if (title) title.textContent = puzzle.typeName;
   if (desc) desc.textContent = PUZZLE_TYPE_BY_ID[puzzle.typeId]?.desc || '';
   if (status) status.textContent = `Langkah: ${puzzle.moves} · Susun sampai mekanisme menyala.`;
+  const wallet = $('puzzle-currency');
+  if (wallet) wallet.textContent = `✦ ${expState().echoes} GEMA · PETUNJUK ${PUZZLE_HINT_COST} GEMA`;
+  updatePuzzleTimerWidget();
   const board = $('puzzle-board');
   if (!board) return;
   board.innerHTML = puzzleBoardMarkup(puzzle);
@@ -8537,11 +9487,13 @@ function finishPuzzleStage() {
     run.phase += 1;
     puzzleSelected = -1;
     run.puzzle = generatePuzzle(run.phases[run.phase], run.stage.difficulty, `arc|${run.stage.id}|${run.phase}`);
+    resetPuzzleTimer();
     buildPuzzlePlay();
-    showToast(`Mekanisme fase ${run.phase + 1} aktif — lanjut.`, 2000);
+    showToast(`Mekanisme fase ${run.phase + 1} aktif — waktu diatur ulang.`, 2000);
     return;
   }
   run.done = true;
+  stopPuzzleTimer();
   const record = recordPuzzleSolve(progress.puzzle, run.stage.id, { moves: run.puzzle.moves });
   progress.puzzle = record.progress;
   if (run.stage.boss) {
@@ -8553,8 +9505,72 @@ function finishPuzzleStage() {
   const status = $('puzzle-status');
   if (status) status.textContent = 'Mekanisme menyala. Jalan terbuka.';
   setTimeout(() => {
-    if (menuView === 'puzzlePlay') showPuzzleAdventure();
+    if (menuView === 'puzzlePlay') showPuzzleAdventure('stages');
   }, 900);
+}
+
+function updatePuzzleTimerWidget() {
+  const widget = $('puzzle-timer');
+  const value = $('puzzle-timer-value');
+  if (!widget || !value) return;
+  const timed = !!puzzleRun?.stage?.timed && !puzzleRun.done;
+  widget.classList.toggle('hidden', !timed);
+  if (!timed) return;
+  const remaining = puzzleRun.deadline > 0 ? (puzzleRun.deadline - Date.now()) / 1000 : puzzleRun.timeLimit;
+  value.textContent = formatPuzzleTime(remaining);
+  widget.classList.toggle('danger', remaining <= 15);
+}
+
+function startPuzzleTimer() {
+  stopPuzzleTimer();
+  if (!puzzleRun?.stage?.timed) {
+    updatePuzzleTimerWidget();
+    return;
+  }
+  puzzleRun.timeLimit = puzzleBossTimer(puzzleRun.stage);
+  puzzleRun.deadline = Date.now() + puzzleRun.timeLimit * 1000;
+  updatePuzzleTimerWidget();
+  puzzleTimerInterval = setInterval(updatePuzzleTimer, 200);
+}
+
+function resetPuzzleTimer() {
+  if (!puzzleRun?.stage?.timed) return;
+  puzzleRun.deadline = Date.now() + puzzleRun.timeLimit * 1000;
+  updatePuzzleTimerWidget();
+}
+
+function stopPuzzleTimer() {
+  if (puzzleTimerInterval) clearInterval(puzzleTimerInterval);
+  puzzleTimerInterval = null;
+  const widget = $('puzzle-timer');
+  if (widget) widget.classList.add('hidden');
+}
+
+function updatePuzzleTimer() {
+  if (!puzzleRun || puzzleRun.done) {
+    stopPuzzleTimer();
+    return;
+  }
+  updatePuzzleTimerWidget();
+  if (puzzleRun.deadline > 0 && Date.now() >= puzzleRun.deadline) timeoutPuzzleStage();
+}
+
+function timeoutPuzzleStage() {
+  if (!puzzleRun || puzzleRun.done) return;
+  puzzleRun.done = true;
+  stopPuzzleTimer();
+  const run = puzzleRun;
+  puzzleState().stats.timeouts += 1;
+  saveProgress();
+  const status = $('puzzle-status');
+  if (status) status.textContent = `WAKTU HABIS — ${PUZZLE_BOSS_BY_ID[run.stage.boss]?.name || 'bos'} menutup mekanisme. Coba lagi.`;
+  const timer = $('puzzle-timer');
+  if (timer) { timer.classList.remove('hidden'); timer.classList.add('danger'); }
+  const value = $('puzzle-timer-value');
+  if (value) value.textContent = '00:00';
+  setTimeout(() => {
+    if (menuView === 'puzzlePlay' && puzzleRun === run) showPuzzleAdventure('stages');
+  }, 1400);
 }
 
 function resetPuzzleBoard() {
@@ -8565,12 +9581,20 @@ function resetPuzzleBoard() {
 }
 
 function showPuzzleHint() {
-  if (!puzzleRun) return;
+  if (!puzzleRun || puzzleRun.done) return;
   const status = $('puzzle-status');
-  const left = Math.max(0, (puzzleRun.puzzle.solution?.length || 0) - puzzleRun.puzzle.moves);
-  if (status) status.textContent = `Petunjuk: ${left} langkah tersisa dari solusi kuno.`;
-  puzzleState().stats.hints += 1;
+  const wallet = expState();
+  const payment = payPuzzleHint(progress.puzzle, wallet.echoes, puzzleRun.stage.id, PUZZLE_HINT_COST);
+  if (!payment.ok) {
+    if (status) status.textContent = `Gema tidak cukup. Butuh ✦ ${payment.cost} Gema — kumpulkan dari kampanye utama. (Punya ✦ ${payment.echoes})`;
+    return;
+  }
+  wallet.echoes = payment.echoes;
+  progress.puzzle = payment.progress;
   saveProgress();
+  if (status) status.textContent = `−✦ ${payment.cost} Gema · ${puzzleHintText(puzzleRun.puzzle)} · Sisa ✦ ${wallet.echoes}.`;
+  const balance = $('puzzle-currency');
+  if (balance) balance.textContent = `✦ ${wallet.echoes} GEMA · PETUNJUK ${PUZZLE_HINT_COST} GEMA`;
 }
 
 function updateLabHud() {
@@ -9052,11 +10076,14 @@ function startLabCoopSession() {
   labCoop.lobby = startedLobby.lobby;
   const mode = labCoop.runMode || coopRunMode || 'labyrinth';
   coopRunMode = mode;
+  const requestedRoom = Number($('lab-start-room')?.value);
+  const startRoom = Number.isInteger(requestedRoom) ? clamp(requestedRoom, 0, ALL_ROOMS.length - 1) : (Number(labCoop.campaignStart) || 0);
+  labCoop.campaignStart = mode === 'campaign' ? startRoom : 0;
   const allies = labCoop.lobby.players
     .filter((player) => !player.host)
     .map((player, index) => labAllyFromLobby(player, index));
   if (mode === 'campaign') {
-    startRun(0);
+    startRun(labCoop.campaignStart);
     game.setAllies(allies);
   } else if (mode === 'court') {
     startCourtRoom(0);
@@ -9073,8 +10100,8 @@ function startLabCoopSession() {
         mode,
         lobby: labCoop.lobby,
         seed: labCoop.lobby.seed,
-        roomIndex: game.roomIndex,
-        roomLocal: mode === 'court' ? 0 : 0,
+        roomIndex: mode === 'campaign' ? labCoop.campaignStart : game.roomIndex,
+        roomLocal: 0,
       });
     }
   }
@@ -9098,7 +10125,7 @@ function startCoopGuest(message) {
     labGuestMode = false;
     coopGuestMode = true;
   } else {
-    startRun(0);
+    startRun(Number.isInteger(message.roomIndex) ? clamp(message.roomIndex, 0, ALL_ROOMS.length - 1) : 0);
     labGuestMode = false;
     coopGuestMode = true;
   }
@@ -9218,11 +10245,110 @@ $('btn-labyrinth-menu')?.addEventListener('click', () => showLabyrinth('run'));
 $('btn-lab-back')?.addEventListener('click', () => { teardownLabCoop(); showMenu(); });
 $('btn-trials-menu')?.addEventListener('click', showTrials);
 $('btn-trials-back')?.addEventListener('click', showMenu);
+$('btn-moba-menu')?.addEventListener('click', showMoba);
+$('btn-moba-back')?.addEventListener('click', showMenu);
+$('btn-moba-start')?.addEventListener('click', startMobaBattle);
+$('btn-moba-pause')?.addEventListener('click', () => toggleMobaPause(true));
+$('btn-moba-quit')?.addEventListener('click', leaveMoba);
+$('btn-moba-resume')?.addEventListener('click', () => toggleMobaPause(false));
+$('btn-moba-pause-leave')?.addEventListener('click', leaveMoba);
+$('moba-screen')?.addEventListener('click', (event) => {
+  const role = event.target.closest('[data-moba-role]');
+  if (role) { mobaRoleFilter = role.dataset.mobaRole; buildMobaScreen(); return; }
+  const hero = event.target.closest('[data-moba-hero]');
+  if (hero) { mobaHeroId = hero.dataset.mobaHero; buildMobaScreen(); return; }
+  const map = event.target.closest('[data-moba-map]');
+  if (map) { mobaMapId = map.dataset.mobaMap; buildMobaScreen(); return; }
+  const lane = event.target.closest('[data-moba-lane]');
+  if (lane) { mobaLane = lane.dataset.mobaLane; buildMobaScreen(); return; }
+  const difficulty = event.target.closest('[data-moba-difficulty]');
+  if (difficulty) { mobaDifficulty = difficulty.dataset.mobaDifficulty; buildMobaScreen(); }
+});
+$('moba-canvas')?.addEventListener('pointermove', (event) => {
+  const point = mobaPointerWorld(event);
+  if (point) mobaAim = point;
+});
+$('moba-canvas')?.addEventListener('pointerdown', (event) => {
+  if (!mobaActive || mobaPaused || mobaMatch?.phase !== 'playing') return;
+  const point = mobaPointerWorld(event);
+  if (!point) return;
+  mobaAim = point;
+  mobaSetOrder(mobaMatch, point.x, point.y);
+});
+$('moba-abilities')?.addEventListener('click', (event) => {
+  const button = event.target.closest('[data-moba-cast]');
+  if (button && mobaActive && !mobaPaused) mobaCast(mobaMatch, Number(button.dataset.mobaCast), mobaAim);
+});
+$('moba-result')?.addEventListener('click', (event) => {
+  const action = event.target.closest('[data-moba-action]')?.dataset.mobaAction;
+  if (action === 'rematch') startMobaBattle();
+  else if (action === 'leave') leaveMoba();
+});
+$('btn-wd-menu')?.addEventListener('click', showWaveDefense);
+$('btn-wd-back')?.addEventListener('click', showMenu);
+$('btn-wd-start')?.addEventListener('click', startWaveDefenseBattle);
+$('btn-wd-pause')?.addEventListener('click', () => toggleWaveDefensePause(true));
+$('btn-wd-quit')?.addEventListener('click', leaveWaveDefense);
+$('btn-wd-resume')?.addEventListener('click', () => toggleWaveDefensePause(false));
+$('btn-wd-pause-leave')?.addEventListener('click', leaveWaveDefense);
+$('btn-wd-next')?.addEventListener('click', () => {
+  if (waveDefenseNextWave(wdMatch)) {
+    wdRenderDirty = true;
+    updateWaveDefenseHud(true);
+  }
+});
+$('wd-screen')?.addEventListener('click', (event) => {
+  const map = event.target.closest('[data-wd-map]');
+  if (map) { wdMapId = map.dataset.wdMap; buildWaveDefenseScreen(); return; }
+  const difficulty = event.target.closest('[data-wd-difficulty]');
+  if (difficulty) { wdDifficulty = difficulty.dataset.wdDifficulty; buildWaveDefenseScreen(); return; }
+  const tower = event.target.closest('[data-wd-tower]');
+  if (tower) { wdSelectedTowerId = tower.dataset.wdTower; buildWaveDefenseScreen(); }
+});
+$('wd-battle')?.addEventListener('click', (event) => {
+  const tower = event.target.closest('[data-wd-tower]');
+  if (tower && wdMatch) {
+    wdSelectedTowerId = tower.dataset.wdTower;
+    waveDefenseSelectTower(wdMatch, wdSelectedTowerId);
+    wdRenderDirty = true;
+    updateWaveDefenseHud(true);
+    return;
+  }
+  const speed = event.target.closest('[data-wd-speed]');
+  if (speed && wdMatch) {
+    waveDefenseSetSpeed(wdMatch, Number(speed.dataset.wdSpeed));
+    updateWaveDefenseHud(true);
+  }
+});
+$('wd-selection')?.addEventListener('click', (event) => {
+  const action = event.target.closest('[data-wd-action]')?.dataset.wdAction;
+  if (action === 'upgrade') waveDefenseUpgrade(wdMatch);
+  else if (action === 'sell') waveDefenseSell(wdMatch);
+  wdRenderDirty = true;
+  updateWaveDefenseHud(true);
+});
+$('wd-canvas')?.addEventListener('pointerdown', (event) => {
+  if (!wdActive || wdPaused || wdMatch?.phase === 'ended') return;
+  const point = waveDefensePointerWorld(event);
+  if (!point) return;
+  handleWaveDefenseSlot(waveDefenseSlotAt(point.x, point.y));
+});
+$('wd-result')?.addEventListener('click', (event) => {
+  const action = event.target.closest('[data-wd-action]')?.dataset.wdAction;
+  if (action === 'rematch') startWaveDefenseBattle();
+  else if (action === 'leave') leaveWaveDefense();
+});
 $('btn-puzzle-menu')?.addEventListener('click', showPuzzleAdventure);
 $('btn-puzzle-back')?.addEventListener('click', showMenu);
 $('btn-puzzle-leave')?.addEventListener('click', showPuzzleAdventure);
 $('btn-puzzle-reset')?.addEventListener('click', resetPuzzleBoard);
 $('btn-puzzle-hint')?.addEventListener('click', showPuzzleHint);
+$('puzzle-tabs')?.addEventListener('click', (event) => {
+  const tab = event.target.closest('[data-puzzle-tab]');
+  if (!tab) return;
+  puzzleTab = tab.dataset.puzzleTab;
+  buildPuzzleScreen();
+});
 $('trials-screen')?.addEventListener('click', (event) => {
   const level = event.target.closest('[data-trial-level]');
   if (level && !level.disabled) {
@@ -9292,6 +10418,10 @@ $('btn-character-start').addEventListener('click', beginJourney);
 $('btn-prologue-skip').addEventListener('click', finishPrologue);
 $('btn-prologue-voice').addEventListener('click', togglePrologueVoice);
 $('btn-levels').addEventListener('click', showLevels);
+$('btn-admin-menu')?.addEventListener('click', () => window.open('/admin', '_blank', 'noopener'));
+fetch('/api/admin/session', { credentials: 'same-origin' })
+  .then((response) => { if (response.ok) $('btn-admin-menu')?.classList.remove('hidden'); })
+  .catch(() => {});
 $('btn-settings-menu').addEventListener('click', () => showSettings(false));
 $('btn-credits').addEventListener('click', showCredits);
 $('btn-updates').addEventListener('click', showUpdates);
@@ -9673,6 +10803,11 @@ function syncScreens() {
   const inRun = started && !spectating && menuView === 'none';
   const covered = settingsOpen;
 
+  $('moba-screen')?.classList.toggle('hidden', menuView !== 'moba' || covered);
+  $('moba-battle')?.classList.toggle('hidden', !mobaActive || covered);
+  $('wd-screen')?.classList.toggle('hidden', menuView !== 'wavedefense' || covered);
+  $('wd-battle')?.classList.toggle('hidden', !wdActive || covered);
+
   $('title-screen').classList.toggle('hidden', menuView !== 'title' || covered);
   $('levels-screen').classList.toggle('hidden', menuView !== 'levels' || covered);
   $('credits-screen').classList.toggle('hidden', menuView !== 'credits' || covered);
@@ -9975,6 +11110,23 @@ function drainEvents() {
         } else if (ev.type === 'purityHit' && ev.broke) {
           showToast('Purity Shield pecah — barisan itu bisa dilukai.', 1800);
         }
+      } else if (activeRunKind === 'astral') {
+        if (ev.type === 'gatePass') {
+          const room = ALL_ROOMS[ev.from];
+          if (room?.astral) {
+            recordAstralRoomClear(progress.astral, room);
+            saveProgress();
+          }
+        } else if (ev.type === 'bossDown') {
+          const room = ALL_ROOMS[ev.room];
+          if (room?.astral) {
+            const result = recordAstralRoomClear(progress.astral, room);
+            saveProgress();
+            if (result?.ok) showToast(result.final ? 'THE ARCHITECT OF ETERNITY GUGUR — The Unwritten Expanse mulai terlihat.' : 'Wilayah Astral ditaklukkan.', 3000);
+          }
+        }
+      } else if (activeRunKind === 'hack') {
+        // Isolated testing session: deliberately no progression side effects.
       } else if (activeRunKind === 'fallen') {
         if (ev.type === 'gatePass') {
           const from = FALLEN_ROOM_BY_ID[ev.from];
@@ -10173,6 +11325,36 @@ function frame(now) {
     const badge = $('fps-badge');
     if (badge) badge.textContent = `${fpsValue} FPS`;
     adaptResolution();
+  }
+
+  if (wdActive) {
+    if (wdMatch && !wdPaused && wdMatch.phase !== 'ended') {
+      updateWaveDefense(wdMatch, Math.min(raw, 0.05));
+    }
+    if (wdMatch && (!wdPaused || wdRenderDirty)) {
+      const canvas = $('wd-canvas');
+      const ctx = canvas?.getContext('2d');
+      if (canvas && ctx) renderWaveDefense(ctx, wdMatch, { width: canvas.width, height: canvas.height, time: now / 1000 });
+    }
+    wdRenderDirty = false;
+    if (wdMatch?.phase === 'ended') completeWaveDefense();
+    wdUiTimer += raw;
+    updateWaveDefenseHud();
+    return;
+  }
+
+  if (mobaActive) {
+    if (mobaMatch && !mobaPaused && mobaMatch.phase === 'playing') {
+      updateMobaMatch(mobaMatch, Math.min(raw, 0.05), mobaInput);
+      mobaInput.castSlot = -1;
+    }
+    const canvas = $('moba-canvas');
+    const ctx = canvas?.getContext('2d');
+    if (canvas && ctx) renderMoba(ctx, mobaMatch, { width: canvas.width, height: canvas.height, time: now / 1000 });
+    if (mobaMatch?.phase === 'ended') completeMobaMatch();
+    mobaUiTimer += raw;
+    updateMobaHud();
+    return;
   }
 
   pollGamepad();
@@ -11757,6 +12939,15 @@ window.__ashen = {
   retry: retryRun,
   showMenu,
   showLevels,
+  showRealms() { realmsUI.showRealms(); },
+  showStageAccess(arcId) { realmsUI.showStageAccess(arcId); },
+  showAstral() { realmsUI.showAstral(); },
+  startHackStage,
+  exitHackStage,
+  hackTool,
+  startAstralStage,
+  get realms() { return progress.realms; },
+  get astral() { return progress.astral; },
   showExpansion,
   showAtlas,
   closeAtlas,
@@ -11881,7 +13072,182 @@ window.__ashen = {
     return true;
   },
   get puzzle() {
-    return { progress: puzzleState(), summary: puzzleSummary(puzzleState()), run: puzzleRun };
+    return { progress: puzzleState(), summary: puzzleSummary(puzzleState()), run: puzzleRun, tab: puzzleTab };
+  },
+  get puzzleTimer() {
+    if (!puzzleRun?.stage?.timed) return null;
+    return {
+      timeLimit: puzzleRun.timeLimit,
+      remaining: puzzleRun.deadline ? Math.max(0, (puzzleRun.deadline - Date.now()) / 1000) : puzzleRun.timeLimit,
+      done: puzzleRun.done,
+    };
+  },
+  get moba() {
+    return {
+      progress: mobaState(),
+      summary: mobaSummary(mobaState()),
+      active: mobaActive,
+      paused: mobaPaused,
+      heroId: mobaHeroId,
+      mapId: mobaMapId,
+      lane: mobaLane,
+      difficulty: mobaDifficulty,
+      snapshot: mobaSnapshot(mobaMatch),
+      result: mobaResult,
+    };
+  },
+  get waveDefense() {
+    return {
+      progress: waveDefenseState(),
+      summary: waveDefenseSummary(waveDefenseState()),
+      active: wdActive,
+      paused: wdPaused,
+      mapId: wdMapId,
+      difficulty: wdDifficulty,
+      selectedTowerId: wdSelectedTowerId,
+      snapshot: waveDefenseSnapshot(wdMatch),
+      result: wdResult,
+    };
+  },
+  showWaveDefense,
+  buildWaveDefenseScreen,
+  startWaveDefenseBattle,
+  leaveWaveDefense,
+  setWaveDefenseMap(id) {
+    if (!WAVE_DEFENSE_MAP_BY_ID[id]) return false;
+    wdMapId = id;
+    buildWaveDefenseScreen();
+    return true;
+  },
+  setWaveDefenseDifficulty(id) {
+    if (!WAVE_DEFENSE_DIFFICULTIES.some((entry) => entry.id === id)) return false;
+    wdDifficulty = id;
+    buildWaveDefenseScreen();
+    return true;
+  },
+  setWaveDefenseTower(id) {
+    if (!WAVE_DEFENSE_TOWER_BY_ID[id]) return false;
+    wdSelectedTowerId = id;
+    if (wdMatch) waveDefenseSelectTower(wdMatch, id);
+    buildWaveDefenseScreen();
+    updateWaveDefenseHud(true);
+    return true;
+  },
+  waveDefenseBuild(slot, towerId = wdMatch?.buildTowerId) {
+    return waveDefenseBuild(wdMatch, slot, towerId);
+  },
+  waveDefenseUpgrade() {
+    return waveDefenseUpgrade(wdMatch);
+  },
+  waveDefenseSell() {
+    return waveDefenseSell(wdMatch);
+  },
+  waveDefenseNextWave() {
+    const ok = waveDefenseNextWave(wdMatch);
+    updateWaveDefenseHud(true);
+    return ok;
+  },
+  waveDefenseSetWave(wave = 1) {
+    if (!wdMatch) return null;
+    wdMatch.wave = Math.max(0, Math.min(wdMatch.totalWaves - 1, Math.floor(Number(wave) || 1) - 1));
+    wdMatch.phase = 'prep';
+    wdMatch.prepTimer = 0;
+    wdMatch.spawnQueue = [];
+    wdMatch.spawnCursor = 0;
+    wdMatch.enemies = [];
+    wdMatch.projectiles = [];
+    wdRenderDirty = true;
+    updateWaveDefenseHud(true);
+    return waveDefenseSnapshot(wdMatch);
+  },
+  waveDefenseStep(seconds = 1) {
+    if (!wdMatch) return null;
+    const frames = Math.max(1, Math.round(Number(seconds) * 60));
+    for (let i = 0; i < frames && wdMatch.phase !== 'ended'; i += 1) updateWaveDefense(wdMatch, 1 / 60);
+    if (wdMatch.phase === 'ended') completeWaveDefense();
+    wdRenderDirty = true;
+    updateWaveDefenseHud(true);
+    return waveDefenseSnapshot(wdMatch);
+  },
+  waveDefenseWin() {
+    if (!wdMatch) return false;
+    endWaveDefense(wdMatch, 'victory');
+    completeWaveDefense();
+    wdRenderDirty = true;
+    updateWaveDefenseHud(true);
+    return true;
+  },
+  waveDefenseDamageCastle(amount = 25) {
+    if (!wdMatch) return false;
+    wdMatch.castle.hp = Math.max(0, wdMatch.castle.hp - Math.max(1, Number(amount) || 1));
+    wdMatch.castle.flash = 0.5;
+    if (wdMatch.castle.hp <= 0) {
+      endWaveDefense(wdMatch, 'defeat');
+      completeWaveDefense();
+    }
+    wdRenderDirty = true;
+    updateWaveDefenseHud(true);
+    return true;
+  },
+  showMoba,
+  buildMobaScreen,
+  startMobaBattle,
+  leaveMoba,
+  setMobaHero(id) {
+    if (!MOBA_HERO_BY_ID[id]) return false;
+    mobaHeroId = id;
+    buildMobaScreen();
+    return true;
+  },
+  setMobaMap(id) {
+    if (!MOBA_MAP_BY_ID[id]) return false;
+    mobaMapId = id;
+    buildMobaScreen();
+    return true;
+  },
+  setMobaLane(lane) {
+    if (!MOBA_LANES.includes(lane)) return false;
+    mobaLane = lane;
+    buildMobaScreen();
+    return true;
+  },
+  mobaCast(slot, aim = {}) {
+    return mobaCast(mobaMatch, Number(slot), aim);
+  },
+  mobaSetOrder(x, y) {
+    return mobaSetOrder(mobaMatch, x, y);
+  },
+  mobaStep(seconds = 1) {
+    if (!mobaMatch) return null;
+    const frames = Math.max(1, Math.round(Number(seconds) * 60));
+    for (let i = 0; i < frames && mobaMatch.phase === 'playing'; i += 1) updateMobaMatch(mobaMatch, 1 / 60, mobaInput);
+    if (mobaMatch.phase === 'ended') completeMobaMatch();
+    updateMobaHud(true);
+    return mobaSnapshot(mobaMatch);
+  },
+  mobaWin() {
+    if (!mobaMatch) return false;
+    endMobaMatch(mobaMatch, 'blue');
+    completeMobaMatch();
+    return true;
+  },
+  mobaDamageCore(team = 'red', amount = 9999) {
+    if (!mobaMatch) return false;
+    const core = mobaMatch.towers.find((tower) => tower.kind === 'core' && tower.team === team);
+    if (!core) return false;
+    core.hp = Math.max(0, core.hp - Math.max(1, Number(amount) || 1));
+    if (core.hp <= 0) {
+      endMobaMatch(mobaMatch, team === 'blue' ? 'red' : 'blue');
+      completeMobaMatch();
+    }
+    updateMobaHud(true);
+    return true;
+  },
+  expirePuzzleTimer() {
+    if (!puzzleRun || puzzleRun.done || !puzzleRun.stage?.timed) return false;
+    puzzleRun.deadline = Date.now() - 1;
+    updatePuzzleTimer();
+    return true;
   },
   showLabyrinth,
   buildLabyrinthScreen,

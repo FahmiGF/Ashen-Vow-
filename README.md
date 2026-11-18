@@ -1,13 +1,46 @@
-# Ashen Vow — v0.15.0
+# Ashen Vow — v0.17.0
 
-## The Fivefold Trials & Puzzle Adventure (v0.15.0)
+## Infinite Realms, Astral Dominion, Stage Access & Admin Control Center (v0.17.0)
 
-Dua jalur baru dibuka dari menu utama.
+**INFINITE REALMS** membuka enam mode dengan loop, progres, dan hadiah eksklusif sendiri: Riftfall (survival bergelombang), Relic Expedition (rute bercabang dan ekstraksi), Last Bastion (pertahanan tiga jalur), Echo Maze (labirin hidup), Shadow Duel (duel cermin), dan Chrono Fracture (tiga loop waktu). Hadiah eksklusif hanya masuk setelah server mendaftarkan run dan memvalidasi claim; membuka mode atau memanipulasi UI tidak memberi reward.
+
+**ARC VI — THE ASTRAL DOMINION** menambahkan lima wilayah dan dua puluh stage setelah The Radiant Crusade. Setiap hall standar memiliki tepat 20 musuh, empat archetype, dan satu Astral Executioner. Lima bos baru memuncak pada **The Architect of Eternity** dengan empat fase: The Observer, The Architect, The Fractured One, dan Eternal Dominion. **The Unwritten Expanse** tetap terkunci sebagai misteri berikutnya.
+
+**STAGE ACCESS** menyediakan tiga panel untuk seluruh Arc I–VI, side content, dan mode. **Sneak Peek** adalah preview read-only dengan kamera dan render stage nyata. **HACK Stage** memuat stage langsung dengan state terisolasi; quest, achievement, reward normal, inventory, boss completion, dan checkpoint kampanye tidak berubah. Toolbar testing: Restart Stage, Reset Enemies, Boss Phase, Teleport, Environment, Collision View, Performance, dan Exit Test.
+
+**ADMIN CONTROL CENTER** tersedia di `/admin` sebagai aplikasi terpisah. Autentikasi memakai scrypt, sesi HttpOnly + CSRF, dan TOTP opsional. Tujuh role dengan 26 permission, permission editor, player management dan moderasi, campaign validation, content overrides, economy, events, reports, announcements, analytics, server monitor dari metrik proses nyata, dan audit log persisten. State tidak pernah disajikan sebagai aset statis (`/data/` ditolak).
+
+**MULTIPLAYER** tetap memakai relay WebSocket zero-dependency di `/ws` untuk campaign, Hearthfall, dan Labyrinth 2–4 pemain. Jalankan `HOST=0.0.0.0 npm start` untuk LAN, atau letakkan server di balik HTTPS/reverse proxy untuk akses internet. Tidak diperlukan layanan eksternal.
+
+- **Verifikasi:** `npm test` — **400/400 lulus**. `npm run smoke:realms` memeriksa mode hub, detail/start, Arc VI, Stage Access, Sneak Peek, HACK toolbar, Exit Test, `/admin`, status API, dan penolakan `/data/admin-state.json` di browser nyata.
+- **Kontrol:** mode memakai keyboard/panel aksi; Stage Access dan Admin memakai mouse. Pengaturan admin: set `ASHEN_ADMIN_PASSWORD` (wajib untuk deployment publik), opsional `ASHEN_ADMIN_USER` dan `ASHEN_ADMIN_TOTP`. Tanpa password env, server mencetak bootstrap password acak ke log.
+
+## Wave Defense — The Last Rampart (v0.16.0)
+
+Benteng terakhir membuka gerbangnya. **WAVE DEFENSE — THE LAST RAMPART** adalah mode pertahanan kastil penuh dari menu utama: pilih benteng, bangun menara di sepanjang jalan serbuan, lalu bertahan selama **24 gelombang** melawan pasukan abu dan **6 bos**.
+
+- **Tiga medan:** Ashen Keep, Ember Bastion, dan Frostgate Citadel. Masing-masing punya rute berkelok, **24 pos menara**, tema visual sendiri, dan rekor terpisah.
+- **Dua belas menara:** Ballista, Catapult, Trebuchet, Mage Tower, Cannon Tower, Frost Spire, Flame Keep, Poison Grove, Tesla Coil, Sniper's Nest, Holy Chapel, dan Rift Obelisk — semuanya bisa dinaikkan ke **level 3** atau dijual kembali untuk modal menara lain.
+- **Dua belas tipe musuh:** ghoul, runner, bone shield, cinder brute, grave bat, plague cultist, iron ogre, frost wraith, siege ram, shadow stalker, ember hound, dan void priest. Enam bos muncul di gelombang kunci: Bone Colossus, Ember Wyrm, Plague Matriarch, Iron Warden, Frost Titan, dan Ashen Sovereign.
+- **Ekonomi nyata:** emas awal berbeda per kesulitan, bounty per kill, bonus untuk gelombang yang dikirim lebih awal, biaya upgrade bertingkat, dan refund 62% saat menjual. Tiga tingkat kesulitan — Squire, Knight, Warlord — juga mengubah HP musuh, kecepatan, dan HP kastil.
+- **Kontrol:** klik pos untuk membangun, pilih menara lewat panel atau tombol `1`–`9`, kirim gelombang dengan `Space`, percepat `1×/2×/3×`, dan `Esc` untuk jeda. HUD menampilkan HP kastil, emas, skor, kill, leak, boss bar, dan feed pertempuran.
+- **Progres & optimasi:** hasil, rekor skor/gelombang, kill, leak, dan statistik per benteng tersimpan di `progress.wavedefense`. Latar peta di-cache, HUD diperbarui 8 Hz, dan jumlah musuh, projectile, serta effect dibatasi; render berhenti saat jeda.
+- **Verifikasi:** `npm test` mencakup **10 test Wave Defense** untuk data, ekonomi, build/upgrade/sell, wave, bos, kemenangan, kekalahan, sanitizer, dan renderer. `npm run smoke:wavedefense` menjalankan **59 pemeriksaan browser nyata** untuk hub, pemilihan medan, klik kanvas, upgrade, jual, gelombang, boss, pause, hasil, dan reload. `npm run bench:wavedefense` mengukur simulasi 24 menara level 3 di tengah gelombang padat.
+
+## The Fivefold Trials, Puzzle Adventure & Riftwar (v0.15.0)
+
+Tiga jalur baru dibuka dari menu utama.
 
 - **THE FIVEFOLD TRIALS:** 20 biome Infinite Labyrinth kini punya lima level sebelum bosnya — total **100 level**, **2.000 musuh terjadwal**, dan **100 elite dijamin**. Setiap level memakai template data-driven: tepat 20 musuh, empat arketipe, dan satu elite (19 normal + 1 elite). Musuh datang dalam empat wave berisi lima; bos biome baru terbuka setelah kelima level selesai dan hanya memberi hadiah sekali.
-- **PUZZLE ADVENTURE — THE LOST MECHANISM:** Arc 1 berisi 10 tahap yang benar-benar bisa dimainkan di papan interaktif. Ada **23 kategori teka-teki** di atas delapan mesin nyata: jalur titik, pipa berotasi, gambar teracak, urutan, cermin laser, roda gigi, sakelar, dan geser balok. Setiap puzzle dibuat dari solusi yang diketahui lalu diacak dengan langkah yang bisa dibalik, sehingga selalu bisa diselesaikan; validator otomatis menolak layout yang rusak.
-- **Progres Metroidvania:** 10 kemampuan (Rune Scanner sampai Ancient Compass), lima bos teka-teki, snapshot co-op deterministik, dan save di `progress.trials` / `progress.puzzle` tanpa mengubah key save lama.
-- **Verifikasi:** `npm test` mencakup validasi 20/4/1 untuk seluruh 100 encounter, seluruh 23 generator puzzle di lima tingkat kesulitan, replay solusi, editor gate, dan sanitizer; `npm run smoke:fivefold` memainkan level trial nyata, membuka bos biome, menyelesaikan 10 tahap puzzle, dan memuat ulang save.
+- **PUZZLE ADVENTURE — THE LOST MECHANISM:** **Sepuluh arc dan 100 tahap** yang benar-benar bisa dimainkan di papan interaktif. Ada **23 kategori teka-teki** di atas delapan mesin nyata: jalur titik, pipa berotasi, gambar teracak, urutan, cermin laser, roda gigi, sakelar, dan geser balok. Setiap puzzle dibuat dari solusi yang diketahui lalu diacak dengan langkah yang bisa dibalik, sehingga selalu bisa diselesaikan; validator otomatis menolak layout yang rusak.
+- **Boss-Timed Puzzle:** setiap finale arc menjalankan tiga fase mekanisme dengan batas **90 detik per fase**. Timer terlihat di papan, berubah merah saat kritis, dan waktu habis memicu status gagal + hitungan timeout tanpa memberi progres palsu.
+- **INDEKS & LORE:** tab **INDEKS** mendokumentasikan seluruh 23 sistem, mesin, deskripsi, dan lore-nya; tab **LORE** mencatat sepuluh bab cerita, rahasia tiap arc, dan asal setiap bos — semuanya data nyata di `src/puzzle.js`.
+- **Petunjuk berbayar:** tombol **PETUNJUK · ✦ 100** membuka langkah solusi berikutnya dan memotong **100 Gema**, mata uang abadi yang didapat dari kampanye utama. Jika saldo kurang, tidak ada Gema yang hilang dan tidak ada petunjuk yang diberikan.
+- **Progres Metroidvania:** 10 kemampuan (Rune Scanner sampai Ancient Compass), sepuluh bos teka-teki, snapshot co-op deterministik, dan save di `progress.trials` / `progress.puzzle` tanpa mengubah key save lama.
+- **RIFTWAR — MOBA 5V5:** mode top-down baru dengan **28 hero** — seluruh 13 kelas kampanye dan 15 kelas Infinite Frontiers. Tiga medan (**Ashen Rift**, **Ember Vale**, **Sunken Crown**), lima jalur, empat tingkat kesulitan, dan dua tim berisi lima hero dengan AI sekutu dan musuh.
+- **Pertempuran lane nyata:** gelombang minion di tiga jalur, menara lane, penjaga nexus, dua nexus, 12 mob jungle, dan 6 bos epik yang memberi buff tim. Hero punya level, gold, KDA, respawn, auto-attack, serta empat jurus Q/W/E/R dengan cooldown dan mana.
+- **Kontrol & hasil:** klik untuk bergerak, `Q/W/E/R` untuk jurus, `B` untuk recall, `ESC` untuk jeda. Hasil menang/kalah, scoreboard, tabel tim, dan statistik hero/medan tersimpan di `progress.moba`.
+- **Verifikasi:** `npm test` mencakup validasi 20/4/1 untuk seluruh 100 encounter, seluruh 23 generator puzzle di lima tingkat kesulitan, replay 100 solusi, lore/arc/timer, biaya petunjuk, editor gate, sanitizer, serta 8 test Riftwar untuk roster 28 kelas, 3 medan, simulasi 5v5, ability, nexus, dan save; `npm run smoke:fivefold` memainkan level trial nyata, membuka bos biome, membeli petunjuk, membuka indeks/lore, menguji timeout bos, menyelesaikan 100 tahap puzzle, dan memuat ulang save; `npm run smoke:moba` menjalankan 51 pemeriksaan browser nyata termasuk pemilihan hero, klik-gerak, cast, kemenangan, kekalahan, dan reload.
 
 ## The Radiant Crusade — Perang Salib Bersinar (v0.14.0)
 

@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex,nofollow" />
+  <title>Ashen Vow — Admin Control Center</title>
+  <link rel="stylesheet" href="/admin.css" />
+</head>
+<body>
+  <div id="admin-login" class="login-shell">
+    <div class="login-card">
+      <div class="login-brand"><span class="sigil">✦</span><div><strong>ASHEN VOW</strong><small>ADMIN CONTROL CENTER</small></div></div>
+      <p class="login-copy">Akses terbatas. Setiap tindakan administratif dicatat dalam audit log.</p>
+      <form id="login-form" autocomplete="on">
+        <label>Username<input id="login-user" name="username" type="text" autocomplete="username" required maxlength="32" /></label>
+        <label>Password<input id="login-pass" name="password" type="password" autocomplete="current-password" required /></label>
+        <label>Kode MFA <span class="hint">(jika aktif)</span><input id="login-totp" name="totp" type="text" inputmode="numeric" pattern="[0-9 ]*" maxlength="7" autocomplete="one-time-code" /></label>
+        <p id="login-error" class="form-error" role="alert"></p>
+        <button class="btn primary wide" type="submit">MASUK KE CONTROL CENTER</button>
+      </form>
+      <p class="login-foot">Sesi berakhir otomatis setelah 2 jam. Cookie HttpOnly + CSRF.</p>
+    </div>
+  </div>
+
+  <div id="admin-app" class="app-shell hidden">
+    <aside class="sidebar">
+      <div class="side-brand"><span class="sigil">✦</span><div><strong>ASHEN VOW</strong><small>ADMIN CONTROL CENTER</small></div></div>
+      <nav id="admin-nav" class="side-nav" aria-label="Navigasi admin"></nav>
+      <div class="side-bottom">
+        <div id="side-user" class="side-user"></div>
+        <button id="btn-logout" class="btn ghost small" type="button">KELUAR</button>
+      </div>
+    </aside>
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">ASHEN VOW / LIVE OPERATIONS</p>
+          <h1 id="view-title">Overview</h1>
+        </div>
+        <div class="top-actions">
+          <span id="maintenance-pill" class="pill hidden">MAINTENANCE</span>
+          <a class="btn ghost small" href="/" target="_blank" rel="noopener">BUKA GAME ↗</a>
+          <button id="btn-refresh" class="btn ghost small" type="button">REFRESH</button>
+        </div>
+      </header>
+      <div id="toast" class="toast hidden" role="status"></div>
+      <section id="admin-view" class="view" aria-live="polite"></section>
+    </main>
+  </div>
+
+  <div id="modal" class="modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <div class="modal-head"><h2 id="modal-title"></h2><button id="modal-close" class="icon-btn" type="button" aria-label="Tutup">✕</button></div>
+      <div id="modal-body"></div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/admin.js"></script>
+</body>
+</html>

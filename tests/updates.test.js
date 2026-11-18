@@ -28,16 +28,44 @@ test('update log is complete and ordered newest first', () => {
   }
 });
 
-test('the latest update documents the Fivefold Trials and Puzzle Adventure', () => {
+test('the latest update documents Infinite Realms and Arc VI', () => {
   const latest = LATEST_UPDATE;
-  assert.equal(latest.version, '0.15.0');
+  assert.equal(latest.version, '0.17.0');
+  const text = [latest.title, latest.summary, ...latest.highlights, ...(latest.fixes || [])].join(' ');
+  assert.match(text, /Infinite Realms/i);
+  assert.match(text, /Astral Dominion/i);
+  assert.match(text, /Stage Access/i);
+  assert.match(text, /Admin Control Center/i);
+  assert.match(text, /Riftfall/i);
+  assert.match(text, /HACK/i);
+  assert.match(text, /The Architect of Eternity/i);
+  assert.match(text, /Enam mode baru/i);
+  assert.match(text, /progress\.realms/);
+  assert.match(text, /progress\.astral/);
+  assert.match(text, /Arc VI/i);
+  assert.match(text, /400 test/i);
+  assert.match(text, /WebSocket zero-dependency/i);
+});
+
+test('the Fivefold Trials, Puzzle Adventure and Riftwar release remains documented', () => {
+  const latest = UPDATE_LOG.find((entry) => entry.version === '0.15.0');
+  assert.ok(latest);
   const text = [latest.title, latest.summary, ...latest.highlights, ...(latest.fixes || [])].join(' ');
   assert.match(text, /Fivefold Trials/i);
   assert.match(text, /Puzzle Adventure/i);
+  assert.match(text, /Riftwar/i);
+  assert.match(text, /MOBA/i);
+  assert.match(text, /28 hero/i);
   assert.match(text, /20 musuh/i);
   assert.match(text, /1 elite/i);
-  assert.match(text, /23 kategori/i);
-  assert.match(text, /10 tahap/i);
+  assert.match(text, /23 kategori|23 jenis/i);
+  assert.match(text, /100 tahap/i);
+  assert.match(text, /sepuluh arc|10 arc/i);
+  assert.match(text, /boss-timed/i);
+  assert.match(text, /INDEKS/i);
+  assert.match(text, /LORE/i);
+  assert.match(text, /100 Gema/i);
+  assert.match(text, /petunjuk/i);
   assert.match(text, /progress\.trials/);
   assert.match(text, /progress\.puzzle/i);
 });

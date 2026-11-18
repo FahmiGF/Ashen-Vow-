@@ -1,0 +1,227 @@
+/* Ashen Vow — Infinite Realms, Stage Access, Arc VI, HACK tools */
+.realms-screen, .stage-access-screen, .astral-screen {
+  overflow-y: auto;
+  background:
+    radial-gradient(900px 500px at 75% -10%, rgba(159, 200, 255, .09), transparent 60%),
+    radial-gradient(700px 500px at 10% 110%, rgba(216, 180, 106, .07), transparent 60%),
+    #0c0b09;
+}
+.realms-inner, .stage-access-inner, .astral-inner { max-width: 1380px; margin: 0 auto; padding: 24px clamp(14px, 3vw, 38px) 60px; }
+.realms-head, .stage-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; margin-bottom: 18px; }
+.realms-head h2, .stage-head h2 { margin: 4px 0 8px; }
+.realms-head-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.realms-menu-btn span::before, .stage-menu-btn span::before, .astral-menu-btn span::before { content: "✦ "; color: var(--gold); }
+.realms-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border: 1px solid rgba(216, 180, 106, .18); background: rgba(8, 8, 6, .55); margin-bottom: 16px; }
+.realms-summary > div { padding: 12px 16px; border-right: 1px solid rgba(216, 180, 106, .12); }
+.realms-summary > div:last-child { border-right: 0; }
+.realms-summary span { display: block; color: #8f8574; font-size: 9px; letter-spacing: .14em; }
+.realms-summary b { display: block; font-family: Georgia, serif; font-size: 22px; color: #f0d59a; margin-top: 4px; }
+.realms-mode-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.realms-mode-card { position: relative; border: 1px solid rgba(216, 180, 106, .18); background: linear-gradient(160deg, rgba(24, 22, 17, .96), rgba(11, 11, 9, .96)); padding: 18px; overflow: hidden; }
+.realms-mode-card::after { content: ""; position: absolute; inset: auto -20% -55% 25%; height: 130px; background: radial-gradient(closest-side, var(--mode) 0%, transparent 70%); opacity: .16; pointer-events: none; }
+.realms-mode-glyph { display: grid; place-items: center; width: 44px; height: 44px; border: 1px solid var(--mode); color: var(--accent); font-size: 20px; margin-bottom: 12px; background: rgba(0, 0, 0, .25); }
+.realms-mode-kicker { display: block; color: var(--mode); font-size: 9px; letter-spacing: .18em; }
+.realms-mode-card h3 { margin: 5px 0 6px; font-family: Georgia, serif; font-size: 22px; font-weight: 500; color: #f1e8d7; }
+.realms-mode-card p { color: #a49a88; font-size: 11px; line-height: 1.55; min-height: 34px; margin: 0 0 12px; }
+.realms-mode-meta { display: flex; gap: 12px; border-top: 1px solid rgba(216, 180, 106, .12); border-bottom: 1px solid rgba(216, 180, 106, .12); padding: 8px 0; margin-bottom: 12px; color: #766e5f; font-size: 8px; letter-spacing: .12em; }
+.realms-mode-actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.realms-mode-actions .tag { max-width: 48%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.realms-lower { display: grid; grid-template-columns: 1.2fr 1fr; gap: 14px; margin-top: 16px; }
+.realms-panel { border: 1px solid rgba(216, 180, 106, .16); background: rgba(10, 10, 8, .62); padding: 18px; }
+.realms-panel h3 { margin: 0 0 12px; font-family: Georgia, serif; color: #e8dcc6; font-weight: 500; font-size: 15px; }
+.realms-panel p { color: #9e9482; font-size: 11px; line-height: 1.7; }
+.realms-rewards { display: grid; gap: 7px; }
+.realms-reward { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; gap: 8px; align-items: center; border: 1px solid rgba(216, 180, 106, .12); padding: 8px 10px; }
+.realms-reward > span { color: #6f6658; }
+.realms-reward b { display: block; color: #d9cfbd; font-size: 11px; font-weight: 600; }
+.realms-reward small { color: #766e5f; font-size: 9px; }
+.realms-reward em { color: #706758; font-style: normal; font-size: 8px; letter-spacing: .12em; }
+.realms-reward.claimed { border-color: rgba(127, 189, 148, .35); }
+.realms-reward.claimed > span, .realms-reward.claimed em { color: #7fbd94; }
+.realms-detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 14px 0; }
+.realms-detail-grid > div { border: 1px solid rgba(216, 180, 106, .14); padding: 9px; }
+.realms-detail-grid span { display: block; color: #8e8575; font-size: 8px; letter-spacing: .12em; }
+.realms-detail-grid b { display: block; margin-top: 4px; color: #e0d6c4; font-size: 11px; font-weight: 500; }
+.realms-difficulty { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 12px 0; }
+.realms-diff { border: 1px solid rgba(216, 180, 106, .18); background: #0d0d0b; color: #a79d8c; padding: 8px; text-align: left; cursor: pointer; }
+.realms-diff b { display: block; font-size: 9px; letter-spacing: .1em; color: #d7cdb9; }
+.realms-diff span { font-size: 8px; color: #756d5e; }
+.realms-diff.active { border-color: var(--gold); background: #1a1710; }
+.realms-diff.active b { color: #f0d59a; }
+
+/* modal */
+.realms-modal { position: fixed; inset: 0; z-index: 80; background: rgba(0, 0, 0, .72); display: grid; place-items: center; padding: 20px; }
+.realms-modal-card { width: min(680px, 100%); max-height: 86vh; overflow-y: auto; background: #12110e; border: 1px solid rgba(216, 180, 106, .3); box-shadow: 0 30px 100px rgba(0, 0, 0, .6); padding: 22px; }
+.realms-modal-head { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(216, 180, 106, .16); padding-bottom: 10px; margin-bottom: 14px; }
+.realms-modal-head h2 { margin: 0; font-family: Georgia, serif; font-weight: 500; font-size: 20px; color: #f0e6d3; }
+.realms-modal p { color: #a49a88; font-size: 11px; line-height: 1.65; }
+
+/* run */
+.realms-run-screen { padding: 0; background: #070705; overflow: hidden; }
+.realms-run-wrap { position: absolute; inset: 0; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; }
+#realms-canvas { width: 100%; height: 100%; object-fit: contain; background: #050504; grid-row: 1 / -1; grid-column: 1; }
+.realms-run-hud { position: relative; z-index: 2; grid-row: 1; grid-column: 1; display: flex; justify-content: space-between; gap: 16px; padding: 12px 14px; background: linear-gradient(180deg, rgba(5, 5, 4, .92), transparent); pointer-events: none; }
+.realms-run-title span { display: block; color: #9e9482; font-size: 8px; letter-spacing: .16em; }
+.realms-run-title b { display: block; color: #f0e5d1; font-family: Georgia, serif; font-size: 18px; font-weight: 500; }
+.realms-run-title em { color: #8c8270; font-style: normal; font-size: 8px; letter-spacing: .1em; }
+.realms-run-bars { width: min(340px, 40vw); }
+.realms-hp { position: relative; border: 1px solid rgba(216, 180, 106, .3); height: 18px; background: rgba(0, 0, 0, .55); margin-bottom: 5px; }
+.realms-hp span { display: block; height: 100%; background: linear-gradient(90deg, #9a3d30, #d8895a); transition: width .12s linear; }
+.realms-hp.castle span { background: linear-gradient(90deg, #346b78, #8bb8d8); }
+.realms-hp b { position: absolute; inset: 0; display: grid; place-items: center; color: #f1e8d7; font-size: 8px; letter-spacing: .1em; text-shadow: 0 1px 2px #000; }
+.realms-run-score { text-align: right; }
+.realms-run-score span { display: block; color: #8f8574; font-size: 8px; letter-spacing: .14em; }
+.realms-run-score b { display: block; color: #f0d59a; font-family: Georgia, serif; font-size: 20px; }
+.realms-run-score em { color: #7c7363; font-style: normal; font-size: 7px; letter-spacing: .1em; }
+.realms-objectives { position: absolute; z-index: 2; left: 14px; top: 86px; display: grid; gap: 4px; min-width: 190px; }
+.realms-objectives > div { display: flex; justify-content: space-between; gap: 20px; border-left: 2px solid #4a4234; background: rgba(8, 8, 6, .78); padding: 5px 8px; color: #a89e8c; font-size: 9px; }
+.realms-objectives > div.done { border-left-color: #7fbd94; color: #a9d6b7; }
+.realms-objectives b { color: #e4d9c4; font-weight: 500; }
+.realms-controls { position: relative; z-index: 2; grid-row: 3; grid-column: 1; padding: 12px 14px; background: linear-gradient(0deg, rgba(5, 5, 4, .96), rgba(5, 5, 4, .55), transparent); }
+.realms-controls .row { justify-content: center; }
+.realms-choice-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-bottom: 10px; }
+.realms-choice { border: 1px solid rgba(216, 180, 106, .24); background: rgba(20, 18, 13, .94); color: #d8cebb; padding: 10px; text-align: left; cursor: pointer; }
+.realms-choice:hover { border-color: var(--gold); }
+.realms-choice b { display: block; font-size: 11px; color: #f0d59a; margin-bottom: 4px; }
+.realms-choice span { font-size: 9px; color: #938a79; line-height: 1.45; }
+.realms-upgrade { text-align: center; }
+.realms-upgrade h3 { margin: 2px 0 10px; font-family: Georgia, serif; color: #f0e5d1; font-weight: 500; }
+.realms-dpad { display: grid; grid-template-columns: repeat(3, 38px); grid-template-rows: repeat(2, 38px); gap: 4px; justify-content: center; margin-bottom: 8px; }
+.realms-dpad button { border: 1px solid rgba(216, 180, 106, .25); background: #11100d; color: #d9cfbd; cursor: pointer; }
+.realms-dpad button:nth-child(1) { grid-column: 2; }
+.realms-dpad button:nth-child(2) { grid-column: 1; grid-row: 2; }
+.realms-dpad button:nth-child(3) { grid-column: 2; grid-row: 2; }
+.realms-dpad button:nth-child(4) { grid-column: 3; grid-row: 2; }
+.realms-maze-controls, .realms-duel-controls, .realms-chrono-controls, .realms-bastion-controls { text-align: center; }
+.realms-end { position: fixed; inset: 0; z-index: 70; background: rgba(3, 3, 2, .78); display: grid; place-items: center; padding: 20px; }
+.realms-end-card { width: min(520px, 100%); border: 1px solid rgba(216, 180, 106, .35); background: #11100d; padding: 26px; text-align: center; box-shadow: 0 30px 100px #000; }
+.realms-end-card h2 { font-family: Georgia, serif; font-size: 32px; font-weight: 500; color: #f0d59a; margin: 4px 0 18px; }
+.realms-end-stats { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid rgba(216, 180, 106, .15); margin-bottom: 14px; }
+.realms-end-stats > div { padding: 10px; border-right: 1px solid rgba(216, 180, 106, .12); }
+.realms-end-stats > div:last-child { border: 0; }
+.realms-end-stats span { display: block; color: #8b8171; font-size: 8px; letter-spacing: .12em; }
+.realms-end-stats b { display: block; color: #e9dfcd; font-size: 13px; margin-top: 4px; }
+.realms-claim { font-size: 10px; line-height: 1.6; color: #a49a88; }
+.realms-claim.ok { color: #9dd2ad; }
+.realms-claim.bad { color: #d98777; }
+.realms-run-exit { position: fixed; z-index: 5; top: 110px; right: 16px; border: 1px solid rgba(216, 180, 106, .25); background: rgba(10, 10, 8, .8); color: #bdb2a0; font-size: 9px; padding: 6px 9px; cursor: pointer; }
+
+/* stage access */
+.stage-layout { display: grid; grid-template-columns: 220px minmax(0, 1fr) 360px; gap: 12px; align-items: start; }
+.stage-left, .stage-center, .stage-right { border: 1px solid rgba(216, 180, 106, .16); background: rgba(10, 10, 8, .7); min-height: 540px; }
+.stage-left { padding: 10px; max-height: 650px; overflow-y: auto; }
+.stage-left h3 { color: #766e5f; font-size: 8px; letter-spacing: .16em; margin: 14px 4px 6px; }
+.stage-arc { display: block; width: 100%; border: 1px solid transparent; background: transparent; color: #a99f8e; text-align: left; padding: 8px; cursor: pointer; border-left: 2px solid transparent; }
+.stage-arc:hover { background: #151410; }
+.stage-arc.active { background: #181610; border-left-color: var(--gold); }
+.stage-arc span { display: block; color: #776f60; font-size: 7px; letter-spacing: .14em; }
+.stage-arc b { display: block; font-size: 10px; color: #d4cab8; font-weight: 500; margin: 2px 0; }
+.stage-arc em { color: #6e6658; font-style: normal; font-size: 8px; }
+.stage-statline { display: grid; gap: 4px; border-top: 1px solid rgba(216, 180, 106, .12); margin-top: 14px; padding: 10px 4px; color: #756c5d; font-size: 7px; letter-spacing: .1em; }
+.stage-center { padding: 14px; max-height: 650px; overflow-y: auto; }
+.stage-browser-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.stage-browser-head h3 { margin: 0; font-family: Georgia, serif; font-size: 17px; font-weight: 500; color: #e6dcc9; }
+.stage-browser-head span { color: #7e7566; font-size: 8px; letter-spacing: .12em; }
+.stage-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; }
+.stage-card { border: 1px solid rgba(216, 180, 106, .14); background: #0d0d0b; color: #a89e8c; padding: 10px; text-align: left; cursor: pointer; }
+.stage-card:hover { border-color: rgba(216, 180, 106, .5); }
+.stage-card.active { border-color: var(--gold); background: #191710; }
+.stage-card.boss { border-left: 2px solid #b35b50; }
+.stage-card-index { display: block; color: #6f6658; font-size: 8px; letter-spacing: .1em; }
+.stage-card b { display: block; color: #ded4c2; font-size: 11px; font-weight: 500; margin: 3px 0; line-height: 1.3; }
+.stage-card em { display: block; color: #8b8171; font-style: normal; font-size: 7px; letter-spacing: .1em; }
+.stage-card small { display: block; color: #6f6658; font-size: 8px; margin-top: 5px; }
+.mode-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.stage-right { padding: 18px; max-height: 650px; overflow-y: auto; }
+.stage-detail h2 { margin: 4px 0 2px; font-family: Georgia, serif; font-weight: 500; font-size: 24px; color: #efe5d2; }
+.stage-sub { color: #918877; font-size: 10px; margin: 0 0 12px; }
+.stage-detail > p { color: #a59b89; font-size: 11px; line-height: 1.6; }
+.stage-detail h3 { margin: 16px 0 6px; color: #7e7566; font-size: 8px; letter-spacing: .16em; }
+.stage-facts { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+.stage-facts > div { border: 1px solid rgba(216, 180, 106, .12); padding: 7px; }
+.stage-facts span { display: block; color: #7e7566; font-size: 7px; letter-spacing: .1em; }
+.stage-facts b { display: block; color: #d8cebb; font-size: 9px; margin-top: 3px; font-weight: 500; }
+.stage-boss { border: 1px solid rgba(179, 91, 80, .3); background: rgba(60, 20, 16, .18); padding: 10px; margin: 10px 0; }
+.stage-boss > span { color: #b35b50; font-size: 7px; letter-spacing: .14em; }
+.stage-boss b { display: block; color: #e8c8b8; font-family: Georgia, serif; font-size: 16px; font-weight: 500; }
+.stage-boss em { display: block; color: #9b7c70; font-style: normal; font-size: 8px; letter-spacing: .1em; }
+.stage-boss p { font-size: 10px; color: #a08d82; }
+.stage-enemies, .stage-rewards, .stage-modifiers { display: flex; flex-wrap: wrap; gap: 4px; }
+.stage-enemies span, .stage-rewards span, .stage-modifiers span { border: 1px solid rgba(216, 180, 106, .14); padding: 3px 6px; color: #9d9382; font-size: 8px; }
+.stage-enemies span.elite { border-color: rgba(216, 180, 106, .5); color: #f0d59a; }
+.stage-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 14px 0 8px; }
+.stage-controls label { display: block; color: #7e7566; font-size: 7px; letter-spacing: .12em; }
+.stage-controls select { width: 100%; background: #0a0a08; border: 1px solid rgba(216, 180, 106, .2); color: #d5cbb9; padding: 6px; margin-top: 3px; font-size: 9px; }
+.stage-peek { position: fixed; inset: 0; z-index: 75; background: rgba(0, 0, 0, .8); display: grid; place-items: center; padding: 16px; }
+.stage-peek-card { width: min(960px, 100%); border: 1px solid rgba(216, 180, 106, .3); background: #0d0c0a; padding: 14px; }
+.stage-peek-card header { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+.stage-peek-card h3 { margin: 2px 0; font-family: Georgia, serif; font-weight: 500; font-size: 20px; }
+.stage-peek-card span { color: #8e8473; font-size: 8px; letter-spacing: .12em; }
+#stage-peek-canvas { width: 100%; height: auto; max-height: 48vh; object-fit: contain; background: #050504; border: 1px solid rgba(216, 180, 106, .12); }
+
+/* astral */
+.astral-regions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.astral-region { border: 1px solid rgba(216, 180, 106, .17); background: linear-gradient(160deg, rgba(21, 20, 16, .9), rgba(9, 9, 8, .96)); padding: 16px; }
+.astral-region.locked { opacity: .55; }
+.astral-region header { display: flex; align-items: center; gap: 10px; border-bottom: 1px solid rgba(216, 180, 106, .12); padding-bottom: 9px; }
+.astral-region header > span { display: grid; place-items: center; width: 36px; height: 36px; border: 1px solid var(--region); color: var(--region); font-size: 16px; }
+.astral-region header h3 { margin: 1px 0; font-family: Georgia, serif; font-size: 19px; font-weight: 500; color: #efe5d2; }
+.astral-region header em { display: block; color: #847b6b; font-style: normal; font-size: 8px; }
+.astral-region header strong { margin-left: auto; color: var(--region); font-family: Georgia, serif; font-size: 18px; }
+.astral-region > p { color: #9e9482; font-size: 10px; line-height: 1.55; min-height: 30px; }
+.astral-boss { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; border-left: 2px solid var(--region); padding: 7px 10px; margin-bottom: 10px; background: rgba(0, 0, 0, .2); }
+.astral-boss span { color: #7e7566; font-size: 7px; letter-spacing: .12em; }
+.astral-boss b { color: #e7ddc9; font-size: 11px; font-weight: 500; }
+.astral-boss em { color: #8e8473; font-style: normal; font-size: 8px; }
+.astral-rooms { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-bottom: 10px; }
+.astral-room { border: 1px solid rgba(216, 180, 106, .12); background: #0b0b09; color: #a49a88; padding: 7px; text-align: left; cursor: pointer; }
+.astral-room:hover { border-color: var(--region); }
+.astral-room.boss { border-left: 2px solid #b35b50; }
+.astral-room span { display: block; color: #6e6658; font-size: 7px; }
+.astral-room b { display: block; color: #d7cdbb; font-size: 9px; font-weight: 500; line-height: 1.3; }
+.astral-room em { display: block; color: #6e6658; font-style: normal; font-size: 7px; margin-top: 3px; }
+.astral-locked { display: flex; align-items: center; gap: 16px; border: 1px dashed rgba(216, 180, 106, .24); margin-top: 14px; padding: 18px; background: rgba(10, 10, 8, .6); }
+.astral-locked > span:first-child { font-size: 28px; color: #6e6658; }
+.astral-locked h3 { margin: 2px 0; font-family: Georgia, serif; font-size: 18px; font-weight: 500; color: #d8cebb; }
+.astral-locked p { margin: 2px 0; color: #8e8473; font-size: 10px; }
+.astral-locked > .tag { margin-left: auto; }
+
+/* HACK toolbar */
+.hack-toolbar { position: fixed; z-index: 90; left: 50%; bottom: 12px; transform: translateX(-50%); display: flex; flex-wrap: wrap; gap: 4px; align-items: center; max-width: calc(100vw - 24px); background: rgba(9, 9, 7, .96); border: 1px solid rgba(216, 180, 106, .5); padding: 7px; box-shadow: 0 10px 40px rgba(0, 0, 0, .6); }
+.hack-label { color: #f0d59a; font-size: 8px; letter-spacing: .16em; padding: 0 7px; border-right: 1px solid rgba(216, 180, 106, .25); }
+.hack-toolbar button { border: 1px solid rgba(216, 180, 106, .18); background: #14120e; color: #b9ae9b; padding: 5px 7px; font-size: 7px; letter-spacing: .1em; cursor: pointer; }
+.hack-toolbar button:hover, .hack-toolbar button.active { border-color: var(--gold); color: #f0d59a; }
+.hack-toolbar button.danger { border-color: rgba(179, 91, 80, .4); color: #d98777; }
+.hack-perf { color: #8f8574; font-size: 8px; padding: 0 8px; }
+.hack-collision { position: fixed; inset: 0; z-index: 4; pointer-events: none; width: 100vw; height: 100vh; }
+.hack-env-rain .canvas-shade { background: linear-gradient(180deg, rgba(20, 40, 80, .25), transparent 70%); }
+.hack-env-frost .canvas-shade { background: linear-gradient(180deg, rgba(150, 200, 255, .18), transparent 72%); }
+.hack-env-void .canvas-shade { background: radial-gradient(circle at 50% 50%, transparent 30%, rgba(60, 0, 80, .24)); }
+
+@media (max-width: 1100px) {
+  .stage-layout { grid-template-columns: 190px minmax(0, 1fr); }
+  .stage-right { grid-column: 1 / -1; min-height: 0; }
+  .realms-mode-grid { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 760px) {
+  .realms-inner, .stage-access-inner, .astral-inner { padding: 16px 10px 50px; }
+  .realms-head, .stage-head { display: block; }
+  .realms-head-actions { justify-content: flex-start; margin-top: 10px; }
+  .realms-summary { grid-template-columns: 1fr 1fr; }
+  .realms-summary > div:nth-child(2) { border-right: 0; }
+  .realms-mode-grid, .realms-lower, .astral-regions { grid-template-columns: 1fr; }
+  .realms-difficulty { grid-template-columns: 1fr 1fr; }
+  .stage-layout { display: block; }
+  .stage-left, .stage-center, .stage-right { min-height: 0; max-height: none; margin-bottom: 10px; }
+  .stage-cards { grid-template-columns: 1fr 1fr; }
+  .mode-cards { grid-template-columns: 1fr; }
+  .realms-run-hud { flex-wrap: wrap; padding: 8px; }
+  .realms-run-bars { order: 3; width: 100%; }
+  .realms-objectives { top: 112px; }
+  .realms-choice-grid { grid-template-columns: 1fr; }
+  .realms-end { align-items: end; padding: 10px; }
+  .realms-end-card { max-height: 82vh; overflow-y: auto; }
+  .hack-toolbar { left: 8px; right: 8px; bottom: 8px; transform: none; max-width: none; }
+  .hack-toolbar button { font-size: 6px; padding: 4px 5px; }
+  .astral-rooms { grid-template-columns: 1fr; }
+}

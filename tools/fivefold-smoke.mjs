@@ -1,6 +1,7 @@
 // Fivefold Trials + Puzzle Adventure browser smoke (headless Chrome + CDP).
 // Verifies the hubs, a real 20-enemy trial run, biome boss gating/reward,
-// every Arc 1 puzzle, and save persistence across a reload.
+// all one hundred puzzle stages, lore/index tabs, boss timers, paid hints, and
+// save persistence across a reload.
 
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
@@ -109,7 +110,7 @@ async function main() {
       const A = window.__ashen; A.clearProgress();
       return { version: A.version, trials: !!A.progress.trials, puzzle: !!A.progress.puzzle };
     })()`);
-    check('boot reports v0.15.0', initial.version, '0.15.0');
+    check('boot reports v0.16.0', initial.version, '0.16.0');
     check('save carries trial progress', initial.trials, true);
     check('save carries puzzle progress', initial.puzzle, true);
 
@@ -123,6 +124,7 @@ async function main() {
         bosses: document.querySelectorAll('[data-trial-boss]').length,
         lockedBosses: [...document.querySelectorAll('[data-trial-boss]')].filter((b) => b.disabled).length,
         puzzleStages: (() => { A.showPuzzleAdventure(); return document.querySelectorAll('[data-puzzle-stage]').length; })(),
+        puzzleArcs: document.querySelectorAll('.puzzle-arc-head').length,
         puzzleView: A.menuView,
       };
     })()`);
@@ -131,8 +133,44 @@ async function main() {
     check('hub lists one hundred levels', hubs.levels, 100);
     check('hub lists twenty biome bosses', hubs.bosses, 20);
     check('bosses start locked', hubs.lockedBosses, 20);
-    check('puzzle hub lists ten Arc 1 stages', hubs.puzzleStages, 10);
+    check('puzzle hub lists one hundred stages', hubs.puzzleStages, 100);
+    check('puzzle hub groups ten arcs', hubs.puzzleArcs, 10);
     check('puzzle view is active', hubs.puzzleView, 'puzzle');
+
+    const codex = await evaluate(`(() => {
+      const A = window.__ashen;
+      document.querySelector('[data-puzzle-tab="index"]').click();
+      const indexCards = document.querySelectorAll('.puzzle-lore-card').length;
+      const indexText = document.querySelector('#puzzle-body').textContent;
+      document.querySelector('[data-puzzle-tab="lore"]').click();
+      const loreCards = document.querySelectorAll('.puzzle-arc-lore').length;
+      const loreText = document.querySelector('#puzzle-body').textContent;
+      A.showPuzzleAdventure('stages');
+      return { indexCards, indexText, loreCards, loreText };
+    })()`);
+    check('index lists all twenty-three puzzle systems', codex.indexCards, 23);
+    check('index carries real descriptions', /mekanisme|jalur|pipa/i.test(codex.indexText), true);
+    check('lore lists ten arc chapters', codex.loreCards, 10);
+    check('lore carries the lost-mechanism story', /mekanisme|sumpah|penjaga/i.test(codex.loreText), true);
+
+    const hint = await evaluate(`(() => {
+      const A = window.__ashen;
+      A.showPuzzleAdventure();
+      A.progress.expansion.echoes = 250;
+      A.startPuzzleStage(0);
+      document.querySelector('#btn-puzzle-hint').click();
+      const paid = { echoes: A.progress.expansion.echoes, hints: A.puzzle.progress.stats.hints, status: document.querySelector('#puzzle-status').textContent };
+      A.progress.expansion.echoes = 50;
+      document.querySelector('#btn-puzzle-hint').click();
+      const poor = { echoes: A.progress.expansion.echoes, hints: A.puzzle.progress.stats.hints, status: document.querySelector('#puzzle-status').textContent };
+      return { paid, poor };
+    })()`);
+    check('hint deducts 100 campaign Gema', hint.paid.echoes, 150);
+    check('hint records one purchase', hint.paid.hints, 1);
+    check('hint reveals a solution step', /petak|pipa|cermin|tukar|putar|tekan|geser/i.test(hint.paid.status), true);
+    check('insufficient Gema is not charged', hint.poor.echoes, 50);
+    check('insufficient Gema gives no hint', hint.poor.hints, 1);
+    check('insufficient Gema is explained', /tidak cukup/i.test(hint.poor.status), true);
 
     const run = await evaluate(`(() => {
       const A = window.__ashen;
@@ -179,11 +217,36 @@ async function main() {
     check('boss reward is recorded once', boss.bosses, 1);
     check('all five clears were banked before the boss', boss.cleared, 5);
 
+    const timed = await evaluate(`(() => {
+      const A = window.__ashen;
+      A.showPuzzleAdventure('stages');
+      for (let index = 0; index < 9; index += 1) {
+        A.startPuzzleStage(index);
+        let guard = 0;
+        while (!A.puzzle.run.done && guard < 5) { A.solveCurrentPuzzle(); guard += 1; }
+      }
+      A.startPuzzleStage(9);
+      const before = { visible: !document.querySelector('#puzzle-timer').classList.contains('hidden'), limit: A.puzzleTimer.timeLimit, label: document.querySelector('#puzzle-timer').textContent };
+      A.expirePuzzleTimer();
+      return before;
+    })()`);
+    check('arc finale shows the boss timer', timed.visible, true);
+    check('boss timer is ninety seconds', timed.limit, 90);
+    check('boss timer labels the finale', /BOSS-TIMED/i.test(timed.label), true);
+    await sleep(1600);
+    const timeout = await evaluate(`(() => {
+      const A = window.__ashen;
+      return { view: A.menuView, timeouts: A.puzzle.progress.stats.timeouts, solved: A.puzzle.progress.solved.length };
+    })()`);
+    check('expired boss timer fails the stage', timeout.timeouts, 1);
+    check('expired boss timer returns to the hub', timeout.view, 'puzzle');
+    check('failed boss stage does not grant progress', timeout.solved, 9);
+
     const puzzles = await evaluate(`(() => {
       const A = window.__ashen;
-      A.showPuzzleAdventure();
+      A.showPuzzleAdventure('stages');
       let solved = 0;
-      for (let index = 0; index < 10; index += 1) {
+      for (let index = 0; index < 100; index += 1) {
         A.startPuzzleStage(index);
         let guard = 0;
         while (!A.puzzle.run.done && guard < 5) { A.solveCurrentPuzzle(); guard += 1; }
@@ -191,9 +254,9 @@ async function main() {
       }
       return { solved, abilities: A.puzzle.progress.abilities.length, solvedList: A.puzzle.progress.solved.length, bosses: A.puzzle.progress.bosses.length };
     })()`);
-    check('all ten Arc 1 stages solve', puzzles.solved, 10);
+    check('all one hundred puzzle stages solve', puzzles.solved, 100);
     check('ten Metroidvania abilities unlock', puzzles.abilities, 10);
-    check('puzzle boss is recorded', puzzles.bosses, 1);
+    check('all ten puzzle bosses are recorded', puzzles.bosses, 10);
 
     await send('Page.reload');
     await sleep(300);
@@ -205,12 +268,16 @@ async function main() {
         bosses: A.progress.trials.bosses.length,
         puzzleSolved: A.progress.puzzle.solved.length,
         abilities: A.progress.puzzle.abilities.length,
+        puzzleBosses: A.progress.puzzle.bosses.length,
+        timeouts: A.progress.puzzle.stats.timeouts,
       };
     })()`);
     check('trial clears survive reload', persisted.trialClears, 5);
     check('trial boss survives reload', persisted.bosses, 1);
-    check('puzzle progress survives reload', persisted.puzzleSolved, 10);
+    check('puzzle progress survives reload', persisted.puzzleSolved, 100);
     check('puzzle abilities survive reload', persisted.abilities, 10);
+    check('puzzle bosses survive reload', persisted.puzzleBosses, 10);
+    check('boss timeout count survives reload', persisted.timeouts, 1);
     await sleep(250);
     assert.deepEqual(pageErrors, [], `console errors: ${pageErrors.join(' | ')}`);
     console.log(`✔ fivefold smoke: ${checks.length} checks passed`);

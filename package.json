@@ -1,9 +1,9 @@
 {
   "name": "ashen-vow",
-  "version": "0.15.0",
+  "version": "0.17.0",
   "private": true,
   "type": "module",
-  "description": "Ashen Vow v0.14.0 — The Radiant Crusade (Arc III): a war-camp menu, five siege levels, five bosses, the Valor Chain and an Arc IV rift teaser, plus four new Arc II zones (eleven regions, 59 rooms, 15 bosses) — alongside Pondok Umpan, Speedrun, Faewood, Panggung Abadi, Hearthfall, co-op, Atlas, the labyrinth, 3D mode and expansions",
+  "description": "Ashen Vow v0.17.0 — Infinite Realms (six modes), Arc VI The Astral Dominion, Stage Access with Sneak Peek and isolated HACK testing, server-validated mode rewards, a separate /admin control center with roles and audit logs, plus all previous campaigns, modes and WebSocket co-op",
   "scripts": {
     "start": "node server.js",
     "test": "node --test tests/*.test.js",
@@ -21,6 +21,10 @@
     "smoke:fallen": "node tools/fallen-smoke.mjs",
     "audit:gadgets": "node tools/gadget-audit.mjs",
     "smoke:crusade": "node tools/crusade-smoke.mjs",
-    "smoke:fivefold": "node tools/fivefold-smoke.mjs"
+    "smoke:fivefold": "node tools/fivefold-smoke.mjs",
+    "smoke:moba": "node tools/moba-smoke.mjs",
+    "smoke:wavedefense": "node tools/wavedefense-smoke.mjs",
+    "smoke:realms": "node tools/realms-smoke.mjs",
+    "bench:wavedefense": "node tools/wavedefense-bench.mjs"
   }
 }

@@ -1,16 +1,38 @@
 # Ashen Vow — Claude Master Plan
 
-> Compressed handoff for continuing **Ashen Vow v0.15.0**.
-> Status: **playable, browser-verified; Milestones A and B plus Sigil & Ritual, Echoes of the Forgotten World, Infinite Frontiers, Overdrive, The Sundered Atlas, Infinite Labyrinth co-op, Hearthfall (The Hollow Court), Skill Points + Panggung Abadi, Taman Peri (Faewood), Speedrun (one life, escalating game speed), and Pondok Umpan (fishing, bait shack, illustrated index) complete**.
+> Compressed handoff for continuing **Ashen Vow v0.17.0**.
+> Status: **playable, browser-verified; Milestones A and B plus Sigil & Ritual, Echoes of the Forgotten World, Infinite Frontiers, Overdrive, The Sundered Atlas, Infinite Labyrinth co-op, Hearthfall (The Hollow Court), Skill Points + Panggung Abadi, Taman Peri (Faewood), Speedrun, Pondok Umpan, Fivefold Trials, Puzzle Adventure, Riftwar, Wave Defense, Infinite Realms, Arc VI The Astral Dominion, Stage Access/HACK, and the Admin Control Center complete**.
 > Roadmap: [`MASTERPLAN.md`](MASTERPLAN.md).
 > Repo: `https://github.com/FahmiGF/Ashen-Vow-` · branch `main` · push account `isshinAshinaSeal`.
 
-## 0.0 v0.15.0 — The Fivefold Trials & Puzzle Adventure
+## 0.0 v0.17.0 — Infinite Realms, Astral Dominion, Stage Access & Admin Control Center
+
+- `src/realms.js` — pure deterministic six-mode layer (Riftfall, Relic Expedition, Last Bastion, Echo Maze, Shadow Duel, Chrono Fracture), Stage Access catalogue, HACK config, `progress.realms`, server claim eligibility.
+- `src/realms_render.js` — canvas renderers for all six modes.
+- `src/realms_ui.js` — mode hub/run shell, Stage Access three-panel browser, read-only Sneak Peek, HACK toolbar (restart, reset, boss phase, teleport, environment, collision, performance, exit), and Arc VI hub.
+- `src/astral.js` — Arc VI data: regions, 20 rooms at global IDs **505–524**, 5 enemies, 5 bosses, final four-phase Architect of Eternity, `progress.astral`, locked Unwritten Expanse, validator enforcing 20 enemies / 4 archetypes / 1 elite.
+- `src/admin_server.js` — separate admin service: scrypt passwords, HttpOnly sessions + CSRF, optional TOTP, 7 roles / 26 permissions, players, moderation, content validation/overrides, economy, events, reports, announcements, actual process metrics, persistent audit logs, server-verified mode reward claims.
+- `admin.html`, `admin.css`, `src/admin.js` — dedicated `/admin` Control Center with 16 sections. Admin state lives in `data/admin-state.json` (gitignored) and `/data/` is blocked from static serving.
+- `server.js` — routes `/admin` and `/api/*`, tracks real request/latency/memory/WebSocket metrics, rejects new co-op upgrades during maintenance, and serves public platform/status, player sync, realm run registration/claim endpoints.
+- Save: `progress.astral` and `progress.realms` inside `ashen-vow-progress-v1`. Legacy keys and sizes stay intact; `ALL_ROOMS` is now 525 and legacy `ROOMS` remains 14.
+- Co-op remains the zero-dependency `/ws` relay (campaign/Hearthfall/Labyrinth, 2–4 players). No external multiplayer service is required.
+- Tests: `tests/astral.test.js`, `tests/realms.test.js`, `tests/admin.test.js`; full suite **400/400**. Browser smoke `npm run smoke:realms`.
+
+## 0.1 v0.16.0 — Wave Defense: The Last Rampart
+
+- `src/wavedefense.js` — pure deterministic castle-defense mode: 3 maps with 24 build slots each, 24 waves, 12 towers (Ballista, Catapult, Trebuchet, Mage Tower, Cannon Tower, Frost Spire, Flame Keep, Poison Grove, Tesla Coil, Sniper's Nest, Holy Chapel, Rift Obelisk), 12 enemy types, 6 bosses, 3 difficulties, three tower levels, early-wave bonus, 62% sell refund, and castle HP. Renderer caches the static battlefield and caps enemies/projectiles/effects.
+- `src/main.js` — **WAVE DEFENSE — THE LAST RAMPART** hub and battlefield: map/tower/difficulty pickers, canvas placement, tower panel, wave control, 1×/2×/3× speed, pause, result, 8 Hz HUD updates, boss bar, battle feed, responsive pointer coordinates, and debug hooks `showWaveDefense`, `startWaveDefenseBattle`, `waveDefenseBuild`, `waveDefenseUpgrade`, `waveDefenseSell`, `waveDefenseNextWave`, `waveDefenseStep`, `waveDefenseWin`, `waveDefenseDamageCastle`, `waveDefenseSetWave`.
+- Save: `progress.wavedefense` inside `ashen-vow-progress-v1`; records runs, wins, losses, best wave/score, per-map runs/wins, and tower usage through `sanitizeWaveDefenseProgress` / `recordWaveDefense`.
+- Tests: `tests/wavedefense.test.js` (10 tests: data counts, economy, build/upgrade/sell, wave spawn/leak, boss wave, 24-wave victory, defeat, sanitizer, snapshot/renderer). Browser smoke `npm run smoke:wavedefense` (59 checks); benchmark `npm run bench:wavedefense`.
+
+## 0.05 v0.15.0 — The Fivefold Trials, Puzzle Adventure & Riftwar
 
 - `src/trials.js` — pure biome-combat expansion for all 20 labyrinth biomes: 100 standard levels generated from a data-driven 20-enemy / 4-archetype / 1-elite template (19 normal + 1 guaranteed elite), four 5-enemy waves, per-biome bosses, one-shot boss rewards, arena builder and boss overrides, and `progress.trials` with a sanitizer that rejects out-of-order clears and forged bosses.
-- `src/puzzle.js` — pure Puzzle Adventure framework: 23 puzzle categories over 8 real engines (path, pipes, image, sequence, beam, gear, toggle, swap), deterministic generation from a known solution, automatic solvability validation, an editor publish gate, a co-op snapshot codec, 10 Arc 1 stages, 10 Metroidvania abilities, five puzzle bosses, and `progress.puzzle`.
+- `src/puzzle.js` — pure Puzzle Adventure framework: 23 puzzle categories over 8 real engines (path, pipes, image, sequence, beam, gear, toggle, swap), deterministic generation from a known solution, automatic solvability validation, an editor publish gate, a co-op snapshot codec, **10 arcs / 100 stages**, 10 Metroidvania abilities, ten puzzle bosses, an index/lore dataset (`PUZZLE_ARCS`, `PUZZLE_LORE`, `PUZZLE_TYPE_LORE`), and `progress.puzzle`. Every arc finale is a boss-timed puzzle with a 90-second phase limit (`PUZZLE_BOSS_TIME_LIMIT`); expiry records `stats.timeouts` and never grants progress. Hint purchases (`PUZZLE_HINT_COST = 100` Gema) reveal the next recorded solution move; `payPuzzleHint()` is pure and refuses insufficient funds without mutating progress.
 - UI: **THE FIVEFOLD TRIALS** hub (20 biome cards, five levels each plus a gated boss arena) and **PUZZLE ADVENTURE — THE LOST MECHANISM** hub with an interactive board for every engine. Trial levels run through `game.loadArena` + `spawnEnemy`; puzzle stages are solved on the DOM board.
-- Tests: `tests/trials.test.js` + `tests/puzzle.test.js`; browser smoke `npm run smoke:fivefold`.
+- `src/moba.js` — pure Riftwar MOBA layer: `MOBA_HEROES` (all 13 core + 15 frontier classes = 28 unique heroes), 3 battlefields, 6 minion types, 12 jungle mobs, 6 epic bosses, lane towers/guards/nexuses, deterministic 5v5 simulation, four-slot abilities, movement/auto-attack, waves, gold/levels, win/loss, camera and canvas renderer. Save lives in `progress.moba` through `sanitizeMobaProgress` / `recordMobaMatch`.
+- UI: **RIFTWAR — MOBA 5V5** menu entry and hub (roster filter, hero/map/lane/difficulty pickers, codex), plus `#moba-battle` canvas with top bar, team scoreboards, player HUD, ability bar, pause/result overlays and `styles-moba.css`. Debug hooks: `moba`, `showMoba`, `startMobaBattle`, `leaveMoba`, `mobaStep`, `mobaCast`, `mobaWin`, `mobaDamageCore`.
+- Tests: `tests/trials.test.js` + `tests/puzzle.test.js` + `tests/moba.test.js`; browser smokes `npm run smoke:fivefold` and `npm run smoke:moba`.
 
 ## 0.05 v0.11.0 — Speedrun: Satu Nyawa
 

@@ -7,6 +7,9 @@ export const PUZZLE_VERSION = '1.0.0';
 export const PUZZLE_NAME = 'Puzzle Adventure — The Lost Mechanism';
 export const PUZZLE_PROGRESS_VERSION = 1;
 export const PUZZLE_ARC1_STAGES = 10;
+export const PUZZLE_HINT_COST = 100;
+export const PUZZLE_BOSS_TIME_LIMIT = 90;
+export const PUZZLE_ARC_COUNT = 10;
 
 export function puzzleHash(text) {
   let hash = 2166136261;
@@ -79,7 +82,7 @@ export const PUZZLE_ABILITIES = [
 ];
 export const PUZZLE_ABILITY_BY_ID = Object.fromEntries(PUZZLE_ABILITIES.map((ability) => [ability.id, ability]));
 
-export const PUZZLE_ARC1 = [
+const ARC1_STAGES = [
   { id: 'arc1_1', index: 0, location: 'Forgotten Entrance', name: 'Gerbang Terlupakan', typeId: 'connect_dots', difficulty: 1, ability: 'rune_scanner' },
   { id: 'arc1_2', index: 1, location: 'Flooded Corridor', name: 'Koridor Tergenang', typeId: 'pipe_connections', difficulty: 1, ability: 'mechanists_hand' },
   { id: 'arc1_3', index: 2, location: 'Broken Gallery', name: 'Galeri yang Retak', typeId: 'image_restoration', difficulty: 2, ability: 'water_control' },
@@ -90,17 +93,153 @@ export const PUZZLE_ARC1 = [
   { id: 'arc1_8', index: 7, location: 'Crystal Laboratory', name: 'Laboratorium Kristal', typeId: 'crystal_colors', difficulty: 4, ability: 'crystal_key' },
   { id: 'arc1_9', index: 8, location: 'Mechanism Core', name: 'Inti Mekanisme', typeId: 'grand_mechanism', difficulty: 4, ability: 'shadow_lantern' },
   { id: 'arc1_10', index: 9, location: 'Ancient Heart', name: 'Jantung Kuno', typeId: 'grand_mechanism', difficulty: 5, boss: 'ancient_heart', ability: 'ancient_compass' },
+].map((stage) => ({ ...stage, arc: 1, arcTitle: 'The Lost Mechanism' }));
+
+// Nine more playable arcs continue the mechanism after Ancient Heart. Every
+// arc ends in a boss-timed puzzle, and all 23 puzzle categories appear
+// repeatedly across the hundred-stage campaign.
+const EXTRA_ARCS = [
+  {
+    title: 'The Sunken Archive', boss: 'flooded_architect',
+    story: 'Air yang tidak pernah surut menyimpan catatan pertama para mekanik. Setiap pipa di sini adalah urat yang mengingat nama pemiliknya.',
+    secret: 'Lambung arkib masih berdenyut; airnya bukan air, melainkan memori yang mengembun.',
+    locations: ['Tideworn Stair', 'Drowned Scriptorium', 'Coral Lock', 'Flooded Vault', 'Silt Garden', 'Broken Aqueduct', 'Pearl Mechanism', 'Deep Current', 'Pressure Hall', 'The Drowned Architect'],
+  },
+  {
+    title: 'The Glass Foundry', boss: 'prism_sphinx',
+    story: 'Para pengrajin mencairkan cermin untuk melihat masa depan, lalu lupa bahwa bayangan pun bisa memilih jalan pulang.',
+    secret: 'Setiap pecahan kaca memantulkan satu kemungkinan yang tidak pernah terjadi.',
+    locations: ['Cracked Furnace', 'Molten Lattice', 'Prism Assembly', 'Ash Conveyor', 'Mirror Kiln', 'Crystal Bellows', 'Glass Labyrinth', 'Shard Garden', 'White Heat', 'The Prism Sphinx'],
+  },
+  {
+    title: 'The Clockwork Garden', boss: 'eternal_clock',
+    story: 'Taman ini tidak ditanam; ia dijadwalkan. Daun tumbuh tepat saat lonceng berbunyi, dan setiap kelopak menyimpan satu detik yang hilang.',
+    secret: 'Jam terbesar tidak menunjukkan waktu sekarang, tetapi waktu ketika mekanisme pertama kali berjanji.',
+    locations: ['Bronze Gate', 'Ticking Grove', 'Pendulum Walk', 'Gear Orchard', 'Minute Maze', 'Hourglass Pond', 'Spring Mechanism', 'Midnight Arbor', 'The Long Second', 'The Eternal Clock'],
+  },
+  {
+    title: 'The First Vow', boss: 'mechanized_guardian',
+    story: 'Sebelum kerajaan, sebelum abu, ada satu sumpah yang diucapkan pada roda gigi pertama. Penjaganya masih menagih janji itu.',
+    secret: 'Sumpah pertama bukan untuk menjaga dunia, melainkan untuk menjaga pintu agar tidak pernah dibuka dari dalam.',
+    locations: ['Vowstone Path', 'Oath Bell', 'Sealed Workshop', 'Mechanism Altar', 'Broken Promise', 'First Gear', 'Last Lock', 'The Quiet Core', 'Heart Engine', 'The Mechanized Guardian'],
+  },
+  {
+    title: 'The Ember Loom', boss: 'ember_weaver',
+    story: 'Di bawah bengkel, benang bara menenun ulang setiap mesin yang pernah mati. Penenunnya meminta satu nama sebagai upah.',
+    secret: 'Setiap benang bara adalah nyawa yang pernah dilebur menjadi bahan bakar.',
+    locations: ['Cinder Loom', 'Threadbare Hall', 'Ember Spindle', 'Scorched Pattern', 'Weaver’s Landing', 'Coal Garden', 'Burning Knot', 'Ash Tapestry', 'The Red Loom', 'The Ember Weaver'],
+  },
+  {
+    title: 'The Hollow Observatory', boss: 'hollow_star',
+    story: 'Sebuah observatorium tanpa langit. Bintang-bintang di lantainya adalah lubang yang menatap balik ke arah pengamat.',
+    secret: 'Tidak ada bintang di atas sana; yang mereka lihat adalah mata sesuatu yang tidur di bawah lensa.',
+    locations: ['Lensless Dome', 'Orbit Stair', 'Fallen Constellation', 'Null Meridian', 'Comet Well', 'Starless Gallery', 'Gravity Cradle', 'Black Sun Dial', 'The Last Orbit', 'The Hollow Star'],
+  },
+  {
+    title: 'The Abyssal Choir', boss: 'abyssal_cantor',
+    story: 'Nyanyian di kedalaman bukan pujian. Ia adalah perintah yang diulang sampai dinding lupa cara berdiri.',
+    secret: 'Kantor abyssal tidak menyanyi untuk dewa; ia menyanyi agar sesuatu di bawah tetap tertidur.',
+    locations: ['Drowned Nave', 'Hymnless Vault', 'Coral Throat', 'Tide Bell', 'Choir of Salt', 'Pressure Psalm', 'The Silent Verse', 'Deep Antiphon', 'Last Hallelujah', 'The Abyssal Cantor'],
+  },
+  {
+    title: 'The Forgotten Throne', boss: 'forgotten_sovereign',
+    story: 'Tahta ini tidak pernah kosong. Ia hanya lupa siapa yang duduk di atasnya, dan memanggil setiap pengunjung dengan nama raja lama.',
+    secret: 'Raja yang terlupakan masih di sana, terkunci di dalam patung yang tidak pernah selesai dipahat.',
+    locations: ['Empty Court', 'Crownless Hall', 'Statue Procession', 'The Pale Throne', 'Regent’s Maze', 'Scepter Vault', 'Dust Coronation', 'The Last Subject', 'Throne Room', 'The Forgotten Sovereign'],
+  },
+  {
+    title: 'The Last Mechanism', boss: 'last_machinist',
+    story: 'Di ujung semua mesin, seorang machinist duduk di depan roda yang tidak berputar. Ia menunggu seseorang menyelesaikan pekerjaannya.',
+    secret: 'Mekanisme terakhir bukan mesin penghancur. Ia adalah mesin yang menyimpan semua janji yang tidak sempat ditepati.',
+    locations: ['Final Bench', 'Unfinished Gear', 'The Last Blueprint', 'Machinist’s Rest', 'Broken Oath Engine', 'Zero Turn', 'The Quiet Workshop', 'Inheritance Lock', 'Vow Engine', 'The Last Machinist'],
+  },
 ];
-export const PUZZLE_STAGE_BY_ID = Object.fromEntries(PUZZLE_ARC1.map((stage) => [stage.id, stage]));
+
+function buildArcStages() {
+  const stages = [];
+  EXTRA_ARCS.forEach((arc, arcOffset) => {
+    const arcNumber = arcOffset + 2;
+    arc.locations.forEach((name, localIndex) => {
+      const index = (arcNumber - 1) * 10 + localIndex;
+      const type = PUZZLE_TYPES[(index * 7) % PUZZLE_TYPES.length];
+      stages.push({
+        id: `arc${arcNumber}_${localIndex + 1}`,
+        index,
+        location: `${arc.title} · Lapis ${localIndex + 1}`,
+        name,
+        typeId: type.id,
+        difficulty: Math.min(5, arcNumber),
+        arc: arcNumber,
+        arcTitle: arc.title,
+        ...(localIndex === 9 ? {
+          boss: arc.boss,
+          timed: true,
+          timeLimit: PUZZLE_BOSS_TIME_LIMIT,
+        } : {}),
+      });
+    });
+  });
+  return stages;
+}
+
+export const PUZZLE_STAGES = [...ARC1_STAGES.map((stage) => (stage.boss
+  ? { ...stage, timed: true, timeLimit: PUZZLE_BOSS_TIME_LIMIT }
+  : stage)), ...buildArcStages()];
+/** Legacy Arc 1 slice; progression APIs use the full PUZZLE_STAGES list. */
+export const PUZZLE_ARC1 = PUZZLE_STAGES.slice(0, PUZZLE_ARC1_STAGES);
+export const PUZZLE_STAGE_COUNT = PUZZLE_STAGES.length;
+export const PUZZLE_ARC1_STAGE_BY_ID = Object.fromEntries(PUZZLE_ARC1.map((stage) => [stage.id, stage]));
+export const PUZZLE_STAGE_BY_ID = Object.fromEntries(PUZZLE_STAGES.map((stage) => [stage.id, stage]));
 
 export const PUZZLE_BOSSES = [
-  { id: 'mechanized_guardian', name: 'The Mechanized Guardian', phases: ['gear_rotation', 'pressure_plates', 'grand_mechanism'], desc: 'Aktifkan tiga mekanisme sambil menghindari serangannya.' },
-  { id: 'prism_sphinx', name: 'The Prism Sphinx', phases: ['mirror_reflection', 'crystal_colors', 'laser_routing'], desc: 'Pecahkan pantulan cahaya untuk membuka kelemahannya.' },
-  { id: 'flooded_architect', name: 'The Flooded Architect', phases: ['pipe_connections', 'water_control', 'bridge_construction'], desc: 'Alihkan saluran air untuk mengubah arena.' },
-  { id: 'eternal_clock', name: 'The Eternal Clock', phases: ['clock_alignment', 'gear_rotation', 'number_sequence'], desc: 'Selesaikan teka-teki waktu di sela fase tempurnya.' },
-  { id: 'ancient_heart', name: 'The Ancient Heart', phases: ['gear_rotation', 'mirror_reflection', 'grand_mechanism'], desc: 'Tiga sistem kuno harus hidup kembali sebelum jantung berhenti.' },
+  { id: 'mechanized_guardian', name: 'The Mechanized Guardian', phases: ['gear_rotation', 'pressure_plates', 'grand_mechanism'], desc: 'Aktifkan tiga mekanisme sambil menghindari serangannya.', lore: 'Penjaga pertama ditempa dari roda gigi yang belum pernah berhenti. Ia tidak tidur; ia hanya menunggu sumpah berikutnya.' },
+  { id: 'prism_sphinx', name: 'The Prism Sphinx', phases: ['mirror_reflection', 'crystal_colors', 'laser_routing'], desc: 'Pecahkan pantulan cahaya untuk membuka kelemahannya.', lore: 'Sphinx ini tidak menjaga pintu. Ia menjaga jawaban yang akan mengubah siapa pun yang berhasil melewatinya.' },
+  { id: 'flooded_architect', name: 'The Flooded Architect', phases: ['pipe_connections', 'water_control', 'bridge_construction'], desc: 'Alihkan saluran air untuk mengubah arena.', lore: 'Ia membangun arkib untuk menyelamatkan kenangan, lalu menenggelamkannya agar tidak ada yang membaca terlalu jauh.' },
+  { id: 'eternal_clock', name: 'The Eternal Clock', phases: ['clock_alignment', 'gear_rotation', 'number_sequence'], desc: 'Selesaikan teka-teki waktu di sela fase tempurnya.', lore: 'Setiap detik yang kau habiskan di sini disimpan di dalamnya. Ia tidak membunuh; ia hanya menagih waktu.' },
+  { id: 'ancient_heart', name: 'The Ancient Heart', phases: ['gear_rotation', 'mirror_reflection', 'grand_mechanism'], desc: 'Tiga sistem kuno harus hidup kembali sebelum jantung berhenti.', lore: 'Jantung ini tidak memompa darah. Ia memompa tujuan, dan telah berdetak lebih lama daripada nama-nama yang menyalakannya.' },
+  { id: 'ember_weaver', name: 'The Ember Weaver', phases: ['energy_circuit', 'gear_rotation', 'grand_mechanism'], desc: 'Hubungkan tenun bara sebelum benangnya membakar seluruh papan.', lore: 'Penenun memakai nyawa yang telah selesai sebagai benang. Ia percaya setiap mesin berhak dilahirkan kembali.' },
+  { id: 'hollow_star', name: 'The Hollow Star', phases: ['shadow_matching', 'mirror_reflection', 'portal_sequence'], desc: 'Susun bayangan di sekitar bintang kosong tanpa menatapnya terlalu lama.', lore: 'Bintang ini bukan cahaya, melainkan tempat cahaya pernah tinggal. Siapa pun yang menatapnya akan melihat dirinya yang tidak pernah kembali.' },
+  { id: 'abyssal_cantor', name: 'The Abyssal Cantor', phases: ['musical_sequence', 'rune_matching', 'memory_tiles'], desc: 'Ulangi kidung dasar laut untuk menidurkan kembali sesuatu di bawahnya.', lore: 'Kantor tidak ingin dibebaskan. Ia ingin nyanyiannya berhenti, tetapi sesuatu di bawah tidak mengizinkannya.' },
+  { id: 'forgotten_sovereign', name: 'The Forgotten Sovereign', phases: ['statue_placement', 'combination_lock', 'pressure_plates'], desc: 'Kembalikan patung-patung ke posisi yang diingat tahta.', lore: 'Raja ini lupa namanya sendiri, tetapi ia masih ingat setiap wajah yang pernah berjanji setia kepadanya.' },
+  { id: 'last_machinist', name: 'The Last Machinist', phases: ['number_sequence', 'bridge_construction', 'grand_mechanism'], desc: 'Selesaikan blueprint terakhir sebelum mekanisme menutup selamanya.', lore: 'Machinist terakhir tidak menginginkan mahkota. Ia hanya ingin seseorang menyelesaikan pekerjaan yang ia mulai sebelum dunia kehilangan nama-namanya.' },
 ];
 export const PUZZLE_BOSS_BY_ID = Object.fromEntries(PUZZLE_BOSSES.map((boss) => [boss.id, boss]));
+
+/** Story index shown by the LORE tab. */
+export const PUZZLE_ARCS = [
+  { arc: 1, title: 'The Lost Mechanism', boss: 'ancient_heart', story: 'Mekanisme yang menahan dunia telah kehilangan urutannya. Gerbang, pipa, cermin, dan roda gigi menunggu seseorang yang mau mendengarkan bunyi lamanya.', secret: 'Tidak ada yang membangun mekanisme ini untuk menahan dunia. Ia dibangun agar dunia tidak bangun.' },
+  ...EXTRA_ARCS.map((arc, index) => ({ arc: index + 2, title: arc.title, boss: arc.boss, story: arc.story, secret: arc.secret })),
+];
+export const PUZZLE_LORE = {
+  intro: 'Catatan Mekanisme Hilang. Setiap arc adalah lapisan ingatan yang sama: para penjaga mencoba menghentikan sesuatu yang tidak punya nama, dan setiap teka-teki adalah kunci yang mereka tinggalkan.',
+  epilogue: 'Jika kau sampai di roda terakhir, kau akan menemukan bahwa mekanisme itu tidak pernah rusak. Ia hanya menunggu seseorang memilih untuk memutarnya lagi.',
+  arcs: PUZZLE_ARCS,
+};
+export const PUZZLE_TYPE_LORE = {
+  connect_dots: 'Jalur pertama dibuat oleh seorang anak yang menandai jalan pulang dengan batu.' ,
+  pipe_connections: 'Pipa-pipa ini mengalirkan memori, bukan air; setiap sambungan adalah janji yang disambung ulang.',
+  image_restoration: 'Gambar-gambar ini adalah potret para mekanik. Wajah mereka terhapus setiap kali mekanisme lupa.',
+  gear_rotation: 'Roda gigi pertama diputar oleh sumpah, bukan tangan. Ia masih menghitung siapa yang berutang.',
+  mirror_reflection: 'Cermin di sini tidak memantulkan cahaya. Ia memantulkan pilihan yang belum diambil.',
+  rune_matching: 'Rune adalah nama lama untuk perintah. Menyusunnya berarti memerintahkan sesuatu untuk bangun.',
+  energy_circuit: 'Sirkuit ini pernah menjadi urat nadi kota yang kini tidak ada lagi di peta.',
+  pressure_plates: 'Lempeng tekanan menimbang niat, bukan berat badan. Hanya langkah yang yakin yang dihitung.',
+  shadow_matching: 'Bayangan-bayangan ini milik orang yang pernah mencoba mekanisme sebelum kau.',
+  musical_sequence: 'Lonceng kuno menyimpan suara terakhir setiap penjaga. Nada yang salah akan memanggil mereka.',
+  crystal_colors: 'Setiap warna kristal adalah emosi yang dikristalkan agar tidak hilang bersama pemiliknya.',
+  sliding_blocks: 'Balok-balok ini dulunya adalah bagian dari tahta. Mereka masih ingat urutan duduk para raja.',
+  ancient_maze: 'Labirin berubah mengikuti ingatan pengunjung. Dinding yang kau lupakan akan menghilang.',
+  clock_alignment: 'Jam ini tidak terlambat. Dunia yang datang terlalu cepat.',
+  statue_placement: 'Patung-patung menghadap arah yang hanya masuk akal bagi seseorang yang sudah mati.',
+  portal_sequence: 'Portal tidak membawa kau ke tempat lain; ia membawa kau ke waktu ketika kau masih bisa memilih.',
+  number_sequence: 'Angka-angka ini adalah jumlah sumpah yang diucapkan di setiap arc. Polanya tidak pernah selesai.',
+  bridge_construction: 'Jembatan ini dibangun dari janji yang tidak ditepati. Setiap papan adalah nama.',
+  laser_routing: 'Laser adalah benang yang menghubungkan dua penyesalan. Cermin menentukan mana yang dipotong.',
+  memory_tiles: 'Petak-petak ini menyala sesuai urutan kematian para penjaga. Mengulanginya berarti mengingat mereka.',
+  water_control: 'Katup air mengatur seberapa dalam kau ingin mengingat. Semakin tinggi, semakin banyak yang naik.',
+  combination_lock: 'Kombinasi ini tidak membuka pintu. Ia membuka ingatan yang sengaja dikunci.',
+  grand_mechanism: 'Mekanisme agung adalah gabungan semua kesalahan kecil yang akhirnya bergerak bersama.',
+};
 
 const DIRS = [[1, 0], [0, 1], [-1, 0], [0, -1]]; // E S W N
 const adjacentCells = (x, y, w, h) => DIRS
@@ -567,6 +706,69 @@ export function applyRemotePuzzleMove(puzzle, move) {
   return applyPuzzleMove(puzzle, move);
 }
 
+/** The next move in the recorded solution, from the current move count. */
+export function puzzleBossTimer(stage) {
+  if (!stage?.boss) return 0;
+  return Math.max(1, Math.round(Number(stage.timeLimit) || PUZZLE_BOSS_TIME_LIMIT));
+}
+
+export function formatPuzzleTime(seconds) {
+  const safe = Math.max(0, Math.ceil(Number(seconds) || 0));
+  return `${String(Math.floor(safe / 60)).padStart(2, '0')}:${String(safe % 60).padStart(2, '0')}`;
+}
+
+export function puzzleNextMove(puzzle) {
+  const solution = Array.isArray(puzzle?.solution) ? puzzle.solution : [];
+  if (!solution.length) return null;
+  const index = Math.max(0, Math.min(solution.length - 1, Math.round(Number(puzzle.moves) || 0)));
+  return solution[index];
+}
+
+/** Human-readable hint that costs currency in the UI. */
+export function puzzleHintText(puzzle) {
+  const move = puzzleNextMove(puzzle);
+  if (!move) return 'Tidak ada langkah tersisa — mekanisme ini sudah selaras.';
+  if (puzzle.engine === 'path') {
+    return `Langkah berikutnya: petak (${Number(move.cell?.[0]) + 1}, ${Number(move.cell?.[1]) + 1}).`;
+  }
+  if (puzzle.engine === 'pipes') {
+    return `Putar pipa #${Number(move.rotate) + 1} sebanyak ${((Number(move.turns) || 1) + 4) % 4 || 1} kali.`;
+  }
+  if (puzzle.engine === 'beam') {
+    return `Putar cermin #${Number(move.rotate) + 1} sebanyak ${((Number(move.turns) || 1) + 4) % 4 || 1} kali.`;
+  }
+  if (puzzle.engine === 'image') {
+    return `Tukar petak ${Number(move.a) + 1} dengan petak ${Number(move.b) + 1}.`;
+  }
+  if (puzzle.engine === 'swap') {
+    return `Geser balok di posisi ${Number(move.a) + 1} ke posisi ${Number(move.b) + 1}.`;
+  }
+  if (puzzle.engine === 'sequence') {
+    return `Tukar rune posisi ${Number(move.a) + 1} dengan posisi ${Number(move.b) + 1}.`;
+  }
+  if (puzzle.engine === 'gear') return `Putar roda gigi #${Number(move.index) + 1}.`;
+  if (puzzle.engine === 'toggle') return `Tekan sakelar #${Number(move.index) + 1}.`;
+  return 'Ikuti jalur solusi kuno satu langkah lagi.';
+}
+
+/**
+ * Spends campaign currency for one hint. Pure: returns the new balance and
+ * progress; the caller persists both. Insufficient funds never mutate state.
+ */
+export function payPuzzleHint(rawProgress, echoes, stageId, cost = PUZZLE_HINT_COST) {
+  const price = Math.max(1, Math.round(Number(cost) || PUZZLE_HINT_COST));
+  const balance = Math.max(0, Math.floor(Number(echoes) || 0));
+  const progress = sanitizePuzzleProgress(rawProgress);
+  if (balance < price) {
+    return { ok: false, reason: 'insufficient', cost: price, echoes: balance, progress };
+  }
+  progress.stats.hints += 1;
+  if (stageId && PUZZLE_STAGE_BY_ID[stageId]) {
+    progress.hints[stageId] = Math.min(20, (progress.hints[stageId] || 0) + 1);
+  }
+  return { ok: true, reason: 'paid', cost: price, echoes: balance - price, progress };
+}
+
 export function defaultPuzzleProgress() {
   return {
     version: PUZZLE_PROGRESS_VERSION,
@@ -576,29 +778,32 @@ export function defaultPuzzleProgress() {
     bosses: [],
     hints: {},
     best: { moves: {}, time: 0 },
-    stats: { attempts: 0, solved: 0, hints: 0, bosses: 0, deaths: 0 },
+    stats: { attempts: 0, solved: 0, hints: 0, bosses: 0, deaths: 0, timeouts: 0 },
   };
 }
 
 export function sanitizePuzzleProgress(raw) {
   const base = defaultPuzzleProgress();
   if (!raw || typeof raw !== 'object') return base;
-  const stageIds = new Set(PUZZLE_ARC1.map((stage) => stage.id));
+  const stageIds = new Set(PUZZLE_STAGES.map((stage) => stage.id));
   const claimed = new Set(Array.isArray(raw.solved) ? raw.solved.filter((id) => stageIds.has(id)) : []);
   // Only a contiguous chain counts, so forged saves cannot skip puzzles.
   base.solved = [];
-  for (const stage of PUZZLE_ARC1) {
+  for (const stage of PUZZLE_STAGES) {
     if (!claimed.has(stage.id)) break;
     base.solved.push(stage.id);
   }
-  base.stage = Math.min(PUZZLE_ARC1.length, base.solved.length);
+  base.stage = Math.min(PUZZLE_STAGES.length, base.solved.length);
   base.abilities = PUZZLE_ABILITIES
-    .filter((ability) => base.solved.includes(PUZZLE_ARC1[ability.stage - 1]?.id))
+    .filter((ability) => base.solved.includes(PUZZLE_STAGES[ability.stage - 1]?.id))
     .map((ability) => ability.id);
-  base.bosses = Array.isArray(raw.bosses) ? [...new Set(raw.bosses.filter((id) => PUZZLE_BOSS_BY_ID[id] && base.solved.includes('arc1_10')))] : [];
+  const bossStages = Object.fromEntries(PUZZLE_STAGES.filter((stage) => stage.boss).map((stage) => [stage.boss, stage.id]));
+  base.bosses = Array.isArray(raw.bosses)
+    ? [...new Set(raw.bosses.filter((id) => PUZZLE_BOSS_BY_ID[id] && base.solved.includes(bossStages[id])))]
+    : [];
   base.hints = {};
   if (raw.hints && typeof raw.hints === 'object') {
-    for (const stage of PUZZLE_ARC1) {
+    for (const stage of PUZZLE_STAGES) {
       const value = Number(raw.hints[stage.id]);
       if (Number.isFinite(value) && value > 0) base.hints[stage.id] = Math.min(20, Math.round(value));
     }
@@ -617,9 +822,9 @@ export function sanitizePuzzleProgress(raw) {
 }
 
 export function puzzleStageUnlocked(progress, index) {
-  if (!Number.isInteger(index) || index < 0 || index >= PUZZLE_ARC1.length) return false;
+  if (!Number.isInteger(index) || index < 0 || index >= PUZZLE_STAGES.length) return false;
   if (index === 0) return true;
-  return (progress?.solved || []).includes(PUZZLE_ARC1[index - 1].id);
+  return (progress?.solved || []).includes(PUZZLE_STAGES[index - 1].id);
 }
 
 export function recordPuzzleSolve(rawProgress, stageId, summary = {}) {
@@ -630,7 +835,7 @@ export function recordPuzzleSolve(rawProgress, stageId, summary = {}) {
   if (firstClear) {
     progress.solved.push(stageId);
     progress.solved.sort((a, b) => PUZZLE_STAGE_BY_ID[a].index - PUZZLE_STAGE_BY_ID[b].index);
-    progress.stage = Math.min(PUZZLE_ARC1.length, progress.solved.length);
+    progress.stage = Math.min(PUZZLE_STAGES.length, progress.solved.length);
     progress.stats.solved += 1;
     if (stage.ability && !progress.abilities.includes(stage.ability)) progress.abilities.push(stage.ability);
   }
@@ -641,8 +846,9 @@ export function recordPuzzleSolve(rawProgress, stageId, summary = {}) {
 
 export function recordPuzzleBoss(rawProgress, bossId) {
   const progress = sanitizePuzzleProgress(rawProgress);
-  if (!progress.solved.includes('arc1_10')) return { progress, firstClear: false };
+  const stage = PUZZLE_STAGES.find((entry) => entry.boss === bossId);
   const boss = PUZZLE_BOSS_BY_ID[bossId];
+  if (!stage || !progress.solved.includes(stage.id)) return { progress, firstClear: false };
   if (!boss || progress.bosses.includes(bossId)) return { progress, firstClear: false };
   progress.bosses.push(bossId);
   progress.stats.bosses += 1;
@@ -650,7 +856,7 @@ export function recordPuzzleBoss(rawProgress, bossId) {
 }
 
 export function generateStagePuzzle(stageIndex, seed = 'ashen') {
-  const stage = PUZZLE_ARC1[Math.max(0, Math.min(PUZZLE_ARC1.length - 1, Math.round(Number(stageIndex) || 0)))];
+  const stage = PUZZLE_STAGES[Math.max(0, Math.min(PUZZLE_STAGES.length - 1, Math.round(Number(stageIndex) || 0)))];
   if (!stage) return null;
   const puzzle = generatePuzzle(stage.typeId, stage.difficulty, `${seed}|${stage.id}`);
   return { ...puzzle, stageId: stage.id, stageName: stage.name, location: stage.location };
@@ -658,13 +864,14 @@ export function generateStagePuzzle(stageIndex, seed = 'ashen') {
 
 export function puzzleSummary(progress) {
   return {
-    stages: PUZZLE_ARC1.length,
+    stages: PUZZLE_STAGES.length,
+    arcs: PUZZLE_ARC_COUNT,
     solved: progress.solved.length,
-    percent: Math.round((progress.solved.length / PUZZLE_ARC1.length) * 100),
+    percent: Math.round((progress.solved.length / PUZZLE_STAGES.length) * 100),
     abilities: progress.abilities.length,
     abilityTotal: PUZZLE_ABILITIES.length,
     bosses: progress.bosses.length,
-    next: PUZZLE_ARC1.find((stage) => !progress.solved.includes(stage.id)) || null,
+    next: PUZZLE_STAGES.find((stage) => !progress.solved.includes(stage.id)) || null,
     types: PUZZLE_TYPES.length,
   };
 }

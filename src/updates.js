@@ -1,23 +1,76 @@
 // Ashen Vow — release history shown in the in-game Update Log.
 // Keep the newest entry first. `GAME_VERSION` is the single source of truth
 // for the version shown by the Update Log screen and the debug hooks.
-export const GAME_VERSION = '0.15.0';
+export const GAME_VERSION = '0.17.0';
 
 export const UPDATE_LOG = [
   {
+    version: '0.17.0',
+    date: '18 November 2026',
+    title: 'INFINITE REALMS — ASTRAL DOMINION — STAGE ACCESS & CONTROL CENTER',
+    tag: 'ENAM MODE · ARC VI · SNEAK PEEK & HACK · ADMIN DASHBOARD · v0.17.0',
+    summary:
+      'Infinite Realms membuka enam mode dengan aturan, progres, dan hadiah eksklusif masing-masing. Arc VI: The Astral Dominion menambahkan lima wilayah dan dua puluh stage setelah The Radiant Crusade, Stage Access menghadirkan Sneak Peek read-only dan HACK Stage terisolasi dengan toolbar testing, serta Admin Control Center menjadi pusat operasi server dengan role, audit log, moderasi, event, ekonomi, dan monitoring nyata.',
+    highlights: [
+      'Enam mode baru: Riftfall, Relic Expedition, Last Bastion, Echo Maze, Shadow Duel, dan Chrono Fracture — masing-masing punya loop simulasi deterministik, kesulitan, progres, skor, dan reward track sendiri di progress.realms.',
+      'Hadiah eksklusif mode tidak pernah diberikan oleh UI lokal. Client mendaftarkan run ke server, lalu claim divalidasi terhadap mode, skor minimum, wave, relik, kunci, anchor, durasi minimum, dan aturan satu-klaim-per-run.',
+      'Arc VI: The Astral Dominion berisi lima wilayah (Starfall Passage, Nebula Gardens, The Astral Observatory, Voidbound Citadel, The Eternal Throne), 20 stage, 5 musuh termasuk Astral Executioner, dan 5 bos. Setiap hall standar memiliki tepat 20 musuh, empat archetype, dan satu elite.',
+      'The Architect of Eternity memiliki empat fase — Observer, Architect, Fractured One, dan Eternal Dominion — serta reward kampanye victory. The Unwritten Expanse tetap terkunci sebagai misteri berikutnya.',
+      'Stage Access menyediakan tiga panel untuk Arc I–VI, side content, dan mode; browser stage, detail musuh/elite/bos/modifier, recommended class, Sneak Peek read-only, dan HACK Stage.',
+      'HACK memakai snapshot progres terisolasi: quest, achievement, reward normal, inventory, boss completion, dan checkpoint kampanye tidak berubah. Toolbar menyediakan Restart Stage, Reset Enemies, Boss Phase, Teleport, Environment, Collision View, Performance, dan Exit Test.',
+      'Admin Control Center terpisah di /admin: scrypt password, sesi HttpOnly + CSRF, TOTP opsional, 26 permission, 7 role, permission editor, player lookup/moderation, campaign validation, content overrides, economy, events, reports, announcements, analytics, server monitor, dan audit log persisten.',
+      'Multiplayer tetap memakai relay WebSocket zero-dependency di /ws untuk campaign, Hearthfall, dan Labyrinth 2–4 pemain; set HOST=0.0.0.0 untuk LAN atau letakkan server di balik HTTPS/reverse proxy untuk internet.',
+      'Progres Astral disimpan di progress.astral; hadiah mode disimpan di progress.realms. Verifikasi: 400 test Node untuk data Astral, enam simulasi mode, reward eligibility, HACK config, admin auth/permission/reward/audit, serta seluruh suite lama; smoke browser untuk mode hub, Arc VI, Sneak Peek, HACK toolbar, dan route admin.',
+    ],
+    fixes: [
+      'Riftfall sekarang memulai gelombang dari state intermission dengan benar; sebelumnya waveState tidak pernah maju.',
+      'Static server menolak /data/ dan file tersembunyi sehingga state admin tidak dapat diunduh sebagai aset publik.',
+      'Matchmaking baru ditolak saat maintenance atau matchmaking ditutup; sesi yang sudah berjalan tidak diputus paksa.',
+    ],
+  },
+  {
+    version: '0.16.0',
+    date: '17 November 2026',
+    title: 'WAVE DEFENSE — THE LAST RAMPART',
+    tag: 'TOWER DEFENSE · 3 BENTENG · 24 GELOMBANG · 12 MENARA · 6 BOS · v0.16.0',
+    summary:
+      'Benteng terakhir membuka gerbangnya. Wave Defense menghadirkan pertahanan kastil 24 gelombang di tiga medan, dua belas menara yang bisa dibangun dan ditingkatkan, dua belas tipe musuh, enam bos, serta ekonomi emas yang menentukan setiap keputusan.',
+    highlights: [
+      'Tiga medan pertahanan: Ashen Keep, Ember Bastion, dan Frostgate Citadel. Setiap peta punya jalan berkelok, 24 pos menara, rute serbuan sendiri, dan rekor terpisah.',
+      'Dua belas menara: Ballista, Catapult, Trebuchet, Mage Tower, Cannon Tower, Frost Spire, Flame Keep, Poison Grove, Tesla Coil, Sniper\'s Nest, Holy Chapel, dan Rift Obelisk. Setiap menara punya damage, jangkauan, kecepatan serang, area, status, atau efek khusus yang nyata.',
+      'Ekonomi pertahanan: mulai dengan 225–320 emas, bunuh musuh untuk bounty, kirim gelombang lebih awal untuk bonus, tingkatkan menara hingga level 3, atau jual kembali untuk modal menara lain.',
+      'Dua puluh empat gelombang berurutan dengan dua belas tipe musuh—ghoul, runner, shield, brute, bat, cultist, ogre, wraith, siege ram, stalker, hound, dan void priest—plus enam bos: Bone Colossus, Ember Wyrm, Plague Matriarch, Iron Warden, Frost Titan, dan Ashen Sovereign.',
+      'Kontrol lengkap: klik pos untuk membangun, pilih menara lewat panel atau tombol 1–9, kirim gelombang dengan Space, percepat 1×/2×/3×, pause dengan Esc, dan lihat HP kastil, emas, skor, kill, boss bar, serta feed pertempuran.',
+      'Tiga tingkat kesulitan mengubah HP musuh, kecepatan, emas awal, dan HP kastil. Kemenangan, kekalahan, gelombang terbaik, skor, kill, leak, dan rekor tiap benteng disimpan di progress.wavedefense.',
+      'Optimasi: latar peta di-cache ke canvas statis, HUD diperbarui 8 Hz, snapshot/daftar musuh dibatasi, projectile dan effect memiliki batas keras, serta render hanya dilakukan saat dibutuhkan ketika pause.',
+      'Verifikasi: 10 test deterministik untuk data, ekonomi, build/upgrade/sell, wave, bos, kemenangan, kekalahan, sanitizer, dan renderer; browser smoke 59 pemeriksaan untuk klik nyata, canvas, pause, hasil, dan reload.',
+    ],
+    fixes: [
+      'Frame pertama battlefield langsung digambar saat pertahanan dimulai agar tidak ada kanvas kosong.',
+      'Batas musuh, projectile, dan effect mencegah lonjakan kerja saat gelombang akhir dan bos bertumpuk.',
+    ],
+  },
+  {
     version: '0.15.0',
     date: '17 November 2026',
-    title: 'THE FIVEFOLD TRIALS — PUZZLEBOUND REALMS',
-    tag: 'BIOME EXPANSION · PUZZLE ADVENTURE · v0.15.0',
+    title: 'THE FIVEFOLD TRIALS · PUZZLEBOUND REALMS · RIFTWAR',
+    tag: 'BIOME EXPANSION · PUZZLE ADVENTURE · MOBA 5V5 · v0.15.0',
     summary:
-      'Setiap biome kini punya lima level tempur sebelum bosnya, dan Puzzle Adventure membuka Arc 1: The Lost Mechanism — 23 jenis teka-teki yang benar-benar bisa dimainkan, 10 kemampuan Metroidvania, dan bos teka-teki.',
+      'Setiap biome kini punya lima level tempur sebelum bosnya, Puzzle Adventure membuka sepuluh arc The Lost Mechanism, dan Riftwar menghadirkan pertempuran MOBA 5v5 dengan seluruh 28 kelas Ashen Vow sebagai hero.',
     highlights: [
       'The Fivefold Trials: 20 biome x 5 level = 100 level baru. Setiap level berisi tepat 20 musuh, 4 arketipe, dan 1 elite yang dijamin; bos biome hanya terbuka setelah kelima level selesai. Progres tersimpan di progress.trials.',
       'Encounter memakai template data-driven dengan wave 5 musuh, validasi 20/4/1, dan hadiah bos sekali saja.',
       'Puzzle Adventure: 23 kategori teka-teki (connect the dots, pipa, gambar teracak, gear, cermin, rune, memori, dan 16 lainnya) di atas delapan mesin puzzle nyata.',
       'Setiap puzzle dibuat dari solusi yang diketahui lalu diacak dengan langkah yang bisa dibalik, sehingga selalu bisa diselesaikan; editor menolak layout yang tidak valid.',
-      'Arc 1 berisi 10 tahap, 10 kemampuan, lima bos teka-teki, dan progres di progress.puzzle yang tersimpan aman di save yang sama.',
+      'Sepuluh arc berisi 100 tahap berurutan, 10 kemampuan, sepuluh bos, dan progres di progress.puzzle yang tersimpan aman di save yang sama.',
+      'Setiap finale arc adalah boss-timed puzzle: tiga fase harus selesai dalam 90 detik per fase, dengan timer, status gagal, dan hitungan timeout yang tersimpan.',
+      'Tab INDEKS mendokumentasikan 23 sistem beserta lore-nya, sementara tab LORE mencatat sepuluh bab cerita, rahasia tiap arc, dan asal setiap bos.',
+      'Petunjuk membuka langkah solusi berikutnya dan berharga 100 Gema — mata uang abadi dari kampanye utama. Saldo kurang tidak pernah memotong Gema atau memberi petunjuk.',
       'Snapshot puzzle deterministic untuk co-op dan sanitizer yang menolak progres palsu.',
+      'Riftwar — MOBA 5v5: 28 hero dari 13 kelas kampanye dan 15 kelas Infinite Frontiers, 3 medan (Ashen Rift, Ember Vale, Sunken Crown), 5 jalur, 4 tingkat kesulitan, dan progres di progress.moba.',
+      'Pertempuran top-down nyata: dua tim lima hero, gelombang minion di tiga jalur, 30 struktur per medan (menara lane, penjaga nexus, dua nexus), 12 mob jungle, dan 6 bos epik yang memberi buff tim.',
+      'Kontrol MOBA: klik untuk bergerak, Q/W/E/R untuk empat jurus, B untuk recall, auto-attack, respawn, level, gold, KDA, scoreboard, hasil menang/kalah, dan save statistik hero serta medan.',
+      'Optimasi dan verifikasi: kanvas arena 960x540 dengan kamera clamp, minimap, batas 180 minion, timer HUD 15 Hz, 8 test deterministik untuk roster/medan/simulasi/sanitizer, dan browser smoke 51 pemeriksaan termasuk klik, cast, kemenangan, kekalahan, dan reload.',
     ],
   },
   {

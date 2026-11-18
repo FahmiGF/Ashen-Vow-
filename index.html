@@ -4,10 +4,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#0b0807" />
-    <title>Ashen Vow — v0.14.0</title>
+    <title>Ashen Vow — v0.17.0</title>
     <meta
       name="description"
-      content="Ashen Vow adalah metroidvania medieval 2D dengan combat pedang real-time, 426 ruang, 72 boss, mode Speedrun satu nyawa, 100 level ekspansi, Thornveil Haven, peta, jam langsung, dan indeks sumpah."
+      content="Ashen Vow adalah metroidvania medieval 2D dengan combat pedang real-time, 426 ruang, 72 boss, mode Speedrun satu nyawa, 100 level ekspansi, Wave Defense dengan 24 gelombang dan 12 menara, Riftwar MOBA 5v5 dengan 28 kelas, Thornveil Haven, peta, jam langsung, dan indeks sumpah."
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -22,6 +22,9 @@
     <link rel="stylesheet" href="./styles-fishing.css" />
     <link rel="stylesheet" href="./styles-fallen.css" />
     <link rel="stylesheet" href="./styles-crusade.css" />
+    <link rel="stylesheet" href="./styles-moba.css" />
+    <link rel="stylesheet" href="./styles-wavedefense.css" />
+    <link rel="stylesheet" href="./styles-realms.css" />
     <link
       rel="icon"
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%230b0807'/%3E%3Cpath d='M32 6l7 18 18 8-18 8-7 18-7-18-18-8 18-8z' fill='%23d08a45'/%3E%3C/svg%3E"
@@ -29,7 +32,7 @@
   </head>
   <body>
     <main id="app">
-      <div class="frame">
+      <div id="game-frame" class="frame">
         <canvas id="game" width="960" height="540" aria-label="Arena permainan Ashen Vow"></canvas>
         <div class="canvas-shade" aria-hidden="true"></div>
 
@@ -232,7 +235,7 @@
         <!-- ══ MAIN MENU ══ -->
         <section id="title-screen" class="screen title-screen">
           <div class="screen-inner title-inner">
-            <p class="eyebrow">SEBUAH SUMPAH DI ANTARA ABU · v0.15.0</p>
+            <p class="eyebrow">SEBUAH SUMPAH DI ANTARA ABU · v0.17.0</p>
             <h1 class="game-title">ASHEN<span>VOW</span></h1>
             <div class="title-rule"><i></i><b>✦</b><i></i></div>
             <p class="lede">
@@ -285,6 +288,22 @@
                 <span>MULTIPLAYER — CO-OP</span>
                 <em>Kampanye · Hearthfall · Labyrinth · 2–4 pemain</em>
               </button>
+              <button id="btn-realms-menu" class="btn btn-ghost menu-btn realms-menu-btn" type="button">
+                <span>INFINITE REALMS — ENAM MODE</span>
+                <em>Riftfall · Relic Expedition · Last Bastion · Echo Maze · Shadow Duel · Chrono Fracture</em>
+              </button>
+              <button id="btn-stage-menu" class="btn btn-ghost menu-btn stage-menu-btn" type="button">
+                <span>STAGE ACCESS</span>
+                <em>Sneak Peek · HACK Stage · toolbar testing terisolasi</em>
+              </button>
+              <button id="btn-astral-menu" class="btn btn-ghost menu-btn astral-menu-btn" type="button">
+                <span>ARC VI — THE ASTRAL DOMINION</span>
+                <em>5 wilayah · 20 stage · The Architect of Eternity · Unwritten Expanse</em>
+              </button>
+              <button id="btn-admin-menu" class="btn btn-ghost menu-btn hidden" type="button">
+                <span>ADMIN CONTROL CENTER</span>
+                <em>Hanya akun dengan sesi administratif valid · /admin</em>
+              </button>
               <button id="btn-labyrinth-menu" class="btn btn-ghost menu-btn lab-menu-btn" type="button">
                 <span>INFINITE LABYRINTH — CURSED REALMS</span>
                 <em>20 zona · 30 bos · barang terkutuk · co-op 4 pemain · v0.7.0</em>
@@ -295,7 +314,15 @@
               </button>
               <button id="btn-puzzle-menu" class="btn btn-ghost menu-btn puzzle-menu-btn" type="button">
                 <span>PUZZLE ADVENTURE — THE LOST MECHANISM</span>
-                <em>23 jenis teka-teki · Arc 1 · 10 kemampuan · bos teka-teki</em>
+                <em>23 jenis · 10 arc · 100 tahap · 10 bos-timed puzzle</em>
+              </button>
+              <button id="btn-moba-menu" class="btn btn-ghost menu-btn moba-menu-btn" type="button">
+                <span>RIFTWAR — MOBA 5V5</span>
+                <em>28 kelas · 3 medan · 6 bos epik · lane minion &amp; menara</em>
+              </button>
+              <button id="btn-wd-menu" class="btn btn-ghost menu-btn wd-menu-btn" type="button">
+                <span>WAVE DEFENSE — THE LAST RAMPART</span>
+                <em>3 benteng · 24 gelombang · 12 menara · 6 bos</em>
               </button>
               <button id="btn-court-menu" class="btn btn-ghost menu-btn court-menu-btn" type="button">
                 <span>HEARTHFALL — THE HOLLOW COURT</span>
@@ -331,7 +358,7 @@
               </button>
               <button id="btn-updates" class="btn btn-ghost menu-btn" type="button">
                 <span>CATATAN UPDATE</span>
-                <em>Riwayat rilis · v0.15.0 · Fivefold Trials</em>
+                <em>Riwayat rilis · v0.17.0 · Infinite Realms · Astral Dominion</em>
               </button>
             </nav>
 
@@ -626,13 +653,18 @@
         <!-- ══ PUZZLE ADVENTURE ══ -->
         <section id="puzzle-screen" class="screen hidden">
           <div class="screen-inner puzzle-inner">
-            <p class="eyebrow">PUZZLE ADVENTURE · THE LOST MECHANISM · ARC 1</p>
+            <p class="eyebrow">PUZZLE ADVENTURE · THE LOST MECHANISM · 10 ARC · 100 TAHAP</p>
             <h2 class="screen-title">THE LOST MECHANISM</h2>
             <p class="screen-sub">
-              Tiga belas sistem kuno menahan jantung dunia. Hubungkan titik, putar pipa,
-              pulihkan gambar, dan buka jalan menuju Ancient Heart.
+              Dua puluh tiga sistem kuno tersebar di sepuluh arc. Setiap finale adalah
+              bos-timed puzzle: selesaikan tiga mekanisme sebelum waktu habis.
             </p>
             <div id="puzzle-summary" class="lab-summary"></div>
+            <nav id="puzzle-tabs" class="exp-tabs puzzle-tabs" aria-label="Bagian Puzzle Adventure">
+              <button class="exp-tab active" type="button" data-puzzle-tab="stages">TAHAP</button>
+              <button class="exp-tab" type="button" data-puzzle-tab="index">INDEKS</button>
+              <button class="exp-tab" type="button" data-puzzle-tab="lore">LORE</button>
+            </nav>
             <div id="puzzle-body" class="puzzle-body"></div>
             <div class="screen-links">
               <button id="btn-puzzle-back" class="link-btn" type="button">← KEMBALI KE MENU</button>
@@ -646,14 +678,172 @@
             <p id="puzzle-play-eyebrow" class="eyebrow">FORGOTTEN ENTRANCE · STAGE 1 / 10</p>
             <h2 id="puzzle-play-title" class="screen-title">CONNECT THE DOTS</h2>
             <p id="puzzle-play-desc" class="screen-sub"></p>
+            <div id="puzzle-timer" class="puzzle-timer hidden"><span>BOSS-TIMED PUZZLE</span><strong id="puzzle-timer-value">01:30</strong></div>
             <div id="puzzle-board" class="puzzle-board"></div>
             <p id="puzzle-status" class="puzzle-status">Hubungkan titik hijau ke kotak tujuan.</p>
+            <p id="puzzle-currency" class="puzzle-currency">✦ 0 GEMA · PETUNJUK 100 GEMA</p>
             <div class="puzzle-actions">
               <button id="btn-puzzle-reset" class="btn btn-ghost btn-compact" type="button">ULANGI</button>
-              <button id="btn-puzzle-hint" class="btn btn-ghost btn-compact" type="button">PETUNJUK</button>
+              <button id="btn-puzzle-hint" class="btn btn-ghost btn-compact" type="button">PETUNJUK · ✦ 100</button>
               <button id="btn-puzzle-leave" class="btn btn-ghost btn-compact" type="button">KELUAR</button>
             </div>
           </div>
+        </section>
+
+        <!-- ══ RIFTWAR — MOBA 5v5 ══ -->
+        <section id="moba-screen" class="screen hidden">
+          <div class="screen-inner moba-inner">
+            <p class="eyebrow">RIFTWAR · 28 HEROES · 3 BATTLEFIELDS · MOBA 5V5</p>
+            <h2 class="screen-title moba-title">ASHEN VOW: RIFTWAR</h2>
+            <p class="screen-sub">
+              Tiga jalur, dua nexus, dan satu sumpah yang harus dipatahkan. Pilih salah satu dari
+              seluruh 28 kelas Ashen Vow, dorong minion melewati menara, dan jatuhkan nexus musuh.
+            </p>
+            <div id="moba-summary" class="moba-summary"></div>
+            <div class="moba-section-head"><h3>PILIH HERO</h3><span id="moba-hero-count">28 HERO</span></div>
+            <div id="moba-role-filter" class="moba-role-filter" role="group" aria-label="Filter peran hero"></div>
+            <div id="moba-roster" class="moba-roster"></div>
+            <div class="moba-config">
+              <div class="moba-config-block">
+                <div class="moba-section-head"><h3>PILIH MEDAN</h3><span>3 MAP</span></div>
+                <div id="moba-maps" class="moba-maps"></div>
+              </div>
+              <div class="moba-config-block">
+                <div class="moba-section-head"><h3>JALUR &amp; KESULITAN</h3><span>5 LANE</span></div>
+                <div id="moba-lanes" class="moba-choice-row"></div>
+                <div id="moba-difficulties" class="moba-choice-row"></div>
+              </div>
+            </div>
+            <div id="moba-codex" class="moba-codex"></div>
+            <div class="moba-start-row">
+              <button id="btn-moba-start" class="btn btn-primary" type="button">
+                <span>MULAI PERTEMPURAN</span>
+                <em>5v5 · AI sekutu &amp; musuh · menara, jungle, bos epik</em>
+              </button>
+            </div>
+            <div class="screen-links">
+              <button id="btn-moba-back" class="link-btn" type="button">← KEMBALI KE MENU</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- ══ RIFTWAR BATTLEFIELD ══ -->
+        <section id="moba-battle" class="moba-battle hidden" aria-label="Pertempuran Riftwar">
+          <canvas id="moba-canvas" width="960" height="540"></canvas>
+          <div id="moba-hud" class="moba-hud">
+            <div class="moba-topbar">
+              <div class="moba-score"><b id="moba-blue-score">0</b><span>PENJAGA</span><i>VS</i><span>PASUKAN RIFT</span><b id="moba-red-score">0</b></div>
+              <div class="moba-clock"><span id="moba-map-name">ASHEN RIFT</span><strong id="moba-clock">00:00</strong><em id="moba-wave">GELOMBANG 0</em></div>
+              <div class="moba-top-actions">
+                <button id="btn-moba-pause" class="moba-icon-btn" type="button" aria-label="Jeda">II</button>
+                <button id="btn-moba-quit" class="moba-icon-btn" type="button" aria-label="Keluar">✕</button>
+              </div>
+            </div>
+            <div id="moba-team-blue" class="moba-team-card moba-team-blue"></div>
+            <div id="moba-team-red" class="moba-team-card moba-team-red"></div>
+            <div class="moba-player-panel">
+              <div class="moba-portrait"><strong id="moba-player-glyph">⚔</strong><span id="moba-player-level">L1</span></div>
+              <div class="moba-bars">
+                <div class="moba-name-line"><b id="moba-player-name">Sera Vayne</b><span id="moba-player-role">TANK</span><em id="moba-player-gold">◈ 0</em></div>
+                <div class="moba-bar hp"><i id="moba-player-hp"></i><span id="moba-player-hp-text">897 / 897</span></div>
+                <div class="moba-bar mana"><i id="moba-player-mana"></i><span id="moba-player-mana-text">100 / 100</span></div>
+                <div class="moba-kda" id="moba-player-kda">0 / 0 / 0</div>
+              </div>
+              <div id="moba-respawn" class="moba-respawn hidden">RESPAWN 0.0</div>
+            </div>
+            <div id="moba-abilities" class="moba-abilities"></div>
+            <div id="moba-feed" class="moba-feed"></div>
+            <div class="moba-controls-hint">KLIK UNTUK GERAK · <kbd>Q</kbd><kbd>W</kbd><kbd>E</kbd><kbd>R</kbd> JURUS · <kbd>B</kbd> RECALL · <kbd>ESC</kbd> JEDA</div>
+          </div>
+          <div id="moba-pause" class="moba-modal hidden">
+            <div class="moba-modal-card">
+              <p class="eyebrow">PERTEMPURAN DIBEKUKAN</p>
+              <h3>JEDA RIFTWAR</h3>
+              <button id="btn-moba-resume" class="btn btn-primary" type="button">LANJUTKAN</button>
+              <button id="btn-moba-pause-leave" class="btn btn-ghost" type="button">TINGGALKAN PERTEMPURAN</button>
+            </div>
+          </div>
+          <div id="moba-result" class="moba-modal hidden"></div>
+        </section>
+
+        <!-- ══ WAVE DEFENSE: THE LAST RAMPART ══ -->
+        <section id="wd-screen" class="screen hidden">
+          <div class="screen-inner wd-inner">
+            <p class="eyebrow">WAVE DEFENSE · 3 BENTENG · 24 GELOMBANG · 12 MENARA</p>
+            <h2 class="screen-title wd-title">THE LAST RAMPART</h2>
+            <p class="screen-sub">
+              Musuh datang dari gerbang utara. Bangun Ballista, Catapult, Trebuchet, Mage Tower,
+              Cannon Tower dan tujuh menara lain di sepanjang jalan, lalu pertahankan mahkota terakhir.
+            </p>
+            <div id="wd-summary" class="wd-summary"></div>
+            <div class="wd-section-head"><h3>PILIH BENTENG</h3><span id="wd-map-count">3 MEDAN</span></div>
+            <div id="wd-maps" class="wd-maps"></div>
+            <div class="wd-section-head"><h3>KESULITAN</h3><span>GOLD &amp; HP KASTIL BERUBAH</span></div>
+            <div id="wd-difficulties" class="wd-choice-row"></div>
+            <div class="wd-section-head"><h3>MENARA PERTAHANAN</h3><span id="wd-tower-count">12 JENIS</span></div>
+            <div id="wd-towers" class="wd-tower-grid"></div>
+            <div class="wd-start-row">
+              <button id="btn-wd-start" class="btn btn-primary" type="button">
+                <span>MULAI PERTAHANAN</span>
+                <em>Bangun menara · kirim gelombang · jaga kastil</em>
+              </button>
+            </div>
+            <div class="screen-links">
+              <button id="btn-wd-back" class="link-btn" type="button">← KEMBALI KE MENU</button>
+            </div>
+          </div>
+        </section>
+
+        <section id="wd-battle" class="wd-battle hidden" aria-label="Pertempuran Wave Defense">
+          <canvas id="wd-canvas" width="960" height="540"></canvas>
+          <div class="wd-hud">
+            <div class="wd-topbar">
+              <div class="wd-castle-panel">
+                <span>MAHKOTA TERAKHIR</span>
+                <strong id="wd-castle-text">120 / 120</strong>
+                <div id="wd-castle-bar" class="wd-castle-bar"><i id="wd-castle-fill"></i></div>
+              </div>
+              <div class="wd-wave-panel">
+                <span id="wd-map-name">ASHEN KEEP</span>
+                <strong id="wd-wave">SIAP</strong>
+                <em id="wd-phase">GELOMBANG 1 DALAM 12.0</em>
+              </div>
+              <div class="wd-resources">
+                <div><span>EMAS</span><b id="wd-gold" class="gold">270</b></div>
+                <div><span>SKOR</span><b id="wd-score">0</b></div>
+                <div><span>KILL</span><b id="wd-kills">0</b></div>
+              </div>
+              <div class="wd-top-actions">
+                <button id="btn-wd-pause" class="wd-icon-btn" type="button" aria-label="Jeda">II</button>
+                <button id="btn-wd-quit" class="wd-icon-btn" type="button" aria-label="Keluar">✕</button>
+              </div>
+            </div>
+            <div id="wd-boss-panel" class="wd-boss-panel hidden">
+              <span id="wd-boss-name">BOSS</span>
+              <div class="wd-boss-bar"><i id="wd-boss-fill"></i></div>
+            </div>
+            <div id="wd-palette" class="wd-palette" role="group" aria-label="Pilih menara"></div>
+            <div id="wd-selection" class="wd-selection"></div>
+            <div class="wd-next">
+              <button id="btn-wd-next" type="button">KIRIM GELOMBANG 1</button>
+              <div id="wd-speed" class="wd-speed" role="group" aria-label="Kecepatan permainan">
+                <button type="button" data-wd-speed="1" class="active">1×</button>
+                <button type="button" data-wd-speed="2">2×</button>
+                <button type="button" data-wd-speed="3">3×</button>
+              </div>
+            </div>
+            <div id="wd-feed" class="wd-feed"></div>
+            <div class="wd-hint">KLIK POS UNTUK MEMBANGUN · <kbd>SPACE</kbd> GELOMBANG · <kbd>1-9</kbd> PILIH MENARA · <kbd>ESC</kbd> JEDA</div>
+          </div>
+          <div id="wd-pause" class="wd-overlay hidden">
+            <div class="wd-modal">
+              <p class="eyebrow">PERTAHANAN DIBEKUKAN</p>
+              <h3>JEDA WAVE DEFENSE</h3>
+              <button id="btn-wd-resume" class="btn btn-primary" type="button">LANJUTKAN</button>
+              <button id="btn-wd-pause-leave" class="btn btn-ghost" type="button">TINGGALKAN BENTENG</button>
+            </div>
+          </div>
+          <div id="wd-result" class="wd-overlay hidden"></div>
         </section>
 
         <!-- ══ HEARTHFALL: THE HOLLOW COURT ══ -->
@@ -1261,6 +1451,66 @@
           </div>
         </section>
 
+        <!-- ══ INFINITE REALMS ══ -->
+        <section id="realms-screen" class="screen realms-screen hidden">
+          <div class="screen-inner realms-inner">
+            <div id="realms-body"></div>
+            <div class="screen-links">
+              <button id="btn-realms-back" class="link-btn" type="button">← KEMBALI KE MENU</button>
+            </div>
+          </div>
+        </section>
+
+        <section id="realms-run-screen" class="screen realms-run-screen hidden">
+          <div class="realms-run-wrap">
+            <canvas id="realms-canvas" width="960" height="540" aria-label="Arena mode Infinite Realms"></canvas>
+            <div id="realms-run-hud" class="realms-run-hud"></div>
+            <div id="realms-objectives" class="realms-objectives"></div>
+            <div id="realms-end" class="realms-end hidden"></div>
+            <div id="realms-controls" class="realms-controls"></div>
+            <button id="btn-realms-run-exit" class="realms-run-exit" type="button">✕ KELUAR</button>
+          </div>
+        </section>
+
+        <!-- ══ STAGE ACCESS ══ -->
+        <section id="stage-access-screen" class="screen stage-access-screen hidden">
+          <div class="screen-inner stage-access-inner">
+            <header class="stage-head">
+              <div><p class="eyebrow">DEVELOPER-STYLE STAGE BROWSER</p><h2 class="screen-title">STAGE ACCESS</h2><p class="screen-sub">Pratinjau read-only atau masuk ke stage dengan state HACK yang terisolasi.</p></div>
+              <button id="btn-stage-back" class="link-btn" type="button">← KEMBALI KE MENU</button>
+            </header>
+            <div class="stage-layout">
+              <aside id="stage-left" class="stage-left"></aside>
+              <div id="stage-center" class="stage-center"></div>
+              <aside id="stage-right" class="stage-right"></aside>
+            </div>
+            <div id="stage-peek" class="stage-peek hidden">
+              <div class="stage-peek-card">
+                <header><div><p class="eyebrow">SNEAK PEEK · READ-ONLY</p><h3 id="stage-peek-name">Stage</h3><span id="stage-peek-sub"></span></div><button id="btn-stage-peek-close" class="icon-btn" type="button" aria-label="Tutup">✕</button></header>
+                <canvas id="stage-peek-canvas" width="960" height="400"></canvas>
+                <p id="stage-peek-hint" class="micro"></p>
+                <div class="row"><button id="btn-stage-peek-hack" class="btn btn-primary small" type="button">HACK STAGE</button><button id="btn-stage-peek-close-2" class="btn btn-ghost small" type="button">TUTUP</button></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ══ ASTRAL DOMINION ══ -->
+        <section id="astral-screen" class="screen astral-screen hidden">
+          <div class="screen-inner astral-inner">
+            <div id="astral-body"></div>
+            <div class="screen-links"><button id="btn-astral-back" class="link-btn" type="button">← KEMBALI KE MENU</button></div>
+          </div>
+        </section>
+
+        <!-- ══ MODE DETAIL MODAL ══ -->
+        <div id="modal" class="realms-modal hidden" role="dialog" aria-modal="true">
+          <div class="realms-modal-card"><div class="realms-modal-head"><h2 id="modal-title"></h2><button id="modal-close" class="icon-btn" type="button" aria-label="Tutup">✕</button></div><div id="modal-body"></div></div>
+        </div>
+
+        <!-- ══ HACK TOOLBAR ══ -->
+        <div id="hack-toolbar" class="hack-toolbar hidden" role="toolbar" aria-label="HACK testing tools"></div>
+
         <!-- ══ BOSS DIALOGUE ══ -->
         <section id="dialogue-screen" class="dialogue-screen hidden" role="dialog" aria-modal="true" aria-live="polite">
           <div class="dialogue-panel">
@@ -1310,10 +1560,8 @@
             <button class="tbtn attack" data-action="attack" type="button" aria-label="Serang">⚔</button>
           </div>
         </div>
-      </div>
-
-      <footer class="footer">
-        <span>ASHEN VOW · v0.10.0</span>
+      </div>        <footer class="footer">
+          <span>ASHEN VOW · v0.17.0</span>
         <span class="dot">✦</span>
         <span>Metroidvania medieval 2D · 14 ruang · 6 boss · dibuat dengan Canvas</span>
       </footer>

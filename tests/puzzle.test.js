@@ -1,11 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  PUZZLE_TYPES, PUZZLE_ENGINE_IDS, PUZZLE_ABILITIES, PUZZLE_ARC1, PUZZLE_BOSSES,
-  PUZZLE_STAGE_BY_ID, PUZZLE_BOSS_BY_ID, generatePuzzle, generateStagePuzzle,
-  applyPuzzleMove, puzzleIsSolved, validatePuzzle, publishPuzzle, puzzleSnapshot,
-  decodePuzzleState, encodePuzzleState, defaultPuzzleProgress, sanitizePuzzleProgress,
-  puzzleStageUnlocked, recordPuzzleSolve, recordPuzzleBoss, puzzleSummary,
+  PUZZLE_TYPES, PUZZLE_ENGINE_IDS, PUZZLE_ABILITIES, PUZZLE_ARC1, PUZZLE_STAGES,
+  PUZZLE_BOSSES, PUZZLE_HINT_COST, PUZZLE_BOSS_TIME_LIMIT, PUZZLE_STAGE_BY_ID,
+  PUZZLE_BOSS_BY_ID, PUZZLE_ARCS, PUZZLE_LORE, PUZZLE_TYPE_LORE,
+  generatePuzzle, generateStagePuzzle, applyPuzzleMove, puzzleIsSolved, validatePuzzle,
+  publishPuzzle, puzzleSnapshot, decodePuzzleState, encodePuzzleState,
+  defaultPuzzleProgress, sanitizePuzzleProgress, puzzleStageUnlocked, recordPuzzleSolve,
+  recordPuzzleBoss, puzzleSummary, puzzleHintText, payPuzzleHint, puzzleBossTimer,
+  formatPuzzleTime,
 } from '../src/puzzle.js';
 
 test('twenty-three puzzle categories cover eight real engines', () => {
@@ -79,24 +82,38 @@ test('puzzle snapshots survive the co-op codec', () => {
   assert.deepEqual(puzzleSnapshot(local).state, puzzleSnapshot(moved).state);
 });
 
-test('Arc 1 has ten connected stages, ten abilities and puzzle bosses', () => {
+test('puzzle campaign ships one hundred stages across ten arcs', () => {
+  assert.equal(PUZZLE_STAGES.length, 100);
   assert.equal(PUZZLE_ARC1.length, 10);
   assert.equal(PUZZLE_ABILITIES.length, 10);
-  assert.equal(PUZZLE_BOSSES.length, 5);
-  for (let index = 0; index < PUZZLE_ARC1.length; index += 1) {
-    const stage = PUZZLE_ARC1[index];
+  assert.equal(PUZZLE_BOSSES.length, 10);
+  assert.deepEqual([...new Set(PUZZLE_STAGES.map((stage) => stage.arc))], [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+  for (let index = 0; index < PUZZLE_STAGES.length; index += 1) {
+    const stage = PUZZLE_STAGES[index];
     assert.equal(stage.index, index);
     assert.ok(PUZZLE_STAGE_BY_ID[stage.id]);
     assert.ok(stage.typeId);
+    assert.ok(stage.arcTitle);
     const puzzle = generateStagePuzzle(index, 'arc');
     assert.equal(puzzle.engine, PUZZLE_TYPES.find((type) => type.id === stage.typeId).engine);
     assert.equal(validatePuzzle(puzzle).ok, true);
   }
-  assert.ok(PUZZLE_BOSS_BY_ID[PUZZLE_ARC1[9].boss]);
+  const bossStages = PUZZLE_STAGES.filter((stage) => stage.boss);
+  assert.equal(bossStages.length, 10);
+  assert.equal(new Set(bossStages.map((stage) => stage.boss)).size, 10);
+  for (const stage of bossStages) {
+    assert.ok(PUZZLE_BOSS_BY_ID[stage.boss]);
+    assert.equal(stage.timed, true);
+    assert.equal(puzzleBossTimer(stage), PUZZLE_BOSS_TIME_LIMIT);
+  }
+  assert.equal(puzzleBossTimer(PUZZLE_STAGES[0]), 0);
+  assert.equal(formatPuzzleTime(PUZZLE_BOSS_TIME_LIMIT), '01:30');
   assert.equal(PUZZLE_ARC1[9].boss, 'ancient_heart');
+  // Every one of the 23 systems appears in the campaign.
+  assert.equal(new Set(PUZZLE_STAGES.map((stage) => stage.typeId)).size, PUZZLE_TYPES.length);
 });
 
-test('stages unlock in order and the final boss requires the full arc', () => {
+test('stages unlock in order and each arc boss requires its arc', () => {
   let progress = defaultPuzzleProgress();
   assert.equal(puzzleStageUnlocked(progress, 0), true);
   assert.equal(puzzleStageUnlocked(progress, 1), false);
@@ -104,41 +121,82 @@ test('stages unlock in order and the final boss requires the full arc', () => {
   assert.equal(skipped.firstClear, false);
   const earlyBoss = recordPuzzleBoss(progress, 'ancient_heart');
   assert.equal(earlyBoss.firstClear, false);
-  for (const stage of PUZZLE_ARC1) {
+  for (const stage of PUZZLE_STAGES) {
     const result = recordPuzzleSolve(progress, stage.id, { moves: 4 });
     assert.equal(result.firstClear, true);
     progress = result.progress;
   }
-  assert.equal(progress.solved.length, 10);
+  assert.equal(progress.solved.length, 100);
   assert.equal(progress.abilities.length, 10);
-  assert.equal(progress.stage, 10);
-  const boss = recordPuzzleBoss(progress, 'ancient_heart');
-  assert.equal(boss.firstClear, true);
-  assert.equal(recordPuzzleBoss(boss.progress, 'ancient_heart').firstClear, false);
-  assert.ok(puzzleSummary(progress).percent >= 90);
+  assert.equal(progress.stage, 100);
+  for (const stage of PUZZLE_STAGES.filter((entry) => entry.boss)) {
+    const boss = recordPuzzleBoss(progress, stage.boss);
+    assert.equal(boss.firstClear, true, `${stage.boss} should be claimable after ${stage.id}`);
+    assert.equal(recordPuzzleBoss(boss.progress, stage.boss).firstClear, false);
+    progress = boss.progress;
+  }
+  assert.equal(progress.bosses.length, 10);
+  assert.equal(puzzleSummary(progress).percent, 100);
 });
 
-test('puzzle Adventure can be completed solo by replaying solutions', () => {
+test('puzzle Adventure can be completed solo by replaying all one hundred solutions', () => {
   let progress = defaultPuzzleProgress();
-  for (let index = 0; index < PUZZLE_ARC1.length; index += 1) {
+  for (let index = 0; index < PUZZLE_STAGES.length; index += 1) {
     let puzzle = generateStagePuzzle(index, 'solo');
     let current = { ...puzzle, state: JSON.parse(JSON.stringify(puzzle.initial)), moves: 0 };
     for (const move of puzzle.solution) current = applyPuzzleMove(current, move).puzzle;
     assert.equal(puzzleIsSolved(current), true);
-    progress = recordPuzzleSolve(progress, PUZZLE_ARC1[index].id, { moves: current.moves }).progress;
+    progress = recordPuzzleSolve(progress, PUZZLE_STAGES[index].id, { moves: current.moves }).progress;
   }
-  assert.equal(progress.stats.solved, 10);
+  assert.equal(progress.stats.solved, 100);
   assert.equal(progress.abilities.length, 10);
   const boss = recordPuzzleBoss(progress, 'ancient_heart');
   assert.equal(boss.firstClear, true);
+});
+
+test('hints reveal a real solution step and cost 100 campaign Gema', () => {
+  assert.equal(PUZZLE_HINT_COST, 100);
+  for (const type of PUZZLE_TYPES) {
+    const puzzle = generatePuzzle(type.id, 2, `hint-${type.id}`);
+    assert.ok(puzzleHintText(puzzle).length > 10, `${type.id} hint is too vague`);
+  }
+  const poor = payPuzzleHint(defaultPuzzleProgress(), 99, 'arc1_1');
+  assert.equal(poor.ok, false);
+  assert.equal(poor.reason, 'insufficient');
+  assert.equal(poor.echoes, 99);
+  assert.equal(poor.progress.stats.hints, 0);
+  const paid = payPuzzleHint(defaultPuzzleProgress(), 250, 'arc1_1');
+  assert.equal(paid.ok, true);
+  assert.equal(paid.cost, 100);
+  assert.equal(paid.echoes, 150);
+  assert.equal(paid.progress.stats.hints, 1);
+  assert.equal(paid.progress.hints.arc1_1, 1);
+});
+
+test('every arc finale is a boss-timed puzzle with lore and a unique boss', () => {
+  assert.equal(PUZZLE_BOSS_TIME_LIMIT, 90);
+  assert.equal(PUZZLE_ARCS.length, 10);
+  assert.equal(Object.keys(PUZZLE_TYPE_LORE).length, PUZZLE_TYPES.length);
+  assert.ok(PUZZLE_LORE.intro.length > 40 && PUZZLE_LORE.epilogue.length > 40);
+  for (const arc of PUZZLE_ARCS) {
+    assert.ok(arc.story.length > 40, `arc ${arc.arc} story`);
+    assert.ok(arc.secret.length > 20, `arc ${arc.arc} secret`);
+    assert.ok(PUZZLE_BOSS_BY_ID[arc.boss], `arc ${arc.arc} boss`);
+    assert.ok(PUZZLE_BOSS_BY_ID[arc.boss].lore.length > 30, `arc ${arc.arc} boss lore`);
+    const stages = PUZZLE_STAGES.filter((stage) => stage.arc === arc.arc);
+    assert.equal(stages.length, 10);
+    const finale = stages[9];
+    assert.equal(finale.boss, arc.boss);
+    assert.equal(finale.timed, true);
+  }
 });
 
 test('save sanitizer repairs forged progress and keeps unknown fields', () => {
   const raw = {
     solved: ['arc1_3', 'arc1_1', 'nope'],
-    bosses: ['ancient_heart'],
+    bosses: ['ancient_heart', 'flooded_architect'],
     hints: { arc1_1: 2, nope: 99 },
-    stats: { attempts: '7', solved: -3 },
+    stats: { attempts: '7', solved: -3, timeouts: '2' },
     custom: { kept: true },
   };
   const clean = sanitizePuzzleProgress(raw);
@@ -149,5 +207,6 @@ test('save sanitizer repairs forged progress and keeps unknown fields', () => {
   assert.deepEqual(clean.hints, { arc1_1: 2 });
   assert.equal(clean.stats.attempts, 7);
   assert.equal(clean.stats.solved, 0);
+  assert.equal(clean.stats.timeouts, 2);
   assert.deepEqual(clean.custom, { kept: true });
 });

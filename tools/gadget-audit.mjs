@@ -68,6 +68,9 @@ async function main() {
     '--no-default-browser-check',
     '--disable-gpu',
     '--mute-audio',
+    '--disable-background-timer-throttling',
+    '--disable-backgrounding-occluded-windows',
+    '--disable-renderer-backgrounding',
     '--window-size=1440,900',
     URL,
   ], { stdio: 'ignore' });
@@ -189,6 +192,7 @@ async function main() {
       { id: 'fishing', open: 'window.__ashen.showFishing()' },
       { id: 'baitShop', open: 'window.__ashen.openBaitShop()' },
       { id: 'fishIndex', open: 'window.__ashen.openFishIndex()' },
+      { id: 'waveDefense', open: 'window.__ashen.showWaveDefense()' },
       {
         id: 'fallenMenu',
         open: '(() => { const A = window.__ashen; A.progress.cleared[7] = true; A.ascendNow(); A.showFallenMenu(); })()',
@@ -244,11 +248,10 @@ async function main() {
       if (viewport.label === 'phone-390' || viewport.label === 'desktop-1440') {
         await evaluate('window.__ashen.showMenu()');
         await sleep(200);
-        // Headless pacing is noisy; take the better of two samples.
-        const menuA = await sampleFps(900);
-        const menuB = await sampleFps(900);
-        const menuFps = { fps: Math.max(menuA.fps, menuB.fps) };
-        check(`${viewport.label} menu keeps a playable frame rate`, menuFps.fps >= 20, true);
+        // Headless pacing is noisy; take the best of three samples and report all of them on failure.
+        const menuSamples = [await sampleFps(800), await sampleFps(800), await sampleFps(800)];
+        const menuFps = { fps: Math.max(...menuSamples.map((sample) => sample.fps)) };
+        check(`${viewport.label} menu keeps a playable frame rate (${menuSamples.map((sample) => sample.fps).join('/')} fps)`, menuFps.fps >= 20, true);
         entry.fps = menuFps.fps;
         const runFps = await evaluate(`(() => {
           const A = window.__ashen;
@@ -256,10 +259,9 @@ async function main() {
           return A.menuView;
         })()`);
         await sleep(400);
-        const runA = await sampleFps(900);
-        const runB = await sampleFps(900);
-        const midRun = { fps: Math.max(runA.fps, runB.fps) };
-        check(`${viewport.label} run keeps a playable frame rate`, midRun.fps >= 20, true);
+        const runSamples = [await sampleFps(800), await sampleFps(800), await sampleFps(800)];
+        const midRun = { fps: Math.max(...runSamples.map((sample) => sample.fps)) };
+        check(`${viewport.label} run keeps a playable frame rate (${runSamples.map((sample) => sample.fps).join('/')} fps)`, midRun.fps >= 20, true);
         check(`${viewport.label} run starts for the sample`, runFps, 'none');
         entry.runFps = midRun.fps;
       }

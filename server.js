@@ -5,6 +5,7 @@ import { extname, join, normalize, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import { GAME_VERSION } from './src/updates.js';
+import { createAdminService } from './src/admin_server.js';
 
 const ROOT = fileURLToPath(new URL('.', import.meta.url));
 const PORT = Number(process.env.PORT) || 4300;
@@ -28,6 +29,32 @@ const MIME = {
 // every reload. Keyed by path + mtime + size, so editing a file invalidates it.
 const assetCache = new Map();
 const COMPRESSIBLE = new Set(['.html', '.css', '.js', '.mjs', '.json', '.svg']);
+const bootAt = Date.now();
+let requestCount = 0;
+let requestErrors = 0;
+let latencyTotal = 0;
+let peakSockets = 0;
+const admin = createAdminService({
+  dataDir: join(ROOT, 'data'),
+  metrics: () => {
+    const sockets = [...rooms.values()].reduce((sum, room) => sum + room.sockets.size, 0);
+    return {
+      status: 'healthy',
+      uptimeSeconds: Math.round((Date.now() - bootAt) / 1000),
+      requests: requestCount,
+      errors: requestErrors,
+      errorRate: requestCount ? Math.round((requestErrors / requestCount) * 10000) / 100 : 0,
+      averageLatencyMs: requestCount ? Math.round((latencyTotal / requestCount) * 10) / 10 : 0,
+      memoryMb: Math.round(process.memoryUsage().rss / 1048576),
+      activeCoopRooms: rooms.size,
+      connectedPlayers: sockets,
+      peakSockets,
+      node: process.version,
+      host: HOST,
+      port: PORT,
+    };
+  },
+});
 
 async function loadAsset(target, ext) {
   const info = await stat(target);
@@ -48,10 +75,20 @@ async function loadAsset(target, ext) {
 }
 
 const server = createServer(async (req, res) => {
+  const started = performance.now();
+  requestCount += 1;
   try {
     const url = new URL(req.url || '/', `http://${req.headers.host}`);
     let pathname = decodeURIComponent(url.pathname);
     if (pathname === '/') pathname = '/index.html';
+    if (pathname === '/admin' || pathname === '/admin/') pathname = '/admin.html';
+    if (pathname.startsWith('/data/') || pathname.startsWith('/.') || pathname.includes('/../')) {
+      res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
+      res.end('Not found');
+      return;
+    }
+    const ip = String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
+    if (await admin.handle(req, res, url, ip)) return;
     const target = normalize(join(ROOT, pathname));
     if (!target.startsWith(normalize(ROOT + sep))) {
       res.writeHead(403).end('Forbidden');
@@ -77,8 +114,11 @@ const server = createServer(async (req, res) => {
     res.writeHead(200, headers);
     res.end(useGzip ? asset.gzip : asset.raw);
   } catch {
+    requestErrors += 1;
     res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
     res.end('Not found');
+  } finally {
+    latencyTotal += performance.now() - started;
   }
 });
 
@@ -273,6 +313,11 @@ server.on('upgrade', (req, socket) => {
     socket.destroy();
     return;
   }
+  if (admin.state && (!admin.state.settings.matchmakingOpen || admin.state.settings.maintenance)) {
+    socket.write('HTTP/1.1 503 Service Unavailable\r\nConnection: close\r\n\r\n');
+    socket.destroy();
+    return;
+  }
   const key = req.headers['sec-websocket-key'];
   if (!key || req.headers.upgrade?.toLowerCase() !== 'websocket') {
     socket.destroy();
@@ -306,6 +351,7 @@ server.on('upgrade', (req, socket) => {
     return;
   }
   room.sockets.add(socket);
+  peakSockets = Math.max(peakSockets, [...rooms.values()].reduce((sum, entry) => sum + entry.sockets.size, 0));
   const role = room.host ? 'guest' : 'host';
   if (!room.host) room.host = socket;
   const meta = {

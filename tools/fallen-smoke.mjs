@@ -148,8 +148,8 @@ async function main() {
       A.clearProgress();
       return { version: A.version, title: document.title, fallen: !!A.progress.fallen };
     })()`);
-    check('boot reports v0.15.0', boot.version, '0.15.0');
-    assert.match(boot.title, /0\.14\.0/);
+    check('boot reports v0.16.0', boot.version, '0.16.0');
+    assert.match(boot.title, /0.16.0/);
     check('fresh saves carry a fallen progress block', boot.fallen, true);
 
     const ascended = await evaluate(`(() => {

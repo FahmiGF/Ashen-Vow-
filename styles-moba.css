@@ -1,0 +1,398 @@
+/* Riftwar — MOBA hub and battlefield */
+.moba-menu-btn {
+  border-color: rgba(94, 199, 232, 0.28);
+  background: linear-gradient(135deg, rgba(27, 63, 75, 0.42), rgba(20, 12, 9, 0.5));
+}
+.moba-inner { width: min(1040px, 94%); }
+.moba-title {
+  color: #d9f7ff;
+  text-shadow: 0 0 30px rgba(76, 201, 240, 0.22);
+}
+.moba-summary {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  margin: 18px auto 12px;
+}
+.moba-stat {
+  padding: 9px 10px;
+  border: 1px solid rgba(125, 219, 235, 0.2);
+  background: rgba(7, 19, 22, 0.7);
+  text-align: left;
+}
+.moba-stat span {
+  display: block;
+  color: #84aeb4;
+  font-size: 8px;
+  letter-spacing: 0.14em;
+}
+.moba-stat strong {
+  display: block;
+  margin-top: 3px;
+  color: #e9fbff;
+  font-size: 18px;
+  line-height: 1;
+}
+.moba-section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 16px 0 7px;
+  border-bottom: 1px solid rgba(125, 219, 235, 0.13);
+}
+.moba-section-head h3 {
+  margin: 0 0 5px;
+  color: #e5d3b8;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+}
+.moba-section-head span {
+  color: #6d999f;
+  font-size: 8px;
+  letter-spacing: 0.15em;
+}
+.moba-role-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 9px;
+}
+.moba-role-filter button,
+.moba-choice-row button {
+  border: 1px solid rgba(125, 219, 235, 0.17);
+  background: rgba(7, 18, 21, 0.72);
+  color: #9db8b8;
+  padding: 6px 9px;
+  font: 600 9px var(--font-display);
+  letter-spacing: 0.1em;
+  cursor: pointer;
+}
+.moba-role-filter button.active,
+.moba-role-filter button:hover,
+.moba-choice-row button.active,
+.moba-choice-row button:hover {
+  border-color: rgba(125, 219, 235, 0.58);
+  color: #effeff;
+  background: rgba(35, 93, 104, 0.38);
+}
+.moba-roster {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+  max-height: 315px;
+  overflow-y: auto;
+  padding: 2px 4px 2px 0;
+}
+.moba-roster::-webkit-scrollbar { width: 5px; }
+.moba-roster::-webkit-scrollbar-thumb { background: rgba(125, 219, 235, 0.25); }
+.moba-hero-card {
+  position: relative;
+  min-height: 78px;
+  padding: 7px 6px 6px;
+  border: 1px solid rgba(125, 219, 235, 0.14);
+  background: linear-gradient(160deg, rgba(26, 47, 48, 0.7), rgba(12, 9, 8, 0.88));
+  color: #dfe9e4;
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+}
+.moba-hero-card::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 0;
+  height: 2px;
+  background: var(--hero, #4a90e2);
+  opacity: 0.72;
+}
+.moba-hero-card.active {
+  border-color: var(--hero, #4a90e2);
+  box-shadow: 0 0 0 1px rgba(125, 219, 235, 0.18), inset 0 0 24px rgba(76, 201, 240, 0.08);
+}
+.moba-hero-card .mh-glyph {
+  display: block;
+  font-size: 18px;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+.moba-hero-card .mh-name {
+  display: block;
+  font: 600 10px/1.1 var(--font-display);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.moba-hero-card .mh-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 3px;
+  margin-top: 4px;
+  color: #8da8a4;
+  font-size: 7px;
+  letter-spacing: 0.06em;
+}
+.moba-hero-card .mh-origin {
+  color: #66888b;
+  font-size: 7px;
+  margin-top: 2px;
+  display: block;
+}
+.moba-config {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 16px;
+  text-align: left;
+}
+.moba-maps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+.moba-map-card {
+  border: 1px solid rgba(125, 219, 235, 0.15);
+  background: rgba(10, 19, 19, 0.78);
+  padding: 8px;
+  color: #adc6c2;
+  text-align: left;
+  cursor: pointer;
+}
+.moba-map-card.active {
+  border-color: #72d5df;
+  background: rgba(24, 67, 72, 0.42);
+}
+.moba-map-card strong { display: block; color: #e5f7f7; font-size: 10px; }
+.moba-map-card em { display: block; color: #7fb9bc; font-size: 7px; margin: 2px 0 4px; }
+.moba-map-card span { display: block; font-size: 7px; line-height: 1.35; color: #849d98; }
+.moba-choice-row { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 7px; }
+.moba-codex {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 14px;
+  text-align: left;
+}
+.moba-codex article {
+  border: 1px solid rgba(201, 162, 92, 0.14);
+  background: rgba(12, 9, 8, 0.7);
+  padding: 8px;
+}
+.moba-codex h4 { margin: 0 0 3px; color: #dcc49d; font-size: 10px; }
+.moba-codex p { margin: 0; color: #938778; font-size: 8px; line-height: 1.4; }
+.moba-start-row { margin: 18px 0 8px; }
+.moba-start-row .btn { width: min(430px, 100%); }
+
+/* Battlefield */
+.moba-battle {
+  position: absolute;
+  inset: 0;
+  z-index: 24;
+  overflow: hidden;
+  background: #080b0c;
+}
+.moba-battle canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  cursor: crosshair;
+}
+.moba-hud {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  color: #f1e8d8;
+  font-family: var(--font-display);
+  text-shadow: 0 1px 3px #000;
+}
+.moba-topbar {
+  position: absolute;
+  top: 8px;
+  left: 10px;
+  right: 10px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+.moba-score {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 9px;
+  background: rgba(5, 9, 10, 0.72);
+  border: 1px solid rgba(125, 219, 235, 0.18);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+}
+.moba-score b { font-size: 16px; color: #dffaff; }
+.moba-score i { color: #816d5b; font-style: normal; font-size: 8px; }
+.moba-clock { text-align: center; padding-top: 2px; }
+.moba-clock span, .moba-clock em { display: block; color: #7ea5a7; font-size: 7px; letter-spacing: 0.18em; font-style: normal; }
+.moba-clock strong { display: block; color: #fff2d8; font-size: 20px; line-height: 1; }
+.moba-top-actions { display: flex; gap: 4px; pointer-events: auto; }
+.moba-icon-btn {
+  width: 26px; height: 26px;
+  border: 1px solid rgba(125, 219, 235, 0.22);
+  background: rgba(5, 9, 10, 0.78);
+  color: #dffaff;
+  font: 700 11px var(--font-display);
+  cursor: pointer;
+}
+.moba-team-card {
+  position: absolute;
+  top: 62px;
+  width: 122px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 5px;
+  background: rgba(5, 9, 10, 0.52);
+  border: 1px solid rgba(125, 219, 235, 0.1);
+}
+.moba-team-blue { left: 10px; }
+.moba-team-red { right: 10px; }
+.moba-team-card .mt-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 7px;
+  color: #b4c9c5;
+}
+.moba-team-card .mt-row b { color: #e9f4ef; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+.moba-team-card .mt-row i { font-style: normal; color: #7c918b; }
+.moba-team-card .mt-row.dead { opacity: 0.44; }
+.moba-player-panel {
+  position: absolute;
+  left: 10px;
+  bottom: 9px;
+  width: 235px;
+  display: flex;
+  gap: 7px;
+  padding: 7px;
+  background: rgba(5, 9, 10, 0.82);
+  border: 1px solid rgba(125, 219, 235, 0.18);
+}
+.moba-portrait {
+  position: relative;
+  width: 42px; height: 42px;
+  display: grid; place-items: center;
+  border: 1px solid rgba(125, 219, 235, 0.3);
+  background: radial-gradient(circle, rgba(58, 144, 150, 0.35), rgba(5, 10, 10, 0.9));
+}
+.moba-portrait strong { font-size: 20px; }
+.moba-portrait span { position: absolute; bottom: -1px; right: -1px; font-size: 7px; background: #1d646b; padding: 1px 3px; }
+.moba-bars { flex: 1; min-width: 0; }
+.moba-name-line { display: flex; align-items: baseline; gap: 5px; font-size: 7px; }
+.moba-name-line b { color: #f4e7d0; font-size: 9px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.moba-name-line span { color: #79c7ca; font-size: 6px; letter-spacing: 0.1em; }
+.moba-name-line em { margin-left: auto; font-style: normal; color: #f2c46d; font-size: 7px; }
+.moba-bar { position: relative; height: 7px; margin-top: 3px; background: rgba(0,0,0,0.65); border: 1px solid rgba(255,255,255,0.08); }
+.moba-bar i { display: block; height: 100%; width: 100%; background: #b73c4e; transition: width 0.12s linear; }
+.moba-bar.mana i { background: #277d9e; }
+.moba-bar span { position: absolute; inset: 0; text-align: center; font-size: 5px; line-height: 7px; color: #fff; }
+.moba-kda { margin-top: 2px; color: #93aaa5; font-size: 6px; letter-spacing: 0.08em; }
+.moba-respawn {
+  position: absolute; inset: auto 5px 5px; color: #ffbf7a; font-size: 8px; text-align: right;
+}
+.moba-abilities {
+  position: absolute;
+  right: 10px;
+  bottom: 9px;
+  display: flex;
+  gap: 4px;
+  pointer-events: auto;
+}
+.moba-ability {
+  width: 57px;
+  min-height: 53px;
+  padding: 4px 3px;
+  border: 1px solid rgba(125, 219, 235, 0.2);
+  background: rgba(5, 9, 10, 0.86);
+  color: #e8f5f1;
+  text-align: center;
+  cursor: pointer;
+}
+.moba-ability:hover { border-color: #74d8e1; }
+.moba-ability.cooling { filter: grayscale(0.7); opacity: 0.66; }
+.moba-ability .ma-key { display: block; color: #7fd3d8; font-size: 8px; }
+.moba-ability .ma-name { display: block; font-size: 7px; line-height: 1.15; margin: 2px 0; }
+.moba-ability .ma-cost { display: block; color: #75b4cf; font-size: 6px; }
+.moba-ability .ma-cd { display: block; color: #f2c46d; font-size: 7px; }
+.moba-feed {
+  position: absolute;
+  right: 10px;
+  top: 185px;
+  width: 185px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: right;
+  font-size: 7px;
+}
+.moba-feed span { color: #e6d7c1; background: rgba(5,9,10,0.48); padding: 2px 5px; }
+.moba-controls-hint {
+  position: absolute;
+  left: 50%;
+  bottom: 8px;
+  transform: translateX(-50%);
+  color: #78928e;
+  font-size: 6px;
+  white-space: nowrap;
+}
+.moba-controls-hint kbd { color: #c9e9e6; border: 1px solid #416568; padding: 0 2px; margin: 0 1px; }
+.moba-modal {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  background: rgba(2, 6, 7, 0.76);
+  backdrop-filter: blur(3px);
+}
+.moba-modal-card {
+  width: min(390px, 88%);
+  padding: 24px;
+  border: 1px solid rgba(125, 219, 235, 0.3);
+  background: linear-gradient(160deg, rgba(18, 40, 43, 0.96), rgba(10, 8, 7, 0.98));
+  text-align: center;
+}
+.moba-modal-card h3 { margin: 6px 0 18px; color: #ecfbff; font-size: 22px; }
+.moba-modal-card .btn { display: block; width: 100%; margin-top: 7px; }
+.moba-result-card { width: min(560px, 92%); }
+.moba-result-card.victory { border-color: rgba(255, 209, 102, 0.6); }
+.moba-result-card.defeat { border-color: rgba(239, 71, 111, 0.55); }
+.moba-result-title { margin: 2px 0 6px; font-size: 29px; color: #ffe8a3; }
+.moba-result-card.defeat .moba-result-title { color: #ff8ca0; }
+.moba-result-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 14px 0 18px; }
+.moba-result-stats div { padding: 7px; border: 1px solid rgba(255,255,255,0.1); }
+.moba-result-stats span { display: block; color: #8ca6a0; font-size: 7px; }
+.moba-result-stats b { display: block; margin-top: 3px; font-size: 16px; color: #f0fbf7; }
+.moba-result-card .moba-team-table { display: flex; flex-direction: column; gap: 2px; margin: 8px 0 14px; text-align: left; }
+.moba-result-card .moba-team-table div { display: grid; grid-template-columns: 1fr 52px 42px; gap: 5px; color: #a9beb8; font-size: 8px; padding: 2px 4px; background: rgba(255,255,255,0.035); }
+.moba-result-card .moba-team-table b { color: #e6f5ef; }
+.moba-result-actions { display: flex; gap: 6px; }
+.moba-result-actions .btn { flex: 1; }
+
+@media (max-width: 900px) {
+  .moba-roster { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .moba-summary { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 700px) {
+  .moba-roster { grid-template-columns: repeat(4, minmax(0, 1fr)); max-height: 340px; }
+  .moba-config { grid-template-columns: 1fr; }
+  .moba-maps { grid-template-columns: 1fr; }
+  .moba-codex { grid-template-columns: 1fr 1fr; }
+  .moba-team-card { display: none; }
+  .moba-feed { display: none; }
+  .moba-player-panel { width: 185px; }
+  .moba-ability { width: 43px; min-height: 46px; }
+  .moba-ability .ma-name { font-size: 6px; }
+  .moba-controls-hint { display: none; }
+  .moba-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 460px) {
+  .moba-roster { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .moba-codex { grid-template-columns: 1fr; }
+  .moba-ability { width: 39px; }
+  .moba-ability .ma-cost { display: none; }
+}
