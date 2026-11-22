@@ -1,0 +1,24 @@
+/* Update XIV — The Eternal Night */
+.eternal-inner { max-width: 1240px; }
+.eternal-section { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+.eternal-card { border-color: rgba(154, 167, 214, 0.3); }
+.eternal-card.active { border-color: rgba(154, 167, 214, 0.8); box-shadow: 0 0 0 1px rgba(154, 167, 214, 0.28) inset; }
+.eternal-badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; border: 1px solid rgba(154, 167, 214, 0.45); color: #b9c3e8; }
+.eternal-badge.locked { border-color: rgba(150, 138, 120, 0.4); color: #8f8574; }
+.eternal-meter { display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: center; font-size: 11px; color: #9d8f78; }
+.eternal-meter i { height: 7px; border-radius: 999px; background: rgba(255, 255, 255, 0.08); overflow: hidden; }
+.eternal-meter b { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, #7fb7cf, #b9a0d8); }
+.eternal-meter b.focus { background: linear-gradient(90deg, #8fd0a8, #c8b46a); }
+.eternal-meter b.exposure { background: linear-gradient(90deg, #c8b46a, #c46a5a); }
+.eternal-perf { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.eternal-perf div { background: rgba(255, 255, 255, 0.035); border-radius: 6px; padding: 8px; font-size: 11px; color: #9d8f78; }
+.eternal-perf b { display: block; margin-top: 3px; color: #e8dcc3; font-size: 14px; font-variant-numeric: tabular-nums; }
+.veil-hud-extra { display: grid; grid-template-columns: auto 1fr auto; gap: 6px; align-items: center; margin: 3px 0; font-size: 9px; letter-spacing: 0.06em; color: #9d8f78; }
+.veil-hud-extra i { height: 4px; border-radius: 999px; background: rgba(255, 255, 255, 0.08); overflow: hidden; }
+.veil-hud-extra b { display: block; height: 100%; width: 0; background: #b9a0d8; }
+.veil-hud-extra b#veil-hud-focus-fill { background: #8fd0a8; }
+.veil-hud-extra em { font-style: normal; color: #cbb8e0; font-variant-numeric: tabular-nums; }
+
+@media (max-width: 700px) {
+  .eternal-section { grid-template-columns: 1fr; }
+}

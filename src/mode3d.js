@@ -5,7 +5,99 @@
 // Thornveil Forest vertical slice (village, NPCs, 3 enemies, elite, boss),
 // 3D Map Editor, Training Grounds, and Graphics Presets.
 
-export const MODE_3D_VERSION = '0.4.0';
+import { render3DScene, render3DHudOverlay } from './mode3d_visuals.js';
+import { WebGL3D } from './webgl3d.js';
+import { HORROR3D_SITES, HORROR3D_SITE_BY_ID, horror3DScenery } from './mode3d_horror.js';
+import {
+  MODE3D_AREAS,
+  MODE3D_AREA_BY_ID,
+  MODE3D_ELITES,
+  MODE3D_BOSSES,
+  MODE3D_VAULTS,
+  MODE3D_DUNGEONS,
+  MODE3D_RELICS,
+  applyRelics,
+  areaVault,
+  contentSummary,
+} from './mode3d_content.js';
+
+export const MODE_3D_VERSION = '1.0.0';
+
+export const MODE3D_REGIONS = {
+  thornveil: {
+    id: 'thornveil', name: 'Thornveil Forest', subtitle: 'Hutan Purba · Worldroot', weather: 'spores', scale: 1,
+    sky: [[0, '#081318'], [0.4, '#17342f'], [0.72, '#3d5140'], [1, '#756348']], sun: [0.74, 0.2], sunColor: '#ffe5a3', sunGlow: 'rgba(255,229,163,0.72)', haze: 'rgba(214,237,196,0.28)',
+    mountains: ['#14251f', '#1c3026', '#263c2c'], ground: '#39462f', groundFar: '#5f6541', groundNear: '#202717', path: '#8e7a52', pathFar: '#6f6245', rock: '#58604e',
+    trunk: '#5b4329', trunkDark: '#35291b', trunkLight: '#87683d', canopy: '#315c38', canopyDark: '#1c3826', canopyLight: '#5e8e4e',
+    accent: '#c9d47a', grass: '#6c7b45', wood: '#77552f', woodDark: '#3e2d1b', wall: '#b8a47a', thatch: '#8d6f3f', thatchDark: '#604b2a', door: '#3c2b19', glow: '#d8ff8a',
+    stone: '#697064', stoneLight: '#98a08e', moss: '#6b7f48', crystal: '#9adf9a', fog: 'rgba(198,219,188,0.16)',
+    landmarks: [
+      { type: 'ruin', x: -300, z: 360, scale: 1.4 }, { type: 'ruin', x: 290, z: 720, scale: 1.1 },
+      { type: 'crystal', x: -250, z: 880, scale: 1.2 }, { type: 'crystal', x: 260, z: 520, scale: 0.9 },
+    ],
+  },
+  infernal: {
+    id: 'infernal', name: 'Infernal Fortress', subtitle: 'Benteng Bara · Obsidian Keep', weather: 'embers', scale: 1.05,
+    sky: [[0, '#120609'], [0.4, '#331013'], [0.72, '#6b2417'], [1, '#b95428']], sun: [0.25, 0.26], sunColor: '#ffb15c', sunGlow: 'rgba(255,121,54,0.68)', haze: 'rgba(255,134,78,0.22)',
+    mountains: ['#210d10', '#351115', '#4b1717'], ground: '#302124', groundFar: '#54302b', groundNear: '#170f11', path: '#6b3b2e', pathFar: '#4d2a24', rock: '#5c3c36',
+    trunk: '#3a2924', trunkDark: '#211413', trunkLight: '#6b4432', canopy: '#512319', canopyDark: '#2c1210', canopyLight: '#8b3720',
+    accent: '#ff8447', grass: '#7c4a32', wood: '#563021', woodDark: '#2a1714', wall: '#4a3536', thatch: '#452726', thatchDark: '#251416', door: '#170d0e', glow: '#ff7a3d',
+    stone: '#433336', stoneLight: '#7b5c58', moss: '#63382a', crystal: '#ff7b4a', fog: 'rgba(120,48,34,0.18)',
+    landmarks: [
+      { type: 'ruin', x: -260, z: 280, scale: 1.8 }, { type: 'ruin', x: 250, z: 390, scale: 2.1 }, { type: 'ruin', x: -210, z: 760, scale: 1.5 },
+      { type: 'crystal', x: 260, z: 690, scale: 1.3 }, { type: 'bonfire', x: 0, z: 210, scale: 1.2 },
+    ],
+  },
+  drowned: {
+    id: 'drowned', name: 'Drowned Kingdom', subtitle: 'Kerajaan Tenggelam · Pale Tide', weather: 'rain', scale: 1,
+    sky: [[0, '#07131c'], [0.4, '#123341'], [0.72, '#2d5b61'], [1, '#66867f']], sun: [0.7, 0.18], sunColor: '#d9f3ef', sunGlow: 'rgba(196,240,239,0.6)', haze: 'rgba(182,225,220,0.26)',
+    mountains: ['#11262d', '#18343a', '#21464a'], ground: '#314943', groundFar: '#56706a', groundNear: '#172a29', path: '#778c7c', pathFar: '#5e7167', rock: '#4c625f',
+    trunk: '#394b47', trunkDark: '#20302f', trunkLight: '#688279', canopy: '#2d5a55', canopyDark: '#183b3a', canopyLight: '#4d8379',
+    accent: '#86d5c8', grass: '#4f7e6f', wood: '#4c5e54', woodDark: '#24352f', wall: '#7f938b', thatch: '#506b64', thatchDark: '#314744', door: '#1b2b29', glow: '#8de5d5',
+    stone: '#526e6b', stoneLight: '#8ba7a1', moss: '#3f796a', crystal: '#91e6dc', fog: 'rgba(138,192,188,0.24)',
+    landmarks: [
+      { type: 'ruin', x: -280, z: 310, scale: 1.6 }, { type: 'ruin', x: 240, z: 560, scale: 1.3 }, { type: 'platform', x: -60, y: 50, z: 320, w: 90, d: 42, scale: 1 },
+      { type: 'crystal', x: 180, z: 860, scale: 1.4 },
+    ],
+  },
+  gothic: {
+    id: 'gothic', name: 'Gothic Citadel', subtitle: 'Kastel Gotik · Bellfall', weather: 'ash', scale: 1.1,
+    sky: [[0, '#0b0c12'], [0.4, '#1d2232'], [0.72, '#3b4057'], [1, '#6c6b78']], sun: [0.78, 0.15], sunColor: '#e7e3db', sunGlow: 'rgba(230,228,221,0.5)', haze: 'rgba(198,204,218,0.2)',
+    mountains: ['#141622', '#1c2030', '#282d3d'], ground: '#30333c', groundFar: '#5d606b', groundNear: '#171920', path: '#6d6b70', pathFar: '#565761', rock: '#545662',
+    trunk: '#3a3331', trunkDark: '#211d1d', trunkLight: '#69605b', canopy: '#36453a', canopyDark: '#213027', canopyLight: '#60785c',
+    accent: '#d3c39b', grass: '#5e6552', wood: '#57442f', woodDark: '#2b2119', wall: '#9a948b', thatch: '#5b4d43', thatchDark: '#352c27', door: '#17161b', glow: '#d6c38d',
+    stone: '#595a65', stoneLight: '#999aa2', moss: '#596153', crystal: '#d9d1f1', fog: 'rgba(157,163,179,0.16)',
+    landmarks: [
+      { type: 'ruin', x: -300, z: 250, scale: 2.2 }, { type: 'ruin', x: -280, z: 520, scale: 2.8 }, { type: 'ruin', x: 290, z: 360, scale: 2.4 },
+      { type: 'ruin', x: 310, z: 690, scale: 2.1 }, { type: 'totem', x: 0, z: 260, scale: 1 },
+    ],
+  },
+  crystal: {
+    id: 'crystal', name: 'Crystal Caverns', subtitle: 'Gua Kristal · Singing Deep', weather: 'spores', scale: 0.96,
+    sky: [[0, '#080b1a'], [0.4, '#171d3a'], [0.72, '#343c68'], [1, '#7079a5']], sun: [0.35, 0.12], sunColor: '#d7e2ff', sunGlow: 'rgba(169,206,255,0.65)', haze: 'rgba(172,203,255,0.22)',
+    mountains: ['#13152a', '#1a1d38', '#252a4a'], ground: '#2b2c42', groundFar: '#50516d', groundNear: '#161725', path: '#6e6e8b', pathFar: '#52536f', rock: '#4f5070',
+    trunk: '#3e3045', trunkDark: '#211a27', trunkLight: '#77618c', canopy: '#4b3b6b', canopyDark: '#2a203f', canopyLight: '#8370b2',
+    accent: '#c6b6ff', grass: '#5f5b83', wood: '#5b4564', woodDark: '#2f2437', wall: '#807b9d', thatch: '#55465f', thatchDark: '#30283a', door: '#1a1522', glow: '#c6e8ff',
+    stone: '#515270', stoneLight: '#9a99b8', moss: '#71648f', crystal: '#bde9ff', fog: 'rgba(142,158,208,0.2)',
+    landmarks: [
+      { type: 'crystal', x: -270, z: 260, scale: 2.4 }, { type: 'crystal', x: 260, z: 300, scale: 1.8 }, { type: 'crystal', x: -220, z: 690, scale: 2.1 },
+      { type: 'crystal', x: 250, z: 760, scale: 2.6 }, { type: 'ruin', x: 0, z: 430, scale: 1.2 },
+    ],
+  },
+  astral: {
+    id: 'astral', name: 'Astral Islands', subtitle: 'Pulau Astral · Veil Edge', weather: 'ash', scale: 1,
+    sky: [[0, '#090717'], [0.35, '#211438'], [0.68, '#56346f'], [1, '#b186b9']], sun: [0.58, 0.16], sunColor: '#f3d8ff', sunGlow: 'rgba(235,183,255,0.7)', haze: 'rgba(228,189,240,0.24)',
+    mountains: ['#1a122d', '#23183d', '#34204f'], ground: '#38304f', groundFar: '#6c5b84', groundNear: '#1e172f', path: '#8b79a4', pathFar: '#6a5c81', rock: '#63567e',
+    trunk: '#4e3f5f', trunkDark: '#2a2138', trunkLight: '#8a709c', canopy: '#574b8d', canopyDark: '#302850', canopyLight: '#9b8fd3',
+    accent: '#f0c8ff', grass: '#7968a0', wood: '#5d456f', woodDark: '#302239', wall: '#8e80a3', thatch: '#5d4b72', thatchDark: '#32263f', door: '#1b1526', glow: '#f2b7ff',
+    stone: '#62577d', stoneLight: '#a69cbd', moss: '#7e6a9d', crystal: '#e9b9ff', fog: 'rgba(194,158,212,0.2)',
+    landmarks: [
+      { type: 'crystal', x: -280, z: 300, scale: 2.2 }, { type: 'ruin', x: 260, z: 430, scale: 1.9 }, { type: 'crystal', x: -210, z: 760, scale: 1.7 }, { type: 'totem', x: 180, z: 220, scale: 1.2 },
+    ],
+  },
+};
+
+export const MODE3D_REGION_LIST = Object.values(MODE3D_REGIONS);
 
 // ── 1. MATH & 3D PROJECTION HELPERS ─────────────────────────────────────────
 export function vec3(x = 0, y = 0, z = 0) {
@@ -60,6 +152,10 @@ export class Ashen3DGame {
     this.viewH = options.viewH || 540;
     this.subMode = options.subMode || 'campaign'; // campaign, exploration, boss_rush, training, editor
     this.quality = options.quality || 'high'; // low, medium, high, ultra
+    this.region = MODE3D_REGIONS[options.region] ? options.region : 'thornveil';
+    this.visualSettings = { brightness: 100, contrast: 100, gamma: 100, ...(options.visualSettings || {}) };
+    this.hudSettings = { showHealth: true, showStamina: true, showBoss: true, showDamageNumbers: true, showEnemyHealth: true, showCrosshair: true, ...(options.hudSettings || {}) };
+    this.cameraSensitivity = options.cameraSensitivity || 1;
 
     this.player = {
       x: 0,
@@ -163,15 +259,429 @@ export class Ashen3DGame {
       color: '#70e000',
     };
 
-    this.scenery = this.generateForestScenery();
+    this.scenery = this.generateScenery();
+    this.horror = null;
+    this.firstPerson = false;
+    this.horrorEvents = [];
     this.particles = [];
     this.damageNumbers = [];
     this.activeDialogue = null;
     this.toast = null;
     this.toastTimer = 0;
+
+    // ── Update X: content pack, relics, vaults, audio events ──
+    this.clock3D = 0;
+    this.areas = MODE3D_AREAS;
+    this.areaId = 'thornveil_heart';
+    this.area = MODE3D_AREA_BY_ID[this.areaId] || null;
+    this.dungeons = MODE3D_DUNGEONS;
+    this.relics = [];
+    this.modifiers = applyRelics(this.relics);
+    this.echoes = 0;
+    this.vault = areaVault(this.areaId) ? { ...areaVault(this.areaId), collected: false } : null;
+    this.soundEvents = [];
+    this.applyRelicStats();
   }
 
-  generateForestScenery() {
+  // Relic effects are real: max HP, damage and speed read from this.modifiers.
+  recomputeModifiers() {
+    this.modifiers = applyRelics(this.relics);
+    this.applyRelicStats();
+  }
+
+  applyRelicStats() {
+    const baseHp = 120;
+    const maxHp = Math.round(baseHp * this.modifiers.maxHp);
+    const ratio = this.player.maxHp ? this.player.hp / this.player.maxHp : 1;
+    this.player.maxHp = maxHp;
+    this.player.hp = Math.max(1, Math.min(maxHp, Math.round(maxHp * ratio)));
+    this.player.maxStamina = Math.round(100 * this.modifiers.stamina);
+    this.player.stamina = Math.min(this.player.stamina, this.player.maxStamina);
+  }
+
+  pickRelic(relicId) {
+    if (!MODE3D_RELICS.some((relic) => relic.id === relicId)) return false;
+    if (this.relics.includes(relicId)) return false;
+    this.relics.push(relicId);
+    this.recomputeModifiers();
+    this.emitSound('relic', this.player.x, this.player.y + 20, this.player.z);
+    return true;
+  }
+
+  emitSound(type, x, y, z) {
+    this.soundEvents.push({ type, x, y, z, at: this.clock3D });
+    if (this.soundEvents.length > 24) this.soundEvents.shift();
+  }
+
+  drainSounds() {
+    const events = this.soundEvents;
+    this.soundEvents = [];
+    return events;
+  }
+
+  // Loads one of the ten authored areas: region, hazards, enemy line-up, elite,
+  // boss and vault all come from src/mode3d_content.js.
+  setArea(areaId) {
+    const area = MODE3D_AREA_BY_ID[areaId];
+    if (!area) return false;
+    this.horror = null;
+    this.firstPerson = false;
+    this.areaId = areaId;
+    this.area = area;
+    if (area.region && MODE3D_REGIONS[area.region]) this.setRegion(area.region);
+
+    const specs = {
+      forest_prowler: { name: 'Forest Prowler', hp: 120, radius: 24, poise: 40 },
+      spore_beetle: { name: 'Spore Beetle', hp: 180, radius: 28, poise: 70 },
+      bramble_stalker: { name: 'Bramble Stalker', hp: 220, radius: 26, poise: 60 },
+    };
+    this.enemies = area.enemies.map((type, index) => {
+      const spec = specs[type] || specs.forest_prowler;
+      const spread = area.enemies.length > 1 ? index / (area.enemies.length - 1) : 0.5;
+      return {
+        id: `${type}_${index}`,
+        type,
+        name: spec.name,
+        x: -160 + spread * 320,
+        y: 0,
+        z: 260 + index * 90,
+        hp: spec.hp,
+        maxHp: spec.hp,
+        poise: spec.poise,
+        state: 'patrol',
+        target: null,
+        attackCd: 0,
+        telegraph: 0,
+        radius: spec.radius,
+      };
+    });
+
+    const eliteDef = area.elite ? MODE3D_ELITES.find((entry) => entry.id === area.elite) : null;
+    this.elite = eliteDef
+      ? {
+          id: eliteDef.id,
+          name: `${eliteDef.name} (${eliteDef.rank})`,
+          rank: eliteDef.rank,
+          x: 0,
+          y: 0,
+          z: 620,
+          hp: eliteDef.hp,
+          maxHp: eliteDef.hp,
+          poise: eliteDef.poise,
+          maxPoise: eliteDef.poise,
+          state: 'idle',
+          attackCd: 0,
+          telegraph: 0,
+          radius: 36,
+          color: '#f77f00',
+          model: eliteDef.model,
+          tint: eliteDef.tint,
+          modifier: eliteDef.modifier,
+        }
+      : null;
+
+    const bossDef = area.boss ? MODE3D_BOSSES.find((entry) => entry.id === area.boss) : null;
+    if (bossDef) {
+      this.boss = {
+        id: bossDef.id,
+        name: bossDef.name,
+        title: bossDef.title,
+        x: 0,
+        y: 0,
+        z: 950,
+        hp: bossDef.hp,
+        maxHp: bossDef.hp,
+        poise: 300,
+        phase: 1,
+        phases: bossDef.phases,
+        state: 'dormant',
+        attackTimer: 0,
+        radius: 64,
+        height: 120,
+        color: '#70e000',
+        model: bossDef.model,
+        tint: bossDef.tint,
+      };
+    } else if (!area.boss) {
+      this.boss = null;
+    }
+
+    const vault = areaVault(areaId);
+    this.vault = vault ? { ...vault, collected: false } : null;
+    this.showToast(`${area.name} — ${area.subtitle}`, 2400);
+    this.emitSound('roomEnter', 0, 20, 0);
+    return true;
+  }
+
+  // ── Update XVII: 3D Scary Mode ─────────────────────────────────────────
+  startHorrorSite(siteId, options = {}) {
+    const site = HORROR3D_SITE_BY_ID[siteId];
+    if (!site || !this.setArea(site.areaId)) return null;
+    this.subMode = 'scary';
+    this.scenery = horror3DScenery(siteId);
+    this.npcs = [];
+    this.elite = null;
+    this.boss = null;
+    this.vault = null;
+    const entity = {
+      id: `horror_${site.id}`,
+      type: 'bramble_stalker',
+      name: site.entity.name,
+      title: site.entity.title,
+      x: 0,
+      y: 0,
+      z: 520,
+      hp: 99999,
+      maxHp: 99999,
+      poise: 99999,
+      maxPoise: 99999,
+      state: 'dormant',
+      target: null,
+      attackCd: 0,
+      telegraph: 0,
+      radius: 32,
+      speed: site.entity.speed,
+      damage: site.entity.damage,
+      stagger: 0,
+      unkillable: true,
+      horror: true,
+      tint: site.entity.tint,
+      model: site.entity.model,
+    };
+    this.enemies = [entity];
+    this.firstPerson = true;
+    const p = this.player;
+    p.x = 0;
+    p.y = 0;
+    p.z = 0;
+    p.vx = 0;
+    p.vy = 0;
+    p.vz = 0;
+    p.hp = p.maxHp;
+    p.stamina = p.maxStamina;
+    p.lockOnTarget = null;
+    p.attackState = 'idle';
+    this.camera.x = 0;
+    this.camera.y = 54;
+    this.camera.z = 0;
+    this.camera.yaw = 0;
+    this.camera.pitch = 0.04;
+    this.camera.shake = 0;
+    this.horror = {
+      active: true,
+      siteId: site.id,
+      site,
+      phaseIndex: 0,
+      phaseTitle: site.phases[0].title,
+      collected: [],
+      fear: 0,
+      sanity: 100,
+      elapsed: 0,
+      scares: 0,
+      scare: null,
+      scareTimer: 0,
+      huntCooldown: 6,
+      entity,
+      antiJumpscare: !!options.antiJumpscare,
+      intensity: options.intensity || 'full',
+      completed: false,
+      dead: false,
+      result: null,
+      exit: site.exit,
+    };
+    this.triggerHorrorScare(site.scares[0]);
+    this.emitHorrorEvent({ type: 'horrorStart', siteId: site.id, name: site.name });
+    this.emitSound('horrorSiteEnter', 0, 20, 0);
+    this.showToast(`${site.name} · ${site.difficulty}`, 2800);
+    return this.horror;
+  }
+
+  drainHorrorEvents() {
+    const events = this.horrorEvents;
+    this.horrorEvents = [];
+    return events;
+  }
+
+  emitHorrorEvent(event) {
+    this.horrorEvents.push({ ...event, at: this.clock3D });
+    if (this.horrorEvents.length > 48) this.horrorEvents.shift();
+  }
+
+  triggerHorrorScare(scare, overrides = {}) {
+    const h = this.horror;
+    if (!h || !scare) return null;
+    const anti = h.antiJumpscare || overrides.antiJumpscare;
+    const duration = anti ? 1.6 : 2.4;
+    h.scare = {
+      id: scare.id,
+      shape: anti ? 'atmospheric' : scare.shape,
+      line: scare.line,
+      timer: duration,
+      duration,
+      flash: anti ? 0 : (h.intensity === 'reduced' ? 0.22 : 0.48),
+      antiJumpscare: anti,
+    };
+    h.scareTimer = duration;
+    h.scares += 1;
+    this.camera.shake = Math.max(this.camera.shake, anti ? 0.25 : 0.9);
+    this.emitSound(anti ? 'horrorWhisper' : 'horrorSting', this.player.x, this.player.y + 20, this.player.z);
+    this.emitHorrorEvent({ type: 'horrorScare', siteId: h.siteId, scareId: scare.id });
+    return h.scare;
+  }
+
+  updateHorrorCamera(dt, input = {}) {
+    const p = this.player;
+    const c = this.camera;
+    if (input.lookX) c.yaw += input.lookX * c.sensitivity * this.cameraSensitivity;
+    if (input.lookY) c.pitch = clamp(c.pitch + input.lookY * c.sensitivity * this.cameraSensitivity, -0.7, 0.7);
+    c.x = p.x;
+    c.y = p.y + 54;
+    c.z = p.z;
+    c.targetX = p.x + Math.sin(c.yaw) * 120;
+    c.targetY = p.y + 54 + Math.sin(c.pitch) * 120;
+    c.targetZ = p.z + Math.cos(c.yaw) * 120;
+    p.yaw = c.yaw;
+    if (c.shake > 0) {
+      c.x += (Math.random() - 0.5) * c.shake * 8;
+      c.y += (Math.random() - 0.5) * c.shake * 8;
+      c.shake = Math.max(0, c.shake - dt * 2.2);
+    }
+  }
+
+  updateHorror(dt, input = {}) {
+    const h = this.horror;
+    if (!h || !h.active) return;
+    const p = this.player;
+    const e = h.entity;
+    h.elapsed += dt;
+    if (h.scareTimer > 0) {
+      h.scareTimer = Math.max(0, h.scareTimer - dt);
+      if (h.scareTimer <= 0) h.scare = null;
+    }
+    h.huntCooldown = Math.max(0, h.huntCooldown - dt);
+
+    const nearbyEcho = h.site.echoes.find((echo) => !h.collected.includes(echo.id) && dist3D(p, echo) < 62);
+    if (nearbyEcho && input.interactJustPressed) {
+      h.collected.push(nearbyEcho.id);
+      const marker = this.scenery.find((item) => item.echoId === nearbyEcho.id);
+      if (marker) marker.collected = true;
+      this.spawnParticleRing(nearbyEcho.x, 20, nearbyEcho.z, h.site.palette.glow, 22);
+      this.emitSound('relic', nearbyEcho.x, 20, nearbyEcho.z);
+      this.emitHorrorEvent({ type: 'horrorEcho', siteId: h.siteId, echoId: nearbyEcho.id, count: h.collected.length });
+      if (h.collected.length === 1) this.triggerHorrorScare(h.site.scares[1]);
+      if (h.collected.length === 2) this.triggerHorrorScare(h.site.scares[2]);
+      this.showToast(`${nearbyEcho.label} · ${h.collected.length}/3`, 1600);
+    }
+
+    h.phaseIndex = h.collected.length >= 3 ? 2 : h.collected.length >= 1 ? 1 : 0;
+    h.phaseTitle = h.site.phases[h.phaseIndex].title;
+    h.sanity = Math.max(0, 100 - h.fear);
+
+    if (h.phaseIndex >= 1) {
+      e.state = 'chase';
+      const d = dist3D(p, e);
+      const speed = e.speed * (h.phaseIndex === 2 ? 1.22 : 1);
+      if (e.stagger > 0) {
+        e.stagger = Math.max(0, e.stagger - dt);
+      } else if (d < 900) {
+        const dx = p.x - e.x;
+        const dz = p.z - e.z;
+        const n = Math.hypot(dx, dz) || 1;
+        e.x += (dx / n) * speed * dt;
+        e.z += (dz / n) * speed * dt;
+      }
+      e.attackCd += dt;
+      if (d < 44 && e.attackCd >= 1.8) {
+        e.attackCd = 0;
+        p.hp = Math.max(0, p.hp - e.damage);
+        h.fear = Math.min(100, h.fear + 18);
+        this.addDamageNumber(p.x, p.y + 40, p.z, e.damage, '#e63946');
+        this.camera.shake = 1.1;
+        this.emitSound('horrorHit', p.x, p.y + 20, p.z);
+        this.emitHorrorEvent({ type: 'horrorHit', siteId: h.siteId, hp: p.hp });
+        if (p.hp <= 0) {
+          this.finishHorror('dead');
+          return;
+        }
+      }
+      if (d < 150 && h.huntCooldown <= 0) {
+        h.huntCooldown = 13;
+        this.triggerHorrorScare(h.site.scares[3]);
+      }
+    } else {
+      e.state = 'dormant';
+      e.attackCd = 0;
+    }
+
+    h.fear = clamp(h.fear + (dist3D(p, e) < 300 && h.phaseIndex >= 1 ? 5 * dt : -4 * dt), 0, 100);
+    h.sanity = Math.max(0, 100 - h.fear);
+
+    if (h.phaseIndex === 2 && dist3D(p, h.site.exit) < 68) this.finishHorror('cleared');
+  }
+
+  finishHorror(result) {
+    const h = this.horror;
+    if (!h || !h.active) return false;
+    h.active = false;
+    h.result = result;
+    h.completed = result === 'cleared';
+    h.dead = result === 'dead';
+    h.elapsed = Math.round(h.elapsed * 10) / 10;
+    if (result === 'cleared') {
+      this.showToast(`KELUAR HIDUP · ${h.site.name} · ${h.elapsed.toFixed(1)}s`, 3600);
+      this.emitSound('victory', this.player.x, this.player.y + 20, this.player.z);
+    } else {
+      this.showToast(`THE UNLIT MENEMUKANMU · ${h.site.name}`, 3600);
+      this.emitSound('death', this.player.x, this.player.y + 20, this.player.z);
+    }
+    this.emitHorrorEvent({
+      type: result === 'cleared' ? 'horrorCleared' : 'horrorDead',
+      siteId: h.siteId,
+      result,
+      time: h.elapsed,
+      scares: h.scares,
+      phase: h.phaseIndex,
+    });
+    return true;
+  }
+
+  horrorSnapshot() {
+    const h = this.horror;
+    if (!h) return null;
+    return {
+      active: h.active, siteId: h.siteId, name: h.site.name, areaId: this.areaId, phase: h.phaseIndex,
+      phaseTitle: h.phaseTitle, collected: h.collected.length, echoes: h.site.echoes.length,
+      fear: Math.round(h.fear), sanity: Math.round(h.sanity), scares: h.scares,
+      elapsed: h.elapsed, result: h.result, firstPerson: this.firstPerson,
+      entityName: h.entity.name,
+      entityDistance: Math.round(dist3D(this.player, h.entity)),
+      scare: h.scare ? { shape: h.scare.shape, line: h.scare.line, flash: h.scare.flash } : null,
+    };
+  }
+
+  setRegion(regionId) {
+    if (!MODE3D_REGIONS[regionId]) return false;
+    this.region = regionId;
+    this.scenery = this.generateScenery();
+    this.player.x = 0;
+    this.player.z = 0;
+    this.player.y = 0;
+    this.camera.x = 0;
+    this.camera.z = -120;
+    this.camera.yaw = 0;
+    return true;
+  }
+
+  generateScenery() {
+    if (this.region !== 'thornveil') {
+      const list = [];
+      const trees = [[-180, 100], [180, 150], [-230, 340], [220, 390], [-190, 620], [210, 660], [-240, 880], [230, 900]];
+      for (const [x, z] of trees) list.push({ type: this.region === 'crystal' ? 'crystal' : 'worldtree', x, y: 0, z, radius: 36, height: 190, color: '#41513f' });
+      for (const [x, z, type] of [[-90, 250, 'ruin'], [110, 560, 'ruin'], [-130, 760, 'crystal'], [120, 820, 'crystal'], [0, 460, 'totem']]) {
+        list.push({ type, x, y: 0, z, radius: 24, height: 70, w: 70, d: 36, color: '#6b5f4d' });
+      }
+      return list;
+    }
     const list = [];
     // Tribal Village Huts
     list.push({ type: 'hut', x: 30, y: 0, z: 90, radius: 36, color: '#8d6e63' });
@@ -202,12 +712,29 @@ export class Ashen3DGame {
   // ── UPDATE LOOP ───────────────────────────────────────────────────────────
   update(dt, input = {}) {
     dt = clamp(dt, 0.001, 0.05);
+    this.clock3D += dt;
+
+    if (this.horror) {
+      if (this.horror.active) {
+        this.updatePlayer(dt, input);
+        this.updateHorrorCamera(dt, input);
+        this.updateHorror(dt, input);
+      }
+      this.updateParticles(dt);
+      this.updateDamageNumbers(dt);
+      if (this.toastTimer > 0) {
+        this.toastTimer -= dt;
+        if (this.toastTimer <= 0) this.toast = null;
+      }
+      return;
+    }
 
     this.updatePlayer(dt, input);
     this.updateCamera(dt, input);
     this.updateEnemies(dt);
     this.updateParticles(dt);
     this.updateDamageNumbers(dt);
+    this.updateVault();
 
     if (this.toastTimer > 0) {
       this.toastTimer -= dt;
@@ -217,6 +744,7 @@ export class Ashen3DGame {
 
   updatePlayer(dt, input) {
     const p = this.player;
+    if (this.horror?.active) p.yaw = this.camera.yaw;
 
     // Movement relative to camera yaw
     let moveX = 0;
@@ -377,9 +905,23 @@ export class Ashen3DGame {
       if (!target || target.hp <= 0) continue;
       const d = dist3D({ x: hx, y: hy, z: hz }, target);
       if (d <= reach + (target.radius || 20)) {
-        target.hp = Math.max(0, target.hp - damage);
+        const crit = Math.random() < this.modifiers.crit;
+        if (target.unkillable) {
+          target.stagger = 1.2;
+          this.emitSound('hit', target.x, target.y + 20, target.z);
+          this.addDamageNumber(target.x, target.y + 40, target.z, 0, '#d9c6ff');
+          this.camera.shake = 0.5;
+          hitCount++;
+          continue;
+        }
+        const finalDamage = Math.max(1, Math.round(damage * this.modifiers.damage * (crit ? 1.6 : 1)));
+        target.hp = Math.max(0, target.hp - finalDamage);
         target.poise = Math.max(0, (target.poise || 50) - 25);
-        this.addDamageNumber(target.x, target.y + 40, target.z, damage);
+        if (this.modifiers.lifesteal > 0) {
+          this.player.hp = Math.min(this.player.maxHp, this.player.hp + finalDamage * this.modifiers.lifesteal);
+        }
+        this.emitSound('hit', target.x, target.y + 20, target.z);
+        this.addDamageNumber(target.x, target.y + 40, target.z, finalDamage, crit ? '#ffd166' : '#ffffff');
         this.spawnParticleRing(target.x, target.y + 20, target.z, '#ff0054', 10);
         this.camera.shake = 0.4;
         hitCount++;
@@ -397,8 +939,8 @@ export class Ashen3DGame {
     const c = this.camera;
 
     // Mouse / Analog look
-    if (input.lookX) c.yaw += input.lookX * c.sensitivity;
-    if (input.lookY) c.pitch = clamp(c.pitch + input.lookY * c.sensitivity, -0.4, 0.7);
+    if (input.lookX) c.yaw += input.lookX * c.sensitivity * this.cameraSensitivity;
+    if (input.lookY) c.pitch = clamp(c.pitch + input.lookY * c.sensitivity * this.cameraSensitivity, -0.4, 0.7);
 
     // If lock-on active, orient camera to face between player and target
     if (p.lockOnTarget && p.lockOnTarget.hp > 0) {
@@ -418,6 +960,23 @@ export class Ashen3DGame {
     c.x += (cx - c.x) * 0.15;
     c.y += (Math.max(12, cy) - c.y) * 0.15;
     c.z += (cz - c.z) * 0.15;
+
+    // Keep the camera inside the playable volume and push it out of the largest
+    // tree trunks instead of clipping through the world.
+    c.x = clamp(c.x, -360, 360);
+    c.y = Math.max(10, c.y);
+    c.z = clamp(c.z, -120, 1160);
+    for (const item of this.scenery) {
+      if (item.type !== 'worldtree' && item.type !== 'hut') continue;
+      const dx = c.x - item.x;
+      const dz = c.z - item.z;
+      const safe = (item.radius || 30) * 0.85;
+      const dist = Math.hypot(dx, dz);
+      if (dist < safe && dist > 0.001) {
+        c.x = item.x + (dx / dist) * safe;
+        c.z = item.z + (dz / dist) * safe;
+      }
+    }
 
     c.targetX = p.x;
     c.targetY = p.y + 24;
@@ -557,10 +1116,73 @@ export class Ashen3DGame {
     this.toast = text;
     this.toastTimer = durationMs / 1000;
   }
+
+  updateVault() {
+    if (!this.vault || this.vault.collected) return;
+    const d = dist3D(this.player, this.vault);
+    if (d > 46) return;
+    this.vault.collected = true;
+    if (this.pickRelic(this.vault.relic)) {
+      const relic = MODE3D_RELICS.find((entry) => entry.id === this.vault.relic);
+      this.echoes += this.vault.echoes || 0;
+      this.showToast(`Relik ditemukan: ${relic ? relic.name : this.vault.relic} (+${this.vault.echoes} echo)`, 2600);
+      this.spawnParticleRing(this.vault.x, 20, this.vault.z, '#ffd166', 26);
+    }
+  }
 }
 
-// ── 3. 3D CANVAS RENDERER (SOFTWARE PROJECTION PIPELINE) ────────────────────
-export function render3D(ctx, game) {
+// ── 3. 3D RENDER PIPELINE (WebGL2 GLB assets, Canvas fallback) ───────────────
+// A single renderer instance is shared by every 3D screen. It initialises lazily
+// on first use, loads the authored GLB kit asynchronously, and transparently
+// degrades to the illustrated Canvas presentation if WebGL2 is unavailable.
+let gfx3D = null;
+let gfx3DState = 'idle';
+
+function ensureRenderer() {
+  if (gfx3D) return gfx3D;
+  gfx3D = new WebGL3D();
+  if (!gfx3D.init()) {
+    gfx3DState = 'unsupported';
+    return gfx3D;
+  }
+  gfx3DState = 'loading';
+  gfx3D
+    .load('assets/3d/')
+    .then((ok) => {
+      gfx3DState = ok ? 'ready' : 'failed';
+    })
+    .catch(() => {
+      gfx3DState = 'failed';
+    });
+  return gfx3D;
+}
+
+export function configure3D(options) {
+  if (gfx3D) gfx3D.configure(options);
+}
+
+export function gfx3DStatus() {
+  return {
+    state: gfx3DState,
+    available: Boolean(gfx3D?.available),
+    reason: gfx3D?.failedReason || null,
+    hdr: gfx3D?.hdrFormat || null,
+    msaa: gfx3D?.msaa || 0,
+    anisotropic: gfx3D?.appliedAniso || 1,
+    upscaler: gfx3D?.lastUpscaler || null,
+    models: gfx3D ? Object.keys(gfx3D.models).length : 0,
+    props: gfx3D ? Object.keys(gfx3D.props).length : 0,
+    internalWidth: gfx3D?.width || 0,
+    stats: gfx3D?.stats || null,
+  };
+}
+
+export function content3DSummary() {
+  return contentSummary();
+}
+
+// ── 4. 3D CANVAS FALLBACK RENDERER (SOFTWARE PROJECTION PIPELINE) ───────────
+function render3DLegacy(ctx, game) {
   const w = game.viewW;
   const h = game.viewH;
   const cam = game.camera;
@@ -797,7 +1419,7 @@ export function render3D(ctx, game) {
 
   // Player Character in 3D
   const ply = game.player;
-  const pProj = project3D(ply, cam, cam.fov, w, h);
+  const pProj = game.firstPerson ? null : project3D(ply, cam, cam.fov, w, h);
   if (pProj) {
     drawList.push({
       depth: pProj.depth,
@@ -893,7 +1515,7 @@ export function render3D(ctx, game) {
   render3DHUD(ctx, game);
 }
 
-export function render3DHUD(ctx, game) {
+function render3DHUDLegacy(ctx, game) {
   const w = game.viewW;
   const h = game.viewH;
   const p = game.player;
@@ -977,4 +1599,27 @@ export function render3DHUD(ctx, game) {
     ctx.textAlign = 'center';
     ctx.fillText(game.toast, w / 2, 113);
   }
+}
+
+// Public rendering entry points. The legacy primitive renderer above is kept
+// only as an internal fallback reference; production always uses the
+// illustrated presentation layer in mode3d_visuals.js.
+export function render3D(ctx, game) {
+  const renderer = ensureRenderer();
+  if (renderer.available) {
+    const region = MODE3D_REGIONS[game.region] || MODE3D_REGIONS.thornveil;
+    let rendered = false;
+    try {
+      rendered = renderer.render(ctx, game, { region });
+    } catch (error) {
+      gfx3DState = 'failed';
+      renderer.failedReason = String(error.message || error);
+      rendered = false;
+    }
+    if (rendered) {
+      render3DHudOverlay(ctx, game);
+      return;
+    }
+  }
+  render3DScene(ctx, game);
 }

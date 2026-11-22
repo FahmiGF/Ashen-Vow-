@@ -12,12 +12,12 @@ import {
 } from '../src/moba.js';
 
 test('moba roster contains all core and frontier classes with unique ids', () => {
-  assert.equal(MOBA_HERO_COUNT, 28);
-  assert.equal(MOBA_HEROES.length, 28);
-  assert.equal(Object.values(CHARACTERS).length, 13);
+  assert.equal(MOBA_HERO_COUNT, 33);
+  assert.equal(MOBA_HEROES.length, 33);
+  assert.equal(Object.values(CHARACTERS).length, 18);
   assert.equal(FRONTIER_CLASSES.length, 15);
-  assert.equal(new Set(MOBA_HEROES.map((hero) => hero.id)).size, 28);
-  assert.equal(MOBA_HEROES.filter((hero) => hero.source === 'core').length, 13);
+  assert.equal(new Set(MOBA_HEROES.map((hero) => hero.id)).size, 33);
+  assert.equal(MOBA_HEROES.filter((hero) => hero.source === 'core').length, 18);
   assert.equal(MOBA_HEROES.filter((hero) => hero.source === 'frontier').length, 15);
   for (const hero of MOBA_HEROES) {
     assert.ok(MOBA_HERO_BY_ID[hero.id], hero.id);

@@ -6,9 +6,15 @@ export class SoundKit {
     this.music = null;
     this.sfx = null;
     this.ambient = null;
+    this.buses = {};
     this.muted = false;
     this.noiseBuffer = null;
-    this.channels = { master: 0.8, music: 0.55, sfx: 0.8 };
+    this.channels = {
+      master: 0.8, music: 0.55, sfx: 0.8, ambient: 0.55, dialogue: 0.85, combat: 0.75,
+      ui: 0.65, footsteps: 0.55, voiceChat: 0.7, cinematic: 0.8,
+    };
+    this.mutedChannels = { dialogue: false, voiceChat: false };
+    this.dynamicRange = 'normal';
   }
 
   init() {
@@ -29,6 +35,12 @@ export class SoundKit {
       this.sfx = this.ctx.createGain();
       this.sfx.gain.value = this.channels.sfx;
       this.sfx.connect(this.master);
+      for (const id of ['ambient', 'dialogue', 'combat', 'ui', 'footsteps', 'voiceChat', 'cinematic']) {
+        const bus = this.ctx.createGain();
+        bus.gain.value = this.channels[id];
+        bus.connect(this.master);
+        this.buses[id] = bus;
+      }
       this.noiseBuffer = this.makeNoise();
       this.startAmbient();
     } catch {
@@ -38,25 +50,145 @@ export class SoundKit {
 
   // Applies the Settings audio panel. Master is a 0..1 gain, music/SFX are
   // independent child buses so the HUD mute never destroys their levels.
-  applyVolumes({ master, music, sfx, muted } = {}) {
-    if (master !== undefined) this.channels.master = Math.max(0, Math.min(1, Number(master) || 0));
-    if (music !== undefined) this.channels.music = Math.max(0, Math.min(1, Number(music) || 0));
-    if (sfx !== undefined) this.channels.sfx = Math.max(0, Math.min(1, Number(sfx) || 0));
+  applyVolumes(values = {}) {
+    const { muted, channelMutes, dynamicRange, reduceLoudSfx, ...levels } = values;
+    for (const [key, value] of Object.entries(levels)) {
+      if (this.channels[key] !== undefined && value !== undefined) {
+        this.channels[key] = Math.max(0, Math.min(1, Number(value) || 0));
+      }
+    }
     if (muted !== undefined) this.muted = Boolean(muted);
+    if (channelMutes) this.mutedChannels = { ...this.mutedChannels, ...channelMutes };
+    if (dynamicRange) this.dynamicRange = dynamicRange;
+    if (reduceLoudSfx !== undefined) this.reduceLoudSfx = Boolean(reduceLoudSfx);
     if (!this.ctx) return;
     const now = this.ctx.currentTime;
-    if (this.master) {
-      this.master.gain.cancelScheduledValues(now);
-      this.master.gain.linearRampToValueAtTime(this.muted ? 0 : this.channels.master, now + 0.12);
+    const ramp = (node, target) => {
+      if (!node) return;
+      node.gain.cancelScheduledValues(now);
+      node.gain.linearRampToValueAtTime(target, now + 0.12);
+    };
+    ramp(this.master, this.muted ? 0 : this.channels.master);
+    ramp(this.music, this.channels.music);
+    ramp(this.sfx, this.channels.sfx);
+    for (const [id, bus] of Object.entries(this.buses)) ramp(bus, this.mutedChannels[id] ? 0 : this.channels[id]);
+  }
+
+  // ── spatial audio ─────────────────────────────────────────────────────
+  // `stereo` keeps the existing non-positional mix. `surround` and `spatial`
+  // install a WebAudio listener and route positioned effects through per-sound
+  // PannerNodes (HRTF for `spatial`). This is real binaural panning, not a
+  // volume trick.
+  setSpatial(mode = 'stereo') {
+    this.spatialMode = ['stereo', 'surround', 'spatial'].includes(mode) ? mode : 'stereo';
+    if (!this.ctx) return this.spatialMode;
+    if (this.spatialMode !== 'stereo' && !this.listenerReady) {
+      const listener = this.ctx.listener;
+      if (listener.positionX) {
+        listener.positionX.value = 0;
+        listener.positionY.value = 0;
+        listener.positionZ.value = 0;
+        listener.forwardX.value = 0;
+        listener.forwardY.value = 0;
+        listener.forwardZ.value = -1;
+        listener.upX.value = 0;
+        listener.upY.value = 1;
+        listener.upZ.value = 0;
+      } else if (listener.setPosition) {
+        listener.setPosition(0, 0, 0);
+        listener.setOrientation(0, 0, -1, 0, 1, 0);
+      }
+      this.listenerReady = true;
     }
-    if (this.music) {
-      this.music.gain.cancelScheduledValues(now);
-      this.music.gain.linearRampToValueAtTime(this.channels.music, now + 0.12);
+    return this.spatialMode;
+  }
+
+  setListener(position = { x: 0, y: 0, z: 0 }, forward = { x: 0, y: 0, z: -1 }) {
+    if (!this.ctx || this.spatialMode === 'stereo') return;
+    const listener = this.ctx.listener;
+    if (listener.positionX) {
+      const now = this.ctx.currentTime;
+      listener.positionX.setTargetAtTime(position.x || 0, now, 0.02);
+      listener.positionY.setTargetAtTime(position.y || 0, now, 0.02);
+      listener.positionZ.setTargetAtTime(position.z || 0, now, 0.02);
+      listener.forwardX.setTargetAtTime(forward.x || 0, now, 0.02);
+      listener.forwardY.setTargetAtTime(forward.y || 0, now, 0.02);
+      listener.forwardZ.setTargetAtTime(forward.z || -1, now, 0.02);
+      listener.upX.value = 0;
+      listener.upY.value = 1;
+      listener.upZ.value = 0;
+    } else if (listener.setPosition) {
+      listener.setPosition(position.x || 0, position.y || 0, position.z || 0);
+      listener.setOrientation(forward.x || 0, forward.y || 0, forward.z || -1, 0, 1, 0);
     }
-    if (this.sfx) {
-      this.sfx.gain.cancelScheduledValues(now);
-      this.sfx.gain.linearRampToValueAtTime(this.channels.sfx, now + 0.12);
+  }
+
+  createPanner(at = {}) {
+    if (!this.ctx || !this.ctx.createPanner) return null;
+    const panner = this.ctx.createPanner();
+    panner.panningModel = this.spatialMode === 'spatial' ? 'HRTF' : 'equalpower';
+    panner.distanceModel = 'inverse';
+    panner.refDistance = 80;
+    panner.maxDistance = 1400;
+    panner.rolloffFactor = 1.1;
+    if (panner.positionX) {
+      panner.positionX.value = at.x || 0;
+      panner.positionY.value = at.y || 0;
+      panner.positionZ.value = at.z || 0;
+    } else if (panner.setPosition) {
+      panner.setPosition(at.x || 0, at.y || 0, at.z || 0);
     }
+    panner.connect(this.sfx || this.master);
+    return panner;
+  }
+
+  // Plays an effect at a world position. The existing non-positional `play()`
+  // path is untouched; this swaps the SFX destination for a PannerNode so every
+  // tone/noise inside the event is binaurally positioned.
+  playAt(event, at = null) {
+    if (!at || this.spatialMode === 'stereo') return this.play(event);
+    this.init();
+    if (!this.ctx) return undefined;
+    const panner = this.createPanner(at);
+    if (!panner) return this.play(event);
+    const previous = this.sfx;
+    this.sfx = panner;
+    try {
+      this.play(event);
+    } finally {
+      this.sfx = previous;
+    }
+    setTimeout(() => {
+      try {
+        panner.disconnect();
+      } catch {
+        /* already disconnected */
+      }
+    }, 2500);
+    return undefined;
+  }
+
+  busFor(kind = 'sfx') {
+    return this.buses?.[kind] || (kind === 'music' ? this.music : this.sfx) || this.master;
+  }
+
+  testTone(kind = 'master') {
+    this.init();
+    if (!this.ctx) return false;
+    const bus = kind === 'master' ? this.master : this.busFor(kind);
+    if (!bus) return false;
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = 440;
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(0.08, now + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.45);
+    osc.connect(gain).connect(bus);
+    osc.start(now);
+    osc.stop(now + 0.5);
+    return true;
   }
 
   makeNoise() {
@@ -72,7 +204,7 @@ export class SoundKit {
     const ctx = this.ctx;
     const g = ctx.createGain();
     g.gain.value = 0.0;
-    g.connect(this.music || this.master);
+    g.connect(this.busFor('ambient'));
     const filter = ctx.createBiquadFilter();
     filter.type = 'lowpass';
     filter.frequency.value = 240;
@@ -112,7 +244,7 @@ export class SoundKit {
     const now = ctx.currentTime;
     const g = ctx.createGain();
     g.gain.value = 0.0001;
-    g.connect(this.music || this.master);
+    g.connect(this.busFor('cinematic'));
     const filter = ctx.createBiquadFilter();
     filter.type = 'lowpass';
     filter.frequency.setValueAtTime(220, now);
@@ -186,6 +318,7 @@ export class SoundKit {
 
   setMuted(m) {
     this.muted = m;
+    if (this.muted) this.channels.master = this.channels.master || 0.8;
     if (this.master) {
       const now = this.ctx.currentTime;
       this.master.gain.cancelScheduledValues(now);
@@ -241,6 +374,31 @@ export class SoundKit {
     src.connect(f).connect(g).connect(this.sfx || this.master);
     src.start(t0);
     src.stop(t0 + dur + 0.02);
+  }
+
+  /**
+   * Scary Mode sting. Parameters come from the effect descriptor so the mix
+   * already reflects intensity, sudden-audio level and accessibility caps.
+   */
+  playScare(effect) {
+    if (!this.ctx || this.muted || !effect) return;
+    const a = effect.audio || {};
+    const gain = Number(a.gain);
+    if (a.muted || !Number.isFinite(gain) || gain <= 0) return;
+    const dur = Math.max(0.1, Number(a.dur) || 0.5);
+    const freq = Math.max(30, Number(a.freq) || 400);
+    const sweepTo = Math.max(20, Number(a.sweepTo) || 80);
+    if (a.type === 'metal') {
+      this.tone({ freq, to: sweepTo, type: 'square', dur, gain });
+      this.noise({ dur: 0.14, gain: gain * 0.55, freq: 2400, type: 'highpass' });
+    } else if (a.type === 'noise') {
+      this.noise({ dur, gain, freq, sweepTo, type: 'bandpass', q: 1.1 });
+    } else if (a.type === 'sine') {
+      this.tone({ freq, to: sweepTo, type: 'sine', dur, gain });
+      this.tone({ freq: freq * 1.5, to: sweepTo, type: 'triangle', dur: dur * 0.8, gain: gain * 0.4, delay: 0.05 });
+    } else {
+      this.tone({ freq, to: sweepTo, type: 'sawtooth', dur, gain });
+    }
   }
 
   play(event) {
@@ -379,6 +537,22 @@ export class SoundKit {
         [261, 329, 392, 523, 659, 784].forEach((f, i) =>
           this.tone({ freq: f, type: 'sine', dur: 2.2, gain: 0.055, delay: i * 0.14 }),
         );
+        break;
+      case 'horrorSting':
+        this.playScare({ audio: { type: 'metal', freq: 240, sweepTo: 42, dur: 1.5, gain: 0.15 } });
+        this.noise({ dur: 0.8, gain: 0.1, freq: 1200, sweepTo: 90, type: 'lowpass' });
+        break;
+      case 'horrorWhisper':
+        this.noise({ dur: 1.4, gain: 0.07, freq: 880, sweepTo: 260, type: 'bandpass', q: 2.4 });
+        this.tone({ freq: 96, to: 58, type: 'sine', dur: 1.2, gain: 0.035 });
+        break;
+      case 'horrorHit':
+        this.tone({ freq: 120, to: 38, type: 'sawtooth', dur: 0.45, gain: 0.16 });
+        this.noise({ dur: 0.32, gain: 0.12, freq: 420, sweepTo: 70, type: 'lowpass' });
+        break;
+      case 'horrorSiteEnter':
+        this.tone({ freq: 72, to: 48, type: 'sine', dur: 2.2, gain: 0.09 });
+        this.noise({ dur: 1.8, gain: 0.05, freq: 500, sweepTo: 140, type: 'lowpass' });
         break;
       default:
         break;

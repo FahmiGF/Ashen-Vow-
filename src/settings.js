@@ -1,7 +1,13 @@
 // Ashen Vow — settings, keybindings, and accessibility state.
 // Pure data + storage helpers so the whole module is testable in Node.
+import {
+  SETTINGS2_VERSION,
+  defaultExtendedSettings,
+  sanitizeExtendedSettings,
+} from './settings2.js';
+
 export const SETTINGS_KEY = 'ashen-vow-settings-v1';
-export const SETTINGS_VERSION = 1;
+export const SETTINGS_VERSION = SETTINGS2_VERSION;
 
 // Every player action that can be rebound. `gamepad` is informational for the
 // settings table; the Gamepad API mapping lives in GAMEPAD_MAP below.
@@ -14,6 +20,7 @@ export const ACTIONS = [
   { id: 'consume', label: 'Lempar Item Cepat', defaults: ['KeyK', 'KeyX'], gamepad: 'RB / R1' },
   { id: 'cycleItem', label: 'Ganti Item Cepat', defaults: ['KeyR'], gamepad: 'L3' },
   { id: 'ability', label: 'Keahlian Khusus', defaults: ['KeyU', 'KeyV'], gamepad: 'Y / Triangle' },
+  { id: 'weaponSkill', label: 'Weapon Skill', defaults: ['KeyG', 'KeyT'], gamepad: 'LB + Y' },
   { id: 'heal', label: 'Minum Flask', defaults: ['KeyE', 'KeyH'], gamepad: 'LB / L1' },
   { id: 'swap', label: 'Ganti Senjata', defaults: ['KeyQ', 'KeyC'], gamepad: 'D-Pad Atas' },
   { id: 'interact', label: 'Interaksi / Warung', defaults: ['KeyF', 'Enter'], gamepad: 'D-Pad Bawah' },
@@ -31,36 +38,56 @@ export function defaultBindings() {
 }
 
 export function defaultSettings() {
+  const ext = defaultExtendedSettings();
   return {
+    ...ext,
     version: SETTINGS_VERSION,
-    audio: { master: 80, music: 55, sfx: 80, muted: false, muteOnBlur: true },
+    audio: { ...ext.audio },
+    graphics: { ...ext.graphics },
     gameplay: {
-      screenShake: 'full',
-      reduceFlashing: false,
-      highContrast: false,
-      colorblind: false,
-      textSize: 'normal',
-      fpsCounter: false,
-      frameCap: 60,
-      gamepad: true,
-      graphicsPreset: 'high',
-      particleDensity: 'full',
+      ...ext.gameplay,
+      reduceFlashing: ext.accessibility.reduceFlashing,
+      highContrast: ext.accessibility.highContrast,
+      colorblind: ext.accessibility.colorblind !== 'off',
+      textSize: ext.accessibility.textSize,
+      graphicsPreset: ext.graphics.preset,
+      particleDensity: ext.graphics.particleQuality === 'low' ? 'low' : ext.graphics.particleQuality === 'medium' ? 'low' : 'full',
       qualityBias: 55,
-      antiAliasing: true,
+      antiAliasing: ext.graphics.antiAliasing !== 'off',
       fov: 100,
       renderDistance: 100,
+      shadowQuality: ext.graphics.shadowQuality === 'off' ? 'off' : ext.graphics.shadowQuality === 'low' ? 'low' : ext.graphics.shadowQuality === 'medium' ? 'medium' : 'high',
+      lightingQuality: ext.graphics.lightingQuality,
+      textureQuality: ext.graphics.textureQuality,
+      vfxQuality: ext.graphics.particleQuality,
+      animationQuality: ext.performance.animationQuality,
+      resolutionScale: ext.graphics.renderScale / 100,
+      backgroundEffects: true,
     },
     bindings: defaultBindings(),
   };
 }
 
 export function cloneSettings(settings) {
+  const source = settings && typeof settings === 'object' ? settings : defaultSettings();
   return {
+    ...source,
     version: SETTINGS_VERSION,
-    audio: { ...settings.audio },
-    gameplay: { ...settings.gameplay },
+    audio: { ...source.audio, channelMutes: { ...(source.audio?.channelMutes || {}) } },
+    graphics: { ...source.graphics },
+    display: { ...source.display },
+    controls: { ...source.controls },
+    gameplay: { ...source.gameplay },
+    accessibility: { ...source.accessibility },
+    language: { ...source.language },
+    performance: { ...source.performance },
+    hud: { ...source.hud, layout: { ...(source.hud?.layout || {}) } },
+    notifications: { ...source.notifications },
+    privacy: { ...source.privacy },
+    account: { ...source.account },
+    advanced: { ...source.advanced },
     bindings: Object.fromEntries(
-      Object.entries(settings.bindings || {}).map(([key, codes]) => [key, [...codes]]),
+      Object.entries(source.bindings || {}).map(([key, codes]) => [key, [...codes]]),
     ),
   };
 }
@@ -112,49 +139,51 @@ function sanitizeBindings(raw) {
 export function sanitizeSettings(raw) {
   const defaults = defaultSettings();
   const source = raw && typeof raw === 'object' ? raw : {};
-  const audio = source.audio && typeof source.audio === 'object' ? source.audio : {};
+  const ext = sanitizeExtendedSettings(source);
   const gameplay = source.gameplay && typeof source.gameplay === 'object' ? source.gameplay : {};
-
-  const screenShake = ['off', 'low', 'full'].includes(gameplay.screenShake)
-    ? gameplay.screenShake
-    : defaults.gameplay.screenShake;
-  const frameCap = [0, 60, 120].includes(Number(gameplay.frameCap))
-    ? Number(gameplay.frameCap)
-    : defaults.gameplay.frameCap;
-  const graphicsPreset = ['low', 'med', 'high', 'ultra'].includes(gameplay.graphicsPreset)
-    ? gameplay.graphicsPreset
-    : defaults.gameplay.graphicsPreset;
+  const quality = (value, allowed, fallback) => allowed.includes(value) ? value : fallback;
+  const legacyPreset = source.graphics?.preset
+    ? ext.graphics.preset
+    : ['low', 'medium', 'med', 'high', 'ultra', 'custom'].includes(gameplay.graphicsPreset)
+      ? gameplay.graphicsPreset === 'med' ? 'medium' : gameplay.graphicsPreset
+      : ext.graphics.preset;
   const particleDensity = ['off', 'low', 'full'].includes(gameplay.particleDensity)
     ? gameplay.particleDensity
-    : defaults.gameplay.particleDensity;
-  const qualityBias = clamp(Math.round(num(gameplay.qualityBias, defaults.gameplay.qualityBias)), 0, 100);
-  const fov = clamp(Math.round(num(gameplay.fov, defaults.gameplay.fov)), 80, 120);
-  const renderDistance = clamp(Math.round(num(gameplay.renderDistance, defaults.gameplay.renderDistance)), 50, 100);
+    : ext.graphics.particleQuality === 'low' ? 'low' : ext.graphics.particleQuality === 'medium' ? 'low' : 'full';
+  const screenShake = ['off', 'low', 'full'].includes(gameplay.screenShake)
+    ? gameplay.screenShake
+    : ext.accessibility.reduceShake ? 'low' : ext.gameplay.screenShake;
+  const resolutionScale = clamp(num(gameplay.resolutionScale, ext.graphics.renderScale / 100), 0.5, 2);
 
   return {
+    ...ext,
     version: SETTINGS_VERSION,
-    audio: {
-      master: clamp(Math.round(num(audio.master, defaults.audio.master)), 0, 100),
-      music: clamp(Math.round(num(audio.music, defaults.audio.music)), 0, 100),
-      sfx: clamp(Math.round(num(audio.sfx, defaults.audio.sfx)), 0, 100),
-      muted: Boolean(audio.muted),
-      muteOnBlur: audio.muteOnBlur === undefined ? defaults.audio.muteOnBlur : Boolean(audio.muteOnBlur),
-    },
+    audio: { ...ext.audio },
+    graphics: { ...ext.graphics, preset: legacyPreset },
     gameplay: {
+      ...ext.gameplay,
       screenShake,
-      reduceFlashing: Boolean(gameplay.reduceFlashing),
-      highContrast: Boolean(gameplay.highContrast),
-      colorblind: Boolean(gameplay.colorblind),
-      textSize: gameplay.textSize === 'large' ? 'large' : 'normal',
-      fpsCounter: Boolean(gameplay.fpsCounter),
-      frameCap,
-      gamepad: gameplay.gamepad === undefined ? true : Boolean(gameplay.gamepad),
-      graphicsPreset,
+      reduceFlashing: gameplay.reduceFlashing === undefined ? ext.accessibility.reduceFlashing : Boolean(gameplay.reduceFlashing),
+      highContrast: gameplay.highContrast === undefined ? ext.accessibility.highContrast : Boolean(gameplay.highContrast),
+      colorblind: gameplay.colorblind === undefined ? ext.accessibility.colorblind !== 'off' : Boolean(gameplay.colorblind),
+      textSize: gameplay.textSize === 'large' ? 'large' : ext.accessibility.textSize,
+      fpsCounter: gameplay.fpsCounter === undefined ? ext.display.showFps : Boolean(gameplay.fpsCounter),
+      frameCap: [0, 30, 60, 90, 120, 144].includes(Number(gameplay.frameCap)) ? Number(gameplay.frameCap) : ext.graphics.frameRateLimit,
+      gamepad: gameplay.gamepad === undefined ? ext.controls.gamepad : Boolean(gameplay.gamepad),
+      graphicsPreset: legacyPreset,
       particleDensity,
-      qualityBias,
-      antiAliasing: gameplay.antiAliasing === undefined ? defaults.gameplay.antiAliasing : Boolean(gameplay.antiAliasing),
-      fov,
-      renderDistance,
+      qualityBias: clamp(Math.round(num(gameplay.qualityBias, defaults.gameplay.qualityBias)), 0, 100),
+      antiAliasing: gameplay.antiAliasing === undefined ? ext.graphics.antiAliasing !== 'off' : Boolean(gameplay.antiAliasing),
+      fov: clamp(Math.round(num(gameplay.fov, 100)), 80, 120),
+      renderDistance: clamp(Math.round(num(gameplay.renderDistance, 100)), 50, 100),
+      shadowQuality: quality(gameplay.shadowQuality, ['off', 'low', 'medium', 'high'], ext.graphics.shadowQuality === 'ultra' ? 'high' : ext.graphics.shadowQuality),
+      lightingQuality: quality(gameplay.lightingQuality, ['low', 'medium', 'high', 'ultra'], ext.graphics.lightingQuality),
+      textureQuality: quality(gameplay.textureQuality, ['low', 'medium', 'high', 'ultra'], ext.graphics.textureQuality),
+      vfxQuality: quality(gameplay.vfxQuality, ['low', 'medium', 'high', 'ultra'], ext.graphics.particleQuality),
+      animationQuality: quality(gameplay.animationQuality, ['low', 'medium', 'high', 'ultra'], ext.performance.animationQuality),
+      resolutionScale: Math.round(resolutionScale * 100) / 100,
+      backgroundEffects: gameplay.backgroundEffects === undefined ? true : Boolean(gameplay.backgroundEffects),
+      difficulty: ext.gameplay.difficulty,
     },
     bindings: sanitizeBindings(source.bindings),
   };

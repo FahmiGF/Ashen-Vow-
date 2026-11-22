@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#0b0807" />
-    <title>Ashen Vow — v0.17.0</title>
+    <title>Ashen Vow — v0.31.0</title>
     <meta
       name="description"
       content="Ashen Vow adalah metroidvania medieval 2D dengan combat pedang real-time, 426 ruang, 72 boss, mode Speedrun satu nyawa, 100 level ekspansi, Wave Defense dengan 24 gelombang dan 12 menara, Riftwar MOBA 5v5 dengan 28 kelas, Thornveil Haven, peta, jam langsung, dan indeks sumpah."
@@ -25,6 +25,10 @@
     <link rel="stylesheet" href="./styles-moba.css" />
     <link rel="stylesheet" href="./styles-wavedefense.css" />
     <link rel="stylesheet" href="./styles-realms.css" />
+    <link rel="stylesheet" href="./styles-eclipse.css" />
+    <link rel="stylesheet" href="./styles-veil.css" />
+    <link rel="stylesheet" href="./styles-eternal.css" />
+    <link rel="stylesheet" href="./styles-archive.css" />
     <link
       rel="icon"
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%230b0807'/%3E%3Cpath d='M32 6l7 18 18 8-18 8-7 18-7-18-18-8 18-8z' fill='%23d08a45'/%3E%3C/svg%3E"
@@ -42,6 +46,17 @@
           <em id="live-clock-stage">DI LUAR RUN</em>
         </div>
 
+        <div id="veil-hud" class="veil-hud hidden" aria-live="polite">
+          <div class="veil-hud-head">
+            <span>SANITY</span>
+            <b id="veil-hud-value">82</b>
+            <em id="veil-hud-condition">STABLE</em>
+          </div>
+          <div class="veil-hud-bar"><i id="veil-hud-fill"></i></div>
+          <div class="veil-hud-extra"><span>EXPOSURE</span><i><b id="veil-hud-exposure-fill"></b></i><em id="veil-hud-exposure">0</em></div>
+          <div class="veil-hud-extra"><span>FOCUS</span><i><b id="veil-hud-focus-fill"></b></i><em id="veil-hud-focus">100</em></div>
+          <div class="veil-hud-meta"><span id="veil-hud-stage">—</span><span id="veil-hud-ghost">0 entitas</span></div>
+        </div>
         <div id="hud" class="hud hidden">
           <div class="hud-top">
             <div class="vitals">
@@ -235,7 +250,7 @@
         <!-- ══ MAIN MENU ══ -->
         <section id="title-screen" class="screen title-screen">
           <div class="screen-inner title-inner">
-            <p class="eyebrow">SEBUAH SUMPAH DI ANTARA ABU · v0.17.0</p>
+            <p class="eyebrow">SEBUAH SUMPAH DI ANTARA ABU · v0.23.0</p>
             <h1 class="game-title">ASHEN<span>VOW</span></h1>
             <div class="title-rule"><i></i><b>✦</b><i></i></div>
             <p class="lede">
@@ -258,7 +273,15 @@
               </button>
               <button id="btn-settings-menu" class="btn btn-ghost menu-btn" type="button">
                 <span>PENGATURAN</span>
-                <em>Audio · keybind · aksesibilitas</em>
+                <em>14 kategori · preset grafis · audio mixer · bahasa</em>
+              </button>
+              <button id="btn-scary-menu" class="btn btn-ghost menu-btn" type="button">
+                <span>SCARY MODE 2.0</span>
+                <em>Kesulitan horor · anti-jumpscare · jurnal horor</em>
+              </button>
+              <button id="btn-difficulty-menu" class="btn btn-ghost menu-btn" type="button">
+                <span>KESULITAN</span>
+                <em>Story · Easy · Normal · Hard · Nightmare · Abyssal</em>
               </button>
               <button id="btn-map-menu" class="btn btn-ghost menu-btn" type="button">
                 <span>PETA SUMPAH</span>
@@ -271,6 +294,10 @@
               <button id="btn-mode3d-menu" class="btn btn-ghost menu-btn mode3d-menu-btn" type="button">
                 <span>ASHEN VOW: MODE 3D</span>
                 <em>Petualangan 3D orang ketiga · Thornveil Forest · Bos Yggvar</em>
+              </button>
+              <button id="btn-horror3d-menu" class="btn btn-ghost menu-btn horror3d-menu-btn" type="button">
+                <span>3D SCARY MODE: BLACKVEIL NIGHTFALL</span>
+                <em>5 bangunan 3D · 15 fase · jumpscare nyata · The Unlit memburumu</em>
               </button>
               <button id="btn-frontier-menu" class="btn btn-ghost menu-btn frontier-menu-btn" type="button">
                 <span>INFINITE FRONTIERS — BEYOND THE VEIL</span>
@@ -299,6 +326,10 @@
               <button id="btn-astral-menu" class="btn btn-ghost menu-btn astral-menu-btn" type="button">
                 <span>ARC VI — THE ASTRAL DOMINION</span>
                 <em>5 wilayah · 20 stage · The Architect of Eternity · Unwritten Expanse</em>
+              </button>
+              <button id="btn-eclipse-menu" class="btn btn-ghost menu-btn eclipse-menu-btn" type="button">
+                <span>UPDATE VIII — ECLIPSE OF THE FORGOTTEN GODS</span>
+                <em>Arc VIII · 6 biome · 30 stage · Godfall 100 lantai · guild &amp; raid · Awakening</em>
               </button>
               <button id="btn-admin-menu" class="btn btn-ghost menu-btn hidden" type="button">
                 <span>ADMIN CONTROL CENTER</span>
@@ -358,7 +389,7 @@
               </button>
               <button id="btn-updates" class="btn btn-ghost menu-btn" type="button">
                 <span>CATATAN UPDATE</span>
-                <em>Riwayat rilis · v0.17.0 · Infinite Realms · Astral Dominion</em>
+                <em>Riwayat rilis · v0.31.0 · Credit Scene + hidden secrets</em>
               </button>
             </nav>
 
@@ -415,29 +446,45 @@
 
             <div class="credits-grid">
               <div class="credit-cell">
-                <span>GAME DESIGN &amp; CODE</span>
-                <strong>SealiusHQ</strong>
+                <span>TECHNICAL LEAD</span>
+                <strong>Sealius</strong>
               </div>
               <div class="credit-cell">
-                <span>SUPPORT, FEEDBACK &amp; PLAYTESTING</span>
-                <strong>Contributors</strong>
+                <span>ARTIST &amp; DESIGNER</span>
+                <strong>Sealius</strong>
               </div>
               <div class="credit-cell">
-                <span>ENGINE</span>
-                <strong>HTML5 Canvas · Vanilla JS</strong>
+                <span>GAME DESIGN</span>
+                <strong>Sealius</strong>
               </div>
               <div class="credit-cell">
-                <span>VISUAL &amp; AUDIO</span>
-                <strong>Procedural Systems</strong>
+                <span>SYSTEMS &amp; ENGINEERING</span>
+                <strong>Sealius</strong>
+              </div>
+              <div class="credit-cell">
+                <span>WORLD &amp; NARRATIVE</span>
+                <strong>Sealius</strong>
+              </div>
+              <div class="credit-cell">
+                <span>UI &amp; UX DESIGN</span>
+                <strong>Sealius</strong>
+              </div>
+              <div class="credit-cell">
+                <span>QA &amp; VERIFICATION</span>
+                <strong>Sealius</strong>
+              </div>
+              <div class="credit-cell">
+                <span>RELEASE &amp; SUPPORT</span>
+                <strong>Sealius</strong>
               </div>
               <div class="credit-cell wide">
-                <span>SPECIAL THANKS</span>
-                <strong>Every soul who playtested the vow</strong>
+                <span>SUPPORT, FEEDBACK &amp; PLAYTESTING</span>
+                <strong>Contributors — every soul who playtested the vow</strong>
               </div>
             </div>
 
             <div id="credits-times" class="credits-times"></div>
-            <p class="credit-version">ASHEN VOW · v0.14.0 · 13 PENJAGA · 92 BOSS · 505 RUANG</p>
+            <p class="credit-version">ASHEN VOW · v0.31.0 · 13 PENJAGA · 92 BOSS · 505 RUANG</p>
             <div class="screen-links">
               <button id="btn-credits-back" class="link-btn" type="button">← KEMBALI KE MENU</button>
             </div>
@@ -454,7 +501,7 @@
               Catatan ini ikut tersimpan di dalam game.
             </p>
             <div class="updates-meta">
-              <span id="updates-version">VERSI SAAT INI · v0.14.0</span>
+              <span id="updates-version">VERSI SAAT INI · v0.31.0</span>
               <span>DIPERBARUI 15 NOVEMBER 2026</span>
             </div>
             <div id="update-log" class="update-log"></div>
@@ -496,16 +543,42 @@
           <div class="screen-inner mode3d-inner">
             <div class="mode3d-header">
               <div>
-                <p class="eyebrow">ASHEN VOW 3D · METROIDVANIA ORANG KETIGA · v0.4.0</p>
+                <p class="eyebrow">ASHEN VOW 3D · METROIDVANIA ORANG KETIGA · UPDATE XX · v0.31.0</p>
                 <h2 class="screen-title">THORNVEIL FOREST VERTICAL SLICE</h2>
               </div>
               <div class="mode3d-controls-bar">
+                <select id="select-3d-area" class="mode3d-select" aria-label="Pilih Area 3D">
+                  <option value="veilroot_approach">1 · Veilroot Approach</option>
+                  <option value="thornveil_heart">2 · Thornveil Heart</option>
+                  <option value="emberfall_gate">3 · Emberfall Gate</option>
+                  <option value="obsidian_forge">4 · Obsidian Forge</option>
+                  <option value="tidewreck_harbor">5 · Tidewreck Harbor</option>
+                  <option value="pale_court">6 · Pale Court</option>
+                  <option value="bellfall_abbey">7 · Bellfall Abbey</option>
+                  <option value="choral_spire">8 · Choral Spire</option>
+                  <option value="singing_deep">9 · Singing Deep</option>
+                  <option value="veil_edge">10 · Veil Edge</option>
+                  <option value="horror_blackveil_manor">H1 · Blackveil Manor</option>
+                  <option value="horror_saint_orra">H2 · Saint Orra Sanatorium</option>
+                  <option value="horror_drowned_chapel">H3 · The Drowned Chapel</option>
+                  <option value="horror_cinder_mill">H4 · Cinder Mill</option>
+                  <option value="horror_hollow_lighthouse">H5 · The Hollow Lighthouse</option>
+                </select>
+                <select id="select-3d-region" class="mode3d-select" aria-label="Pilih Region 3D">
+                  <option value="thornveil">Thornveil Forest</option>
+                  <option value="infernal">Infernal Fortress</option>
+                  <option value="drowned">Drowned Kingdom</option>
+                  <option value="gothic">Gothic Citadel</option>
+                  <option value="crystal">Crystal Caverns</option>
+                  <option value="astral">Astral Islands</option>
+                </select>
                 <select id="select-3d-submode" class="mode3d-select" aria-label="Pilih Sub-Mode 3D">
                   <option value="campaign">3D Campaign (Thornveil)</option>
                   <option value="exploration">3D Exploration (Santai)</option>
                   <option value="boss_rush">3D Boss Rush (Yggvar)</option>
                   <option value="training">3D Training Grounds</option>
                   <option value="editor">3D Map Editor</option>
+                  <option value="scary">3D Scary Mode (Blackveil)</option>
                 </select>
                 <select id="select-3d-quality" class="mode3d-select" aria-label="Kualitas Grafis 3D">
                   <option value="high">Preset: High (60 FPS)</option>
@@ -518,6 +591,28 @@
             <div class="canvas-3d-wrap">
               <canvas id="canvas-3d" width="960" height="540"></canvas>
             </div>
+            <section class="horror3d-panel" id="horror3d-panel">
+              <div class="horror3d-panel-head">
+                <div>
+                  <p class="eyebrow">UPDATE XVII · FIRST-PERSON 3D HORROR</p>
+                  <h3>3D SCARY MODE: BLACKVEIL NIGHTFALL</h3>
+                  <p class="micro">Lima bangunan nyata di dunia WebGL/GLB. Tiga fase per situs: ambil tiga gema, lalu keluar hidup. The Unlit berburu setelah gema pertama.</p>
+                </div>
+                <div class="horror3d-controls">
+                  <select id="horror3d-select" class="mode3d-select" aria-label="Pilih situs 3D Scary Mode"></select>
+                  <select id="horror3d-intensity" class="mode3d-select" aria-label="Intensitas horor 3D">
+                    <option value="reduced">Intensitas: Reduced</option>
+                    <option value="full">Intensitas: Full</option>
+                    <option value="nightmare">Intensitas: Nightmare</option>
+                  </select>
+                  <label class="horror3d-anti"><input id="horror3d-anti" type="checkbox" /> Anti-jumpscare</label>
+                  <button id="btn-horror3d-start" class="btn btn-primary btn-compact" type="button">MASUK BANGUNAN</button>
+                </div>
+              </div>
+              <div id="horror3d-sites" class="horror3d-sites"></div>
+              <p id="horror3d-summary" class="micro horror3d-summary">0/5 situs dibersihkan · 0 jumpscare</p>
+              <p class="micro">WASD bergerak · mouse drag melihat · <kbd>E</kbd> ambil gema / keluar · <kbd>SHIFT</kbd> lari · <kbd>J</kbd> memukul The Unlit (tidak bisa dibunuh) · <kbd>R</kbd> ulang setelah mati.</p>
+            </section>
             <div class="mode3d-footer">
               <p class="micro">
                 <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> Gerak · <kbd>SHIFT</kbd> Sprint · <kbd>SPACE</kbd> Lompat / Glider · <kbd>J</kbd> / Klik Serang · <kbd>L</kbd> Air Dash · <kbd>E</kbd> Bicara NPC · <kbd>Q</kbd> / <kbd>TAB</kbd> Lock-On · <kbd>ESC</kbd> Keluar
@@ -1174,6 +1269,30 @@
           </div>
         </section>
 
+        <!-- ══ HUNTER'S KIT SHOP ══ -->
+        <section id="hunter-shop-screen" class="screen hidden">
+          <div class="screen-inner shop-inner hunter-shop-inner">
+            <p class="eyebrow">PERLENGKAPAN PEMBURU · ROH TIDAK DATANG TANPA LAWAN</p>
+            <h2 class="screen-title">TOKO PEMBURU</h2>
+            <p class="screen-sub">
+              Tanda Pemburu didapat dengan mengusir roh. Stok tersimpan lintas run; alat yang sudah dibeli
+              masuk ke tas run ini dan bisa dipakai lewat item cepat.
+            </p>
+            <div class="shop-wallet hunter-wallet">
+              <span>TANDA PEMBURU</span>
+              <strong><i>◈</i> <b id="hunter-shop-marks">0</b></strong>
+            </div>
+            <p id="hunter-shop-report" class="hunter-shop-report"></p>
+            <div id="hunter-shop-items" class="shop-items"></div>
+            <div class="screen-links">
+              <button id="btn-hunter-shop-close" class="btn btn-primary btn-compact" type="button">
+                <span>KEMBALI</span>
+              </button>
+            </div>
+            <p class="micro">Suluh &amp; lonceng menstun roh. Asap memutus pengejaran. Peluru Roh menembus manifestasi. Jimat menahan cakar roh.</p>
+          </div>
+        </section>
+
         <!-- ══ BLESSING ══ -->
         <section id="blessing-screen" class="screen hidden">
           <div class="screen-inner">
@@ -1194,9 +1313,11 @@
             <button id="btn-resume" class="btn btn-primary" type="button"><span>LANJUTKAN</span></button>
             <div class="screen-links">
               <button id="btn-shop" class="link-btn" type="button">WARUNG ABU</button>
+              <button id="btn-pause-hunter-shop" class="link-btn" type="button">TOKO PEMBURU</button>
               <button id="btn-pause-inventory" class="link-btn" type="button">INVENTARIS</button>
               <button id="btn-pause-map" class="link-btn" type="button">PETA</button>
               <button id="btn-pause-codex" class="link-btn" type="button">INDEKS</button>
+              <button id="btn-pause-anti" class="link-btn" type="button">ANTI-JUMPSCARE: MATI</button>
               <button id="btn-pause-settings" class="link-btn" type="button">PENGATURAN</button>
               <button id="btn-pause-levels" class="link-btn" type="button">PILIH LEVEL</button>
               <button id="btn-pause-menu" class="link-btn" type="button">MENU UTAMA</button>
@@ -1388,24 +1509,204 @@
           </div>
         </section>
 
-        <!-- ══ SETTINGS ══ -->
-        <section id="settings-screen" class="screen overlay-screen hidden">
-          <div class="screen-inner settings-inner">
-            <p class="eyebrow">SUMPAH YANG BISA KAU ATUR</p>
-            <h2 class="screen-title">PENGATURAN</h2>
-            <p class="screen-sub">
-              Audio, kontrol, dan aksesibilitas tersimpan terpisah dari progres permainan.
-            </p>
-            <div id="settings-tabs" class="settings-tabs" role="tablist" aria-label="Kategori pengaturan"></div>
-            <div id="settings-body" class="settings-body"></div>
-            <div class="screen-links">
-              <button id="btn-settings-back" class="btn btn-primary btn-compact" type="button">
-                <span>KEMBALI</span>
-              </button>
+        <!-- ══ SETTINGS 2.0 ══ -->
+        <!-- ══ SCARY MODE 2.0 — THE NIGHTMARE PROTOCOL ══ -->
+        <section id="scary-screen" class="screen overlay-screen hidden">
+          <div class="screen-inner scary-inner">
+            <div class="scary-head">
+              <div>
+                <p class="eyebrow">THE NIGHTMARE PROTOCOL · v0.23.0</p>
+                <h2 class="screen-title">SCARY MODE</h2>
+                <p class="screen-sub">Tiga lapisan terpisah: kesulitan horor, presentasi kejutan, dan kenyamanan.</p>
+              </div>
+              <button id="btn-scary-close" class="btn btn-ghost btn-small" type="button">TUTUP</button>
             </div>
-            <p class="micro">ESC selalu kembali satu tingkat · pengaturan langsung tersimpan.</p>
+            <div id="scary-summary" class="scary-summary" aria-live="polite"></div>
+            <div id="scary-tabs" class="scary-tabs" role="tablist" aria-label="Kategori horor"></div>
+            <div id="scary-body" class="scary-body"></div>
+            <div class="scary-actions">
+              <button class="btn btn-ghost btn-small" type="button" data-scary-action="preview-audio">PRATINJAU AUDIO HOROR</button>
+              <button class="btn btn-ghost btn-small" type="button" data-scary-action="preview-visual">PRATINJAU VISUAL</button>
+              <button class="btn btn-ghost btn-small" type="button" data-scary-action="hunter">TOKO PEMBURU</button>
+              <button class="btn btn-ghost btn-small" type="button" data-scary-action="reset">RESET HOROR</button>
+              <button class="btn btn-ghost btn-small" type="button" data-scary-action="dread">THE DREAD BEYOND</button>
+              <button class="btn btn-ghost btn-small" type="button" data-scary-action="veil">THE VEIL OF THE FORGOTTEN</button>
+              <button class="btn btn-ghost btn-small" type="button" data-eternal-open>THE ETERNAL NIGHT</button>
+              <button class="btn btn-ghost btn-small" type="button" data-archive-open>STAGE ARCHIVE</button>
+              <button class="btn btn-primary btn-small" type="button" data-scary-action="enter">MASUK SCARY MODE</button>
+            </div>
+            <p class="micro">Scary Mode tidak menambah damage, tidak memblokir input, dan Anti-Jumpscare berlaku seketika tanpa restart.</p>
           </div>
         </section>
+
+        <!-- ══ UPDATE XII — THE DREAD BEYOND ══ -->
+        <section id="dread-screen" class="screen overlay-screen hidden">
+          <div class="screen-inner dread-inner">
+            <div class="scary-head">
+              <div>
+                <p class="eyebrow">THE DREAD BEYOND · SCARY MODE EXPANSION · v0.23.0</p>
+                <h2 class="screen-title">THE DREAD BEYOND</h2>
+                <p class="screen-sub">Lima lingkungan horor, lima Unnatural, empat belas peristiwa, tiga bos, dan jurnal misteri.</p>
+              </div>
+              <button id="btn-dread-close" class="btn btn-ghost btn-small" type="button">TUTUP</button>
+            </div>
+            <div id="dread-summary" class="scary-summary" aria-live="polite"></div>
+            <div id="dread-tabs" class="scary-tabs" role="tablist" aria-label="The Dread Beyond"></div>
+            <div id="dread-body" class="scary-body dread-body"></div>
+            <div class="scary-actions">
+              <button class="btn btn-ghost btn-small" type="button" data-dread-action="ground">STABILKAN AWARENESS</button>
+              <button class="btn btn-ghost btn-small" type="button" data-dread-action="reset">RESET PENGATURAN DREAD</button>
+              <button class="btn btn-primary btn-small" type="button" data-dread-action="start">MASUKI DESA TERLUPAKAN</button>
+            </div>
+            <p class="micro">Awareness tidak pernah menghilangkan kendali atau memberi penalti kesehatan. Koneksi papan misteri bersifat opsional.</p>
+          </div>
+        </section>
+
+        <!-- ══ UPDATE XIII — THE VEIL OF THE FORGOTTEN ══ -->
+        <section id="veil-screen" class="screen overlay-screen hidden">
+          <div class="screen-inner veil-inner">
+            <div class="scary-head">
+              <div>
+                <p class="eyebrow">THE VEIL OF THE FORGOTTEN · SCARY MODE UPDATE XIII · v0.24.0</p>
+                <h2 class="screen-title">THE VEIL OF THE FORGOTTEN</h2>
+                <p class="screen-sub">Enam bab, tiga puluh tahap, tujuh bos, Sanity 2.0, Ghost Index 2.0, dan investigasi lapangan.</p>
+              </div>
+              <button class="btn btn-ghost btn-small" type="button" data-veil-close>TUTUP</button>
+            </div>
+            <div id="veil-summary" class="scary-summary" aria-live="polite"></div>
+            <div id="veil-tabs" class="scary-tabs veil-tabs" role="tablist" aria-label="The Veil of the Forgotten"></div>
+            <div id="veil-body" class="scary-body veil-body"></div>
+            <div class="scary-actions">
+              <button class="btn btn-ghost btn-small" type="button" data-veil-action="recover">PULIHKAN SANITY</button>
+              <button class="btn btn-ghost btn-small" type="button" data-veil-action="save">SIMPAN PROFIL</button>
+              <button class="btn btn-ghost btn-small" type="button" data-archive-open>STAGE ARCHIVE →</button>
+              <button class="btn btn-ghost btn-small" type="button" data-eternal-open>THE ETERNAL NIGHT →</button>
+              <button class="btn btn-primary btn-small" type="button" data-veil-action="enter">MASUKI TABIR</button>
+            </div>
+            <p class="micro">Sanity tidak pernah membunuh, mengambil kendali, atau memaksa jumpscare. Anti-jumpscare tidak menonaktifkannya.</p>
+          </div>
+        </section>
+
+        <!-- ══ UPDATE XIV — THE ETERNAL NIGHT (ARC X) ══ -->
+        <section id="eternal-screen" class="screen overlay-screen hidden">
+          <div class="screen-inner veil-inner eternal-inner">
+            <div class="scary-head">
+              <div>
+                <p class="eyebrow">THE ETERNAL NIGHT · SCARY MODE UPDATE XIV · v0.25.0</p>
+                <h2 class="screen-title">THE ETERNAL NIGHT</h2>
+                <p class="screen-sub">Tujuh bab, tiga puluh lima tahap, delapan bos, Sanity 3.0, investigasi prosedural, dan Spectral Pursuit.</p>
+              </div>
+              <button class="btn btn-ghost btn-small" type="button" data-eternal-close>TUTUP</button>
+            </div>
+            <div id="eternal-summary" class="scary-summary" aria-live="polite"></div>
+            <div id="eternal-tabs" class="scary-tabs veil-tabs" role="tablist" aria-label="The Eternal Night"></div>
+            <div id="eternal-body" class="scary-body veil-body"></div>
+            <div class="scary-actions">
+              <button class="btn btn-ghost btn-small" type="button" data-eternal-action="recover">PULIHKAN FOCUS</button>
+              <button class="btn btn-ghost btn-small" type="button" data-eternal-action="save">SIMPAN PROFIL</button>
+              <button class="btn btn-ghost btn-small" type="button" data-archive-open>STAGE ARCHIVE →</button>
+              <button class="btn btn-primary btn-small" type="button" data-eternal-action="unlock">BUKA ARC X</button>
+            </div>
+            <p class="micro">Sanity 3.0 tidak pernah menghilangkan kendali. Veil Exposure bersifat per-run, dan Mental Focus hanya membuka analisis opsional.</p>
+          </div>
+        </section>
+
+        <!-- ══ UPDATE XV — STAGE ARCHIVE & SUPERNATURAL RESEARCH ══ -->
+        <section id="archive-screen" class="screen overlay-screen hidden">
+          <div class="screen-inner archive-inner">
+            <div class="scary-head">
+              <div>
+                <p class="eyebrow">STAGE ARCHIVE 2.0 · SCARY MODE UPDATE XX · v0.31.0</p>
+                <h2 class="screen-title">THE SUPERNATURAL ARCHIVE</h2>
+                <p class="screen-sub">Semua tahap Arc IX dan Arc X, Level Checker, Sneak Peek, Ghost Index 3.0, Jumpscare Index, dan persiapan peralatan investigasi.</p>
+              </div>
+              <button class="btn btn-ghost btn-small" type="button" data-archive-close>TUTUP</button>
+            </div>
+            <div id="archive-summary" class="scary-summary" aria-live="polite"></div>
+            <div id="archive-tabs" class="scary-tabs veil-tabs" role="tablist" aria-label="Stage Archive"></div>
+            <div id="archive-body" class="scary-body archive-body"></div>
+            <p class="micro">Sneak Peek tidak pernah memasuki gameplay, memberikan hadiah, atau mengubah progres. Anti-Jumpscare tetap berlaku dan tidak ada audio yang diputar otomatis.</p>
+          </div>
+        </section>
+
+        <section id="archive-preview-screen" class="screen overlay-screen hidden archive-preview-layer">
+          <div class="screen-inner archive-preview-inner">
+            <div class="scary-head">
+              <div>
+                <p class="eyebrow">ARCHIVE PREVIEW · ISOLATED · NO GAMEPLAY</p>
+                <h2 class="screen-title" id="archive-preview-title">SNEAK PEEK</h2>
+                <p class="screen-sub" id="archive-preview-sub">Pratinjau arsip yang aman.</p>
+              </div>
+              <button class="btn btn-ghost btn-small" type="button" data-archive-preview-close>TUTUP PRATINJAU</button>
+            </div>
+            <div id="archive-preview-body" class="archive-preview-body"></div>
+          </div>
+        </section>
+
+        <section id="settings-screen" class="screen overlay-screen hidden">
+          <div class="screen-inner settings-inner settings2-inner">
+            <div class="settings2-head">
+              <div>
+                <p class="eyebrow" id="settings-eyebrow">SUMPAH YANG BISA KAU ATUR · SETTINGS 2.0</p>
+                <h2 class="screen-title" id="settings-title">PENGATURAN</h2>
+                <p class="screen-sub" id="settings-subtitle">
+                  14 kategori terhubung ke engine. Pratinjau langsung sebelum diterapkan.
+                </p>
+              </div>
+              <div class="settings2-head-status" id="settings-head-status">
+                <span id="settings-apply-state">TERSIMPAN</span>
+                <em>v2 · ashen-vow-settings-v1</em>
+              </div>
+            </div>
+            <div class="settings2-toolbar">
+              <label class="settings-search" for="settings-search">
+                <span aria-hidden="true">⌕</span>
+                <input id="settings-search" type="search" placeholder="Cari pengaturan atau deskripsi…" autocomplete="off" />
+              </label>
+              <button id="btn-settings-diagnostics" class="btn btn-ghost btn-small" type="button" aria-pressed="false">DIAGNOSTIK</button>
+              <button id="btn-scare-preview" class="btn btn-ghost btn-small" type="button">PRATINJAU SERAM</button>
+              <button id="btn-settings-reset-category" class="btn btn-ghost btn-small" type="button">RESET KATEGORI</button>
+              <button id="btn-settings-reset-all" class="btn btn-ghost btn-small" type="button">RESET SEMUA</button>
+            </div>
+            <div id="settings-tabs" class="settings-tabs settings2-tabs" role="tablist" aria-label="Kategori pengaturan"></div>
+            <div id="settings-body" class="settings-body settings2-body"></div>
+            <div id="settings-diagnostics" class="settings-diagnostics hidden" aria-live="polite"></div>
+            <div class="settings2-actions">
+              <button id="btn-settings-cancel" class="btn btn-ghost btn-compact" type="button"><span>BATAL</span></button>
+              <button id="btn-settings-apply" class="btn btn-primary btn-compact" type="button"><span>TERAPKAN</span></button>
+            </div>
+            <p class="micro">ESC membatalkan perubahan yang belum diterapkan · nilai tetap tersimpan setelah TERAPKAN.</p>
+          </div>
+        </section>
+
+        <section id="hud-layout-screen" class="screen overlay-screen hidden">
+          <div class="screen-inner hud-layout-inner">
+            <p class="eyebrow">TATA LETAK HUD</p>
+            <h2 class="screen-title">HUD LAYOUT EDITOR</h2>
+            <p class="screen-sub">Tarik panel untuk memindahkan posisinya. Layout disimpan per profil browser.</p>
+            <div id="hud-layout-stage" class="hud-layout-stage">
+              <div class="hud-drag" data-hud-drag="vitals">VITALS</div>
+              <div class="hud-drag" data-hud-drag="quest">QUEST</div>
+              <div class="hud-drag" data-hud-drag="map">MINIMAP</div>
+              <div class="hud-drag" data-hud-drag="boss">BOSS BAR</div>
+              <div class="hud-drag" data-hud-drag="notifications">NOTIFIKASI</div>
+            </div>
+            <div class="screen-links">
+              <button id="btn-hud-layout-reset" class="link-btn" type="button">KEMBALIKAN DEFAULT</button>
+              <button id="btn-hud-layout-close" class="btn btn-primary btn-compact" type="button">SIMPAN LAYOUT</button>
+            </div>
+          </div>
+        </section>
+
+        <svg class="svg-filter-defs" aria-hidden="true" focusable="false">
+          <filter id="ashen-gamma" color-interpolation-filters="sRGB">
+            <feComponentTransfer>
+              <feFuncR id="gamma-r" type="gamma" exponent="1" />
+              <feFuncG id="gamma-g" type="gamma" exponent="1" />
+              <feFuncB id="gamma-b" type="gamma" exponent="1" />
+            </feComponentTransfer>
+          </filter>
+        </svg>
 
         <!-- ══ CODEX / INDEX ══ -->
         <section id="codex-screen" class="screen overlay-screen hidden">
@@ -1503,6 +1804,31 @@
           </div>
         </section>
 
+        <!-- ══ ECLIPSE OF THE FORGOTTEN GODS ══ -->
+        <section id="eclipse-screen" class="screen eclipse-screen hidden" role="dialog" aria-modal="true" aria-labelledby="eclipse-title">
+          <div class="eclipse-shell">
+            <header class="eclipse-top">
+              <button id="eclipse-back" class="btn btn-ghost btn-compact" type="button">← MENU</button>
+              <div class="eclipse-brand">
+                <span class="eclipse-kicker">UPDATE IX · GLB PIPELINE · WEBGL2 PBR · 10 AREA 3D · v0.20.0</span>
+                <h2 id="eclipse-title">ECLIPSE OF THE FORGOTTEN GODS</h2>
+                <p>Gerhana Dewa yang Terlupakan</p>
+              </div>
+              <div id="eclipse-fragments" class="eclipse-fragments"></div>
+            </header>
+            <nav id="eclipse-tabs" class="eclipse-tabs" aria-label="Eclipse sections">
+              <button type="button" data-eclipse-tab="campaign" class="active">KAMPANYE</button>
+              <button type="button" data-eclipse-tab="godfall">GODFALL</button>
+              <button type="button" data-eclipse-tab="guilds">GUILD &amp; RAID</button>
+              <button type="button" data-eclipse-tab="awakening">AWAKENING</button>
+              <button type="button" data-eclipse-tab="combat">COMBAT 2.0</button>
+              <button type="button" data-eclipse-tab="settings">GRAPHICS</button>
+              <button type="button" data-eclipse-tab="qa">QA GATE</button>
+            </nav>
+            <div id="eclipse-body" class="eclipse-body"></div>
+          </div>
+        </section>
+
         <!-- ══ MODE DETAIL MODAL ══ -->
         <div id="modal" class="realms-modal hidden" role="dialog" aria-modal="true">
           <div class="realms-modal-card"><div class="realms-modal-head"><h2 id="modal-title"></h2><button id="modal-close" class="icon-btn" type="button" aria-label="Tutup">✕</button></div><div id="modal-body"></div></div>
@@ -1510,6 +1836,19 @@
 
         <!-- ══ HACK TOOLBAR ══ -->
         <div id="hack-toolbar" class="hack-toolbar hidden" role="toolbar" aria-label="HACK testing tools"></div>
+
+        <!-- ══ ARC CREDIT SCENE ══ -->
+        <section id="credit-scene-screen" class="credit-scene-screen hidden" role="dialog" aria-modal="true" aria-labelledby="credit-scene-title">
+          <div class="credit-scene-vignette" aria-hidden="true"></div>
+          <div class="credit-scene-inner">
+            <p id="credit-scene-eyebrow" class="eyebrow">CREDIT SCENE</p>
+            <h2 id="credit-scene-title">THE ASHEN VOW</h2>
+            <p id="credit-scene-sub" class="credit-scene-sub"></p>
+            <p id="credit-scene-line" class="credit-scene-line"></p>
+            <div id="credit-scene-roll" class="credit-scene-roll"></div>
+            <button id="btn-credit-scene-skip" class="btn btn-ghost btn-compact" type="button">LEWATI CREDIT</button>
+          </div>
+        </section>
 
         <!-- ══ BOSS DIALOGUE ══ -->
         <section id="dialogue-screen" class="dialogue-screen hidden" role="dialog" aria-modal="true" aria-live="polite">
@@ -1560,8 +1899,32 @@
             <button class="tbtn attack" data-action="attack" type="button" aria-label="Serang">⚔</button>
           </div>
         </div>
-      </div>        <footer class="footer">
-          <span>ASHEN VOW · v0.17.0</span>
+      </div>
+
+      <!-- ══ UPDATE X — DEVELOPER DEBUG DASHBOARD (?dev=1) ══ -->
+      <section id="debug-screen" class="debug-screen" aria-label="Developer debug dashboard">
+        <div class="debug-head">
+          <div><b>DEV DASHBOARD</b><span>AI · BOSS · SCARY MODE</span></div>
+          <div class="debug-head-actions">
+            <button id="btn-debug-ai" class="btn btn-ghost btn-small" type="button" aria-pressed="false">AI OVERLAY</button>
+            <button id="btn-debug-close" class="btn btn-ghost btn-small" type="button">TUTUP</button>
+          </div>
+        </div>
+        <div class="debug-grid">
+          <div class="debug-panel"><h3>AI</h3><div id="debug-ai"></div></div>
+          <div class="debug-panel"><h3>BOSS</h3><div id="debug-boss"></div></div>
+          <div class="debug-panel"><h3>SCARY MODE</h3><div id="debug-scare"></div></div>
+        </div>
+      </section>
+
+      <!-- ══ SCARY MODE PREVIEW (settings demo) ══ -->
+      <div id="scare-preview" class="scare-preview" aria-hidden="true">
+        <div class="scare-preview-silhouette"></div>
+        <div class="scare-preview-copy"><b data-scare-name>Sentinel</b><span data-scare-line>Besi berderit. Helm itu menatapmu.</span></div>
+      </div>
+
+      <footer class="footer">
+          <span>ASHEN VOW · v0.31.0</span>
         <span class="dot">✦</span>
         <span>Metroidvania medieval 2D · 14 ruang · 6 boss · dibuat dengan Canvas</span>
       </footer>

@@ -56,6 +56,7 @@ export class Renderer {
       renderDistance: 100,
       qualityBias: 55,
       particleScale: 1,
+      resolutionScale: 1,
     };
     this.resize();
   }
@@ -66,8 +67,10 @@ export class Renderer {
     // that is already soft. High quality gets a mild 1.25x for crispness.
     const cap = bias < 25 ? 0.85 : bias < 65 ? 1 : 1.25;
     const base = Math.min(cap, window.devicePixelRatio || 1);
-    // pixelScale lets the loop trade resolution for frame rate on slow GPUs.
-    const dpr = clamp(base * (this.pixelScale || 1), 0.6, 2);
+    const userScale = clamp(Number(this.options?.resolutionScale ?? 1), 0.5, 1.15);
+    // pixelScale lets the loop trade resolution for frame rate on slow GPUs;
+    // resolutionScale is the player's explicit Low/Ultra override on top.
+    const dpr = clamp(base * (this.pixelScale || 1) * userScale, 0.5, 2);
     this.dpr = dpr;
     this.canvas.width = Math.round(VIEW_W * dpr);
     this.canvas.height = Math.round(VIEW_H * dpr);
@@ -93,6 +96,41 @@ export class Renderer {
     if (this._layers.size > 24) this._layers.clear();
     this._layers.set(key, cached);
     return cached;
+  }
+
+  /**
+   * A hidden rune. No label, no marker, no bounce: just a faint glyph that is
+   * easy to walk past. It is drawn before entities so the player can stand on
+   * it without covering the art.
+   */
+  drawSecretRune(ctx, game, t) {
+    const rune = game.secretRune;
+    if (!rune || rune.found) return;
+    const pulse = 0.42 + 0.24 * Math.sin((t || 0) * 1.7);
+    ctx.save();
+    ctx.translate(rune.x, rune.y);
+    const halo = ctx.createRadialGradient(0, 0, 2, 0, 0, 54);
+    halo.addColorStop(0, this.alpha('#ffe0a0', 0.32));
+    halo.addColorStop(0.45, this.alpha('#c99a52', 0.12));
+    halo.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = halo;
+    ctx.fillRect(-56, -56, 112, 112);
+    ctx.globalAlpha = pulse;
+    ctx.strokeStyle = '#e8c98c';
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.moveTo(0, -15);
+    ctx.lineTo(11, 0);
+    ctx.lineTo(0, 15);
+    ctx.lineTo(-11, 0);
+    ctx.closePath();
+    ctx.stroke();
+    ctx.font = '14px serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#f3dfb9';
+    ctx.fillText(rune.glyph || 'ᛉ', 0, 1);
+    ctx.restore();
   }
 
   render(game, opts = {}) {
@@ -143,6 +181,7 @@ export class Renderer {
     this.drawCheckpoint(ctx, game, t);
     this.drawRelic(ctx, game, t);
     this.drawPlatforms(ctx, room, pal, t);
+    this.drawSecretRune(ctx, game, t);
     this.drawRoomProps(ctx, game, room, t);
     this.drawFairies(ctx, game, t);
     this.drawHazards(ctx, game, t);
@@ -176,6 +215,529 @@ export class Renderer {
       ctx.fillStyle = right;
       ctx.fillRect(VIEW_W * 0.65, 0, VIEW_W * 0.35, VIEW_H);
     }
+    if (opts.horror) this.drawHorrorAtmosphere(ctx, opts.horror);
+    if (opts.dread) this.drawDreadWorld(ctx, opts.dread, VIEW_W, VIEW_H);
+    if (opts.aiDebug) this.drawAiDebugOverlay(ctx, game, targetCam);
+    if (opts.scare) this.drawScareOverlay(ctx, opts.scare);
+  }
+
+  // ── Scary Mode 2.0 atmosphere layer ──────────────────────────────────────
+  /**
+   * Ambient horror only: fog, darkness, vignette, desaturation and distant
+   * presences. It never flashes, never scales the camera and never covers the
+   * HUD; those belong to the jumpscare overlay, which can be disabled outright.
+   */
+  drawHorrorAtmosphere(ctx, layer, width = VIEW_W, height = VIEW_H) {
+    if (!layer || !layer.enabled) return;
+    const v = layer.visual || {};
+    const preset = layer.presence;
+    ctx.save();
+    if (v.desaturation > 0) {
+      ctx.globalCompositeOperation = 'saturation';
+      ctx.globalAlpha = Math.min(0.55, v.desaturation / 220);
+      ctx.fillStyle = '#808080';
+      ctx.fillRect(0, 0, width, height);
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.globalAlpha = 1;
+    }
+    const darkness = Math.min(0.45, (v.darkness || 0) / 260);
+    if (darkness > 0) {
+      ctx.fillStyle = `rgba(3,4,6,${darkness})`;
+      ctx.fillRect(0, 0, width, height);
+    }
+    if (v.fog > 0) {
+      const fog = Math.min(0.4, v.fog / 260);
+      const top = ctx.createLinearGradient(0, 0, 0, height * 0.4);
+      top.addColorStop(0, `rgba(10,12,14,${fog})`);
+      top.addColorStop(1, 'rgba(10,12,14,0)');
+      ctx.fillStyle = top;
+      ctx.fillRect(0, 0, width, height * 0.4);
+      const bottom = ctx.createLinearGradient(0, height, 0, height * 0.55);
+      bottom.addColorStop(0, `rgba(8,10,12,${fog * 0.9})`);
+      bottom.addColorStop(1, 'rgba(8,10,12,0)');
+      ctx.fillStyle = bottom;
+      ctx.fillRect(0, height * 0.55, width, height * 0.45);
+    }
+    if (v.vignette > 0) {
+      const strength = Math.min(0.62, v.vignette / 150);
+      const radial = ctx.createRadialGradient(width / 2, height / 2, Math.min(width, height) * 0.32, width / 2, height / 2, Math.max(width, height) * 0.72);
+      radial.addColorStop(0, 'rgba(0,0,0,0)');
+      radial.addColorStop(1, `rgba(0,0,0,${strength})`);
+      ctx.fillStyle = radial;
+      ctx.fillRect(0, 0, width, height);
+    }
+    if (layer.event) this.drawHorrorEventOverlay(ctx, layer.event, width, height);
+    if (v.distortion > 0.4) {
+      ctx.globalAlpha = Math.min(0.12, v.distortion * 0.12);
+      for (let i = 0; i < 5; i += 1) {
+        ctx.fillStyle = i % 2 ? '#8fd8ff' : '#ff7a6a';
+        ctx.fillRect(0, height * (0.18 + i * 0.16), width, 2);
+      }
+      ctx.globalAlpha = 1;
+    }
+    if (preset && preset.alpha > 0.01) {
+      const size = preset.size || 46;
+      ctx.globalAlpha = Math.min(0.8, preset.alpha) * Math.max(0.25, (v.silhouette || 60) / 100);
+      ctx.fillStyle = preset.color || '#0b0d10';
+      ctx.beginPath();
+      ctx.ellipse(preset.x, preset.y, size * 0.16, size * 0.52, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(preset.x, preset.y - size * 0.56, size * 0.15, 0, Math.PI * 2);
+      ctx.fill();
+      if (v.flicker) {
+        ctx.globalAlpha *= 0.55 + Math.abs(Math.sin(performance.now() / 420)) * 0.45;
+      }
+    }
+    ctx.restore();
+  }
+
+  /** New jumpscare screens. Only reaches here when the event is allowed. */
+  drawHorrorEventOverlay(ctx, event, width = VIEW_W, height = VIEW_H) {
+    if (!event) return;
+    const t = performance.now() / 1000;
+    if (event.lighting === 'blackout') {
+      ctx.fillStyle = 'rgba(0,0,0,0.38)';
+      ctx.fillRect(0, 0, width, height);
+    } else if (event.lighting === 'inverted') {
+      ctx.fillStyle = 'rgba(28,12,44,0.28)';
+      ctx.fillRect(0, 0, width, height);
+    } else if (event.lighting === 'haunted') {
+      ctx.fillStyle = 'rgba(110,52,18,0.12)';
+      ctx.fillRect(0, 0, width, height);
+    }
+    const screen = event.screen;
+    if (!screen || screen === 'restore') return;
+    ctx.save();
+    if (screen === 'double_shadow') {
+      ctx.fillStyle = 'rgba(2,3,5,0.68)';
+      for (const [x, s] of [[width * 0.68, 1], [width * 0.74, 0.78]]) {
+        ctx.beginPath();
+        ctx.ellipse(x, height * 0.82, 38 * s, 126 * s, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(x, height * 0.58, 22 * s, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    } else if (screen === 'floor_hand' || screen === 'floor_face') {
+      const x = width * 0.52;
+      ctx.globalAlpha = 0.72;
+      ctx.fillStyle = '#050607';
+      ctx.beginPath();
+      ctx.ellipse(x, height * 0.96, 72, 34, 0, Math.PI, Math.PI * 2);
+      ctx.fill();
+      for (let i = -2; i <= 2; i += 1) {
+        ctx.beginPath();
+        ctx.roundRect(x + i * 17 - 6, height * 0.9, 12, 70 + Math.abs(i) * -10, 6);
+        ctx.fill();
+      }
+      if (screen === 'floor_face') {
+        ctx.fillStyle = '#c9c1ac';
+        ctx.beginPath();
+        ctx.ellipse(x, height * 0.9, 24, 31, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#171316';
+        ctx.beginPath();
+        ctx.arc(x - 8, height * 0.885, 3, 0, Math.PI * 2);
+        ctx.arc(x + 8, height * 0.885, 3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    } else if (screen === 'window_face' || screen === 'mirror_guest' || screen === 'mirror_hall') {
+      const x = screen === 'window_face' ? width * 0.8 : width * 0.78;
+      const y = screen === 'window_face' ? height * 0.28 : height * 0.46;
+      const w = screen === 'mirror_hall' ? 150 : 112;
+      const h = screen === 'window_face' ? 130 : 190;
+      ctx.strokeStyle = 'rgba(168,190,196,0.4)';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(x - w / 2, y - h / 2, w, h);
+      ctx.fillStyle = 'rgba(198,190,170,0.22)';
+      ctx.fillRect(x - w / 2, y - h / 2, w, h);
+      ctx.fillStyle = '#0b0c0e';
+      ctx.beginPath();
+      ctx.ellipse(x, y + 8, 31, 45, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#ddd5c2';
+      ctx.beginPath();
+      ctx.ellipse(x, y - 2, 17, 23, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#191216';
+      ctx.beginPath();
+      ctx.arc(x - 6, y - 5, 2.2, 0, Math.PI * 2);
+      ctx.arc(x + 6, y - 5, 2.2, 0, Math.PI * 2);
+      ctx.fill();
+      if (screen === 'mirror_hall') {
+        ctx.globalAlpha = 0.28;
+        ctx.fillStyle = '#bcd6e8';
+        ctx.fillRect(x - w / 2 - 18, 0, 2, height);
+      }
+    } else if (screen === 'inverted') {
+      ctx.globalAlpha = 0.18;
+      ctx.fillStyle = '#b54f61';
+      for (let i = 0; i < 7; i += 1) {
+        ctx.fillRect(0, height * (i / 7), width, 2);
+      }
+      ctx.fillStyle = '#050609';
+      ctx.fillRect(0, height * 0.48, width, 4);
+    } else if (screen === 'reflection') {
+      ctx.globalAlpha = 0.24;
+      ctx.fillStyle = '#bfd7e4';
+      ctx.fillRect(width * 0.18, 0, width * 0.12, height);
+      ctx.fillStyle = '#07090b';
+      ctx.beginPath();
+      ctx.ellipse(width * 0.24, height * 0.52, 28, 74, 0, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (screen === 'glitch') {
+      ctx.globalAlpha = 0.2;
+      for (let i = 0; i < 12; i += 1) {
+        ctx.fillStyle = i % 3 === 0 ? '#d95b4d' : '#86c8d8';
+        ctx.fillRect(0, (height / 12) * i + Math.sin(t * 9 + i) * 4, width, 2);
+      }
+    } else if (screen === 'tint') {
+      ctx.fillStyle = 'rgba(118,38,42,0.16)';
+      ctx.fillRect(0, 0, width, height);
+    }
+    ctx.restore();
+  }
+
+  // ── Update XII: The Dread Beyond environment layer ──────────────────────
+  /**
+   * Five procedurally drawn horror environments. Every shape is deterministic
+   * (no per-frame randomness), so nothing flickers unless the horror settings
+   * explicitly ask for it. Purely presentational: no gameplay state is read or
+   * written here.
+   */
+  drawDreadWorld(ctx, layer, width = VIEW_W, height = VIEW_H) {
+    const env = layer && layer.environment;
+    if (!env || !env.id) return;
+    const palette = env.palette || {};
+    const cameraX = Number(layer.cameraX) || 0;
+    const horizon = height * 0.78;
+    ctx.save();
+    const sky = ctx.createLinearGradient(0, 0, 0, height);
+    sky.addColorStop(0, palette.sky || '#07090b');
+    sky.addColorStop(0.72, palette.fog || '#101518');
+    sky.addColorStop(1, '#040506');
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, width, height);
+
+    // Deterministic pseudo-random from the environment id, not from Math.random.
+    let seed = 0;
+    for (let i = 0; i < env.id.length; i += 1) seed = (seed * 31 + env.id.charCodeAt(i)) >>> 0;
+    const rand = () => {
+      seed = (seed * 1664525 + 1013904223) >>> 0;
+      return seed / 0xffffffff;
+    };
+
+    ctx.globalAlpha = 0.9;
+    if (env.id === 'forgotten_village' || env.id === 'black_manor') {
+      const count = env.id === 'black_manor' ? 5 : 7;
+      for (let i = 0; i < count; i += 1) {
+        const x = i * (width / count) - (cameraX * 0.25) % (width / count);
+        const w = width / count * (0.55 + rand() * 0.2);
+        const h = height * (0.22 + rand() * 0.16);
+        ctx.fillStyle = palette.fog || '#12161a';
+        ctx.fillRect(x, horizon - h, w, h);
+        ctx.beginPath();
+        ctx.moveTo(x - 8, horizon - h);
+        ctx.lineTo(x + w / 2, horizon - h - 26);
+        ctx.lineTo(x + w + 8, horizon - h);
+        ctx.closePath();
+        ctx.fill();
+        if (env.id === 'forgotten_village') {
+          ctx.fillStyle = palette.light || '#ffcf86';
+          ctx.globalAlpha = 0.28;
+          ctx.fillRect(x + w * 0.24, horizon - h * 0.62, 12, 16);
+          ctx.fillRect(x + w * 0.62, horizon - h * 0.62, 12, 16);
+          ctx.globalAlpha = 0.9;
+        } else {
+          ctx.strokeStyle = palette.accent || '#b48b5f';
+          ctx.globalAlpha = 0.35;
+          ctx.lineWidth = 2;
+          ctx.strokeRect(x + w * 0.3, horizon - h * 0.7, w * 0.4, h * 0.45);
+          ctx.globalAlpha = 0.9;
+        }
+      }
+    } else if (env.id === 'hollow_hospital') {
+      ctx.strokeStyle = palette.accent || '#8fb8a8';
+      ctx.globalAlpha = 0.22;
+      ctx.lineWidth = 3;
+      for (let i = 0; i < 6; i += 1) {
+        const x = i * (width / 5) - (cameraX * 0.35) % (width / 5);
+        ctx.beginPath();
+        ctx.arc(x, horizon - 40, 42, Math.PI, 0);
+        ctx.stroke();
+        ctx.strokeRect(x - 34, horizon - 40, 68, height - horizon + 40);
+      }
+      ctx.globalAlpha = 0.5;
+      ctx.fillStyle = palette.light || '#d7f0e4';
+      for (let i = 0; i < 4; i += 1) ctx.fillRect(60 + i * 210 - (cameraX * 0.1) % 210, 46, 92, 7);
+    } else if (env.id === 'silent_underground') {
+      ctx.strokeStyle = palette.accent || '#7f9ab0';
+      ctx.globalAlpha = 0.3;
+      ctx.lineWidth = 4;
+      for (let i = 0; i < 5; i += 1) {
+        const x = i * (width / 4) - (cameraX * 0.5) % (width / 4);
+        ctx.beginPath();
+        ctx.arc(x, horizon - 10, 66, Math.PI, 0);
+        ctx.stroke();
+      }
+      ctx.strokeStyle = '#2b3138';
+      ctx.globalAlpha = 0.7;
+      for (let i = 0; i < 2; i += 1) {
+        ctx.beginPath();
+        ctx.moveTo(0, horizon + 22 + i * 14);
+        ctx.lineTo(width, horizon + 22 + i * 14);
+        ctx.stroke();
+      }
+      ctx.fillStyle = palette.light || '#bcd6e8';
+      ctx.globalAlpha = 0.22;
+      for (let i = 0; i < 3; i += 1) ctx.fillRect(120 + i * 320 - (cameraX * 0.2) % 320, 40, 54, 4);
+    } else {
+      // Endless Forest: layered trunks with a low canopy.
+      for (let i = 0; i < 14; i += 1) {
+        const x = i * (width / 12) - (cameraX * 0.4) % (width / 12);
+        const trunk = 14 + rand() * 18;
+        ctx.globalAlpha = 0.35 + rand() * 0.35;
+        ctx.fillStyle = '#0b100d';
+        ctx.fillRect(x, horizon - height * 0.6, trunk, height * 0.6);
+        ctx.beginPath();
+        ctx.moveTo(x + trunk / 2, horizon - height * 0.6);
+        ctx.lineTo(x - 26, horizon - height * 0.42);
+        ctx.moveTo(x + trunk / 2, horizon - height * 0.56);
+        ctx.lineTo(x + trunk + 30, horizon - height * 0.36);
+        ctx.strokeStyle = '#0b100d';
+        ctx.lineWidth = 6;
+        ctx.stroke();
+      }
+    }
+    ctx.globalAlpha = 1;
+
+    // Ceiling shadow for the Ceiling Dweller, and a mirror sheen for the Twin.
+    if (layer.ceilingShadow) {
+      const shadow = ctx.createLinearGradient(0, 0, 0, 90);
+      shadow.addColorStop(0, 'rgba(0,0,0,0.55)');
+      shadow.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = shadow;
+      ctx.fillRect(0, 0, width, 90);
+    }
+    if (layer.mirror) {
+      ctx.globalAlpha = 0.14;
+      ctx.fillStyle = '#bcd6e8';
+      ctx.fillRect(width * 0.5, 0, width * 0.02, height);
+      ctx.globalAlpha = 1;
+    }
+    const fog = ctx.createLinearGradient(0, height * 0.5, 0, height);
+    fog.addColorStop(0, 'rgba(8,10,12,0)');
+    fog.addColorStop(1, `rgba(6,8,10,${Math.min(0.6, (layer.fog || 0) / 160)})`);
+    ctx.fillStyle = fog;
+    ctx.fillRect(0, height * 0.5, width, height * 0.5);
+    if (layer.event?.lighting === 'blackout') {
+      ctx.fillStyle = 'rgba(0,0,0,0.34)';
+      ctx.fillRect(0, 0, width, height);
+    }
+    if (layer.event?.screen === 'floor_face' || layer.event?.screen === 'mirror_hall') {
+      ctx.save();
+      ctx.globalAlpha = 0.55;
+      ctx.fillStyle = '#d4cbb7';
+      if (layer.event.screen === 'floor_face') {
+        ctx.beginPath();
+        ctx.ellipse(width * 0.54, height * 0.92, 28, 36, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#151113';
+        ctx.beginPath();
+        ctx.arc(width * 0.54 - 9, height * 0.91, 3, 0, Math.PI * 2);
+        ctx.arc(width * 0.54 + 9, height * 0.91, 3, 0, Math.PI * 2);
+        ctx.fill();
+      } else {
+        ctx.fillStyle = 'rgba(188,214,226,0.16)';
+        ctx.fillRect(width * 0.72, height * 0.18, 120, height * 0.62);
+        ctx.fillStyle = '#080a0b';
+        ctx.beginPath();
+        ctx.ellipse(width * 0.78, height * 0.5, 26, 72, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+    ctx.restore();
+  }
+
+  // ── Update X: Scary Mode overlay + AI debug visualisation ────────────────
+
+  drawScareSilhouette(ctx, kind, x, y, size, color, alpha, motion) {
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.translate(x, y);
+    if (motion === 'lunge-zoom') ctx.scale(1 + (1 - alpha) * 0.3, 1 + (1 - alpha) * 0.3);
+    if (motion === 'silhouette-blink') ctx.rotate(Math.sin(alpha * 20) * 0.03);
+    ctx.fillStyle = color;
+    const s = size / 2;
+    if (kind === 'helmet') {
+      ctx.beginPath();
+      ctx.moveTo(-s * 0.6, s * 0.5);
+      ctx.lineTo(-s * 0.7, -s * 0.2);
+      ctx.quadraticCurveTo(0, -s * 0.95, s * 0.7, -s * 0.2);
+      ctx.lineTo(s * 0.6, s * 0.5);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = 'rgba(10,4,2,0.85)';
+      ctx.fillRect(-s * 0.42, -s * 0.2, s * 0.3, s * 0.11);
+      ctx.fillRect(s * 0.12, -s * 0.2, s * 0.3, s * 0.11);
+    } else if (kind === 'spectral') {
+      for (let i = 0; i < 4; i += 1) {
+        ctx.globalAlpha = alpha * (0.35 - i * 0.06);
+        ctx.beginPath();
+        ctx.ellipse(0, -i * 14, s * 0.7, s * 0.9, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    } else if (kind === 'golem') {
+      ctx.fillRect(-s * 0.8, -s * 0.9, s * 1.6, s * 1.5);
+      ctx.fillStyle = 'rgba(255,120,40,0.8)';
+      ctx.fillRect(-s * 0.42, -s * 0.55, s * 0.26, s * 0.14);
+      ctx.fillRect(s * 0.16, -s * 0.55, s * 0.26, s * 0.14);
+    } else if (kind === 'crown' || kind === 'dragon') {
+      ctx.beginPath();
+      ctx.moveTo(-s * 0.8, s * 0.6);
+      ctx.lineTo(-s * 0.5, -s * 0.7);
+      ctx.lineTo(-s * 0.2, -s * 0.15);
+      ctx.lineTo(0, -s * 0.95);
+      ctx.lineTo(s * 0.2, -s * 0.15);
+      ctx.lineTo(s * 0.5, -s * 0.7);
+      ctx.lineTo(s * 0.8, s * 0.6);
+      ctx.closePath();
+      ctx.fill();
+    } else if (kind === 'swarm' || kind === 'bloom' || kind === 'nest') {
+      const count = kind === 'swarm' ? 14 : 9;
+      for (let i = 0; i < count; i += 1) {
+        const a = (Math.PI * 2 * i) / count;
+        const r = s * (0.35 + (i % 4) * 0.16);
+        ctx.beginPath();
+        ctx.arc(Math.cos(a) * r, Math.sin(a) * r, s * 0.16, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    } else {
+      ctx.beginPath();
+      ctx.ellipse(0, 0, s * 0.55, s * 0.85, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(230,240,255,0.9)';
+      ctx.beginPath();
+      ctx.arc(-s * 0.2, -s * 0.25, s * 0.09, 0, Math.PI * 2);
+      ctx.arc(s * 0.2, -s * 0.25, s * 0.09, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  /** Presentation-only scare layer. Never hides the player for long. */
+  drawScareOverlay(ctx, effect, width = VIEW_W, height = VIEW_H) {
+    if (!effect || effect.duration <= 0) return;
+    const progress = Math.min(1, Math.max(0, effect.elapsed / effect.duration));
+    const fade = Math.max(0, 1 - progress);
+    if (effect.accessibility?.silent) return;
+    const w = Math.max(1, Number(width) || VIEW_W);
+    const h = Math.max(1, Number(height) || VIEW_H);
+    const cx = w / 2;
+    const cy = h * 0.52;
+
+    if (effect.flash > 0) {
+      ctx.fillStyle = `rgba(255,238,226,${(effect.flash * fade * 0.45).toFixed(3)})`;
+      ctx.fillRect(0, 0, w, h);
+    }
+
+    const vignette = ctx.createRadialGradient(cx, cy, h * 0.2, cx, cy, h * 0.9);
+    vignette.addColorStop(0, 'rgba(0,0,0,0)');
+    vignette.addColorStop(1, `rgba(8,0,0,${(0.75 * fade).toFixed(3)})`);
+    ctx.fillStyle = vignette;
+    ctx.fillRect(0, 0, w, h);
+
+    if (effect.profile) {
+      const scale = 1 + (1 - fade) * 0.22;
+      this.drawScareSilhouette(
+        ctx,
+        effect.profile.portrait,
+        cx + Math.sin(progress * Math.PI * 5) * effect.shake * 12,
+        cy + 26,
+        Math.min(150, h / 3.6) * scale,
+        effect.profile.color,
+        Math.min(0.92, fade * 1.15),
+        effect.motion,
+      );
+    }
+
+    if (effect.distortion > 0) {
+      ctx.save();
+      ctx.globalAlpha = effect.distortion * fade * 0.35;
+      ctx.strokeStyle = '#e8d9c0';
+      ctx.lineWidth = 1;
+      for (let i = 0; i < 9; i += 1) {
+        const y = (h / 9) * i + Math.sin(progress * 12 + i) * 5;
+        const off = Math.sin(progress * 18 + i * 2) * 18 * effect.distortion;
+        ctx.beginPath();
+        ctx.moveTo(off, y);
+        ctx.lineTo(w + off, y);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    if (effect.chromatic > 0) {
+      ctx.save();
+      ctx.globalAlpha = effect.chromatic * fade * 0.25;
+      ctx.fillStyle = '#ff3b2f';
+      ctx.fillRect(0, 0, w, h * 0.02);
+      ctx.fillStyle = '#2f9bff';
+      ctx.fillRect(0, h * 0.98, w, h * 0.02);
+      ctx.restore();
+    }
+  }
+
+  /** Developer-only: enemy states, paths, detection and attack ranges. */
+  drawAiDebugOverlay(ctx, game, cameraX = 0) {
+    if (!game) return;
+    const cam = Number.isFinite(cameraX) ? cameraX : 0;
+    ctx.save();
+    ctx.font = '10px monospace';
+    ctx.lineWidth = 1;
+    for (const enemy of game.enemies || []) {
+      if (enemy.dead) continue;
+      const ex = enemy.x + enemy.w / 2 - cam;
+      const ey = enemy.y + enemy.h / 2;
+      const brain = enemy.brain;
+      const state = enemy.aiState || brain?.state || enemy.state;
+      ctx.strokeStyle = brain && brain.stuckEvents > 0 ? '#ff7b5a' : '#7fe3c8';
+      ctx.globalAlpha = 0.85;
+      ctx.beginPath();
+      ctx.arc(ex, ey, brain?.profile?.attackRange ? brain.profile.attackRange : 60, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.globalAlpha = 0.35;
+      ctx.beginPath();
+      ctx.arc(ex, ey, brain?.profile?.aggroRange || 540, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+      if (brain && Array.isArray(brain.path) && brain.path.length && game.nav) {
+        ctx.strokeStyle = 'rgba(127,227,200,0.8)';
+        ctx.beginPath();
+        for (let i = brain.pathIndex; i < brain.path.length; i += 1) {
+          const node = game.nav.node(brain.path[i]);
+          if (!node) continue;
+          if (i === brain.pathIndex) ctx.moveTo(node.x - cam, node.y - 6);
+          else ctx.lineTo(node.x - cam, node.y - 6);
+        }
+        ctx.stroke();
+      }
+      ctx.fillStyle = '#dff6ee';
+      ctx.fillText(`${state} ${enemy.hp}/${enemy.maxHp}`, ex + 14, ey - 16);
+      if (brain && brain.lastKnown) {
+        ctx.strokeStyle = 'rgba(255,120,90,0.7)';
+        const lx = brain.lastKnown.x - cam;
+        ctx.beginPath();
+        ctx.moveTo(lx - 5, brain.lastKnown.y - 16);
+        ctx.lineTo(lx + 5, brain.lastKnown.y - 6);
+        ctx.moveTo(lx + 5, brain.lastKnown.y - 16);
+        ctx.lineTo(lx - 5, brain.lastKnown.y - 6);
+        ctx.stroke();
+      }
+    }
+    ctx.restore();
   }
 
   // ── background ───────────────────────────────────────────────────────────
@@ -2418,6 +2980,31 @@ export class Renderer {
         ctx.beginPath();
         ctx.arc(pr.x, pr.y, pr.r * 0.7, 0, Math.PI * 2);
         ctx.fill();
+      } else if (pr.type === 'spirit_bane') {
+        ctx.save();
+        const dir = pr.vx < 0 ? -1 : 1;
+        ctx.translate(pr.x, pr.y);
+        ctx.scale(dir, 1);
+        const glow = ctx.createRadialGradient(0, 0, 1, 0, 0, 24);
+        glow.addColorStop(0, 'rgba(240,250,255,0.95)');
+        glow.addColorStop(0.45, 'rgba(160,220,255,0.55)');
+        glow.addColorStop(1, 'rgba(110,180,255,0)');
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(0, 0, 24, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#e8f6ff';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(18, 0);
+        ctx.lineTo(-5, -3);
+        ctx.lineTo(-10, 0);
+        ctx.lineTo(-5, 3);
+        ctx.closePath();
+        ctx.stroke();
+        ctx.fillStyle = '#d8b96c';
+        ctx.fillRect(-12, -1.5, 5, 3);
+        ctx.restore();
       } else if (pr.type === 'shuriken') {
         ctx.save();
         ctx.translate(pr.x, pr.y);
@@ -3187,6 +3774,51 @@ export class Renderer {
     ctx.restore();
   }
 
+  drawScaryAura(ctx, enemy, t) {
+    const kind = enemy.scaryKind;
+    if (!kind) return;
+    ctx.save();
+    if (kind === 'mirror_double') {
+      ctx.globalAlpha = 0.2;
+      ctx.strokeStyle = '#d7e6ef';
+      ctx.lineWidth = 1.4;
+      for (let i = 0; i < 4; i += 1) {
+        const a = t * 0.8 + i * 1.6;
+        ctx.beginPath();
+        ctx.moveTo(-30, -54 + i * 12);
+        ctx.lineTo(28, -54 + i * 12);
+        ctx.stroke();
+        ctx.fillStyle = '#bfd8e6';
+        ctx.fillRect(-18 - Math.cos(a) * 14, -62 + Math.sin(a) * 10, 3, 3);
+      }
+    } else if (kind === 'lantern_eater') {
+      ctx.globalAlpha = 0.18 + Math.abs(Math.sin(t * 2)) * 0.08;
+      ctx.fillStyle = '#ffca74';
+      ctx.beginPath();
+      ctx.arc(0, -26, 24 + Math.sin(t * 2.4) * 3, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (kind === 'drowned_bell') {
+      ctx.globalAlpha = 0.28;
+      ctx.strokeStyle = '#8bb7bc';
+      ctx.lineWidth = 2;
+      for (let i = 0; i < 3; i += 1) {
+        const r = 18 + ((t * 24 + i * 18) % 52);
+        ctx.beginPath();
+        ctx.arc(0, -24, r, Math.PI * 0.92, Math.PI * 2.08);
+        ctx.stroke();
+      }
+    } else if (kind === 'weeping_mother') {
+      ctx.globalAlpha = 0.32;
+      ctx.fillStyle = '#b8c7d9';
+      for (let i = 0; i < 3; i += 1) {
+        ctx.beginPath();
+        ctx.ellipse(-8 + i * 9, -38 + Math.sin(t * 2 + i) * 18, 2, 6, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    ctx.restore();
+  }
+
   drawEnemies(ctx, game, t) {
     for (const e of game.enemies) {
       if (e.expansion) {
@@ -3227,6 +3859,8 @@ export class Renderer {
         ctx.globalCompositeOperation = 'source-over';
       }
       const flash = e.hitFlash > 0;
+      if (e.scaryKind) this.drawScaryAura(ctx, e, t);
+      if (Number.isFinite(e.ghostAlpha)) ctx.globalAlpha *= Math.max(0.04, e.ghostAlpha);
 
       if (e.type === 'crawler') {
         const wob = Math.sin(t * 12 + e.x) * 2;
@@ -4852,6 +5486,43 @@ export class Renderer {
     const n = parseInt(h.length === 3 ? h.split('').map((c) => c + c).join('') : h, 16);
     return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
   }
+}
+
+// Update XIII — The Veil of the Forgotten. Drawn after the world so the sanity
+// pressure reads as atmosphere, never as a UI block. Uses the canvas pixel
+// space directly; no camera transform and no gameplay collision.
+export function drawVeilAtmosphere(ctx, layer, width, height, dpr = 1) {
+  if (!ctx || !layer || layer.visible === false) return;
+  const w = Math.max(1, Number(width) || 1);
+  const h = Math.max(1, Number(height) || 1);
+  const sanity = clamp(Number(layer.sanity ?? 100), 0, 100);
+  const stress = clamp(1 - sanity / 100, 0, 1);
+  const time = Number(layer.time) || 0;
+  ctx.save();
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  const vignette = ctx.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.28, w / 2, h / 2, Math.max(w, h) * 0.72);
+  vignette.addColorStop(0, 'rgba(0,0,0,0)');
+  vignette.addColorStop(0.72, `rgba(10,6,16,${0.12 + stress * 0.28})`);
+  vignette.addColorStop(1, `rgba(6,3,10,${0.3 + stress * 0.45})`);
+  ctx.fillStyle = vignette;
+  ctx.fillRect(0, 0, w, h);
+
+  if (layer.distortion && stress > 0.25) {
+    const lines = Math.round(3 + stress * 9);
+    ctx.globalAlpha = 0.05 + stress * 0.1;
+    ctx.fillStyle = '#b79ad6';
+    for (let i = 0; i < lines; i += 1) {
+      const y = (h * (i + 0.5)) / lines + Math.sin(time * 0.9 + i * 1.7) * 4;
+      ctx.fillRect(0, y, w, 1);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  if (layer.touched) {
+    ctx.fillStyle = 'rgba(80,20,60,0.12)';
+    ctx.fillRect(0, 0, w, h);
+  }
+  ctx.restore();
 }
 
 export const RENDER_META = { PALETTES, BOSS_INFO };

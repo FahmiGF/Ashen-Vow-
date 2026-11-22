@@ -53,6 +53,7 @@ import {
   findConflict,
   resetActionBindings,
   resetAllBindings,
+  defaultSettings,
   formatCode,
   gamepadActions,
 } from './settings.js';
@@ -78,6 +79,29 @@ import {
   cutsceneFor,
   cutsceneBeatAt,
 } from './cutscene.js';
+import {
+  SECRETS_SAVE_KEY,
+  SECRET_MODE_KEYS,
+  SECRET_LEVEL_RUNES,
+  SECRET_SEQUENCE,
+  advanceSecretSequence,
+  createSecretBuffer,
+  defaultSecretsSave,
+  hasSecret,
+  recordSecret,
+  sanitizeSecretsSave,
+  secretForMode,
+  secretSpotFor,
+  secretSummary,
+} from './secrets.js';
+import {
+  CREDIT_ARCS,
+  CREDIT_SCENE_DELAY_MS,
+  CREDIT_SCENE_AUTO_CLOSE_MS,
+  creditArcFor,
+  creditSceneFor,
+  isArcFinalBoss,
+} from './credits.js';
 import {
   SPEEDRUN_LIVES,
   SPEEDRUN_RULES,
@@ -190,7 +214,174 @@ import {
   defaultFrontierProgress,
   sanitizeFrontierProgress,
 } from './frontier.js';
-import { Ashen3DGame, render3D } from './mode3d.js';
+import { Ashen3DGame, render3D, MODE3D_REGIONS, MODE3D_REGION_LIST, configure3D, gfx3DStatus, content3DSummary } from './mode3d.js';
+import {
+  HORROR3D_SAVE_KEY,
+  HORROR3D_SITES,
+  default3DHorrorSave,
+  sanitize3DHorrorSave,
+  record3DHorrorResult,
+  horror3DSummary,
+  horror3DSite,
+} from './mode3d_horror.js';
+import { probeCapabilities } from './gpu.js';
+import {
+  SETTINGS_CATEGORIES,
+  SETTING_DEFINITIONS,
+  SETTING_BY_PATH,
+  AUDIO_CHANNELS,
+  GRAPHICS_PRESETS,
+  LANGUAGES,
+  LANGUAGE_BY_ID,
+  getSettingsValue,
+  setSettingsValue,
+  applyGraphicsPreset,
+  markGraphicsCustom,
+  searchSettings,
+  settingsForCategory,
+} from './settings2.js';
+import { ScareDirector } from './scary.js';
+import {
+  HORROR_EVENTS,
+  HORROR_EVENT_LIST,
+  HORROR_REWARDS,
+  HORROR_SAVE_KEY,
+  HORROR_SETTING_BY_PATH,
+  HORROR_TABS,
+  HorrorEventDirector,
+  HorrorJournal,
+  SCARY_DIFFICULTY,
+  SCARY_ENEMIES,
+  ScareLedger,
+  horrorSettingsForTab,
+  resolveHorrorPresentation,
+  sanitizeHorrorSettings,
+} from './scary2.js';
+import {
+  HUNTER_ITEMS,
+  HUNTER_SAVE_KEY,
+  HUNTER_START_MARKS,
+  HUNTER_ITEM_BY_ID,
+  defaultHunterSave,
+  hunterBuy,
+  hunterCanBuy,
+  hunterReward,
+  hunterSummary,
+  sanitizeHunterSave,
+} from './hunter.js';
+import {
+  DREAD_ENVIRONMENTS,
+  DREAD_ENVIRONMENT_LIST,
+  DREAD_BOSSES,
+  DREAD_BOSS_LIST,
+  DREAD_MODES,
+  DREAD_MODE_LIST,
+  DREAD_EQUIPMENT,
+  DREAD_JOURNAL_ENTRIES,
+  DREAD_CATEGORIES,
+  DREAD_TABS,
+  DREAD_SAVE_KEY,
+  DREAD_SETTING_DEFINITIONS,
+  UNNATURAL_LIST,
+  AwarenessManager,
+  DreadEventDirector,
+  DreadJournal,
+  dreadModeProgress,
+  dreadSettingsForTab,
+  resolveDreadPresentation,
+  sanitizeDreadSettings,
+} from './dread.js';
+import {
+  VEIL_TABS,
+  VEIL_CHAPTERS,
+  VEIL_STAGES,
+  VEIL_BOSSES,
+  GHOSTS,
+  GHOST_CLASSIFICATIONS,
+  GHOST_RARITIES,
+  GHOST_RESEARCH_STAGES,
+  EVIDENCE_TYPES,
+  SANITY_CONSUMABLES,
+  SANITY_CONDITIONS,
+  MIND_UPGRADES,
+  INVESTIGATION_TOOLS,
+  INVESTIGATION_CASES,
+  INVESTIGATION_STEPS,
+  MISSION_LIBRARY,
+  VEIL_CURRENCIES,
+  VEIL_ACHIEVEMENTS,
+  LEADERBOARDS,
+  VEIL_FACILITIES,
+  VEIL_NPCS,
+  SECRET_LOCATIONS,
+  VEIL_COLLECTIBLES,
+  VEIL_SETTING_DEFINITIONS,
+  VEIL_SAVE_KEY,
+  VeilController,
+  veilStage,
+  veilBoss,
+  stagesForChapter,
+  stageUnlocked,
+  bossUnlocked,
+  chapterUnlocked,
+  veilSummary,
+  veilSettingValue,
+  sanitizeVeilSettings,
+  resolveVeilPresentation,
+  dailyRotation,
+  weeklyRotation,
+  missionProgress,
+  veilFacilityState,
+  veilNpcDialogue,
+  veilCollectibleTotals,
+  veilEquipmentEffects,
+} from './veil.js';
+import {
+  ETERNAL_TABS,
+  ETERNAL_CHAPTERS,
+  ETERNAL_STAGES,
+  ETERNAL_BOSSES,
+  ETERNAL_SAVE_KEY,
+  ETERNAL_SETTING_DEFINITIONS,
+  ETERNAL_EQUIPMENT,
+  EQUIPMENT_CATEGORIES,
+  HUNT_VARIANTS,
+  WORLD_EVENTS,
+  INDEX_RANK_MILESTONES,
+  ETERNAL_ACHIEVEMENTS,
+  EXPEDITION_ROLES,
+  EternalController,
+  eternalStage,
+  eternalBoss,
+  eternalStageUnlocked,
+  eternalBossUnlocked,
+  eternalChapterUnlocked,
+  eternalChapterClear,
+  eternalFinalUnlocked,
+  eternalStagesForChapter,
+  eternalSummary,
+  sanitizeEternalSettings,
+  eternalSettingValue,
+  setEternalSetting,
+  resolveEternalPresentation,
+  equipmentCost,
+} from './eternal.js';
+import {
+  ARCHIVE_ARCS, ARCHIVE_CHAPTERS, ARCHIVE_CHAPTERS_BY_ID, ARCHIVE_STAGES,
+  ARCHIVE_STAGES_BY_ID, ARCHIVE_BOSSES, ARCHIVE_TOOLS, ARCHIVE_TOOLS_BY_ID,
+  ARCHIVE_TOOL_IDS, ARCHIVE_TOOL_CATEGORIES, ARCHIVE_ACHIEVEMENTS,
+  GHOST_TOOL_REQUIREMENTS, JUMPSCARE_EVENTS, JUMPSCARE_EVENTS_BY_ID,
+  JUMPSCARE_CATEGORIES, ARCHIVE_DISCOVERY_STATES, ARCHIVE_SAVE_KEY,
+} from './archive_data.js';
+import { ArchiveController, defaultArchiveSave, sanitizeArchiveSave } from './archive.js';
+import { drawVeilAtmosphere } from './render.js';
+import { bossDebugSnapshot } from './boss_core.js';
+import {
+  DIFFICULTIES as CAMPAIGN_DIFFICULTIES,
+  DIFFICULTY_BY_ID as CAMPAIGN_DIFFICULTY_BY_ID,
+  difficultyWarning,
+  difficultyUnlocked,
+} from './difficulty.js';
 import {
   ATLAS_VERSION,
   ATLAS_NAME,
@@ -562,6 +753,23 @@ import {
   renderWaveDefense,
 } from './wavedefense.js';
 import { RealmsUI } from './realms_ui.js';
+import { EclipseUI } from './eclipse_ui.js';
+import {
+  ECLIPSE_NAME, ECLIPSE_LOCAL_NAME, ECLIPSE_PITCH, ECLIPSE_ROOM_START,
+  ECLIPSE_ROOMS, ECLIPSE_ROOM_BY_ID, ECLIPSE_ENEMY_INFO, ECLIPSE_BOSSES, ECLIPSE_BOSS_BY_ID,
+  ECLIPSE_SECRET_BOSS, ECLIPSE_SECRET_ROOM_ID, ECLIPSE_FRAGMENTS,
+  GODFALL_ROOM_START, GODFALL_FLOOR_COUNT, GODFALL_BOSSES,
+  defaultEclipseProgress, sanitizeEclipseProgress, unlockEclipse, recordEclipseRoom, recordEclipseBoss,
+  eclipseSummary, createGodfallRun, recordGodfallFloor, failGodfallRun,
+  defaultGodfallProgress, sanitizeGodfallProgress, godfallSummary,
+  defaultGuildState, sanitizeGuildState, advanceGuildWeek, recordRaidResult,
+  createRaidRun, RAID_BY_ID,
+  defaultAwakeningProgress, sanitizeAwakeningProgress, awakeningBonus, grantMastery,
+  createSaveEnvelope, migrateSave, SAVE_KEYS,
+  ECLIPSE_WEAPONS, ECLIPSE_CLASSES,
+  PerformanceSampler,
+} from './eclipse.js';
+import { RuntimeReporter, releaseChecklist, validateEclipseContent } from './qa.js';
 import {
   ASTRAL_ROOM_START,
   ASTRAL_LOCAL_NAME,
@@ -627,6 +835,14 @@ let havenNpcId = 'sari';
 let chronicleEventId = null;
 let wardrobeFilter = 'all';
 let activeRunKind = 'legacy';
+let activeEclipseRoom = null;
+let activeGodfallFloor = 0;
+let godfallRun = null;
+let activeRaid = null;
+let eclipseRunStartedAt = 0;
+const framePerf = new PerformanceSampler({ capacity: 240 });
+const runtimeReporter = new RuntimeReporter();
+runtimeReporter.install();
 let activeFairyStage = -1;
 let activeFairyBoss = null;
 let fairyRunStartedAt = 0;
@@ -747,7 +963,13 @@ let codexOpen = false;
 let inventoryOpen = false;
 let codexTab = 'enemies';
 let settingsOpen = false;
-let settingsTab = 'audio';
+let settingsTab = 'graphics';
+let settingsSearch = '';
+let settingsBaseline = null;
+let settingsDiagnosticsOpen = false;
+let settingsApplyState = 'saved';
+let hudLayoutOpen = false;
+let capabilityCache = null;
 let settingsCapture = null; // { action, slot }
 let settingsConflict = null; // { action, other, slot, code }
 let desiredMusic = null;
@@ -894,6 +1116,7 @@ const LEVEL_META = [
 function defaultProgress() {
   return {
     version: 1,
+    schemaVersion: 2,
     unlocked: 1,
     cleared: ROOMS.map(() => false),
     map: defaultMapState(ROOMS.length),
@@ -914,6 +1137,10 @@ function defaultProgress() {
     wavedefense: defaultWaveDefenseProgress(),
     astral: defaultAstralProgress(),
     realms: defaultRealmsProgress(),
+    eclipse: defaultEclipseProgress(),
+    godfall: defaultGodfallProgress(),
+    guild: defaultGuildState(),
+    awakening: defaultAwakeningProgress(),
     stageTimes: {},
   };
 }
@@ -933,11 +1160,32 @@ function sanitizeStageTimes(raw) {
   return result;
 }
 
+function readProgressPayload(raw) {
+  if (!raw) return null;
+  const parsed = JSON.parse(raw);
+  return parsed && typeof parsed === 'object' ? parsed : null;
+}
+
 function loadProgress() {
+  let parsed = null;
+  try {
+    parsed = readProgressPayload(localStorage.getItem(PROGRESS_KEY));
+  } catch {
+    parsed = null;
+  }
+  if (!parsed) {
+    try {
+      parsed = readProgressPayload(localStorage.getItem(SAVE_KEYS.backup));
+      if (parsed) localStorage.setItem(SAVE_KEYS.backup, JSON.stringify(parsed));
+    } catch { /* storage unavailable */ }
+  }
+  const migration = parsed ? migrateSave(parsed) : null;
+  if (migration?.ok) parsed = migration.progress;
   try {
     const raw = localStorage.getItem(PROGRESS_KEY);
-    if (!raw) return defaultProgress();
-    const parsed = JSON.parse(raw);
+    if (raw && (!migration || !migration.ok)) localStorage.setItem(SAVE_KEYS.quarantine, raw.slice(0, 200000));
+  } catch { /* storage unavailable */ }
+  try {
     if (!parsed || typeof parsed !== 'object') return defaultProgress();
     const cleared = ROOMS.map((_, i) => !!parsed.cleared?.[i]);
     const unlocked = clamp(Number(parsed.unlocked) || 1, 1, ROOMS.length);
@@ -951,10 +1199,11 @@ function loadProgress() {
         };
     // Keep every unknown top-level field. v0.3.0 adds `expansion` without
     // changing the storage key or discarding future/legacy save data.
-    const { version, unlocked: _unlocked, cleared: _cleared, map: _map, expansion: _expansion, atlas: _atlas, labyrinth: _labyrinth, court: _court, skills: _skills, pack: _pack, fairy: _fairy, speedrun: _speedrun, fishing: _fishing, fallen: _fallen, crusade: _crusade, trials: _trials, puzzle: _puzzle, moba: _moba, wavedefense: _wavedefense, astral: _astral, realms: _realms, stageTimes: _stageTimes, ...extras } = parsed;
+    const { version, schemaVersion: _schemaVersion, unlocked: _unlocked, cleared: _cleared, map: _map, expansion: _expansion, atlas: _atlas, labyrinth: _labyrinth, court: _court, skills: _skills, pack: _pack, fairy: _fairy, speedrun: _speedrun, fishing: _fishing, fallen: _fallen, crusade: _crusade, trials: _trials, puzzle: _puzzle, moba: _moba, wavedefense: _wavedefense, astral: _astral, realms: _realms, eclipse: _eclipse, godfall: _godfall, guild: _guild, awakening: _awakening, stageTimes: _stageTimes, ...extras } = parsed;
     return {
       ...extras,
       version: 1,
+      schemaVersion: 2,
       unlocked,
       cleared,
       map,
@@ -975,6 +1224,10 @@ function loadProgress() {
       wavedefense: sanitizeWaveDefenseProgress(parsed.wavedefense),
       astral: sanitizeAstralProgress(parsed.astral),
       realms: sanitizeRealmsProgress(parsed.realms),
+      eclipse: sanitizeEclipseProgress(parsed.eclipse),
+      godfall: sanitizeGodfallProgress(parsed.godfall),
+      guild: sanitizeGuildState(parsed.guild),
+      awakening: sanitizeAwakeningProgress(parsed.awakening, Object.keys(CHARACTERS)),
       stageTimes: sanitizeStageTimes(parsed.stageTimes),
     };
   } catch {
@@ -985,7 +1238,10 @@ function loadProgress() {
 function saveProgress() {
   if (activeRunKind === 'hack' && hackSnapshot) return;
   try {
+    const previous = localStorage.getItem(PROGRESS_KEY);
+    if (previous) localStorage.setItem(SAVE_KEYS.backup, previous);
     progress.version = 1;
+    progress.schemaVersion = 2;
     localStorage.setItem(PROGRESS_KEY, JSON.stringify(progress));
   } catch {
     /* storage unavailable — keep in memory */
@@ -993,6 +1249,2610 @@ function saveProgress() {
 }
 
 let progress = loadProgress();
+
+// ── Hidden secrets ───────────────────────────────────────────────────────
+function loadSecretsSave() {
+  try {
+    const raw = localStorage.getItem(SECRETS_SAVE_KEY);
+    return sanitizeSecretsSave(raw ? JSON.parse(raw) : defaultSecretsSave());
+  } catch {
+    return sanitizeSecretsSave(defaultSecretsSave());
+  }
+}
+
+let secretsState = loadSecretsSave();
+const secretBuffer = createSecretBuffer();
+let creditSceneOpen = false;
+let creditSceneCurrent = null;
+let creditSceneTimer = 0;
+let creditSceneDelayTimer = 0;
+let lastCreditEvent = null;
+let lastCreditAttempt = null;
+const creditArcLastAt = {};
+
+function saveSecretsState() {
+  try { localStorage.setItem(SECRETS_SAVE_KEY, JSON.stringify(secretsState)); } catch { /* storage unavailable */ }
+}
+
+function currentSecretMode() {
+  if (mobaActive) return 'moba';
+  if (wdActive) return 'wavedefense';
+  if (menuView === 'puzzlePlay') return 'puzzle';
+  if (menuView === 'realmsRun') return 'realms';
+  if (menuView === 'mode3d') return game3D?.horror ? 'horror3d' : 'mode3d';
+  if (menuView !== 'none' && SECRET_MODE_KEYS.includes(menuView)) return menuView;
+  if (started && menuView === 'none') return activeRunKind;
+  return menuView === 'title' ? 'title' : (started ? activeRunKind : null);
+}
+
+function claimModeSecret() {
+  const mode = currentSecretMode();
+  const mark = secretForMode(mode);
+  if (!mark) return false;
+  const result = recordSecret(secretsState, mark.id);
+  if (!result.firstTime) return false;
+  secretsState = result.state;
+  saveSecretsState();
+  showToast(mark.whisper, 4200);
+  audio.play({ type: 'relic' });
+  return true;
+}
+
+function tryCollectSecretRune() {
+  const rune = game.secretRune;
+  if (!rune || rune.found || !game.player) return false;
+  const px = game.player.x + game.player.w / 2;
+  const py = game.player.y + game.player.h / 2;
+  if (Math.hypot(px - rune.x, py - rune.y) > 86) return false;
+  const result = recordSecret(secretsState, rune.id);
+  if (!result.ok) return false;
+  secretsState = result.state;
+  rune.found = true;
+  game.secretRune = null;
+  saveSecretsState();
+  showToast(rune.whisper, 5000);
+  audio.play({ type: 'relic' });
+  return true;
+}
+
+function maybeCreditScene(ev) {
+  if (ev.type !== 'bossDown') return false;
+  const arc = isArcFinalBoss(activeRunKind, ev.kind) ? creditArcFor(activeRunKind, ev.kind) : null;
+  lastCreditEvent = { kind: ev.kind, runKind: activeRunKind, arc: arc?.id || null, at: performance.now() };
+  if (!arc) return false;
+  lastCreditAttempt = { arc: arc.id, at: performance.now(), opened: false };
+  const now = performance.now();
+  if (now - (creditArcLastAt[arc.id] || -Infinity) < 6000) return false;
+  creditArcLastAt[arc.id] = now;
+  clearTimeout(creditSceneDelayTimer);
+  creditSceneDelayTimer = window.setTimeout(() => {
+    if (started) openCreditScene(arc.id);
+  }, CREDIT_SCENE_DELAY_MS);
+  return true;
+}
+
+function buildCreditScene(arcId) {
+  const scene = creditSceneFor(arcId);
+  if (!scene) return null;
+  $('credit-scene-eyebrow').textContent = `${scene.numeral} · CREDIT SCENE`;
+  $('credit-scene-title').textContent = scene.title;
+  $('credit-scene-sub').textContent = scene.subtitle;
+  $('credit-scene-line').textContent = scene.line;
+  $('credit-scene-roll').innerHTML = `
+    ${scene.roles.map((entry) => `
+      <div class="credit-scene-role">
+        <span>${esc(entry.role)}</span>
+        <strong>${esc(entry.name)}</strong>
+      </div>`).join('')}
+    <div class="credit-scene-footer">
+      <span>ASHEN VOW · ${esc(scene.numeral)}</span>
+      <strong>${esc(scene.footer)}</strong>
+      <em>for every soul who playtested the vow</em>
+    </div>`;
+  return scene;
+}
+
+function openCreditScene(arcId) {
+  const scene = buildCreditScene(arcId);
+  if (!scene) return false;
+  clearTimeout(creditSceneTimer);
+  creditSceneCurrent = scene;
+  creditSceneOpen = true;
+  syncScreens();
+  const roll = $('credit-scene-roll');
+  if (roll) {
+    roll.style.animation = 'none';
+    void roll.offsetWidth;
+    roll.style.animation = '';
+  }
+  creditSceneTimer = window.setTimeout(() => closeCreditScene(), CREDIT_SCENE_AUTO_CLOSE_MS);
+  if (lastCreditAttempt?.arc === arcId) lastCreditAttempt.opened = true;
+  return true;
+}
+
+function closeCreditScene() {
+  if (!creditSceneOpen) return;
+  creditSceneOpen = false;
+  creditSceneCurrent = null;
+  clearTimeout(creditSceneTimer);
+  creditSceneTimer = 0;
+  syncScreens();
+}
+
+// ── Update XVII: 3D Scary Mode save ──────────────────────────────────────
+function load3DHorrorSave() {
+  try {
+    const raw = localStorage.getItem(HORROR3D_SAVE_KEY);
+    return sanitize3DHorrorSave(raw ? JSON.parse(raw) : {});
+  } catch {
+    return default3DHorrorSave();
+  }
+}
+
+let horror3D = load3DHorrorSave();
+let horror3DSiteId = horror3D.lastSite || HORROR3D_SITES[0].id;
+
+function save3DHorrorState() {
+  try { localStorage.setItem(HORROR3D_SAVE_KEY, JSON.stringify(horror3D)); } catch { /* storage unavailable */ }
+}
+
+// ── Scary Mode 2.0 — The Nightmare Protocol (Update XI) ───────────────────
+// Three separate layers live in one settings object but stay independent:
+// horror difficulty (enemy behaviour), scare presentation, and anti-jumpscare.
+function loadHorrorJournalState() {
+  try {
+    const raw = localStorage.getItem(HORROR_SAVE_KEY);
+    return new HorrorJournal(raw ? JSON.parse(raw) : {});
+  } catch {
+    return new HorrorJournal({});
+  }
+}
+
+let horrorJournal = loadHorrorJournalState();
+let horrorDirector = null;
+let horrorPresentation = null;
+let horrorLedger = new ScareLedger({ maxPerSession: 25, repeatPrevention: true });
+let scaryTab = 'jumpscare';
+let horrorPresence = null;
+let horrorEventLayer = {};
+let horrorLastDone = null;
+let horrorSignature = '';
+let horrorAutoTimer = 6;
+
+function horrorSettings() {
+  return sanitizeHorrorSettings(settings.scary || {});
+}
+
+function saveHorrorState() {
+  try {
+    localStorage.setItem(HORROR_SAVE_KEY, JSON.stringify(horrorJournal.toJSON()));
+  } catch { /* storage unavailable */ }
+}
+
+// ── Update XIX: The Hunter's Kit ─────────────────────────────────────────
+function loadHunterState() {
+  try {
+    const raw = localStorage.getItem(HUNTER_SAVE_KEY);
+    return sanitizeHunterSave(raw ? JSON.parse(raw) : defaultHunterSave());
+  } catch {
+    return sanitizeHunterSave(defaultHunterSave());
+  }
+}
+
+let hunterState = loadHunterState();
+let hunterShopOpen = false;
+
+function saveHunterState() {
+  try { localStorage.setItem(HUNTER_SAVE_KEY, JSON.stringify(hunterState)); } catch { /* storage unavailable */ }
+}
+
+/** Persistent stock is copied into a run; spent stock is copied back out. */
+function syncHunterStockToRun() {
+  game.setHunterItems(hunterState.items);
+}
+
+function syncHunterFromGame() {
+  if (!started) return hunterState;
+  hunterState.items = { ...game.player.hunterItems };
+  saveHunterState();
+  return hunterState;
+}
+
+function horrorContext() {
+  const enemies = game.enemies ? game.enemies.filter((e) => !e.dead) : [];
+  return {
+    roomIndex: game.roomIndex,
+    hp: game.player ? game.player.hp : 1,
+    maxHp: game.player ? game.player.maxHp : 100,
+    dead: game.state === 'dead',
+    menu: menuView !== 'none',
+    paused: !!paused,
+    dialogue: !!dialogueOpen,
+    cinematic: !!dialogueOpen || game.state === 'blessing',
+    combat: enemies.some((e) => e.aiState === 'chase' || e.aiState === 'attack'),
+    roomCleared: true,
+    enemyCount: enemies.length,
+    enemySlots: 6,
+    collectiblePresent: false,
+    optionalRoute: true,
+  };
+}
+
+function ensureHorrorDirector() {
+  const next = horrorSettings();
+  if (!horrorDirector) horrorDirector = new HorrorEventDirector(next, { seed: 20261119, roomIndex: game.roomIndex });
+  else horrorDirector.configure(next);
+  horrorPresentation = resolveHorrorPresentation(next, {
+    accessibility: settings.accessibility || {},
+    graphics: settings.graphics || {},
+  });
+  horrorLedger.maxPerSession = horrorPresentation.jumpscares.maxPerSession;
+  horrorLedger.repeatPrevention = horrorPresentation.jumpscares.repeatPrevention;
+  return horrorPresentation;
+}
+
+/** Push the resolved layers into the simulation, the director and the HUD. */
+function syncHorror() {
+  const presentation = ensureHorrorDirector();
+  if (game && typeof game.setScaryMode === 'function') {
+    game.setScaryMode({ enabled: presentation.enabled, difficulty: presentation.difficulty });
+  }
+  if (game3D && typeof game3D.setScaryMode === 'function') game3D.setScaryMode(presentation);
+  if (scareDirector) {
+    scareDirector.configure({
+      ...settings.scary,
+      enabled: presentation.jumpscares.possible,
+      intensity: presentation.jumpscares.intensity,
+      maxScaresPerSession: presentation.jumpscares.maxPerSession,
+    }, settings.accessibility);
+  }
+  const antiBtn = document.getElementById('btn-pause-anti');
+  if (antiBtn) {
+    antiBtn.textContent = `ANTI-JUMPSCARE: ${presentation.antiJumpscare ? 'AKTIF' : 'MATI'}`;
+    antiBtn.classList.toggle('armed', presentation.antiJumpscare);
+  }
+  horrorSignature = JSON.stringify([settings.scary, settings.accessibility, settings.graphics?.preset, settings.graphics?.postProcessing]);
+  return presentation;
+}
+
+function syncHorrorIfChanged() {
+  if (!horrorPresentation) return syncHorror();
+  const sig = JSON.stringify([settings.scary, settings.accessibility, settings.graphics?.preset, settings.graphics?.postProcessing]);
+  return sig === horrorSignature ? horrorPresentation : syncHorror();
+}
+
+function horrorRowHTML(def) {
+  const value = getSettingsValue(settings, def.path);
+  const id = `horror-${def.tab}-${def.path.replace(/\./g, '-')}`;
+  let control = '';
+  if (def.type === 'toggle') {
+    control = `<label class="scary-toggle"><input type="checkbox" id="${id}" data-horror-path="${def.path}" ${value ? 'checked' : ''} /><span>${value ? 'AKTIF' : 'MATI'}</span></label>`;
+  } else if (def.type === 'select') {
+    control = `<select class="scary-select" id="${id}" data-horror-path="${def.path}">${def.options.map((option) => `<option value="${option.id}" ${String(value) === option.id ? 'selected' : ''}>${option.label}</option>`).join('')}</select>`;
+  } else {
+    control = `<div class="scary-range"><input type="range" id="${id}" min="${def.min}" max="${def.max}" step="${def.step}" value="${Number(value)}" data-horror-path="${def.path}" /><output>${Number(value)}${def.suffix || ''}</output></div>`;
+  }
+  return `<div class="scary-row${def.highlight ? ' highlight' : ''}"><label for="${id}"><span>${def.label}</span><small>${def.desc}</small></label>${control}</div>`;
+}
+
+function scaryDifficultyCards() {
+  const current = horrorSettings().difficulty;
+  return `<section class="scary-difficulty">${Object.values(SCARY_DIFFICULTY).map((entry) => `
+    <button class="scary-difficulty-card${entry.id === current ? ' active' : ''}" type="button" data-scary-difficulty="${entry.id}" aria-pressed="${entry.id === current}">
+      <b>${entry.label}</b><em>${entry.tagline}</em>
+      <ul>${entry.rows.map(([key, value]) => `<li>${key}: <strong>${value}</strong></li>`).join('')}</ul>
+    </button>`).join('')}</section>`;
+}
+
+function scaryJournalPanel() {
+  const progressData = horrorJournal.progress();
+  const achievements = horrorJournal.achievements();
+  return `
+    <section class="scary-group"><h3>JURNAL HOROR</h3><div class="scary-journal">${[
+      ['Musuh ditemui', progressData.enemies], ['Peristiwa ditemukan', progressData.events],
+      ['Area diselesaikan', progressData.areas], ['Bos opsional', progressData.bosses],
+      ['Relik tersembunyi', progressData.relics], ['Tantangan', progressData.challenges],
+      ['Hadiah kosmetik', progressData.rewards],
+    ].map(([label, value]) => `<div class="scary-journal-row"><span>${label}</span><b>${value}</b></div>`).join('')}</div></section>
+    <section class="scary-group"><h3>PERISTIWA HOROR</h3><div class="scary-journal">${HORROR_EVENT_LIST.map((eventData) => `<div class="scary-journal-row"><span>${eventData.icon} ${eventData.label}</span><b>${horrorJournal.events[eventData.id] || 0}×</b></div>`).join('')}</div></section>
+    <section class="scary-group"><h3>ACHIEVEMENT</h3>${achievements.map((entry) => `<div class="scary-achievement ${entry.unlocked ? 'unlocked' : 'locked'}"><span class="icon">${entry.icon}</span><div><b>${entry.label}</b><small>${entry.desc}</small></div></div>`).join('')}</section>
+    <section class="scary-group"><h3>HADIAH KOSMETIK</h3>${HORROR_REWARDS.map((reward) => `<div class="scary-achievement ${horrorJournal.rewards.includes(reward.id) ? 'unlocked' : 'locked'}"><span class="icon">✦</span><div><b>${reward.label}</b><small>${reward.kind} · kosmetik</small></div></div>`).join('')}</section>
+    <section class="scary-group"><h3>STATISTIK</h3><div class="scary-journal">${Object.entries(horrorJournal.counters).map(([key, value]) => `<div class="scary-journal-row"><span>${key}</span><b>${value}</b></div>`).join('')}</div></section>`;
+}
+
+function hunterShopCard(item) {
+  const count = hunterState.items[item.id] || 0;
+  const check = hunterCanBuy(hunterState, item.id);
+  const label = check.ok ? `BELI · ◈ ${item.price}` : check.poor ? `◈ ${item.price}` : 'STOK PENUH';
+  return `
+    <article class="shop-card hunter-card${count > 0 ? ' owned' : ''}${check.ok ? '' : ' disabled'}${check.poor ? ' poor' : ''}">
+      <span class="shop-icon" aria-hidden="true">${item.glyph}</span>
+      <span class="shop-type">PERLENGKAPAN PEMBURU</span>
+      <h3 class="shop-name">${esc(item.name)}</h3>
+      <p class="shop-desc">${esc(item.desc)}</p>
+      <p class="shop-note">${esc(item.effect)}</p>
+      <p class="shop-note">STOK RUN INI · ${count}</p>
+      <button class="btn ${check.ok ? 'btn-primary' : 'btn-ghost'} btn-small shop-buy" type="button" data-hunter-buy="${item.id}" ${check.ok ? '' : 'disabled'}>${label}</button>
+    </article>`;
+}
+
+function buildHunterShop() {
+  const wrap = $('hunter-shop-items');
+  if (!wrap) return;
+  const marks = $('hunter-shop-marks');
+  if (marks) marks.textContent = hunterState.marks;
+  const report = $('hunter-shop-report');
+  if (report) {
+    const summary = hunterSummary(hunterState);
+    report.textContent = `${summary.stock} stok tersimpan · ${summary.banished} roh diusir · ${summary.uses} alat dipakai`;
+  }
+  wrap.innerHTML = HUNTER_ITEMS.map(hunterShopCard).join('');
+}
+
+function openHunterShop() {
+  if (dialogueOpen || spectating) return false;
+  hunterShopOpen = true;
+  clearHeldKeys();
+  buildHunterShop();
+  syncScreens();
+  return true;
+}
+
+function closeHunterShop() {
+  if (!hunterShopOpen) return;
+  hunterShopOpen = false;
+  clearHeldKeys();
+  lastTime = performance.now();
+  accumulator = 0;
+  syncScreens();
+  updateHud();
+}
+
+function buyHunterItem(id) {
+  const result = hunterBuy(hunterState, id, Date.now());
+  if (!result.ok) {
+    showToast(result.reason, 1700);
+    return result;
+  }
+  if (started && menuView === 'none') game.addHunterItem(id, result.item.pack, true);
+  saveHunterState();
+  buildHunterShop();
+  updateHud();
+  showToast(`Dibeli: ${result.item.name} · ◈ ${result.marks}`, 1600);
+  return result;
+}
+
+function buildScaryScreen() {
+  const summary = $('scary-summary');
+  const tabs = $('scary-tabs');
+  const body = $('scary-body');
+  if (!summary || !tabs || !body) return null;
+  const presentation = syncHorror();
+  const progressData = horrorJournal.progress();
+  const snap = horrorDirector ? horrorDirector.snapshot() : null;
+  summary.innerHTML = [
+    ['Status', presentation.enabled ? 'AKTIF' : 'MATI', !presentation.enabled],
+    ['Kesulitan', presentation.profile.label.split(' — ')[0]],
+    ['Anti-Jumpscare', presentation.antiJumpscare ? 'AKTIF' : 'MATI', presentation.antiJumpscare],
+    ['Intensitas', String(presentation.profile.intensity).toUpperCase()],
+    ['Peristiwa', progressData.events],
+    ['Achievement', progressData.achievements],
+    ['Event aktif', snap?.active ? snap.active.label : '—'],
+    ['Sisa scare', `${horrorLedger.remaining()}`],
+  ].map(([label, value, warn]) => `<div class="scary-cell${warn ? ' warn' : ''}"><b>${label}</b><span>${esc(String(value))}</span></div>`).join('');
+  tabs.innerHTML = HORROR_TABS.map((tab) => `<button class="scary-tab${scaryTab === tab.id ? ' active' : ''}" type="button" role="tab" aria-selected="${scaryTab === tab.id}" data-scary-tab="${tab.id}"><span>${tab.icon}</span> ${tab.label}</button>`).join('');
+  const list = horrorSettingsForTab(scaryTab).map(horrorRowHTML).join('');
+  const tabLabel = HORROR_TABS.find((tab) => tab.id === scaryTab)?.label || '';
+  body.innerHTML = `
+    ${scaryTab === 'jumpscare' ? scaryDifficultyCards() : ''}
+    <section class="scary-group"><h3>${tabLabel}</h3>${list}</section>
+    ${scaryTab === 'jumpscare' ? scaryJournalPanel() : ''}
+    <p class="micro">Kontrol horor disimpan di ashen-vow-settings-v1 · jurnal di ${HORROR_SAVE_KEY} · kesulitan horor terpisah dari kampanye.</p>`;
+  return presentation;
+}
+
+function openScary() {
+  menuView = 'scary';
+  buildScaryScreen();
+  syncScreens();
+}
+
+function closeScary() {
+  menuView = 'title';
+  syncScreens();
+}
+
+function startScaryRun() {
+  settings.scary.enabled = true;
+  applySettings();
+  syncHorror();
+  horrorSignature = '';
+  menuView = 'none';
+  startRun(0);
+  syncHorror();
+  showToast(`SCARY MODE · ${SCARY_DIFFICULTY[horrorSettings().difficulty].label}`, 2400);
+  return true;
+}
+
+function setHorrorPath(path, value) {
+  setSettingsValue(settings, path, value);
+  applySettings();
+  syncHorror();
+  if (menuView === 'scary') buildScaryScreen();
+  return true;
+}
+
+function toggleAntiJumpscare(force) {
+  const next = typeof force === 'boolean' ? force : !horrorSettings().antiJumpscare;
+  settings.scary.antiJumpscare = next;
+  if (settings.dread) settings.dread.antiJumpscare = next;
+  dreadSignature = '';
+  applySettings({ persist: false });
+  syncHorror();
+  if (next) settings.scary.enabled = true;
+  applySettings();
+  syncHorror();
+  if (menuView === 'scary') buildScaryScreen();
+  showToast(`ANTI-JUMPSCARE ${next ? 'AKTIF' : 'MATI'}`, 1600);
+  return next;
+}
+
+function previewHorrorAudio() {
+  audio.init();
+  audio.playScare({
+    duration: 1.8,
+    audio: { type: 'sine', freq: 210, sweepTo: 96, dur: 1.8, gain: 0.07, muted: false },
+    gain: 0.07,
+  });
+  showToast('Pratinjau audio horor · volume mengikuti batas horor', 1800);
+}
+
+function previewHorrorVisual() {
+  horrorPresence = { nx: 0.74, ny: 0.42, alpha: 1, size: 64, color: '#05070a' };
+  showToast('Pratinjau atmosfer · siluet, kabut, dan vignette', 1800);
+  if (horrorSettings().jumpscares && !horrorSettings().antiJumpscare) previewScare();
+  return horrorPresentation;
+}
+
+function resetHorrorSettings() {
+  settings.scary = sanitizeHorrorSettings({ enabled: settings.scary.enabled });
+  applySettings();
+  syncHorror();
+  if (menuView === 'scary') buildScaryScreen();
+  return horrorSettings();
+}
+
+function horrorTick(dt) {
+  const presentation = syncHorrorIfChanged();
+  // A run reset (Level Select / restart) rebuilds enemies; re-apply the layer.
+  if (game.scaryEnabled !== presentation.enabled || game.scaryDifficulty !== presentation.difficulty) {
+    game.setScaryMode({ enabled: presentation.enabled, difficulty: presentation.difficulty });
+  }
+  if (!horrorDirector) return presentation;
+  const ctx = horrorContext();
+  const snapshot = horrorDirector.update(dt, ctx);
+  if (snapshot.last && snapshot.last.phase === 'done') {
+    const key = `${snapshot.last.id}:${horrorDirector.completed[snapshot.last.id]}`;
+    if (key !== horrorLastDone) {
+      horrorLastDone = key;
+      if (horrorJournal.record('events', snapshot.last.id)) {
+        horrorJournal.grantRewards();
+        saveHorrorState();
+      }
+    }
+  }
+  for (const change of horrorDirector.drain()) {
+    if (change.layer === 'presence') {
+      horrorPresence = change.value === 'appear'
+        ? { nx: 0.74 + Math.random() * 0.12, ny: 0.38 + Math.random() * 0.12, alpha: 1, size: 58, color: '#05070a' }
+        : null;
+    } else if (change.layer === 'audio') {
+      horrorEventLayer.audio = change.value;
+    } else if (change.layer === 'lighting') {
+      horrorEventLayer.lighting = change.value;
+    } else if (change.layer === 'screen') {
+      horrorEventLayer.screen = change.value;
+    } else if (change.layer === 'ui') {
+      horrorEventLayer.ui = change.value;
+    } else if (change.layer === 'route') {
+      horrorEventLayer.route = change.value;
+    } else if (change.layer === 'pursuer') {
+      horrorEventLayer.pursuer = change.value;
+      if (change.value === 'spawn' && presentation.enabled) {
+        const kind = presentation.difficulty === 'hard' ? 'night_stalker' : 'hollow_wraith';
+        game.spawnScaryEnemy(kind, Math.max(80, game.player.x + 320));
+      }
+    } else if (change.layer === 'ghost') {
+      horrorEventLayer.ghost = change.value;
+      if (change.value !== 'leave' && presentation.enabled
+        && !game.enemies.some((enemy) => !enemy.dead && enemy.scaryKind === change.value)) {
+        game.spawnScaryEnemy(change.value, Math.max(80, game.player.x + 340));
+      }
+    } else if (change.layer === 'rift') {
+      horrorEventLayer.rift = change.value;
+      if (change.value === 'open' && presentation.enabled) {
+        game.spawnScaryEnemy('forgotten_one', Math.max(120, game.player.x + 420));
+      }
+    }
+  }
+  if (horrorPresence && horrorPresence.alpha > 0) {
+    horrorPresence.alpha = Math.max(0, horrorPresence.alpha - dt * 0.35);
+    if (horrorPresence.alpha <= 0.01) horrorPresence = null;
+  }
+  horrorAutoTimer -= dt;
+  if (horrorAutoTimer <= 0) {
+    horrorAutoTimer = 8 + Math.random() * 10;
+    // Auto-start belongs to real frame steps; a debug/time-skip tick must not
+    // spawn an event the caller did not ask for.
+    if (dt < 1.5 && presentation.enabled && !snapshot.active && ctx.combat === false && !ctx.menu && !paused) {
+      horrorDirector.autoStart(ctx);
+    }
+  }
+  return presentation;
+}
+
+function horrorRenderLayer() {
+  if (!horrorPresentation || !horrorPresentation.enabled) return null;
+  return {
+    ...horrorPresentation,
+    presence: horrorPresence && horrorPresence.alpha > 0.01
+      ? {
+        x: (horrorPresence.nx ?? 0.72) * (game.viewW || 1280),
+        y: (horrorPresence.ny ?? 0.42) * (game.viewH || 720),
+        alpha: horrorPresence.alpha,
+        size: horrorPresence.size || 58,
+        color: horrorPresence.color,
+      }
+      : null,
+    event: horrorEventLayer,
+  };
+}
+
+document.addEventListener('click', (event) => {
+  const node = event.target instanceof Element ? event.target : null;
+  if (!node) return;
+  const hunterBuyBtn = node.closest('[data-hunter-buy]');
+  if (hunterBuyBtn) { buyHunterItem(hunterBuyBtn.dataset.hunterBuy); return; }
+  if (node.closest('#btn-scary-menu')) { openScary(); return; }
+  if (node.closest('#btn-scary-close')) { closeScary(); return; }
+  if (node.closest('#btn-pause-anti')) { toggleAntiJumpscare(); return; }
+  const tab = node.closest('[data-scary-tab]');
+  if (tab) { scaryTab = tab.dataset.scaryTab; buildScaryScreen(); return; }
+  const difficulty = node.closest('[data-scary-difficulty]');
+  if (difficulty) {
+    settings.scary.difficulty = difficulty.dataset.scaryDifficulty;
+    applySettings();
+    syncHorror();
+    buildScaryScreen();
+    return;
+  }
+  const action = node.closest('[data-scary-action]');
+  if (!action) return;
+  const kind = action.dataset.scaryAction;
+  if (kind === 'enter') startScaryRun();
+  else if (kind === 'reset') resetHorrorSettings();
+  else if (kind === 'preview-audio') previewHorrorAudio();
+  else if (kind === 'preview-visual') previewHorrorVisual();
+  else if (kind === 'hunter') openHunterShop();
+});
+
+document.addEventListener('input', (event) => {
+  const input = event.target;
+  if (!(input instanceof HTMLElement) || !input.dataset || !input.dataset.horrorPath) return;
+  let value = input.type === 'checkbox' ? input.checked : input.value;
+  if (input.type === 'range') value = Number(value);
+  setSettingsValue(settings, input.dataset.horrorPath, value);
+  applySettings({ persist: false });
+  syncHorror();
+  const output = input.parentElement ? input.parentElement.querySelector('output') : null;
+  if (output) output.textContent = `${value}`;
+  if (input.type === 'checkbox') {
+    const span = input.nextElementSibling;
+    if (span) span.textContent = input.checked ? 'AKTIF' : 'MATI';
+  }
+});
+
+document.addEventListener('change', (event) => {
+  const input = event.target;
+  if (!(input instanceof HTMLElement) || !input.dataset || !input.dataset.horrorPath) return;
+  applySettings();
+  syncHorror();
+  if (menuView === 'scary') buildScaryScreen();
+});
+
+// ── Update XII: The Dread Beyond (Scary Mode expansion) ──────────────────
+const DREAD_VIEW_TABS = [
+  { id: 'environments', label: 'Lingkungan', icon: '⌂' },
+  { id: 'unnatural', label: 'The Unnatural', icon: '☾' },
+  { id: 'bosses', label: 'Bos Horor', icon: '♛' },
+  { id: 'modes', label: 'Mode', icon: '◇' },
+  { id: 'equipment', label: 'Peralatan', icon: '⚒' },
+  { id: 'journal', label: 'Jurnal & Misteri', icon: '✦' },
+  { id: 'settings', label: 'Pengaturan', icon: '◈' },
+];
+
+let dreadTab = 'environments';
+let dreadActiveMode = null;
+let dreadBossActive = null;
+let dreadPresence = null;
+let dreadEventLayer = {};
+let dreadAutoTimer = 9;
+let dreadSignature = '';
+let dreadDistance = 0;
+let dreadLastX = null;
+let dreadEquipmentLoadout = [];
+
+settings.dread = sanitizeDreadSettings(settings.dread || {});
+let dreadJournal = loadDreadJournal();
+let dreadDirector = new DreadEventDirector(dreadSettings(), { seed: 20261119 });
+let dreadAwareness = new AwarenessManager({ config: { enabled: dreadSettings().awarenessEnabled } });
+
+function dreadSettings() {
+  return sanitizeDreadSettings(settings.dread || {});
+}
+
+function loadDreadJournal() {
+  try {
+    const raw = localStorage.getItem(DREAD_SAVE_KEY);
+    return new DreadJournal(raw ? JSON.parse(raw) : {});
+  } catch {
+    return new DreadJournal({});
+  }
+}
+
+function saveDreadState() {
+  try {
+    localStorage.setItem(DREAD_SAVE_KEY, JSON.stringify(dreadJournal.toJSON()));
+  } catch { /* storage unavailable */ }
+}
+
+function syncDread() {
+  const next = sanitizeDreadSettings(settings.dread || {});
+  settings.dread = next;
+  const signature = JSON.stringify([next, settings.scary?.antiJumpscare, settings.scary?.enabled]);
+  if (signature !== dreadSignature) {
+    dreadDirector.configure(next);
+    dreadAwareness.setEnabled(next.awarenessEnabled);
+    dreadSignature = signature;
+  }
+  return resolveDreadPresentation(next, settings.scary || {}, { mode3D: false });
+}
+
+function dreadContext() {
+  const base = horrorContext();
+  return { ...base, boss: !!game.boss, dark: true };
+}
+
+function firstUndiscovered(category) {
+  return DREAD_JOURNAL_ENTRIES.find((entry) => entry.category === category && !dreadJournal.entries[entry.id]) || null;
+}
+
+function recordDreadObjective(modeId, objectiveId, amount = 1) {
+  if (!modeId) return 0;
+  const key = `mode:${modeId}:${objectiveId}`;
+  const next = Math.max(0, (Number(dreadJournal.flags[key]) || 0) + amount);
+  dreadJournal.flags[key] = next;
+  saveDreadState();
+  return next;
+}
+
+function dreadModeState(modeId) {
+  const mode = DREAD_MODES[modeId];
+  if (!mode) return { objectives: {} };
+  const objectives = {};
+  for (const goal of mode.objectives) {
+    objectives[goal.id] = Math.max(0, Number(dreadJournal.flags[`mode:${modeId}:${goal.id}`]) || 0);
+  }
+  return { objectives };
+}
+
+function completeDreadMode(modeId) {
+  if (!modeId) return null;
+  const progressData = dreadModeProgress(modeId, dreadModeState(modeId));
+  if (!progressData || !progressData.complete) return progressData;
+  if (dreadJournal.recordMode(modeId)) {
+    dreadJournal.grantRewards();
+    saveDreadState();
+    showToast(`MODE SELESAI · ${DREAD_MODES[modeId].label}`, 2400);
+  }
+  return progressData;
+}
+
+function applyDreadChange(change) {
+  if (!change) return;
+  if (change.layer === 'presence') {
+    dreadPresence = change.value === 'clear'
+      ? null
+      : { nx: 0.6 + Math.random() * 0.24, ny: 0.36 + Math.random() * 0.16, alpha: 1, size: change.value === 'crowd' ? 46 : 56, kind: change.value };
+    return;
+  }
+  if (change.layer !== 'outcome') {
+    dreadEventLayer[change.layer] = change.value;
+    return;
+  }
+  const outcome = change.outcome || {};
+  if (outcome.kind === 'journal') {
+    const entry = firstUndiscovered('mysteries') || firstUndiscovered('entities');
+    if (entry) { dreadJournal.discover(entry.id); dreadAwareness.addClue(); }
+  } else if (outcome.kind === 'recording') {
+    const entry = firstUndiscovered('recordings');
+    if (entry) { dreadJournal.discover(entry.id); dreadJournal.recordRecording(entry.slug); }
+  } else if (outcome.kind === 'lore') {
+    const entry = firstUndiscovered('residents') || firstUndiscovered('events');
+    if (entry) dreadJournal.discover(entry.id);
+  } else if (outcome.kind === 'collectible') {
+    const entry = firstUndiscovered('symbols') || firstUndiscovered('experiments');
+    if (entry) { dreadJournal.discover(entry.id); dreadJournal.collect(entry.id, entry.evidence[0]); }
+  } else if (outcome.kind === 'encounter') {
+    const kind = game.dreadEnvironmentId === 'hollow_hospital' ? 'ceiling_dweller' : 'faceless_visitor';
+    game.spawnUnnatural(kind, Math.max(80, game.player.x + 340));
+    dreadAwareness.addEncounter();
+    if (dreadActiveMode) recordDreadObjective(dreadActiveMode, 'encounters', 1);
+  } else if (outcome.kind === 'mirror') {
+    game.spawnUnnatural('forgotten_twin', Math.max(120, game.player.x + 380));
+    if (dreadActiveMode) recordDreadObjective(dreadActiveMode, 'encounters', 1);
+  } else if (outcome.kind === 'route' || outcome.kind === 'objective' || outcome.kind === 'puzzle' || outcome.kind === 'mislead') {
+    dreadJournal.recordChallenge('objective');
+  }
+  if (dreadActiveMode) recordDreadObjective(dreadActiveMode, 'events', 1);
+  dreadJournal.grantRewards();
+  saveDreadState();
+}
+
+function dreadTick(dt) {
+  if (!started || paused || menuView !== 'none') return null;
+  const presentation = syncDread();
+  if (!presentation.enabled) return presentation;
+  const ctx = dreadContext();
+  dreadDirector.update(dt, ctx);
+  for (const change of dreadDirector.drain()) applyDreadChange(change);
+  if (dreadPresence) {
+    dreadPresence.alpha = Math.max(0, dreadPresence.alpha - dt * 0.4);
+    if (dreadPresence.alpha <= 0.02) dreadPresence = null;
+  }
+  dreadAwareness.tick(dt);
+  if (game.player) {
+    if (Math.abs(game.player.vx) > 60 && typeof game.emitNoise === 'function') {
+      game.emitNoise('step', game.player.x + game.player.w / 2, { loudness: 0.6, ttl: 0.5 });
+    }
+    if (dreadActiveMode) {
+      if (dreadLastX != null) dreadDistance += Math.abs(game.player.x - dreadLastX);
+      if (dreadDistance >= 1200) {
+        dreadDistance = 0;
+        recordDreadObjective(dreadActiveMode, 'distance', 1);
+      }
+    }
+    dreadLastX = game.player.x;
+  }
+  if (dreadBossActive && !game.boss) {
+    if (dreadActiveMode) recordDreadObjective(dreadActiveMode, 'boss', 1);
+    dreadJournal.recordBoss(dreadBossActive);
+    dreadBossActive = null;
+    saveDreadState();
+  }
+  if (dreadActiveMode) completeDreadMode(dreadActiveMode);
+  dreadAutoTimer -= dt;
+  if (dreadAutoTimer <= 0) {
+    dreadAutoTimer = 10 + Math.random() * 12;
+    if (dt < 1.5 && !game.boss && !ctx.combat) dreadDirector.autoStart(ctx);
+  }
+  return presentation;
+}
+
+function dreadRenderLayer() {
+  const env = game.dreadEnv || DREAD_ENVIRONMENTS[game.dreadEnvironmentId] || null;
+  if (!env || !dreadSettings().enabled) return null;
+  const presentation = resolveDreadPresentation(dreadSettings(), settings.scary || {});
+  return {
+    environment: env,
+    cameraX: 0,
+    fog: presentation.atmosphere.fog,
+    ceilingShadow: game.enemies.some((enemy) => enemy.unnaturalKind === 'ceiling_dweller'),
+    mirror: game.boss?.dreadBoss === 'forgotten_twin',
+    presence: dreadPresence,
+    event: dreadEventLayer,
+  };
+}
+
+function dreadRowHTML(def) {
+  const value = getSettingsValue(settings, def.path);
+  const id = `dread-${def.path.replace(/\./g, '-')}`;
+  let control;
+  if (def.type === 'toggle') {
+    control = `<label class="scary-toggle"><input type="checkbox" id="${id}" data-dread-path="${def.path}" ${value ? 'checked' : ''} /><span>${value ? 'AKTIF' : 'MATI'}</span></label>`;
+  } else if (def.type === 'select') {
+    control = `<select class="scary-select" id="${id}" data-dread-path="${def.path}">${def.options.map((option) => `<option value="${option.id}" ${String(value) === String(option.id) ? 'selected' : ''}>${esc(String(option.label))}</option>`).join('')}</select>`;
+  } else {
+    control = `<div class="scary-range"><input type="range" id="${id}" min="${def.min}" max="${def.max}" step="${def.step}" value="${Number(value)}" data-dread-path="${def.path}" /><output>${Number(value)}${def.suffix || ''}</output></div>`;
+  }
+  return `<div class="scary-row"><label for="${id}"><span>${def.label}</span><small>${def.desc}</small></label>${control}</div>`;
+}
+
+function dreadEnvironmentCards() {
+  return `<div class="dread-grid">${DREAD_ENVIRONMENT_LIST.map((env) => `
+    <article class="dread-card">
+      <header><h3>${esc(env.label)}</h3><span>${env.mechanics.length} mekanik</span></header>
+      <p>${esc(env.tagline)}</p>
+      <ul>
+        <li>2D: ${env.room.platforms.length} platform · ${env.ceilings.length} langit-langit</li>
+        <li>3D: ${env.threeD.props.length} prop · kabut ${Math.round(env.threeD.fog * 100)}%</li>
+        <li>Petunjuk: ${env.clues.map((clue) => esc(clue.label)).join(' · ')}</li>
+      </ul>
+      <button class="btn btn-primary btn-small" type="button" data-dread-enter="${env.id}">MASUKI</button>
+    </article>`).join('')}</div>`;
+}
+
+function dreadUnnaturalCards() {
+  return `<div class="dread-grid">${UNNATURAL_LIST.map((entry) => `
+    <article class="dread-card dread-unnatural">
+      <header><h3>${esc(entry.name)}</h3><span>${esc(entry.tactic)}</span></header>
+      <p>${esc(entry.line)}</p>
+      <ul>
+        <li>Penglihatan: ${entry.sightRange} px · ${entry.coneDeg}°</li>
+        <li>Pendengaran: ${entry.hearingRange} px</li>
+        <li>Memori: ${entry.memoryTime} s · Pencarian: ${entry.searchTime} s</li>
+        <li>Tanda: ${entry.tells.join(', ')}</li>
+      </ul>
+      <button class="btn btn-ghost btn-small" type="button" data-dread-spawn="${entry.id}">PANGGIL</button>
+    </article>`).join('')}</div>`;
+}
+
+function dreadBossCards() {
+  return `<div class="dread-grid">${DREAD_BOSS_LIST.map((boss) => `
+    <article class="dread-card dread-boss">
+      <header><h3>${esc(boss.name)}</h3><span>${boss.phases.length} fase</span></header>
+      <p>${esc(boss.title)}</p>
+      <ul>
+        <li>Fase: ${boss.phases.map((phase) => `${phase.phase}. ${phase.name}`).join(' · ')}</li>
+        <li>Arena: ${boss.arena.minX}–${boss.arena.maxX}</li>
+        <li>HP: ${boss.maxHp} · Kontak: ${boss.contact}</li>
+        ${boss.hiddenPhase ? `<li>Arena tersembunyi: ${esc(boss.hiddenPhase.name)}</li>` : ''}
+      </ul>
+      <button class="btn btn-primary btn-small" type="button" data-dread-boss="${boss.id}">HADAPI</button>
+    </article>`).join('')}</div>`;
+}
+
+function dreadModeCards() {
+  return `<div class="dread-grid">${DREAD_MODE_LIST.map((mode) => {
+    const progressData = dreadModeProgress(mode.id, dreadModeState(mode.id));
+    return `
+    <article class="dread-card dread-mode">
+      <header><h3>${mode.icon} ${esc(mode.label)}</h3><span>${Math.round(progressData.ratio * 100)}%</span></header>
+      <p>${esc(mode.desc)}</p>
+      <ul>
+        <li>${esc(mode.objectives.map((goal) => `${goal.label} ${Math.min(goal.target, dreadModeState(mode.id).objectives[goal.id] || 0)}/${goal.target}`).join(' · '))}</li>
+        <li>Lingkungan: ${esc(DREAD_ENVIRONMENTS[mode.environment]?.label || mode.environment)}</li>
+        <li>Hadiah: ${esc(mode.reward)} · ${esc(mode.difficulties.join('/'))}</li>
+      </ul>
+      <button class="btn btn-ghost btn-small" type="button" data-dread-mode="${mode.id}">MULAI MODE</button>
+    </article>`;
+  }).join('')}</div>`;
+}
+
+function dreadEquipmentPanel() {
+  return `<div class="dread-grid">${DREAD_EQUIPMENT.map((item) => `
+    <article class="dread-card ${dreadEquipmentLoadout.includes(item.id) ? 'active' : ''}">
+      <header><h3>${esc(item.label)}</h3><span>${item.kind}</span></header>
+      <p>${esc(item.use)}</p>
+      <ul><li>Efek: ${esc(item.effect)}</li><li>Membuka: ${esc(item.unlocks.join(', '))}</li><li>Bonus tempur: ${item.combatBonus}</li></ul>
+      <button class="btn btn-ghost btn-small" type="button" data-dread-equip="${item.id}">${dreadEquipmentLoadout.includes(item.id) ? 'LEPAS' : 'BAWA'}</button>
+    </article>`).join('')}</div>`;
+}
+
+function dreadJournalPanel() {
+  const progressData = dreadJournal.progress();
+  const achievements = dreadJournal.achievements();
+  const discovered = DREAD_JOURNAL_ENTRIES.filter((entry) => dreadJournal.entries[entry.id]);
+  const connectable = discovered.length >= 2
+    ? `<button class="btn btn-ghost btn-small" type="button" data-dread-connect="1">HUBUNGKAN DUA PETUNJUK</button>`
+    : '';
+  return `
+    <section class="scary-group"><h3>JURNAL · ${progressData.percent}% (${progressData.found}/${progressData.total})</h3>
+      <div class="dread-board">${progressData.categories.map((category) => `
+        <div class="dread-board-row"><span>${esc(category.label)}</span><b>${category.found}/${category.total}</b><em>${category.percent}%</em></div>`).join('')}</div>
+    </section>
+    <section class="scary-group"><h3>ACHIEVEMENT</h3>${achievements.map((entry) => `<div class="scary-achievement ${entry.unlocked ? 'unlocked' : 'locked'}"><span class="icon">${entry.icon}</span><div><b>${esc(entry.label)}</b><small>${esc(entry.desc)}</small></div></div>`).join('')}</section>
+    <section class="scary-group"><h3>PAPAN MISTERI</h3><p class="micro">Koneksi bersifat opsional dan tidak pernah memblokir cerita. ${progressData.connections} koneksi tercatat.</p>${connectable}</section>
+    <section class="scary-group"><h3>HADIAH KOSMETIK</h3>${dreadJournal.rewards.map((id) => `<div class="scary-achievement unlocked"><span class="icon">✦</span><div><b>${esc(id)}</b><small>kosmetik · tanpa bonus tempur</small></div></div>`).join('') || '<p class="micro">Belum ada hadiah.</p>'}</section>`;
+}
+
+function dreadSettingsPanel() {
+  return DREAD_TABS.map((tab) => `
+    <section class="scary-group"><h3>${tab.icon} ${tab.label}</h3>${dreadSettingsForTab(tab.id).map(dreadRowHTML).join('')}</section>`).join('');
+}
+
+function buildDreadScreen() {
+  const summary = $('dread-summary');
+  const tabs = $('dread-tabs');
+  const body = $('dread-body');
+  if (!summary || !tabs || !body) return null;
+  const presentation = syncDread();
+  const progressData = dreadJournal.progress();
+  summary.innerHTML = [
+    ['Lingkungan', game.dreadEnv ? game.dreadEnv.label : '—'],
+    ['Profil', presentation.activeProfile],
+    ['Peristiwa aktif', `${dreadDirector.snapshot().active.length}`],
+    ['Awareness', `${dreadAwareness.snapshot().value} (${dreadAwareness.snapshot().level})`],
+    ['Jurnal', `${progressData.percent}%`],
+    ['Achievement', progressData.achievements],
+    ['Mode aktif', dreadActiveMode ? DREAD_MODES[dreadActiveMode].label : '—'],
+    ['Anti-Jumpscare', presentation.antiJumpscare ? 'AKTIF' : 'MATI'],
+  ].map(([label, value]) => `<div class="scary-cell"><b>${label}</b><span>${esc(String(value))}</span></div>`).join('');
+  tabs.innerHTML = DREAD_VIEW_TABS.map((tab) => `<button class="scary-tab${dreadTab === tab.id ? ' active' : ''}" type="button" role="tab" aria-selected="${dreadTab === tab.id}" data-dread-tab="${tab.id}"><span>${tab.icon}</span> ${tab.label}</button>`).join('');
+  let content = '';
+  if (dreadTab === 'environments') content = dreadEnvironmentCards();
+  else if (dreadTab === 'unnatural') content = dreadUnnaturalCards();
+  else if (dreadTab === 'bosses') content = dreadBossCards();
+  else if (dreadTab === 'modes') content = dreadModeCards();
+  else if (dreadTab === 'equipment') content = dreadEquipmentPanel();
+  else if (dreadTab === 'journal') content = dreadJournalPanel();
+  else content = dreadSettingsPanel();
+  body.innerHTML = `${content}<p class="micro">The Dread Beyond disimpan di ${DREAD_SAVE_KEY} · profil 2D/3D terpisah · Anti-Jumpscare menimpa presentasi kejut, bukan perilaku musuh.</p>`;
+  return presentation;
+}
+
+function openDread() {
+  menuView = 'dread';
+  buildDreadScreen();
+  syncScreens();
+  return true;
+}
+
+function closeDread() {
+  menuView = 'title';
+  syncScreens();
+  return true;
+}
+
+function enterDread(id) {
+  const env = DREAD_ENVIRONMENTS[id];
+  if (!env) return false;
+  settings.scary.enabled = true;
+  settings.dread.enabled = true;
+  applySettings();
+  activeRunKind = 'dread';
+  menuView = 'none';
+  started = true;
+  paused = false;
+  spectating = false;
+  shopOpen = false;
+  syncHorror();
+  game.setScaryMode({ enabled: true, difficulty: horrorSettings().difficulty });
+  game.loadDreadEnvironment(id);
+  syncHunterStockToRun();
+  // Entering a Dread location is a fresh session: never inherit a dead or
+  // blessing state from the previous run.
+  game.state = 'playing';
+  game.player.hp = game.player.maxHp;
+  game.player.flasks = game.player.maxFlasks;
+  const roster = {
+    forgotten_village: ['faceless_visitor', 'pale_echo'],
+    hollow_hospital: ['empty_knight', 'ceiling_dweller'],
+    silent_underground: ['forgotten_twin', 'pale_echo'],
+    black_manor: ['empty_knight', 'faceless_visitor'],
+    endless_forest: ['pale_echo', 'faceless_visitor'],
+  }[id] || ['faceless_visitor'];
+  roster.forEach((kind, index) => game.spawnUnnatural(kind, 420 + index * 280));
+  dreadJournal.completeArea(id);
+  saveDreadState();
+  dreadDirector = new DreadEventDirector(dreadSettings(), { seed: 20261119 + game.roomIndex });
+  dreadSignature = '';
+  dreadEventLayer = {};
+  dreadPresence = null;
+  dreadLastX = null;
+  dreadDistance = 0;
+  dreadAutoTimer = 7;
+  syncDread();
+  syncScreens();
+  lastGameState = null;
+  showToast(`THE DREAD BEYOND · ${env.label}`, 2600);
+  return true;
+}
+
+function startDreadBoss(kind) {
+  const profile = DREAD_BOSSES[kind];
+  if (!profile) return false;
+  enterDread(profile.environment);
+  game.enemies.length = 0;
+  game.projectiles.length = 0;
+  game.spawnDreadBoss(kind);
+  game.boss.intro = 0.6;
+  dreadBossActive = kind;
+  dreadActiveMode = 'watcher_challenge';
+  syncScreens();
+  showToast(`HORROR BOSS · ${profile.name}`, 2600);
+  return true;
+}
+
+function playDreadMode(modeId) {
+  const mode = DREAD_MODES[modeId];
+  if (!mode) return false;
+  enterDread(mode.environment);
+  dreadActiveMode = modeId;
+  dreadDistance = 0;
+  dreadLastX = game.player.x;
+  showToast(`MODE · ${mode.label}`, 2200);
+  return true;
+}
+
+function toggleDreadEquipment(id) {
+  const index = dreadEquipmentLoadout.indexOf(id);
+  if (index >= 0) dreadEquipmentLoadout.splice(index, 1);
+  else dreadEquipmentLoadout.push(id);
+  if (menuView === 'dread') buildDreadScreen();
+  return dreadEquipmentLoadout.slice();
+}
+
+function connectDreadClues() {
+  const discovered = DREAD_JOURNAL_ENTRIES.filter((entry) => dreadJournal.entries[entry.id]);
+  if (discovered.length < 2) return { ok: false, reason: 'not-enough-clues' };
+  const result = dreadJournal.connect(discovered[0].id, discovered[1].id);
+  saveDreadState();
+  if (menuView === 'dread') buildDreadScreen();
+  return result;
+}
+
+function setDreadPath(path, value) {
+  setSettingsValue(settings, path, value);
+  settings.dread = sanitizeDreadSettings(settings.dread || {});
+  applySettings();
+  syncDread();
+  if (menuView === 'dread') buildDreadScreen();
+  return dreadSettings();
+}
+
+function resetDreadSettings() {
+  settings.dread = sanitizeDreadSettings({ enabled: true, antiJumpscare: !!settings.scary.antiJumpscare });
+  applySettings();
+  syncDread();
+  if (menuView === 'dread') buildDreadScreen();
+  return dreadSettings();
+}
+
+// ── Update XIII: The Veil of the Forgotten ───────────────────────────
+let veilTab = 'campaign';
+let veilController = null;
+let veilSearch = '';
+let veilFilter = { classification: 'all', rarity: 'all', research: 'all' };
+let veilSort = 'chapter';
+let veilPage = 1;
+let veilSelectedGhost = null;
+let veilSelectedChapter = VEIL_CHAPTERS[0].id;
+let veilSpawnTimer = 12;
+let veilSpawnCount = 0;
+let veilStageComplete = false;
+let veilBossSeen = false;
+let veilHudCache = '';
+let veilSettingsCache = null;
+
+function veilSettings() {
+  const raw = settings.veil && typeof settings.veil === 'object' ? settings.veil : (veilSettingsCache || {});
+  veilSettingsCache = sanitizeVeilSettings(raw);
+  return veilSettingsCache;
+}
+
+function ensureVeil() {
+  if (veilController) return veilController;
+  let raw = null;
+  try { raw = JSON.parse(localStorage.getItem(VEIL_SAVE_KEY) || 'null'); } catch { raw = null; }
+  let legacyDread = null;
+  try { legacyDread = JSON.parse(localStorage.getItem(DREAD_SAVE_KEY) || 'null'); } catch { legacyDread = null; }
+  veilController = new VeilController({ save: raw || {}, legacyDread, settings: veilSettings() });
+  veilController.sanity.settings = veilSettings().sanity;
+  return veilController;
+}
+
+function saveVeilProfile() {
+  if (!veilController) return false;
+  try {
+    localStorage.setItem(VEIL_SAVE_KEY, JSON.stringify(veilController.toJSON()));
+    return true;
+  } catch { return false; }
+}
+
+function veilPresentation() {
+  return resolveVeilPresentation(veilSettings(), {
+    graphicsPreset: veilController?.save?.preferences?.graphicsPreset || 'high',
+    accessibility: { reducedMotion: !!settings.gameplay?.reduceMotion },
+  });
+}
+
+function applyVeilSetting(path, value) {
+  const current = veilSettings();
+  const next = JSON.parse(JSON.stringify(current));
+  const clean = path.replace(/^veil\./, '');
+  const parts = clean.split('.');
+  let cursor = next;
+  for (let i = 0; i < parts.length - 1; i += 1) {
+    if (!cursor[parts[i]] || typeof cursor[parts[i]] !== 'object') cursor[parts[i]] = {};
+    cursor = cursor[parts[i]];
+  }
+  cursor[parts[parts.length - 1]] = value;
+  settings.veil = sanitizeVeilSettings(next);
+  veilSettingsCache = settings.veil;
+  if (veilController) {
+    veilController.settings = veilSettingsCache;
+    veilController.sanity.settings = veilSettingsCache.sanity;
+    veilController.save.sanity.settings = veilSettingsCache.sanity;
+  }
+  applySettings({ persist: false });
+  return veilSettingsCache;
+}
+
+function veilSettingsFor(tab) {
+  return VEIL_SETTING_DEFINITIONS.filter((def) => def.tab === tab);
+}
+
+function veilSettingControl(def) {
+  const value = veilSettingValue(veilSettings(), def.path);
+  if (def.type === 'toggle') {
+    return `<label class="veil-row"><span>${esc(def.label)}</span><input type="checkbox" data-veil-setting="${def.path}" data-veil-type="toggle" ${value ? 'checked' : ''} /><b>${value ? 'AKTIF' : 'MATI'}</b></label>`;
+  }
+  if (def.type === 'range') {
+    return `<label class="veil-row"><span>${esc(def.label)}</span><input type="range" min="${def.min}" max="${def.max}" step="${def.step}" value="${value}" data-veil-setting="${def.path}" data-veil-type="range" /><b>${value}</b></label>`;
+  }
+  const options = (def.options || []).map((option) => `<option value="${option}" ${String(option) === String(value) ? 'selected' : ''}>${option}</option>`).join('');
+  return `<label class="veil-row"><span>${esc(def.label)}</span><select data-veil-setting="${def.path}" data-veil-type="select">${options}</select><b></b></label>`;
+}
+
+function buildVeilScreen() {
+  const body = $('veil-body');
+  if (!body) return;
+  const controller = ensureVeil();
+  const summary = veilSummary(controller.save, controller);
+  const sanity = controller.sanity.snapshot();
+  $('veil-summary').innerHTML = `<span>${summary.stages}/30 TAHAP</span><span>${summary.bosses}/7 BOS</span><span>${summary.documented}/${summary.totalGhosts} ENTITAS</span><span>SANITY ${Math.round(summary.sanity)} · ${esc(sanity.label)}</span><span>LEVEL ${controller.progression.level().level}</span>`;
+  $('veil-tabs').innerHTML = VEIL_TABS.map((tab) => `<button type="button" class="scary-tab ${tab.id === veilTab ? 'active' : ''}" data-veil-tab="${tab.id}" role="tab" aria-selected="${tab.id === veilTab}">${tab.label}</button>`).join('');
+  body.innerHTML = veilBodyFor(veilTab, controller);
+  syncScreens();
+}
+
+function veilBodyFor(tab, controller) {
+  if (tab === 'campaign') return veilCampaignBody(controller);
+  if (tab === 'sanity') return veilSanityBody(controller);
+  if (tab === 'index') return veilIndexBody(controller);
+  if (tab === 'investigation') return veilInvestigationBody(controller);
+  if (tab === 'hub') return veilHubBody(controller);
+  if (tab === 'mind') return veilMindBody(controller);
+  if (tab === 'progress') return veilProgressBody(controller);
+  return veilSettingsBody();
+}
+
+function veilCampaignBody(controller) {
+  const progress = controller.save.campaign;
+  const cards = VEIL_CHAPTERS.map((chapter) => {
+    const unlocked = chapterUnlocked(chapter.id, progress);
+    const stages = stagesForChapter(chapter.id);
+    const cleared = stages.filter((s) => progress.completedStages.includes(s.id)).length;
+    const bossReady = bossUnlocked(chapter.boss, progress);
+    const stageButtons = stages.map((stage) => {
+      const open = stageUnlocked(stage.id, progress);
+      const done = progress.completedStages.includes(stage.id);
+      return `<button type="button" class="btn btn-ghost btn-small" data-veil-stage="${stage.id}" ${open ? '' : 'disabled'}>${done ? '✓ ' : ''}${stage.number}. ${esc(stage.name)}</button>`;
+    }).join('');
+    return `<article class="veil-card ${veilSelectedChapter === chapter.id ? 'active' : ''}" data-veil-chapter-card="${chapter.id}">
+      <header><h3>${esc(chapter.name)}</h3><span>${cleared}/5</span></header>
+      <p>${esc(chapter.subtitle)} · ${esc(chapter.mechanic)}</p>
+      <div class="veil-toolbar">${stageButtons}</div>
+      <button type="button" class="btn btn-ghost btn-small" data-veil-boss="${chapter.boss}" ${bossReady && unlocked ? '' : 'disabled'}>BOS · ${esc(veilBoss(chapter.boss)?.name || chapter.boss)}</button>
+    </article>`;
+  }).join('');
+  const finalReady = bossUnlocked('veil_architect', progress);
+  return `<div class="veil-grid">${cards}</div>
+    <article class="veil-card ${finalReady ? 'active' : ''}">
+      <header><h3>Arsitek Tabir</h3><span>FINAL · 5 FASE</span></header>
+      <p>Bos terakhir membuka seluruh arsip dan mengakhiri kampanye The Veil of the Forgotten.</p>
+      <button type="button" class="btn btn-primary btn-small" data-veil-boss="veil_architect" ${finalReady ? '' : 'disabled'}>HADAPI ARSITEK TABIR</button>
+    </article>`;
+}
+
+function veilSanityBody(controller) {
+  const meter = controller.sanity;
+  const value = Math.round(meter.value);
+  const conditions = SANITY_CONDITIONS.map((condition) => `<div class="veil-row"><span>${esc(condition.label)}</span><b>${condition.min}–${condition.max}</b><em>${condition.safe ? 'AMAN' : 'PANTAU'}</em></div>`).join('');
+  const consumables = SANITY_CONSUMABLES.map((item) => {
+    const owned = Math.floor(meter.settings.enabled ? (controller.save.flags[`item:${item.id}`] || 0) : 0);
+    return `<div class="veil-row"><span>${esc(item.name)} · +${item.restore}</span><b>${owned}</b><button type="button" class="btn btn-ghost btn-small" data-veil-consume="${item.id}">PAKAI</button></div>`;
+  }).join('');
+  const zones = Object.values(meter.zoneDef ? { current: meter.zoneDef } : {}).map((zone) => `<div class="veil-row"><span>${esc(zone.label)}</span><b>${zone.rate > 0 ? '+' : ''}${zone.rate}/s</b><em>${zone.kind}</em></div>`).join('');
+  return `<article class="veil-card"><header><h3>Sanity 2.0</h3><span>${esc(meter.condition.label)}</span></header>
+      <div class="veil-meter"><i style="width:${value}%"></i></div>
+      <div class="veil-stat"><div><span>Sanity</span><b>${value}/100</b></div><div><span>Exposure</span><b>${Math.round(meter.exposure)}/100</b></div><div><span>Focus</span><b>${Math.round(meter.focus)}/100</b></div><div><span>Zona</span><b>${esc(meter.zone)}</b></div><div><span>Kondisi</span><b>${meter.conditions.size}</b></div></div>
+      <p>Sanity tidak pernah mengurangi HP, membunuh, atau mengambil kendali. Di nilai 0 pemulihan Veil Anchor otomatis terbuka.</p></article>
+    <article class="veil-card"><header><h3>Ambang Kondisi</h3><span>7 TINGKAT</span></header>${conditions}</article>
+    <article class="veil-card"><header><h3>Zona Aktif</h3><span>ENVIRONMENT</span></header>${zones || '<p class="veil-muted">Tidak ada zona aktif.</p>'}</article>
+    <article class="veil-card"><header><h3>Consumable</h3><span>6 ITEM</span></header>${consumables}</article>
+    <div class="veil-grid">${veilSettingsFor('sanity').map((def) => `<article class="veil-card">${veilSettingControl(def)}</article>`).join('')}</div>`;
+}
+
+function veilIndexBody(controller) {
+  const result = controller.index.query({
+    search: veilSearch, classification: veilFilter.classification, rarity: veilFilter.rarity,
+    research: veilFilter.research, sort: veilSort, page: veilPage,
+    spoilers: !!veilSettings()['index.spoilerMode'],
+  });
+  const classificationOptions = `<option value="all">SEMUA KLASIFIKASI</option>${GHOST_CLASSIFICATIONS.map((c) => `<option value="${c.id}" ${veilFilter.classification === c.id ? 'selected' : ''}>${c.label}</option>`).join('')}`;
+  const rarityOptions = `<option value="all">SEMUA RARITY</option>${GHOST_RARITIES.map((r) => `<option value="${r}" ${veilFilter.rarity === r ? 'selected' : ''}>${r}</option>`).join('')}`;
+  const researchOptions = `<option value="all">SEMUA RISET</option>${GHOST_RESEARCH_STAGES.map((r) => `<option value="${r}" ${veilFilter.research === r ? 'selected' : ''}>${r}</option>`).join('')}`;
+  const rows = result.rows.map((row) => `<div class="veil-row"><span>${esc(row.name)} · ${esc(row.classification)} · ${esc(row.stage)}</span><b>${row.evidence}/${row.required}</b><button type="button" class="btn btn-ghost btn-small" data-veil-select="${row.id}">LIHAT</button></div>`).join('');
+  const selected = veilSelectedGhost ? GHOSTS.find((g) => g.id === veilSelectedGhost) : null;
+  let detail = '';
+  if (selected) {
+    const record = controller.index.get(selected.id);
+    const evidence = selected.requiredEvidence.map((type) => {
+      const have = record?.evidence.includes(type);
+      return `<button type="button" class="btn btn-ghost btn-small" data-veil-evidence="${type}" ${have ? 'disabled' : ''}>${have ? '✓ ' : ''}${type}</button>`;
+    }).join('');
+    detail = `<article class="veil-card active"><header><h3>${esc(selected.name)}</h3><span>${esc(selected.rarity)}${selected.secret ? ' · RAHASIA' : ''}</span></header>
+      <p>${esc(selected.description)}</p>
+      <ul>${selected.lore.map((line, index) => `<li>${index < (record?.lore || 0) ? esc(line) : '???'}</li>`).join('')}</ul>
+      <div class="veil-toolbar">${evidence}</div>
+      <div class="veil-toolbar"><button type="button" class="btn btn-ghost btn-small" data-veil-identify="${selected.id}">IDENTIFIKASI</button><button type="button" class="btn btn-ghost btn-small" data-veil-document="${selected.id}">DOKUMENTASIKAN</button><button type="button" class="btn btn-ghost btn-small" data-veil-master="${selected.id}">MASTER</button><button type="button" class="btn btn-ghost btn-small" data-veil-lore="${selected.id}">CATAT LORE</button></div>
+      <p class="veil-muted">Tahap: ${esc(record?.stage || 'rumored')} · Pengamatan: ${record?.encounters || 0}</p></article>`;
+  }
+  return `<div class="veil-toolbar"><input type="search" placeholder="Cari entitas, lokasi, perilaku…" value="${esc(veilSearch)}" data-veil-search /><select data-veil-filter="classification">${classificationOptions}</select><select data-veil-filter="rarity">${rarityOptions}</select><select data-veil-filter="research">${researchOptions}</select><select data-veil-sort><option value="chapter" ${veilSort === 'chapter' ? 'selected' : ''}>URUT BAB</option><option value="name" ${veilSort === 'name' ? 'selected' : ''}>URUT NAMA</option><option value="rarity" ${veilSort === 'rarity' ? 'selected' : ''}>URUT RARITY</option><option value="research" ${veilSort === 'research' ? 'selected' : ''}>URUT RISET</option></select></div>
+    <article class="veil-card"><header><h3>Ghost Index 2.0</h3><span>${controller.index.completion().documented}/${controller.index.completion().total} TERDOKUMENTASI</span></header>${rows || '<p class="veil-muted">Tidak ada entitas yang cocok.</p>'}
+      <div class="veil-pager"><button type="button" class="btn btn-ghost btn-small" data-veil-page="${Math.max(1, result.page - 1)}">‹</button><span>Halaman ${result.page}/${result.pages} · ${result.total} entri</span><button type="button" class="btn btn-ghost btn-small" data-veil-page="${Math.min(result.pages, result.page + 1)}">›</button></div></article>${detail}`;
+}
+
+function veilInvestigationBody(controller) {
+  const save = controller.save.investigation;
+  const cases = INVESTIGATION_CASES.map((entry) => {
+    const done = save.completedCases.includes(entry.id);
+    return `<div class="veil-row"><span>${esc(entry.name)}</span><b>${done ? 'SELESAI' : `${entry.evidenceGoal} bukti`}</b><button type="button" class="btn btn-ghost btn-small" data-veil-case="${entry.id}">${done ? 'ARSIP' : 'MULAI'}</button></div>`;
+  }).join('');
+  const missions = [...dailyRotation('2026-11-20'), ...weeklyRotation('W47'), ...MISSION_LIBRARY.filter((m) => m.kind === 'contract')].map((mission) => {
+    const progress = missionProgress(mission, controller.progression.metrics);
+    const claimed = save.claimedMissions.includes(mission.id);
+    return `<div class="veil-row"><span>${esc(mission.name)} · ${progress.current}/${progress.target}</span><b>${claimed ? 'DIKLAIM' : esc(mission.kind)}</b><button type="button" class="btn btn-ghost btn-small" data-veil-mission="${mission.id}" ${progress.complete && !claimed ? '' : 'disabled'}>KLAIM</button></div>`;
+  }).join('');
+  const tools = INVESTIGATION_TOOLS.map((tool) => {
+    const rank = controller.save.equipment.mastery[tool.id] || 0;
+    return `<div class="veil-row"><span>${esc(tool.name)} · ${esc(tool.category)}</span><b>${rank}/5</b><em>${esc(tool.description)}</em></div>`;
+  }).join('');
+  const active = save.activeCase ? `<p class="veil-muted">Kasus aktif: ${esc(save.activeCase)}</p><button type="button" class="btn btn-primary btn-small" data-veil-action="solve-case">SELESAIKAN KASUS AKTIF</button>` : '<p class="veil-muted">Pilih kasus untuk memulai investigasi.</p>';
+  return `<article class="veil-card"><header><h3>Papan Kasus</h3><span>12 KASUS</span></header>${cases}${active}</article>
+    <article class="veil-card"><header><h3>Misi & Kontrak</h3><span>HARIAN · MINGGUAN · KONTRAK</span></header>${missions}</article>
+    <article class="veil-card"><header><h3>Peralatan Investigasi</h3><span>5 KATEGORI</span></header>${tools}</article>`;
+}
+
+function veilHubBody(controller) {
+  const facilities = veilFacilityState(controller.save.hub).map((facility) => `<div class="veil-row"><span>${esc(facility.name)} · ${esc(facility.description)}</span><b>${facility.active ? 'AKTIF' : 'TUTUP'}</b><button type="button" class="btn btn-ghost btn-small" data-veil-hub="${facility.tab}">BUKA</button></div>`).join('');
+  const npcs = VEIL_NPCS.map((npc) => `<div class="veil-row"><span>${esc(npc.name)} · ${esc(npc.role)}</span><b>${esc(npc.facility)}</b><button type="button" class="btn btn-ghost btn-small" data-veil-npc="${npc.id}">BICARA</button></div>`).join('');
+  return `<article class="veil-card"><header><h3>Investigator's Refuge</h3><span>10 FASILITAS</span></header>${facilities}</article>
+    <article class="veil-card"><header><h3>Penghuni Refuge</h3><span>4 NPC</span></header>${npcs}</article>`;
+}
+
+function veilMindBody(controller) {
+  const mind = controller.progression.mind;
+  const branches = ['spirit', 'mind'].map((branch) => {
+    const rows = MIND_UPGRADES.filter((u) => u.branch === branch).map((upgrade) => {
+      const rank = Math.min(upgrade.maxRank, Math.max(0, Math.round(Number(mind.ranks[upgrade.id]) || 0)));
+      const blocked = rank >= upgrade.maxRank || (upgrade.requires || []).some((r) => !(mind.ranks[r] > 0));
+      return `<div class="veil-row"><span>${esc(upgrade.name)} · ${rank}/${upgrade.maxRank}</span><b>${upgrade.cost} poin</b><button type="button" class="btn btn-ghost btn-small" data-veil-mind="${upgrade.id}" ${blocked ? 'disabled' : ''}>BELI</button></div>`;
+    }).join('');
+    return `<article class="veil-card"><header><h3>${branch === 'spirit' ? 'Spirit' : 'Mind'}</h3><span>${branch.toUpperCase()}</span></header><div class="veil-branch">${rows}</div></article>`;
+  }).join('');
+  return `<article class="veil-card"><header><h3>Poin Mind & Spirit</h3><span>${mind.points} TERSEDIA</span></header><p>Dapatkan poin dari bab, bos, dan kasus. Respec mengembalikan seluruh poin yang sudah dibelanjakan.</p><button type="button" class="btn btn-ghost btn-small" data-veil-action="respec">RESPEC</button></article>${branches}`;
+}
+
+function veilProgressBody(controller) {
+  const snapshot = controller.progression.snapshot();
+  const currencies = VEIL_CURRENCIES.map((currency) => `<div><span>${esc(currency.name)}</span><b>${snapshot.currencies[currency.id] || 0}</b></div>`).join('');
+  const achievements = VEIL_ACHIEVEMENTS.map((achievement) => `<div class="veil-row"><span>${esc(achievement.name)} · ${esc(achievement.description)}</span><b>${achievement.target}</b><em>${snapshot.achievements.includes(achievement.id) ? 'TERBUKA' : 'TERKUNCI'}</em></div>`).join('');
+  const boards = LEADERBOARDS.map((board) => { const rows = controller.leaderboards.board(board.id, veilController.save.preferences.difficulty); return `<div class="veil-row"><span>${esc(board.name)}</span><b>${rows.length} entri</b><em>${rows[0] ? rows[0].metric : '—'}</em></div>`; }).join('');
+  const secrets = SECRET_LOCATIONS.map((secret) => `<div class="veil-row"><span>${esc(secret.name)} · ${esc(secret.clue)}</span><b>${controller.save.secrets.includes(secret.id) ? 'DITEMUKAN' : 'TERSEMBUNYI'}</b><em>${esc(secret.stage)}</em></div>`).join('');
+  const collectibles = veilCollectibleTotals(controller.save.collectibles).map((c) => `<div class="veil-row"><span>${esc(c.name)}</span><b>${c.found}/${c.count}</b><em>${c.percent}%</em></div>`).join('');
+  return `<article class="veil-card"><header><h3>Progres Penyidik</h3><span>LEVEL ${snapshot.level} · RANK ${snapshot.indexRank} · MASTERY ${snapshot.mastery}</span></header><div class="veil-stat">${currencies}</div></article>
+    <article class="veil-card"><header><h3>14 Achievement</h3><span>${snapshot.achievements.length}/14</span></header>${achievements}</article>
+    <article class="veil-card"><header><h3>7 Papan Peringkat</h3><span>PER KESULITAN</span></header>${boards}</article>
+    <article class="veil-card"><header><h3>8 Lokasi Rahasia</h3><span>EKSPLORASI</span></header>${secrets}</article>
+    <article class="veil-card"><header><h3>Koleksi</h3><span>8 KATEGORI</span></header>${collectibles}</article>`;
+}
+
+function veilSettingsBody() {
+  const groups = [['sanity', 'Sanity'], ['campaign', 'Hantu & Kampanye'], ['investigation', 'Investigasi'], ['index', 'Ghost Index'], ['settings', 'Aksesibilitas & Audio']];
+  return groups.map(([tab, label]) => {
+    const rows = veilSettingsFor(tab).map((def) => veilSettingControl(def)).join('');
+    return `<article class="veil-card"><header><h3>${label}</h3><span>${veilSettingsFor(tab).length} KONTROL</span></header>${rows}</article>`;
+  }).join('');
+}
+
+function setVeilTab(tab) {
+  if (!VEIL_TABS.some((entry) => entry.id === tab)) return veilTab;
+  veilTab = tab;
+  buildVeilScreen();
+  return veilTab;
+}
+
+function openVeil() {
+  const controller = ensureVeil();
+  menuView = 'veil';
+  started = false;
+  paused = false;
+  spectating = false;
+  $('veil-hud')?.classList.add('hidden');
+  buildVeilScreen();
+  syncScreens();
+  return controller.snapshot();
+}
+
+function closeVeil() {
+  if (menuView === 'veil') menuView = 'title';
+  syncScreens();
+}
+
+function spawnVeilEncounter(initial = false) {
+  const controller = veilController;
+  const stage = controller ? veilStage(controller.activeStage) : null;
+  if (!stage) return null;
+  const pool = GHOSTS.filter((g) => g.chapter === stage.chapter && !g.secret);
+  if (!pool.length) return null;
+  const ghost = pool[veilSpawnCount % pool.length];
+  veilSpawnCount += 1;
+  const request = controller.director.request(ghost.id, { duration: 30, presentation: veilSettings()['antiJumpscare.enabled'] ? 'softened' : 'full' });
+  if (!request.ok && !initial) return null;
+  const side = veilSpawnCount % 2 === 0 ? 1 : -1;
+  const x = Math.max(80, Math.min(2300, game.player.x + side * (initial ? 320 : 260)));
+  const spawned = game.spawnGhost(ghost.id, x, {});
+  if (spawned) {
+    controller.witness(ghost.id);
+    showToast(`ENTITAS TERDETEKSI · ${ghost.name}`, 1800);
+  }
+  return spawned;
+}
+
+function startVeilStage(stageId) {
+  const controller = ensureVeil();
+  const start = controller.startStage(stageId);
+  if (!start.ok) {
+    showToast(start.reason === 'locked' ? 'TAHAP MASIH TERKUNCI' : 'TAHAP TIDAK DITEMUKAN', 2000);
+    return start;
+  }
+  veilSearch = '';
+  veilStageComplete = false;
+  veilBossSeen = false;
+  veilSpawnTimer = 12;
+  veilSpawnCount = 0;
+  game.veilDeathCounted = false;
+  if (typeof game.reset === 'function') game.reset();
+  applyCharacterToGame();
+  game.loadVeilStage(stageId);
+  syncHunterStockToRun();
+  ensureArchive().progress.recordAttempt(stageId);
+  saveArchiveProfile();
+  game.player.hp = game.player.maxHp;
+  activeRunKind = 'veil';
+  started = true;
+  paused = false;
+  menuView = 'none';
+  spectating = false;
+  controller.sanity.setZone(start.stage.zone);
+  controller.sanity.value = Math.max(controller.sanity.value, 1);
+  veilHudCache = '';
+  updateVeilHud();
+  spawnVeilEncounter(true);
+  syncScreens();
+  showToast(`THE VEIL · ${start.stage.name}`, 2200);
+  saveVeilProfile();
+  return start;
+}
+
+function startVeilBoss(bossId) {
+  const controller = ensureVeil();
+  const start = controller.startBoss(bossId);
+  if (!start.ok) {
+    showToast(start.reason === 'locked' ? 'BOS MASIH TERKUNCI' : 'BOS TIDAK DITEMUKAN', 2000);
+    return start;
+  }
+  veilStageComplete = false;
+  veilBossSeen = true;
+  game.veilDeathCounted = false;
+  if (typeof game.reset === 'function') game.reset();
+  applyCharacterToGame();
+  game.startVeilBoss(bossId);
+  syncHunterStockToRun();
+  game.player.hp = game.player.maxHp;
+  activeRunKind = 'veil';
+  started = true;
+  paused = false;
+  menuView = 'none';
+  controller.sanity.setZone('veil');
+  veilHudCache = '';
+  updateVeilHud();
+  syncScreens();
+  showToast(`BOS · ${start.boss.name}`, 2400);
+  saveVeilProfile();
+  return start;
+}
+
+function completeVeilStage() {
+  const controller = veilController;
+  const stage = controller ? veilStage(controller.activeStage) : null;
+  if (!stage) return null;
+  const result = controller.completeStage(stage.id, {
+    clean: controller.sanity.value >= 30,
+    antiJumpscare: !!veilSettings()['antiJumpscare.enabled'],
+  });
+  saveVeilProfile();
+  showToast(`TAHAP SELESAI · ${stage.name}`, 2400);
+  window.setTimeout(() => {
+    if (activeRunKind !== 'veil') return;
+    activeRunKind = 'none';
+    started = false;
+    openVeil();
+  }, 1800);
+  return result;
+}
+
+function completeVeilBoss() {
+  const controller = veilController;
+  const bossId = controller?.activeBoss;
+  if (!bossId) return null;
+  const result = controller.defeatBoss(bossId, { timeMs: 0 });
+  saveVeilProfile();
+  showToast(`BOS TUMBANG · ${veilBoss(bossId)?.name || bossId}`, 2600);
+  window.setTimeout(() => {
+    if (activeRunKind !== 'veil') return;
+    activeRunKind = 'none';
+    started = false;
+    openVeil();
+  }, 2000);
+  return result;
+}
+
+function updateVeilHud() {
+  const hud = $('veil-hud');
+  if (!hud) return;
+  const visible = started && menuView === 'none' && (activeRunKind === 'veil' || activeRunKind === 'eternal') && !paused;
+  hud.classList.toggle('hidden', !visible);
+  if (!visible || !veilController) return;
+  const meter = veilController.sanity;
+  const condition = meter.condition;
+  const key = `${Math.round(meter.value)}|${Math.round(meter.exposure)}|${Math.round(meter.focus)}|${condition.id}|${veilController.activeStage || veilController.activeBoss || eternalController?.activeStage || eternalController?.activeBoss || ''}|${(game.enemies || []).filter((e) => !e.dead).length}`;
+  hud.classList.toggle('critical', meter.value <= 29);
+  if (key === veilHudCache) return;
+  veilHudCache = key;
+  const value = $('veil-hud-value');
+  const fill = $('veil-hud-fill');
+  const label = $('veil-hud-condition');
+  const stage = $('veil-hud-stage');
+  const ghosts = $('veil-hud-ghost');
+  if (value) value.textContent = String(Math.round(meter.value));
+  if (fill) fill.style.width = `${Math.max(0, Math.min(100, meter.value))}%`;
+  if (label) label.textContent = condition.label.toUpperCase();
+  if (stage) stage.textContent = veilController.activeStage ? veilStage(veilController.activeStage)?.name || 'TABIR' : (eternalController?.activeStage ? eternalStage(eternalController.activeStage)?.name || 'MALAM' : 'TABIR');
+  if (ghosts) ghosts.textContent = `${(game.enemies || []).filter((e) => !e.dead).length} entitas`;
+  const exposure = $('veil-hud-exposure');
+  const exposureFill = $('veil-hud-exposure-fill');
+  const focus = $('veil-hud-focus');
+  const focusFill = $('veil-hud-focus-fill');
+  if (exposure) exposure.textContent = String(Math.round(meter.exposure));
+  if (exposureFill) exposureFill.style.width = `${Math.max(0, Math.min(100, meter.exposure))}%`;
+  if (focus) focus.textContent = String(Math.round(meter.focus));
+  if (focusFill) focusFill.style.width = `${Math.max(0, Math.min(100, meter.focus))}%`;
+}
+
+function veilRenderLayer() {
+  if ((activeRunKind !== 'veil' && activeRunKind !== 'eternal') || !veilController) return null;
+  const presentation = veilPresentation();
+  return {
+    visible: true,
+    sanity: veilController.sanity.value,
+    distortion: presentation.visual.distortion,
+    touched: veilController.sanity.veilTouched || veilController.sanity.value <= 14,
+    time: performance.now() / 1000,
+  };
+}
+
+function veilTick(dt) {
+  if (activeRunKind !== 'veil' || !started || paused || menuView !== 'none') return null;
+  const controller = veilController;
+  if (!controller) return null;
+  controller.tick(dt);
+  updateVeilHud();
+  if (!game.boss) {
+    veilSpawnTimer -= dt;
+    if (veilSpawnTimer <= 0) {
+      veilSpawnTimer = 13;
+      spawnVeilEncounter(false);
+    }
+  }
+  if (game.boss && !veilBossSeen) veilBossSeen = true;
+  if (veilBossSeen && !game.boss) {
+    const result = completeVeilBoss();
+    veilBossSeen = false;
+    return result;
+  }
+  if (!game.boss && !veilStageComplete) {
+    const alive = (game.enemies || []).filter((e) => !e.dead && !e.ghostKind).length;
+    if (alive === 0) {
+      veilStageComplete = true;
+      completeVeilStage();
+    }
+  }
+  if (game.state === 'dead' && !game.veilDeathCounted) {
+    game.veilDeathCounted = true;
+    controller.save.campaign.deaths += 1;
+    saveVeilProfile();
+  }
+  return controller.snapshot();
+}
+
+function claimVeilMission(missionId) {
+  const mission = MISSION_LIBRARY.find((m) => m.id === missionId);
+  const controller = veilController;
+  if (!mission || !controller) return null;
+  if (controller.save.investigation.claimedMissions.includes(missionId)) return { ok: false, reason: 'duplicate' };
+  const progress = missionProgress(mission, controller.progression.metrics);
+  if (!progress.complete) return { ok: false, reason: 'incomplete' };
+  const grant = controller.progression.awardBundle(mission.reward, `mission:${missionId}`);
+  if (!grant.ok) return grant;
+  controller.save.investigation.claimedMissions.push(missionId);
+  controller.progression.checkAchievements();
+  saveVeilProfile();
+  buildVeilScreen();
+  return grant;
+}
+
+function solveVeilCase() {
+  const controller = veilController;
+  const caseId = controller?.save?.investigation?.activeCase;
+  if (!caseId) return { ok: false, reason: 'no-case' };
+  const def = INVESTIGATION_CASES.find((c) => c.id === caseId);
+  if (!def) return { ok: false, reason: 'unknown-case' };
+  const evidence = def.ghostPool.reduce((total, ghostId) => total + (controller.index.get(ghostId)?.evidence.length || 0), 0);
+  const result = controller.completeCase(caseId, { steps: INVESTIGATION_STEPS.slice(0, 6), evidence });
+  if (result.ok) {
+    controller.save.investigation.activeCase = null;
+    ensureArchive().recordCase({ stageId: controller.activeStage });
+    saveArchiveProfile();
+    saveVeilProfile();
+    buildVeilScreen();
+    showToast('KASUS DITUTUP', 2000);
+  }
+  return result;
+}
+
+// ── Update XIV: The Eternal Night (Arc X) ─────────────────────────────
+let eternalController = null;
+let eternalTab = 'dashboard';
+let eternalSettingsCache = null;
+let eternalStageComplete = false;
+let eternalBossSeen = false;
+let eternalRunHunt = null;
+let eternalHuntConfig = { variant: 'standard', chapter: 'midnight_city', rarity: 'all', difficulty: 'normal' };
+
+function eternalSettings() {
+  const raw = settings.eternal && typeof settings.eternal === 'object' ? settings.eternal : (eternalSettingsCache || {});
+  eternalSettingsCache = sanitizeEternalSettings(raw);
+  return eternalSettingsCache;
+}
+
+function ensureEternal() {
+  if (eternalController) return eternalController;
+  let raw = null;
+  try { raw = JSON.parse(localStorage.getItem(ETERNAL_SAVE_KEY) || 'null'); } catch { raw = null; }
+  eternalController = new EternalController({ save: raw || {}, veil: ensureVeil(), settings: eternalSettings() });
+  eternalController.settings = eternalSettings();
+  if (raw && !eternalController.save.campaign.unlocked) {
+    // Migration: an Arc IX finale clear opens Arc X without touching its save.
+    if (veilController?.save?.campaign?.finalBoss) eternalController.save.campaign.unlocked = true;
+  }
+  return eternalController;
+}
+
+function saveEternalProfile() {
+  if (!eternalController) return false;
+  try {
+    localStorage.setItem(ETERNAL_SAVE_KEY, JSON.stringify(eternalController.toJSON()));
+    saveVeilProfile();
+    return true;
+  } catch { return false; }
+}
+
+function applyEternalSetting(path, value) {
+  const current = eternalSettings();
+  const next = JSON.parse(JSON.stringify(current));
+  setEternalSetting(next, path, value);
+  settings.eternal = sanitizeEternalSettings(next);
+  eternalSettingsCache = settings.eternal;
+  if (eternalController) eternalController.settings = eternalSettingsCache;
+  applySettings({ persist: false });
+  return eternalSettingsCache;
+}
+
+function eternalSettingControl(def) {
+  const value = eternalSettingValue(eternalSettings(), def.path);
+  if (def.type === 'toggle') {
+    return `<label class="veil-row"><span>${esc(def.label)}</span><input type="checkbox" data-eternal-setting="${def.path}" data-eternal-type="toggle" ${value ? 'checked' : ''} /><b>${value ? 'AKTIF' : 'MATI'}</b></label>`;
+  }
+  if (def.type === 'range') {
+    return `<label class="veil-row"><span>${esc(def.label)}</span><input type="range" min="${def.min}" max="${def.max}" step="${def.step}" value="${value}" data-eternal-setting="${def.path}" data-eternal-type="range" /><b>${value}</b></label>`;
+  }
+  const options = (def.options || []).map((option) => `<option value="${option}" ${String(option) === String(value) ? 'selected' : ''}>${option}</option>`).join('');
+  return `<label class="veil-row"><span>${esc(def.label)}</span><select data-eternal-setting="${def.path}" data-eternal-type="select">${options}</select><b></b></label>`;
+}
+
+function buildEternalScreen() {
+  const body = $('eternal-body');
+  if (!body) return;
+  const controller = ensureEternal();
+  const summary = eternalSummary(controller.save);
+  const index = controller.veil?.index?.completion?.() || { documented: 0, total: GHOSTS.length };
+  $('eternal-summary').innerHTML = `<span>${summary.stages}/${ETERNAL_STAGES.length} TAHAP</span><span>${summary.bosses}/${ETERNAL_BOSSES.length} BOS</span><span>${summary.chapters}/${ETERNAL_CHAPTERS.length} BAB</span><span>${index.documented}/${index.total} ENTITAS</span><span>LEVEL ${controller.level}</span>`;
+  $('eternal-tabs').innerHTML = ETERNAL_TABS.map((tab) => `<button type="button" class="scary-tab ${tab.id === eternalTab ? 'active' : ''}" data-eternal-tab="${tab.id}" role="tab" aria-selected="${tab.id === eternalTab}">${tab.label}</button>`).join('');
+  body.innerHTML = eternalBodyFor(eternalTab, controller);
+  syncScreens();
+}
+
+function eternalBodyFor(tab, controller) {
+  if (tab === 'dashboard') return eternalDashboardBody(controller);
+  if (tab === 'campaign') return eternalCampaignBody(controller);
+  if (tab === 'index') return eternalIndexBody(controller);
+  if (tab === 'sanity') return eternalSanityBody(controller);
+  if (tab === 'investigation') return eternalInvestigationBody(controller);
+  if (tab === 'hunts') return eternalHuntsBody(controller);
+  if (tab === 'workshop') return eternalWorkshopBody(controller);
+  if (tab === 'events') return eternalEventsBody(controller);
+  if (tab === 'coop') return eternalCoopBody(controller);
+  if (tab === 'progress') return eternalProgressBody(controller);
+  return eternalSettingsBody();
+}
+
+function eternalDashboardBody(controller) {
+  const board = controller.dashboard();
+  const o = board.overview;
+  const cells = [
+    ['Investigator', `Lv. ${o.level}`], ['Ghosts documented', `${o.documented}/${o.totalGhosts}`],
+    ['Investigations', String(o.investigations)], ['Chapters', `${o.chapters}/${ETERNAL_CHAPTERS.length}`], ['Bosses', `${o.bosses}/${o.totalBosses}`],
+    ['Index Rank', `${board.index.rank}/100`], ['Hunts', String(controller.save.stats.hunts)], ['Events', String(controller.save.stats.events)],
+    ['Co-op clears', String(board.multiplayer.clears)], ['Sanity', `${Math.round(controller.veil?.sanity?.value || 0)}`],
+    ['Exposure', `${Math.round(controller.veil?.sanity?.exposure || 0)}`], ['Focus', `${Math.round(controller.veil?.sanity?.focus || 0)}`],
+  ].map(([label, value]) => `<div><span>${esc(label)}</span><b>${esc(value)}</b></div>`).join('');
+  const quick = [['campaign', 'Campaign'], ['index', 'Ghost Index'], ['sanity', 'Sanity & Skills'], ['investigation', 'Investigation Board'], ['workshop', 'Equipment'], ['progress', 'Achievements']]
+    .map(([id, label]) => `<button type="button" class="btn btn-ghost btn-small" data-eternal-tab="${id}">${label}</button>`).join('');
+  return `<article class="veil-card eternal-card active"><header><h3>INVESTIGATOR PROFILE</h3><span>REAL SAVE DATA</span></header><div class="veil-stat">${cells}</div><div class="veil-toolbar">${quick}</div></article>
+    <div class="eternal-section">
+      <article class="veil-card"><header><h3>Campaign</h3><span>${o.chapters}/${ETERNAL_CHAPTERS.length}</span></header><p>${o.bosses} bos dikalahkan · ${o.investigations} investigasi selesai.</p></article>
+      <article class="veil-card"><header><h3>Ghost Index</h3><span>${o.prose}%</span></header><p>${o.documented} dari ${o.totalGhosts} entitas terdokumentasi.</p></article>
+      <article class="veil-card"><header><h3>Sanity 3.0</h3><span>${esc(board.sanity?.label || 'STABLE')}</span></header><p>Sanity ${Math.round(board.sanity?.value || 0)} · Exposure ${Math.round(board.sanity?.exposure || 0)} · Focus ${Math.round(board.sanity?.focus || 0)}.</p></article>
+      <article class="veil-card"><header><h3>Multiplayer</h3><span>${board.multiplayer.sessions} SESI</span></header><p>${board.multiplayer.clears} clear · ${board.multiplayer.reconnects} reconnect.</p></article>
+    </div>`;
+}
+
+function eternalCampaignBody(controller) {
+  if (!controller.save.campaign.unlocked) {
+    return `<article class="veil-card active"><header><h3>ARC X TERKUNCI</h3><span>PRASYARAT</span></header><p>Arc X terbuka setelah Arsitek Tabir dikalahkan, atau dapat dibuka manual untuk pengujian.</p><button type="button" class="btn btn-primary btn-small" data-eternal-action="unlock">BUKA THE ETERNAL NIGHT</button></article>`;
+  }
+  const progress = controller.save.campaign;
+  const cards = ETERNAL_CHAPTERS.map((chapter) => {
+    const unlocked = eternalChapterUnlocked(chapter.id, progress);
+    const stages = eternalStagesForChapter(chapter.id);
+    const cleared = stages.filter((s) => progress.completedStages.includes(s.id)).length;
+    const bossReady = eternalBossUnlocked(chapter.boss, progress);
+    const buttons = stages.map((stage) => {
+      const open = eternalStageUnlocked(stage.id, progress);
+      const done = progress.completedStages.includes(stage.id);
+      return `<button type="button" class="btn btn-ghost btn-small" data-eternal-stage="${stage.id}" ${open ? '' : 'disabled'}>${done ? '✓ ' : ''}${stage.number}. ${esc(stage.name)}</button>`;
+    }).join('');
+    return `<article class="veil-card eternal-card ${unlocked ? '' : 'locked'}"><header><h3>${esc(chapter.name)}</h3><span>${cleared}/5</span></header><p>${esc(chapter.subtitle)} · ${esc(chapter.mechanic)}</p><div class="veil-toolbar">${buttons}</div><button type="button" class="btn btn-ghost btn-small" data-eternal-boss="${chapter.boss}" ${bossReady && unlocked ? '' : 'disabled'}>BOS · ${esc(eternalBoss(chapter.boss)?.name || chapter.boss)}</button></article>`;
+  }).join('');
+  const final = eternalFinalUnlocked(progress);
+  return `<div class="eternal-section">${cards}</div><article class="veil-card eternal-card ${final ? 'active' : ''}"><header><h3>The First Forgotten</h3><span>FINAL · 5 FASE</span></header><p>Bos terakhir Arc X. Kalahkan ${ETERNAL_BOSSES.filter((b) => !b.final).length} bos bab untuk membuka ambang terakhir.</p><button type="button" class="btn btn-primary btn-small" data-eternal-boss="first_forgotten" ${final ? '' : 'disabled'}>HADAPI THE FIRST FORGOTTEN</button></article>`;
+}
+
+function eternalIndexBody(controller) {
+  const index = controller.veil?.index;
+  const completion = index?.completion?.() || { documented: 0, total: GHOSTS.length, documentedStandard: 0, standard: GHOSTS.filter((g) => !g.secret).length, documentedSecret: 0, secret: GHOSTS.filter((g) => g.secret).length, percent: 0 };
+  const classifications = GHOST_CLASSIFICATIONS.map((classification) => {
+    const rows = GHOSTS.filter((g) => g.classification === classification.id);
+    const known = rows.filter((g) => (index?.stageOf(g.id) || 'rumored') !== 'rumored').length;
+    return `<div class="veil-row"><span>${esc(classification.label)}</span><b>${known}/${rows.length}</b><em>${esc(classification.id)}</em></div>`;
+  }).join('');
+  const milestones = INDEX_RANK_MILESTONES.map((m) => `<div class="veil-row"><span>Rank ${m.rank} · ${esc(m.name)}</span><b>${controller.save.rankRewards.includes(m.id) ? 'DITERIMA' : 'TERKUNCI'}</b><em>${esc(m.type)}</em></div>`).join('');
+  return `<article class="veil-card"><header><h3>Ghost Index 2.0</h3><span>${completion.documented}/${completion.total} · RANK ${controller.dashboard().index.rank}/100</span></header><div class="veil-stat"><div><span>Standar</span><b>${completion.documentedStandard}/${completion.standard}</b></div><div><span>Rahasia</span><b>${completion.documentedSecret}/${completion.secret}</b></div><div><span>Persen</span><b>${completion.percent}%</b></div></div><button type="button" class="btn btn-ghost btn-small" data-eternal-action="veil-index">BUKA INDEX LENGKAP DI VEIL</button></article><article class="veil-card"><header><h3>12 Klasifikasi</h3><span>FIELD RISET BARU</span></header>${classifications}</article><article class="veil-card"><header><h3>Milestone Rank 1–100</h3><span>10 HADIAH</span></header>${milestones}</article>`;
+}
+function eternalSanityBody(controller) {
+  const meter = controller.veil?.sanity || ensureVeil().sanity;
+  const snap = meter.snapshot();
+  const bar = (label, value, cls, suffix) => `<div class="eternal-meter"><span>${label}</span><i><b class="${cls}" style="width:${Math.max(0, Math.min(100, value))}%"></b></i><em>${Math.round(value)}${suffix || ''}</em></div>`;
+  return `<article class="veil-card active"><header><h3>Sanity 3.0</h3><span>${esc(snap.label)}</span></header>
+      ${bar('SANITY', snap.value, '', '/100')}${bar('VEIL EXPOSURE', snap.exposure, 'exposure', '/100')}${bar('MENTAL FOCUS', snap.focus, 'focus', '/100')}
+      <p>Sanity mengatur stabilitas; Veil Exposure mengumpulkan pengaruh supernatural per-run; Mental Focus membuka analisis opsional. Tidak ada yang membunuh atau mengambil kendali.</p>
+      <div class="veil-toolbar"><button type="button" class="btn btn-ghost btn-small" data-eternal-action="analyze">ANALISIS LANJUTAN · 10 FOCUS</button><button type="button" class="btn btn-ghost btn-small" data-eternal-action="recover">PULIHKAN FOCUS</button><button type="button" class="btn btn-ghost btn-small" data-eternal-action="reduce-exposure">REDAM EXPOSURE</button></div></article>
+    <article class="veil-card"><header><h3>Zona & Kondisi</h3><span>${esc(snap.zone)}</span></header><p>Paparan: ${esc(snap.exposureBand)} · Fokus: ${esc(snap.focusLabel)} · Kondisi sementara: ${snap.conditions.length}.</p><p class="veil-muted">Pemulihan: ruang aman, relik pelindung, memori, rest station, checkpoint bab, dan hadiah investigasi.</p></article>
+    <div class="veil-grid">${ETERNAL_SETTING_DEFINITIONS.filter((d) => d.tab === 'sanity').map((def) => `<article class="veil-card">${eternalSettingControl(def)}</article>`).join('')}</div>`;
+}
+
+function eternalInvestigationBody(controller) {
+  const inv = controller.save.investigations;
+  const generated = inv.generated.slice(-8).reverse().map((mission) => {
+    const done = inv.completed.includes(mission.id);
+    const active = inv.activeCase === mission.id;
+    return `<div class="veil-row"><span>${esc(mission.name)} · ${mission.evidenceGoal} bukti · Lv.${mission.level}</span><b>${done ? 'SELESAI' : active ? 'AKTIF' : esc(mission.difficulty)}</b><button type="button" class="btn btn-ghost btn-small" data-eternal-case="${mission.id}" ${done ? 'disabled' : ''}>${done ? 'ARSIP' : 'PILIH'}</button></div>`;
+  }).join('');
+  const active = inv.activeCase ? `<button type="button" class="btn btn-primary btn-small" data-eternal-action="solve-case">SELESAIKAN KASUS AKTIF</button>` : '<p class="veil-muted">Pilih atau generate kasus untuk memulai.</p>';
+  return `<article class="veil-card"><header><h3>Procedural Investigation</h3><span>10 TEMPLATE · VALIDATED</span></header><p>Generator memilih template, lokasi, entitas, bukti, dan reward secara deterministik; kombinasi tidak valid ditolak dan fallback selalu tersedia.</p><div class="veil-toolbar"><button type="button" class="btn btn-primary btn-small" data-eternal-action="generate-case">GENERATE KASUS</button><button type="button" class="btn btn-ghost btn-small" data-eternal-action="generate-ancient">GENERATE ANCIENT</button></div>${active}</article>
+    <article class="veil-card"><header><h3>Kasus Tersimpan</h3><span>${inv.generated.length} GENERATED · ${inv.completed.length} SELESAI</span></header>${generated || '<p class="veil-muted">Belum ada kasus yang digenerate.</p>'}</article>`;
+}
+
+function eternalHuntsBody(controller) {
+  const variants = HUNT_VARIANTS.map((variant) => `<article class="veil-card eternal-card ${eternalHuntConfig.variant === variant.id ? 'active' : ''}"><header><h3>${esc(variant.name)}</h3><span>${variant.entities} ENTITAS · ${variant.duration}s</span></header><p>${esc(variant.description)}</p><button type="button" class="btn btn-ghost btn-small" data-eternal-hunt="${variant.id}">MULAI HUNT</button></article>`).join('');
+  const history = controller.save.hunts.history.slice(-6).reverse().map((hunt) => `<div class="veil-row"><span>${esc(hunt.variant)} · ${hunt.entities.length} entitas</span><b>${hunt.antiJumpscare ? 'TANPA JUMPSCARE' : 'PENUH'}</b><em>${new Date(hunt.completedAt).toLocaleDateString('id-ID')}</em></div>`).join('');
+  const chapterOptions = ETERNAL_CHAPTERS.map((c) => `<option value="${c.id}" ${eternalHuntConfig.chapter === c.id ? 'selected' : ''}>${esc(c.name)}</option>`).join('');
+  return `<div class="veil-toolbar"><select data-eternal-hunt-field="chapter">${chapterOptions}</select><select data-eternal-hunt-field="rarity"><option value="all">SEMUA RARITY</option>${GHOST_RARITIES.map((r) => `<option value="${r}" ${eternalHuntConfig.rarity === r ? 'selected' : ''}>${r}</option>`).join('')}</select><select data-eternal-hunt-field="difficulty">${['story', 'easy', 'normal', 'hard', 'nightmare'].map((d) => `<option value="${d}" ${eternalHuntConfig.difficulty === d ? 'selected' : ''}>${d}</option>`).join('')}</select></div><div class="eternal-section">${variants}</div><article class="veil-card"><header><h3>Riwayat Hunt</h3><span>${controller.save.stats.hunts} SELESAI</span></header>${history || '<p class="veil-muted">Belum ada hunt.</p>'}</article>`;
+}
+
+function eternalWorkshopBody(controller) {
+  const groups = EQUIPMENT_CATEGORIES.map((category) => {
+    const items = ETERNAL_EQUIPMENT.filter((item) => item.category === category.id).map((item) => {
+      const tier = controller.save.workshop.tiers[item.id] || 1;
+      const cost = tier < 5 ? equipmentCost(item.id, tier + 1) : null;
+      return `<div class="veil-row"><span>${esc(item.name)} · Tier ${tier}/5 · ${esc(item.description)}</span><b>${cost ? `${cost.spiritShards} ash` : 'MAX'}</b><button type="button" class="btn btn-ghost btn-small" data-eternal-upgrade="${item.id}" ${cost ? '' : 'disabled'}>${cost ? 'TINGKATKAN' : 'MASTERWORK'}</button></div>`;
+    }).join('');
+    return `<article class="veil-card"><header><h3>${esc(category.name)}</h3><span>${ETERNAL_EQUIPMENT.filter((i) => i.category === category.id).length} PERALATAN</span></header>${items}</article>`;
+  }).join('');
+  return `<article class="veil-card"><header><h3>Equipment Workshop 2.0</h3><span>12 ITEM · 5 TIER</span></header><p>Peralatan esensial tersedia pada Tier I tanpa biaya. Upgrade memberi manfaat terukur dan tidak pernah menjadi syarat cerita.</p></article><div class="eternal-section">${groups}</div>`;
+}
+
+function eternalEventsBody(controller) {
+  const active = controller.events.active;
+  const activeDef = active ? WORLD_EVENTS.find((e) => e.id === active.id) : null;
+  const activeCard = activeDef ? `<article class="veil-card active"><header><h3>${esc(activeDef.name)}</h3><span>AKTIF</span></header>${active.objectives.map((objective, index) => `<div class="veil-row"><span>${esc(objective.label)}</span><b>${objective.done ? 'SELESAI' : 'TERBUKA'}</b><button type="button" class="btn btn-ghost btn-small" data-eternal-event-step="${index}" ${objective.done ? 'disabled' : ''}>CATAT</button></div>`).join('')}<button type="button" class="btn btn-primary btn-small" data-eternal-action="complete-event">SELESAIKAN EVENT</button></article>` : '<article class="veil-card"><header><h3>Tidak ada event aktif</h3><span>DIRECTOR</span></header><p>Pilih event dari jadwal untuk memulai.</p><button type="button" class="btn btn-ghost btn-small" data-eternal-action="schedule-event">JADWALKAN EVENT</button></article>';
+  const cards = WORLD_EVENTS.map((event) => `<div class="veil-row"><span>${esc(event.name)} · ${esc(event.kind)} · ${event.objectives.length} objektif</span><b>${controller.save.events.completed.includes(event.id) ? 'SELESAI' : 'TERSEDIA'}</b><button type="button" class="btn btn-ghost btn-small" data-eternal-event="${event.id}" ${controller.events.active ? 'disabled' : ''}>AKTIFKAN</button></div>`).join('');
+  const journal = WORLD_EVENTS.filter((event) => controller.save.events.journal.includes(event.id)).map((event) => `<div class="veil-row"><span>${esc(event.name)}</span><b>TERCATAT</b><em>${esc(event.chapter)}</em></div>`).join('');
+  return `${activeCard}<article class="veil-card"><header><h3>Dynamic World Events</h3><span>11 EVENT</span></header>${cards}</article><article class="veil-card"><header><h3>Jurnal Event</h3><span>${controller.save.events.journal.length}/11</span></header>${journal || '<p class="veil-muted">Belum ada event tercatat.</p>'}</article>`;
+}
+
+function eternalCoopBody(controller) {
+  const roles = EXPEDITION_ROLES.map((role) => `<div class="veil-row"><span>${esc(role.name)} · ${esc(role.ability)}</span><b>SANITY ×${role.sanity}</b><em>${esc(role.id)}</em></div>`).join('');
+  const sessions = controller.expedition.sessions.slice(-4).reverse().map((session) => {
+    const team = controller.expedition.teamSanity(session.id) || [];
+    return `<article class="veil-card"><header><h3>${esc(session.id)}</h3><span>${esc(session.status)} · ${session.members.length} PEMAIN</span></header><p>${team.map((m) => `${esc(m.id)} (${esc(m.role)}) ${Math.round(m.sanity)}`).join(' · ')}</p>${session.tasks.map((task) => `<div class="veil-row"><span>${esc(task.name)}</span><b>${task.done ? 'SELESAI' : `${task.players} pemain`}</b><button type="button" class="btn btn-ghost btn-small" data-eternal-coop-task="${session.id}|${task.id}" ${task.done ? 'disabled' : ''}>CATAT</button></div>`).join('')}<button type="button" class="btn btn-primary btn-small" data-eternal-coop-complete="${session.id}">SELESAIKAN EKSPEDISI</button></article>`;
+  }).join('');
+  return `<article class="veil-card active"><header><h3>Ghost Research Expedition</h3><span>2–4 PEMAIN · PERAN</span></header><p>Setiap investigator mempertahankan Sanity sendiri; tim hanya menampilkan nilai gabungan untuk koordinasi. Reward diberikan sekali per sesi.</p><button type="button" class="btn btn-primary btn-small" data-eternal-action="create-expedition">BUAT SESI LOKAL</button><p class="veil-muted">Model ini dijalankan secara lokal/otoritatif host; belum ada matchmaking atau verifikasi server produksi.</p></article><article class="veil-card"><header><h3>Peran Investigator</h3><span>5 PERAN</span></header>${roles}</article>${sessions || '<p class="veil-muted">Belum ada sesi ekspedisi.</p>'}`;
+}
+
+function eternalProgressBody(controller) {
+  const achievements = ETERNAL_ACHIEVEMENTS.map((achievement) => `<div class="veil-row"><span>${esc(achievement.name)} · ${esc(achievement.description)}</span><b>${achievement.target}</b><em>${controller.save.achievements.includes(achievement.id) ? 'TERBUKA' : 'TERKUNCI'}</em></div>`).join('');
+  const milestones = INDEX_RANK_MILESTONES.map((m) => `<div class="veil-row"><span>Rank ${m.rank} · ${esc(m.name)}</span><b>${controller.save.rankRewards.includes(m.id) ? 'DITERIMA' : 'TERKUNCI'}</b><em>${esc(m.type)}</em></div>`).join('');
+  return `<article class="veil-card"><header><h3>Arc X Progress</h3><span>${controller.save.campaign.chapterClears.length}/${ETERNAL_CHAPTERS.length} BAB</span></header><div class="veil-stat"><div><span>Hunt</span><b>${controller.save.stats.hunts}</b></div><div><span>World events</span><b>${controller.save.stats.events}</b></div><div><span>Co-op</span><b>${controller.save.stats.coopClears}</b></div><div><span>Masterwork</span><b>${controller.save.stats.masterworks}</b></div></div><button type="button" class="btn btn-ghost btn-small" data-eternal-action="claim-ranks">KLAIM HADIAH RANK</button></article><article class="veil-card"><header><h3>10 Achievement Arc X</h3><span>${controller.save.achievements.length}/10</span></header>${achievements}</article><article class="veil-card"><header><h3>Rank Reward</h3><span>${controller.save.rankRewards.length}/10</span></header>${milestones}</article>`;
+}
+
+function eternalSettingsBody() {
+  const groups = [['sanity', 'Sanity 3.0'], ['hunts', 'Spectral Pursuit'], ['events', 'World Events'], ['coop', 'Ekspedisi'], ['settings', 'Performa & Aksesibilitas']];
+  return groups.map(([tab, label]) => {
+    const defs = ETERNAL_SETTING_DEFINITIONS.filter((def) => def.tab === tab);
+    return `<article class="veil-card"><header><h3>${label}</h3><span>${defs.length} KONTROL</span></header>${defs.map((def) => eternalSettingControl(def)).join('')}</article>`;
+  }).join('');
+}
+
+function setEternalTab(tab) {
+  if (!ETERNAL_TABS.some((entry) => entry.id === tab)) return eternalTab;
+  eternalTab = tab;
+  buildEternalScreen();
+  return eternalTab;
+}
+
+function openEternal() {
+  ensureEternal();
+  menuView = 'eternal';
+  started = false;
+  paused = false;
+  spectating = false;
+  $('veil-hud')?.classList.add('hidden');
+  buildEternalScreen();
+  syncScreens();
+  return eternalController.snapshot();
+}
+
+function closeEternal() {
+  if (menuView === 'eternal') menuView = 'title';
+  syncScreens();
+}
+
+function startEternalStage(stageId) {
+  const controller = ensureEternal();
+  const start = controller.startStage(stageId);
+  if (!start.ok) {
+    showToast(start.reason === 'locked' ? 'TAHAP MASIH TERKUNCI' : start.reason === 'arc-locked' ? 'ARC X BELUM TERBUKA' : 'TAHAP TIDAK DITEMUKAN', 2000);
+    return start;
+  }
+  eternalRunHunt = null;
+  eternalStageComplete = false;
+  eternalBossSeen = false;
+  game.veilDeathCounted = false;
+  if (typeof game.reset === 'function') game.reset();
+  applyCharacterToGame();
+  game.loadEternalStage(stageId);
+  syncHunterStockToRun();
+  ensureArchive().progress.recordAttempt(stageId);
+  saveArchiveProfile();
+  game.player.hp = game.player.maxHp;
+  activeRunKind = 'eternal';
+  started = true;
+  paused = false;
+  menuView = 'none';
+  spectating = false;
+  controller.veil?.sanity?.setZone(start.stage.zone);
+  controller.veil?.sanity?.setValue(Math.max(controller.veil.sanity.value, 1));
+  const pool = GHOSTS.filter((g) => g.chapter === start.stage.chapter && !g.secret);
+  if (pool.length) { const ghost = game.spawnGhost(pool[controller.save.campaign.runs % pool.length].id, Math.max(120, game.player.x + 300)); if (ghost) controller.veil?.witness(ghost.ghostKind); }
+  veilHudCache = '';
+  updateVeilHud();
+  syncScreens();
+  showToast(`ARC X · ${start.stage.name}`, 2200);
+  saveEternalProfile();
+  return start;
+}
+
+function startEternalBoss(bossId) {
+  const controller = ensureEternal();
+  const start = controller.startBoss(bossId);
+  if (!start.ok) {
+    showToast(start.reason === 'locked' ? 'BOS MASIH TERKUNCI' : 'BOS TIDAK DITEMUKAN', 2000);
+    return start;
+  }
+  eternalRunHunt = null;
+  eternalStageComplete = false;
+  eternalBossSeen = true;
+  game.veilDeathCounted = false;
+  if (typeof game.reset === 'function') game.reset();
+  applyCharacterToGame();
+  game.startEternalBoss(bossId);
+  syncHunterStockToRun();
+  game.player.hp = game.player.maxHp;
+  activeRunKind = 'eternal';
+  started = true;
+  paused = false;
+  menuView = 'none';
+  controller.veil?.sanity?.setZone('veil');
+  veilHudCache = '';
+  updateVeilHud();
+  syncScreens();
+  showToast(`ARC X BOSS · ${start.boss.name}`, 2400);
+  saveEternalProfile();
+  return start;
+}
+
+function startEternalHunt(config = {}) {
+  const controller = ensureEternal();
+  const hunt = controller.startHunt({ ...eternalHuntConfig, ...config, antiJumpscare: !!eternalSettings()['hunts.antiJumpscare'] });
+  if (!hunt.ok) return hunt;
+  eternalHuntConfig = { ...hunt.hunt.config };
+  eternalRunHunt = hunt.hunt;
+  eternalStageComplete = false;
+  eternalBossSeen = false;
+  game.veilDeathCounted = false;
+  controller.activeStage = hunt.hunt.stage;
+  if (typeof game.reset === 'function') game.reset();
+  applyCharacterToGame();
+  game.loadEternalStage(hunt.hunt.stage);
+  syncHunterStockToRun();
+  game.player.hp = game.player.maxHp;
+  activeRunKind = 'eternal';
+  started = true;
+  paused = false;
+  menuView = 'none';
+  controller.veil?.sanity?.beginRun({ stage: true });
+  controller.veil?.sanity?.setZone('haunted');
+  veilHudCache = '';
+  updateVeilHud();
+  syncScreens();
+  showToast(`SPECTRAL PURSUIT · ${hunt.hunt.variant.toUpperCase()}`, 2200);
+  saveEternalProfile();
+  return hunt;
+}
+
+function completeEternalStage() {
+  const controller = eternalController;
+  const stage = controller?.activeStage ? eternalStage(controller.activeStage) : null;
+  if (!controller || !stage) return null;
+  if (eternalRunHunt) {
+    const hunt = eternalRunHunt;
+    hunt.objectives.forEach((objective) => { objective.done = true; });
+    const result = controller.completeHunt({ timeMs: hunt.duration * 1000 });
+    eternalRunHunt = null;
+    saveEternalProfile();
+    showToast('HUNT SELESAI · CATATAN DIARSIPKAN', 2200);
+    window.setTimeout(() => { if (activeRunKind !== 'eternal') return; activeRunKind = 'none'; started = false; openEternal(); }, 1600);
+    return result;
+  }
+  const result = controller.completeStage(stage.id, {
+    clean: (controller.veil?.sanity?.value || 0) >= 30,
+    timeMs: Math.max(0, Math.round((game.time || 0) * 1000)),
+  });
+  saveEternalProfile();
+  showToast(`TAHAP SELESAI · ${stage.name}`, 2200);
+  window.setTimeout(() => { if (activeRunKind !== 'eternal') return; activeRunKind = 'none'; started = false; openEternal(); }, 1700);
+  return result;
+}
+
+function completeEternalBoss() {
+  const controller = eternalController;
+  const bossId = controller?.activeBoss;
+  if (!bossId) return null;
+  const result = controller.defeatBoss(bossId, { timeMs: Math.max(0, Math.round((game.time || 0) * 1000)) });
+  eternalBossSeen = false;
+  saveEternalProfile();
+  showToast(`BOS TUMBANG · ${eternalBoss(bossId)?.name || bossId}`, 2600);
+  window.setTimeout(() => { if (activeRunKind !== 'eternal') return; activeRunKind = 'none'; started = false; openEternal(); }, 1900);
+  return result;
+}
+
+function eternalTick(dt) {
+  if (activeRunKind !== 'eternal' || !started || paused || menuView !== 'none') return null;
+  const controller = eternalController;
+  if (!controller) return null;
+  veilController?.tick(dt);
+  updateVeilHud();
+  if (game.boss && !eternalBossSeen) eternalBossSeen = true;
+  if (eternalBossSeen && !game.boss) return completeEternalBoss();
+  if (!game.boss && !eternalStageComplete) {
+    const alive = (game.enemies || []).filter((e) => !e.dead && !e.ghostKind).length;
+    if (alive === 0) { eternalStageComplete = true; completeEternalStage(); }
+  }
+  if (game.state === 'dead' && !game.veilDeathCounted) {
+    game.veilDeathCounted = true;
+    controller.save.campaign.deaths += 1;
+    saveEternalProfile();
+  }
+  return controller.snapshot();
+}
+
+// ── Update XV: Stage Archive & Supernatural Research Database ──────────────
+let archiveController = null;
+let archiveTab = 'stages';
+let archiveArc = 'arc9';
+let archiveChapter = 'all';
+let archiveStageId = null;
+let archiveGhostId = null;
+let archivePreviewId = null;
+let archivePreviewData = null;
+let archiveReturnView = 'veil';
+let archivePrepareGhost = null;
+let archiveToolCategory = 'all';
+let archiveGhostFilters = { search: '', classification: 'all', rarity: 'all', discovery: 'all', chapter: 'all', tool: 'all', missing: false };
+let archiveScareFilters = { search: '', category: 'all', state: 'all', missing: false };
+
+const ARCHIVE_TAB_DEFS = [
+  { id: 'stages', label: 'STAGE ARCHIVE' },
+  { id: 'checker', label: 'LEVEL CHECKER' },
+  { id: 'ghosts', label: 'GHOST INDEX 3.0' },
+  { id: 'jumpscares', label: 'JUMPSCARE INDEX' },
+  { id: 'equipment', label: 'EQUIPMENT' },
+  { id: 'progress', label: 'PROGRESS' },
+];
+const ARCHIVE_STATUS_LABEL = { cleared: 'CLEARED', unlocked: 'UNLOCKED', uncleared: 'UNCLEARED', locked: 'LOCKED', perfect: '100% DOCUMENTED' };
+const ARCHIVE_STATE_LABEL = { undiscovered: 'UNDISCOVERED', rumored: 'RUMORED', encountered: 'ENCOUNTERED', identified: 'IDENTIFIED', investigated: 'INVESTIGATED', documented: 'DOCUMENTED', mastered: 'MASTERED' };
+
+function ensureArchive() {
+  if (archiveController) return archiveController;
+  let raw = null;
+  try { raw = JSON.parse(localStorage.getItem(ARCHIVE_SAVE_KEY) || 'null'); } catch { raw = null; }
+  const veil = ensureVeil();
+  const eternal = ensureEternal();
+  archiveController = new ArchiveController({ save: sanitizeArchiveSave(raw || {}), veil, eternal, index: veil.index });
+  return archiveController;
+}
+
+function saveArchiveProfile() {
+  if (!archiveController) return false;
+  try { localStorage.setItem(ARCHIVE_SAVE_KEY, JSON.stringify(archiveController.toJSON())); return true; } catch { return false; }
+}
+
+function archiveSelectedStage() {
+  const controller = ensureArchive();
+  if (archiveStageId && ARCHIVE_STAGES_BY_ID[archiveStageId]) return archiveStageId;
+  archiveStageId = controller.stageArchive.stagesFor(archiveArc, archiveChapter)[0]?.id || ARCHIVE_STAGES[0].id;
+  return archiveStageId;
+}
+
+function archiveStatus(stageId) { return ensureArchive().stageStatus(stageId); }
+
+function archiveStatusBadge(status) {
+  return `<span class="archive-status archive-status-${status}">${ARCHIVE_STATUS_LABEL[status] || status.toUpperCase()}</span>`;
+}
+
+function openArchive(tab = 'stages') {
+  const controller = ensureArchive();
+  archiveReturnView = menuView === 'eternal' ? 'eternal' : menuView === 'veil' ? 'veil' : 'title';
+  if (ARCHIVE_TAB_DEFS.some((entry) => entry.id === tab)) archiveTab = tab;
+  archivePreviewId = null;
+  archivePreviewData = null;
+  menuView = 'archive';
+  started = false;
+  paused = false;
+  spectating = false;
+  $('veil-hud')?.classList.add('hidden');
+  archiveSelectedStage();
+  buildArchiveScreen();
+  syncScreens();
+  return controller.dashboard();
+}
+
+function closeArchive() {
+  archivePreviewId = null;
+  archivePreviewData = null;
+  if (menuView !== 'archive') return;
+  if (archiveReturnView === 'eternal') openEternal();
+  else if (archiveReturnView === 'veil') openVeil();
+  else { menuView = 'title'; syncScreens(); }
+}
+
+function buildArchiveScreen() {
+  const body = $('archive-body');
+  if (!body) return;
+  const controller = ensureArchive();
+  const board = controller.dashboard();
+  $('archive-summary').innerHTML = `<span>${board.stages.cleared}/${board.stages.total} TAHAP</span><span>${board.stages.perfect} PERFECT</span><span>${board.ghosts.documented}/${board.ghosts.total} ENTITAS</span><span>${board.jumpscares.documented}/${board.jumpscares.total} SCARE</span><span>${board.tools.owned}/${board.tools.total} TOOL</span><span>${board.previews.unique} PREVIEW</span>`;
+  $('archive-tabs').innerHTML = ARCHIVE_TAB_DEFS.map((tab) => `<button type="button" class="scary-tab ${tab.id === archiveTab ? 'active' : ''}" data-archive-tab="${tab.id}" role="tab" aria-selected="${tab.id === archiveTab}">${tab.label}</button>`).join('');
+  body.innerHTML = archiveBodyFor(archiveTab, controller);
+  syncScreens();
+}
+
+function archiveBodyFor(tab, controller) {
+  if (tab === 'checker') return archiveCheckerBody(controller);
+  if (tab === 'ghosts') return archiveGhostsBody(controller);
+  if (tab === 'jumpscares') return archiveJumpscaresBody(controller);
+  if (tab === 'equipment') return archiveEquipmentBody(controller);
+  if (tab === 'progress') return archiveProgressBody(controller);
+  return archiveStagesBody(controller);
+}
+
+function archiveStagesBody(controller) {
+  archiveSelectedStage();
+  const arc = ARCHIVE_ARCS.find((a) => a.id === archiveArc) || ARCHIVE_ARCS[0];
+  const chapters = controller.stageArchive.chaptersFor(arc.id);
+  const stages = controller.stageArchive.stagesFor(arc.id, archiveChapter);
+  const selectedId = stages.some((s) => s.id === archiveStageId) ? archiveStageId : stages[0]?.id;
+  if (selectedId) archiveStageId = selectedId;
+  const selected = ARCHIVE_STAGES_BY_ID[archiveStageId];
+  const status = controller.stageStatus(selectedId);
+  const arcButtons = ARCHIVE_ARCS.map((entry) => `<button type="button" class="btn btn-ghost btn-small ${entry.id === arc.id ? 'active' : ''}" data-archive-arc="${entry.id}">${esc(entry.short)} · ${esc(entry.label.split('—')[1]?.trim() || entry.label)}</button>`).join('');
+  const chapterButtons = chapters.map((chapter) => {
+    const rows = controller.stageArchive.stagesFor(arc.id, chapter.id);
+    const cleared = rows.filter((s) => ['cleared', 'perfect'].includes(controller.stageStatus(s.id))).length;
+    return `<button type="button" class="btn btn-ghost btn-small ${chapter.id === archiveChapter ? 'active' : ''}" data-archive-chapter="${chapter.id}">${esc(chapter.name)} · ${cleared}/5</button>`;
+  }).join('');
+  const cards = stages.map((stage) => {
+    const stageState = controller.stageStatus(stage.id);
+    return `<article class="archive-stage-card ${stageState} ${stage.id === archiveStageId ? 'selected' : ''}" data-archive-stage="${stage.id}" tabindex="0">
+      <header><span>${String(stage.number).padStart(2, '0')}</span>${archiveStatusBadge(stageState)}</header>
+      <h4>${esc(stage.name)}</h4><p>${esc(stage.chapterName)} · ${stage.enemyCount} musuh · ${stage.eliteCount} elite</p>
+      <div class="archive-card-actions"><button type="button" class="btn btn-ghost btn-small" data-archive-preview="${stage.id}">SNEAK PEEK</button><button type="button" class="btn btn-ghost btn-small" data-archive-check="${stage.id}">CHECK</button></div>
+    </article>`;
+  }).join('');
+  const docs = selected.ghostIds.map((id) => ({ id, state: controller.ghosts.state(id), ghost: GHOSTS.find((g) => g.id === id) })).filter((row) => row.ghost);
+    const known = docs.filter((row) => row.state !== 'undiscovered');
+  const boss = ARCHIVE_BOSSES.find((b) => b.id === selected.bossId);
+  const bossKnown = boss && controller.stageArchive.bosses(selected.arcId).has(boss.id);
+  const check = controller.checkStage(selected.id);
+  const detail = `<article class="veil-card archive-detail"><header><h3>${esc(selected.chapterName)} · ${esc(selected.name)}</h3>${archiveStatusBadge(status)}</header>
+    <p>${esc(selected.description)}</p>
+    <div class="archive-grid">
+      <div><span>ARC</span><b>${esc(arc.short)}</b></div><div><span>TYPE</span><b>${esc(selected.stageType || 'standard')}</b></div><div><span>THREAT</span><b>${esc(selected.threat)}</b></div><div><span>ENEMIES</span><b>${selected.enemyCount} + ${selected.eliteCount} elite</b></div><div><span>GHOSTS</span><b>${known.length}/${docs.length} known</b></div><div><span>BOSS</span><b>${bossKnown ? esc(boss.name) : 'UNKNOWN'}</b></div><div><span>OVERALL</span><b>${check.percentages.overall}%</b></div><div><span>ATTEMPTS</span><b>${controller.save.stageRecords[selected.id]?.attempts || 0}</b></div><div><span>DISCOVERIES</span><b>${selected.collectibleIds.length} records</b></div>
+    </div>
+    <div class="archive-objectives"><strong>OBJEKTIF</strong><p>${esc(selected.objective)}</p><strong>KONDISI</strong><p>${esc(selected.conditions.zone)} · drain ${selected.sanityDrain} · aktivitas ${esc(selected.conditions.supernaturalActivity)}</p><strong>KOLEKSI</strong><p>${selected.collectibleIds.length} fragmen lore · ${selected.jumpscareEventIds.length} peristiwa scare</p></div>
+    <div class="veil-toolbar"><button type="button" class="btn btn-primary btn-small" data-archive-preview="${selected.id}">SNEAK PEEK</button><button type="button" class="btn btn-ghost btn-small" data-archive-check="${selected.id}">LEVEL CHECKER</button><button type="button" class="btn btn-ghost btn-small" data-archive-ghosts="${selected.id}">GHOST INDEX</button><button type="button" class="btn btn-ghost btn-small" data-archive-prepare="${selected.ghostIds[0] || ''}">PREPARE INVESTIGATION</button><button type="button" class="btn btn-primary btn-small" data-archive-enter="${selected.id}" ${['unlocked', 'cleared', 'perfect'].includes(status) ? '' : 'disabled'}>${status === 'cleared' || status === 'perfect' ? 'REPLAY STAGE' : 'ENTER STAGE'}</button></div>
+  </article>`;
+  const bossRows = controller.stageArchive.bossesFor(arc.id).map((row) => {
+    const found = controller.stageArchive.bosses(arc.id).has(row.id);
+    return `<div class="veil-row"><span>${found ? esc(row.name) : '??? · BOSS TERKUNCI'}</span><b>${row.maxPhases} FASE</b><em>${found ? esc(row.title) : esc(row.chapterName)}</em></div>`;
+  }).join('');
+  return `<div class="archive-toolbar"><div class="veil-toolbar">${arcButtons}</div><div class="veil-toolbar">${chapterButtons}</div></div><div class="archive-layout"><div class="archive-stage-grid">${cards}</div>${detail}</div><article class="veil-card"><header><h3>Boss Archive</h3><span>${controller.stageArchive.bossesFor(arc.id).length} BOS</span></header>${bossRows}</article>`;
+}
+
+function archiveCheckerBody(controller) {
+  const stageId = archiveSelectedStage();
+  const check = controller.checkStage(stageId);
+  const chapter = controller.checkChapter(ARCHIVE_STAGES_BY_ID[stageId].chapterId);
+  const arc = controller.checkArc(ARCHIVE_STAGES_BY_ID[stageId].arcId);
+  if (!check.ok) return `<p>${esc(check.reason)}</p>`;
+  const rows = check.categories.map((category) => `<div class="archive-check-row"><span>${esc(category.label)}</span><div class="archive-bar"><i style="width:${Math.max(0, Math.min(100, Number(category.value) || 0))}%"></i></div><b>${category.status === 'not-available' ? 'N/A' : `${category.value}%`}</b><em>${esc(category.detail)}</em></div>`).join('');
+  const summary = [['MAIN', check.percentages.main], ['GHOSTS', check.percentages.ghosts], ['COLLECTIBLES', check.percentages.collectibles], ['SECRETS', check.percentages.secrets], ['OVERALL', check.percentages.overall]].map(([label, value]) => `<div><span>${label}</span><b>${value}%</b></div>`).join('');
+  const chapterRows = chapter.categories.map((row) => `<div class="veil-row"><span>${esc(row.id.toUpperCase())}</span><b>${row.complete ? 'SELESAI' : 'BELUM'}</b><em>${row.value}%</em></div>`).join('');
+  return `<article class="veil-card active"><header><h3>LEVEL CHECKER · ${esc(check.stage.name)}</h3>${archiveStatusBadge(check.stage.status)}</header><div class="archive-grid archive-percentages">${summary}</div><div class="archive-checks">${rows}</div>${check.issues.length ? `<p class="archive-warning">ISU: ${esc(check.issues.join(' · '))}</p>` : '<p class="archive-ok">Tidak ada konflik progres yang terdeteksi.</p>'}<div class="veil-toolbar"><button type="button" class="btn btn-ghost btn-small" data-archive-tab="stages">KEMBALI KE STAGE</button><button type="button" class="btn btn-ghost btn-small" data-archive-check="${stageId}">PERIKSA ULANG</button></div></article>
+    <article class="veil-card"><header><h3>Chapter Report · ${esc(ARCHIVE_STAGES_BY_ID[stageId].chapterName)}</h3><span>${chapter.completeStages}/${chapter.stages.length} CLEAR</span></header>${chapterRows}</article>
+    <article class="veil-card"><header><h3>Arc Report</h3><span>${arc.completeStages}/${arc.totalStages}</span></header><p>Laporan bab dihitung dari progres Arc IX/X yang tersimpan. Checker tidak memberikan hadiah otomatis.</p></article>`;
+}
+
+function archiveGhostFilterOptions() {
+  return `<select data-archive-filter="classification"><option value="all">SEMUA KLASIFIKASI</option>${GHOST_CLASSIFICATIONS.map((c) => `<option value="${c.id}" ${archiveGhostFilters.classification === c.id ? 'selected' : ''}>${esc(c.label)}</option>`).join('')}</select>
+    <select data-archive-filter="rarity"><option value="all">SEMUA RARITY</option>${GHOST_RARITIES.map((r) => `<option value="${r}" ${archiveGhostFilters.rarity === r ? 'selected' : ''}>${esc(r)}</option>`).join('')}</select>
+    <select data-archive-filter="discovery"><option value="all">SEMUA STATUS</option>${ARCHIVE_DISCOVERY_STATES.map((s) => `<option value="${s}" ${archiveGhostFilters.discovery === s ? 'selected' : ''}>${esc(ARCHIVE_STATE_LABEL[s])}</option>`).join('')}</select>
+    <select data-archive-filter="chapter"><option value="all">SEMUA LOKASI</option>${ARCHIVE_CHAPTERS.map((c) => `<option value="${c.id}" ${archiveGhostFilters.chapter === c.id ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select>
+    <select data-archive-filter="tool"><option value="all">SEMUA TOOL</option>${ARCHIVE_TOOLS.map((t) => `<option value="${t.id}" ${archiveGhostFilters.tool === t.id ? 'selected' : ''}>${esc(t.name)}</option>`).join('')}</select>`;
+}
+
+function archiveGhostsBody(controller) {
+  const rows = controller.ghostQuery({ ...archiveGhostFilters, missing: archiveGhostFilters.missing });
+  const visible = rows.slice(0, 40);
+  if (!archiveGhostId || !rows.some((row) => row.ghost.id === archiveGhostId)) archiveGhostId = rows[0]?.ghost.id || null;
+  const entry = archiveGhostId ? controller.ghostEntry(archiveGhostId) : null;
+  const list = visible.map((row, position) => {
+    const known = row.state !== 'undiscovered';
+    const label = known ? row.ghost.name : `Unknown Entity #${String(position + 1).padStart(3, '0')}`;
+    return `<button type="button" class="archive-ghost-row ${row.ghost.id === archiveGhostId ? 'selected' : ''}" data-archive-ghost="${row.ghost.id}"><span class="archive-entity-mark">${known ? row.ghost.name.slice(0, 1).toUpperCase() : '?'}</span><span><b>${esc(label)}</b><em>${known ? esc(row.ghost.classification) : 'Unknown'} · ${esc(row.state)}</em></span><span class="archive-status">${known ? esc(row.ghost.rarity) : '???'}</span></button>`;
+  }).join('') || '<p class="veil-muted">Tidak ada entitas yang cocok dengan filter.</p>';
+  let detail = '<article class="veil-card"><header><h3>Entity Detail</h3><span>PILIH ENTITAS</span></header><p>Pilih baris untuk melihat bukti, tool, dan tindakan dokumentasi.</p></article>';
+  if (entry) {
+    const known = entry.state !== 'undiscovered';
+    const identified = entry.identity;
+    const tools = [...entry.requirements.required.map((id) => ({ id, optional: false })), ...entry.requirements.optional.map((id) => ({ id, optional: true }))].map((row) => {
+      const tool = controller.equipment.tool(row.id);
+      return `<div class="veil-row"><span>${esc(tool?.name || row.id)}${row.optional ? ' · OPSIONAL' : ''}</span><b>${tool?.owned ? 'OWNED' : 'MISSING'}</b><em>Tier ${tool?.level || 0}</em></div>`;
+    }).join('');
+    const actions = [
+      `<button type="button" class="btn btn-ghost btn-small" data-archive-prepare="${entry.ghost.id}">PREPARE INVESTIGATION</button>`,
+      entry.state === 'encountered' ? `<button type="button" class="btn btn-ghost btn-small" data-archive-ghost-identify="${entry.ghost.id}">IDENTIFIKASI</button>` : '',
+      entry.record && entry.evidenceOwned >= entry.evidenceRequired && !['documented', 'mastered'].includes(entry.state) ? `<button type="button" class="btn btn-primary btn-small" data-archive-ghost-document="${entry.ghost.id}">DOKUMENTASIKAN</button>` : '',
+      ['documented', 'investigated'].includes(entry.state) ? `<button type="button" class="btn btn-ghost btn-small" data-archive-ghost-master="${entry.ghost.id}">MASTER</button>` : '',
+      entry.requirements.containable && ['documented', 'investigated'].includes(entry.state) ? `<button type="button" class="btn btn-ghost btn-small" data-archive-ghost-capture="${entry.ghost.id}">CONTAIN</button>` : '',
+    ].join('');
+    detail = `<article class="veil-card active"><header><h3>${known ? esc(entry.ghost.name) : 'UNKNOWN ENTITY'}</h3>${archiveStatusBadge(entry.state === 'mastered' ? 'perfect' : 'uncleared')}</header><p>${known ? esc(entry.ghost.description || entry.ghost.behavior) : 'Entitas belum ditemukan. Identitas, lokasi, dan perilaku tetap tersembunyi.'}</p><div class="archive-grid"><div><span>STATE</span><b>${esc(ARCHIVE_STATE_LABEL[entry.state])}</b></div><div><span>CLASS</span><b>${identified ? esc(entry.ghost.classification) : 'UNKNOWN'}</b></div><div><span>RARITY</span><b>${known ? esc(entry.ghost.rarity) : 'UNKNOWN'}</b></div><div><span>THREAT</span><b>${known ? entry.ghost.threat : '?'}/5</b></div><div><span>EVIDENCE</span><b>${entry.evidenceOwned}/${entry.evidenceRequired}</b></div><div><span>LOCATION</span><b>${known ? esc(entry.ghost.location) : 'UNKNOWN'}</b></div></div><div class="veil-toolbar">${actions}</div><article class="veil-card archive-subcard"><header><h3>Required Tools</h3><span>${entry.requirements.required.length} WAJIB</span></header>${tools}</article><p class="micro">Metode: ${esc(entry.requirements.methods.join(' · ') || 'Belum diketahui')}.</p></article>`;
+  }
+  return `<div class="archive-toolbar"><input type="search" data-archive-search placeholder="Cari nama, ID, lokasi, bukti, tool…" value="${esc(archiveGhostFilters.search)}" /><div class="veil-toolbar">${archiveGhostFilterOptions()}<button type="button" class="btn btn-ghost btn-small ${archiveGhostFilters.missing ? 'active' : ''}" data-archive-missing>MISSING ENTRIES</button></div></div><p class="micro">${rows.length} entri cocok · status tidak didokumentasikan tidak disamakan dengan tahap yang sudah clear.</p><div class="archive-ghost-layout"><div class="archive-ghost-list">${list}</div>${detail}</div>`;
+}
+
+function archiveJumpscaresBody(controller) {
+  const rows = controller.jumpscareQuery(archiveScareFilters);
+  if (!archiveScareId || !rows.some((row) => row.id === archiveScareId)) archiveScareId = rows[0]?.id || null;
+  const list = rows.map((event, index) => {
+    const known = event.state !== 'undiscovered';
+    return `<div class="archive-scare-row ${event.id === archiveScareId ? 'selected' : ''}" data-archive-scare="${event.id}"><span class="archive-entity-mark">${JUMPSCARE_CATEGORIES.find((c) => c.id === event.category)?.icon || '?'}</span><span><b>${known ? esc(event.name) : `Unknown Event #${String(index + 1).padStart(3, '0')}`}</b><em>${known ? esc(event.category.replace(/_/g, ' ')) : 'Unknown'} · ${esc(event.state)}</em></span>${event.documented ? '<span class="archive-status">RECORDED</span>' : `<button type="button" class="btn btn-ghost btn-small" data-archive-scare-doc="${event.id}" ${known ? '' : 'disabled'}>CATAT</button>`}</div>`;
+  }).join('') || '<p class="veil-muted">Tidak ada peristiwa yang cocok.</p>';
+  const selected = JUMPSCARE_EVENTS_BY_ID[archiveScareId];
+  let detail = '<p class="veil-muted">Pilih peristiwa untuk melihat syarat bukti.</p>';
+  if (selected) {
+    const state = controller.jumpscares.state(selected.id);
+    const known = state !== 'undiscovered';
+    detail = `<article class="veil-card"><header><h3>${known ? esc(selected.name) : 'UNKNOWN EVENT'}</h3><span>${esc(ARCHIVE_STATE_LABEL[state])}</span></header><p>${known ? esc(selected.lore) : 'Belum ada catatan. Peristiwa tidak akan diputar otomatis saat membuka arsip.'}</p><div class="archive-grid"><div><span>CATEGORY</span><b>${esc(selected.category.replace(/_/g, ' '))}</b></div><div><span>RELATED GHOST</span><b>${known ? esc(GHOSTS.find((g) => g.id === selected.ghostId)?.name || selected.ghostId) : 'UNKNOWN'}</b></div><div><span>EVIDENCE</span><b>${esc(selected.evidenceType)}</b></div><div><span>ANTI-JUMPSCARE</span><b>ATMOSPHERIC</b></div></div><p class="micro">Trigger: ${known ? esc(selected.trigger) : 'Hidden until evidence is collected'}.</p></article>`;
+  }
+  return `<div class="archive-toolbar"><input type="search" data-archive-scare-search placeholder="Cari peristiwa…" value="${esc(archiveScareFilters.search)}" /><div class="veil-toolbar"><select data-archive-scare-filter="category"><option value="all">SEMUA KATEGORI</option>${JUMPSCARE_CATEGORIES.map((c) => `<option value="${c.id}" ${archiveScareFilters.category === c.id ? 'selected' : ''}>${esc(c.label)}</option>`).join('')}</select><select data-archive-scare-filter="state"><option value="all">SEMUA STATUS</option>${ARCHIVE_DISCOVERY_STATES.map((s) => `<option value="${s}" ${archiveScareFilters.state === s ? 'selected' : ''}>${ARCHIVE_STATE_LABEL[s]}</option>`).join('')}</select><button type="button" class="btn btn-ghost btn-small ${archiveScareFilters.missing ? 'active' : ''}" data-archive-scare-missing>BELUM TERCATAT</button></div></div><div class="archive-ghost-layout"><div class="archive-ghost-list">${list}</div>${detail}</div><p class="micro">Jumpscare Index terpisah dari Ghost Index. Dokumentasi memakai bukti entitas dan tidak mewajibkan pemain mengalami lonjakan kamera atau audio.</p>`;
+}
+
+function archiveEquipmentBody(controller) {
+  const tools = controller.tools().filter((tool) => archiveToolCategory === 'all' || tool.category === archiveToolCategory);
+  const prep = archivePrepareGhost ? controller.prepare(archivePrepareGhost) : null;
+  const prepHtml = prep?.ok ? `<article class="veil-card active"><header><h3>Persiapan · ${esc(GHOSTS.find((g) => g.id === prep.ghostId)?.name || prep.ghostId)}</h3><span>${prep.ready ? 'SIAP' : 'TOOL KURANG'}</span></header><p>${prep.ready ? 'Semua peralatan wajib tersedia.' : `Missing: ${prep.highlight.map((id) => ARCHIVE_TOOLS_BY_ID[id]?.name || id).join(', ')}`}</p></article>` : '';
+  const rows = tools.map((tool) => `<div class="veil-row ${prep?.highlight?.includes(tool.id) ? 'archive-missing-tool' : ''}"><span>${esc(tool.name)} · ${esc(tool.category)}<em>${esc(tool.functions[0])}</em></span><b>${tool.owned ? `OWNED · T${tool.level}` : 'MISSING'}</b><button type="button" class="btn btn-ghost btn-small" data-archive-upgrade="${tool.id}" ${tool.owned && tool.level < 5 ? '' : 'disabled'}>${tool.owned ? (tool.level >= 5 ? 'MAX' : 'UPGRADE') : 'LOCKED'}</button></div>`).join('');
+  return `${prepHtml}<div class="archive-toolbar"><div class="veil-toolbar"><button type="button" class="btn btn-ghost btn-small ${archiveToolCategory === 'all' ? 'active' : ''}" data-archive-tool-category="all">SEMUA</button>${ARCHIVE_TOOL_CATEGORIES.map((category) => `<button type="button" class="btn btn-ghost btn-small ${archiveToolCategory === category ? 'active' : ''}" data-archive-tool-category="${category}">${esc(category)}</button>`).join('')}</div></div><article class="veil-card"><header><h3>Investigation Equipment Index</h3><span>${controller.equipment.owned().size}/${ARCHIVE_TOOLS.length} OWNED</span></header>${rows}</article>`;
+}
+
+function archiveProgressBody(controller) {
+  const board = controller.dashboard();
+  const achievements = ARCHIVE_ACHIEVEMENTS.map((achievement) => {
+    const unlocked = controller.save.achievements.includes(achievement.id);
+    return `<div class="archive-achievement ${unlocked ? 'unlocked' : ''}"><span>${unlocked ? '✓' : '○'}</span><div><b>${esc(achievement.name)}</b><em>${esc(achievement.requirement)} · ${esc(achievement.reward)}</em></div></div>`;
+  }).join('');
+  return `<div class="archive-grid"><div><span>STAGES</span><b>${board.stages.cleared}/${board.stages.total}</b></div><div><span>PERFECT</span><b>${board.stages.perfect}</b></div><div><span>GHOSTS</span><b>${board.ghosts.documented}/${board.ghosts.total}</b></div><div><span>SCARES</span><b>${board.jumpscares.documented}/${board.jumpscares.total}</b></div><div><span>PREVIEWS</span><b>${board.previews.unique}</b></div><div><span>ACHIEVEMENTS</span><b>${board.achievements.unlocked}/${board.achievements.total}</b></div></div><article class="veil-card"><header><h3>Archive Achievements</h3><span>${board.achievements.unlocked}/${board.achievements.total}</span></header>${achievements}</article><p class="micro">Semua hadiah arsip bersifat kosmetik/progresi lokal dan tidak membutuhkan Anti-Jumpscare untuk dimatikan.</p>`;
+}
+
+function openArchivePreview(stageId) {
+  const controller = ensureArchive();
+  const preview = controller.openPreview(stageId);
+  if (!preview.ok) { showToast(preview.reason === 'unknown-stage' ? 'TAHAP TIDAK DITEMUKAN' : 'PRATINJAU TIDAK TERSEDIA', 1800); return preview; }
+  archivePreviewId = stageId;
+  archivePreviewData = preview;
+  saveArchiveProfile();
+  buildArchivePreview();
+  syncScreens();
+  return preview;
+}
+
+function buildArchivePreview() {
+  if (!archivePreviewData) return;
+  const preview = archivePreviewData;
+  const chapter = ARCHIVE_CHAPTERS_BY_ID[preview.stage.chapterId];
+  const palette = chapter?.palette || { top: '#080a10', mid: '#131a22', low: '#1d2730', glow: '#9fb8c8' };
+  $('archive-preview-title').textContent = `${preview.stage.chapterName} · ${preview.stage.name}`;
+  $('archive-preview-sub').textContent = `${ARCHIVE_STATUS_LABEL[preview.stage.status] || preview.stage.status.toUpperCase()} · pratinjau arsip tidak mengubah progres.`;
+  const known = preview.knownGhosts.map((g) => `<span class="archive-chip">${esc(g.name)} · ${esc(g.classification)}</span>`).join('') || '<span class="archive-chip muted">Belum ada entitas terdokumentasi</span>';
+  const tools = preview.tools.map((tool) => `<div class="veil-row"><span>${esc(tool.name)}</span><b>${tool.owned ? 'OWNED' : 'MISSING'}</b></div>`).join('') || '<p class="veil-muted">Tool rekomendasi muncul setelah entitas diketahui.</p>';
+  $('archive-preview-body').innerHTML = `<div class="archive-preview-scene" style="--archive-top:${palette.top};--archive-mid:${palette.mid};--archive-glow:${palette.glow}"><div class="archive-preview-fog"></div><span>${esc(preview.environment.zone)} · ${esc(preview.threat)}</span><b>${preview.unknownPresence ? `${preview.unknownPresence} entitas belum teridentifikasi` : 'Area telah dipetakan'}</b></div><div class="archive-grid"><div><span>THREAT</span><b>${esc(preview.threat)}</b></div><div><span>BOSS</span><b>${preview.boss.unknown ? 'UNKNOWN' : `${esc(preview.boss.name)} · ${preview.boss.phases} FASE`}</b></div><div><span>COLLECTIBLES</span><b>${preview.collectibles.records} records</b></div><div><span>PREVIEW TYPE</span><b>ARCHIVE</b></div></div><article class="veil-card"><header><h3>Environment</h3><span>ISOLATED</span></header><p>${esc(preview.environment.description)}</p><p class="micro">${esc(preview.environment.conditions.zone)} · drain ${preview.environment.conditions.sanityDrain} · supernatural ${esc(preview.environment.conditions.supernaturalActivity)}</p></article><article class="veil-card"><header><h3>Known Ghosts</h3><span>${preview.knownGhosts.length} KNOWN</span></header><div class="archive-chips">${known}</div></article><article class="veil-card"><header><h3>Recommended Tools</h3><span>ARSIP</span></header>${tools}</article><article class="veil-card"><header><h3>Objectives</h3><span>${preview.objectives.length}</span></header>${preview.objectives.map((o) => `<div class="veil-row"><span>${esc(o.kind)}</span><b>${esc(o.text)}</b></div>`).join('')}</article><p class="micro">Tidak ada musuh, hadiah, checkpoint, konsumsi inventory, atau dokumentasi entitas yang berubah dari pratinjau ini.</p>`;
+}
+
+function closeArchivePreview() {
+  archivePreviewId = null;
+  archivePreviewData = null;
+  syncScreens();
+}
+
+function archiveEnterStage(stageId) {
+  const status = archiveStatus(stageId);
+  if (!['unlocked', 'cleared', 'perfect'].includes(status)) { showToast('TAHAP MASIH TERKUNCI', 1800); return null; }
+  const stage = ARCHIVE_STAGES_BY_ID[stageId];
+  if (!stage) return null;
+  archivePreviewId = null;
+  archivePreviewData = null;
+  return stage.arcId === 'arc9' ? startVeilStage(stageId) : startEternalStage(stageId);
+}
+
+function archiveGhostAction(kind, ghostId) {
+  const controller = ensureArchive();
+  const result = kind === 'identify' ? controller.identifyGhost(ghostId) : kind === 'document' ? controller.documentGhost(ghostId) : kind === 'master' ? controller.masterGhost(ghostId) : null;
+  if (!result) return null;
+  if (result.ok) {
+    saveArchiveProfile();
+    saveVeilProfile();
+    controller.observeGhost(ghostId);
+    saveArchiveProfile();
+    showToast(kind === 'document' ? 'ENTITAS TERDOKUMENTASI' : kind === 'master' ? 'ENTITAS DIKUASAI' : 'ENTITAS TERIDENTIFIKASI', 1800);
+  } else showToast(result.reason === 'missing-evidence' ? 'BUKTI BELUM LENGKAP' : 'TINDAKAN BELUM TERSEDIA', 2000);
+  buildArchiveScreen();
+  return result;
+}
+
+function archiveDocumentScare(eventId) {
+  const event = JUMPSCARE_EVENTS_BY_ID[eventId];
+  if (!event) return null;
+  const controller = ensureArchive();
+  const result = controller.documentJumpscare(eventId, { evidenceType: event.evidenceType });
+  if (result.ok) { saveArchiveProfile(); showToast('PERISTIWA TERCATAT · TANPA MEMAKSA JUMPSCARE', 2000); }
+  else showToast(result.reason === 'missing-evidence' ? 'BUKTI ENTITAS BELUM CUKUP' : result.reason === 'duplicate' ? 'PERISTIWA SUDAH TERCATAT' : 'BUKTI TIDAK COCOK', 2000);
+  buildArchiveScreen();
+  return result;
+}
+
+function archiveUpgradeTool(toolId) {
+  const controller = ensureArchive();
+  const result = controller.equipment.upgrade(toolId);
+  if (result.ok) { saveArchiveProfile(); showToast(`TOOL TIER ${result.level}`, 1600); }
+  else showToast(result.reason === 'missing-tool' ? 'TOOL BELUM DIMILIKI' : 'TIDAK DAPAT DITINGKATKAN', 1600);
+  buildArchiveScreen();
+  return result;
+}
+
+function setArchiveTab(tab) {
+  if (!ARCHIVE_TAB_DEFS.some((entry) => entry.id === tab)) return archiveTab;
+  archiveTab = tab;
+  buildArchiveScreen();
+  return archiveTab;
+}
+
+let archiveScareId = null;
+
+document.addEventListener('click', (event) => {
+  const node = event.target instanceof Element ? event.target.closest('[data-archive-open],[data-archive-close],[data-archive-tab],[data-archive-arc],[data-archive-chapter],[data-archive-stage],[data-archive-preview],[data-archive-preview-close],[data-archive-check],[data-archive-ghosts],[data-archive-prepare],[data-archive-enter],[data-archive-ghost],[data-archive-ghost-identify],[data-archive-ghost-document],[data-archive-ghost-master],[data-archive-scare],[data-archive-scare-doc],[data-archive-upgrade],[data-archive-tool-category],[data-archive-missing],[data-archive-scare-missing]') : null;
+  if (!node) return;
+  if (node.hasAttribute('data-archive-open')) { openArchive(); return; }
+  if (node.hasAttribute('data-archive-close')) { closeArchive(); return; }
+  if (node.hasAttribute('data-archive-preview-close')) { closeArchivePreview(); return; }
+  if (node.dataset.archiveTab) { setArchiveTab(node.dataset.archiveTab); return; }
+  if (node.dataset.archiveArc) { archiveArc = node.dataset.archiveArc; archiveChapter = 'all'; archiveStageId = null; buildArchiveScreen(); return; }
+  if (node.dataset.archiveChapter) { archiveChapter = node.dataset.archiveChapter; archiveStageId = null; buildArchiveScreen(); return; }
+  if (node.dataset.archiveStage) { archiveStageId = node.dataset.archiveStage; buildArchiveScreen(); return; }
+  if (node.dataset.archivePreview) { openArchivePreview(node.dataset.archivePreview); return; }
+  if (node.dataset.archiveCheck) { archiveStageId = node.dataset.archiveCheck; archiveTab = 'checker'; buildArchiveScreen(); return; }
+  if (node.dataset.archiveGhosts) { archiveStageId = node.dataset.archiveGhosts; archiveGhostFilters.chapter = ARCHIVE_STAGES_BY_ID[node.dataset.archiveGhosts]?.chapterId || 'all'; archiveGhostFilters.missing = false; archiveGhostId = null; archiveTab = 'ghosts'; buildArchiveScreen(); return; }
+  if (node.dataset.archivePrepare !== undefined) { archivePrepareGhost = node.dataset.archivePrepare || null; archiveTab = 'equipment'; buildArchiveScreen(); return; }
+  if (node.dataset.archiveEnter) { archiveEnterStage(node.dataset.archiveEnter); return; }
+  if (node.dataset.archiveGhost) { archiveGhostId = node.dataset.archiveGhost; buildArchiveScreen(); return; }
+  if (node.dataset.archiveGhostIdentify) { archiveGhostAction('identify', node.dataset.archiveGhostIdentify); return; }
+  if (node.dataset.archiveGhostDocument) { archiveGhostAction('document', node.dataset.archiveGhostDocument); return; }
+  if (node.dataset.archiveGhostMaster) { archiveGhostAction('master', node.dataset.archiveGhostMaster); return; }
+  if (node.dataset.archiveGhostCapture) {
+    const result = ensureArchive().captureGhost(node.dataset.archiveGhostCapture);
+    if (result.ok) { saveArchiveProfile(); saveVeilProfile(); showToast('ENTITAS TERKANDALIKAN', 1800); } else showToast('ENTITAS BELUM DAPAT DIKANDANGKAN', 1800);
+    buildArchiveScreen();
+    return;
+  }
+  if (node.dataset.archiveScare) { archiveScareId = node.dataset.archiveScare; buildArchiveScreen(); return; }
+  if (node.dataset.archiveScareDoc) { archiveDocumentScare(node.dataset.archiveScareDoc); return; }
+  if (node.dataset.archiveUpgrade) { archiveUpgradeTool(node.dataset.archiveUpgrade); return; }
+  if (node.dataset.archiveToolCategory) { archiveToolCategory = node.dataset.archiveToolCategory; buildArchiveScreen(); return; }
+  if (node.hasAttribute('data-archive-missing')) { archiveGhostFilters.missing = !archiveGhostFilters.missing; archiveGhostId = null; buildArchiveScreen(); return; }
+  if (node.hasAttribute('data-archive-scare-missing')) { archiveScareFilters.missing = !archiveScareFilters.missing; archiveScareId = null; buildArchiveScreen(); }
+});
+
+document.addEventListener('change', (event) => {
+  const node = event.target instanceof Element ? event.target.closest('[data-archive-filter],[data-archive-scare-filter],[data-archive-search],[data-archive-scare-search]') : null;
+  if (!node) return;
+  if (node.hasAttribute('data-archive-search')) archiveGhostFilters.search = node.value;
+  else if (node.hasAttribute('data-archive-scare-search')) archiveScareFilters.search = node.value;
+  else if (node.dataset.archiveScareFilter) archiveScareFilters[node.dataset.archiveScareFilter] = node.value;
+  else if (node.dataset.archiveFilter) archiveGhostFilters[node.dataset.archiveFilter] = node.value;
+  buildArchiveScreen();
+});
+
+document.addEventListener('keydown', (event) => {
+  if (event.key !== 'Escape' || menuView !== 'archive') return;
+  if (archivePreviewId) { event.preventDefault(); closeArchivePreview(); }
+});
+
+document.addEventListener('click', (event) => {
+  const node = event.target instanceof Element ? event.target : null;
+  if (!node) return;
+  if (node.closest('[data-eternal-open]')) { openEternal(); return; }
+  if (node.closest('[data-eternal-close]')) { closeEternal(); return; }
+  const tab = node.closest('[data-eternal-tab]');
+  if (tab) { setEternalTab(tab.dataset.eternalTab); return; }
+  const stage = node.closest('[data-eternal-stage]');
+  if (stage) { startEternalStage(stage.dataset.eternalStage); return; }
+  const boss = node.closest('[data-eternal-boss]');
+  if (boss) { startEternalBoss(boss.dataset.eternalBoss); return; }
+  const hunt = node.closest('[data-eternal-hunt]');
+  if (hunt) { startEternalHunt({ variant: hunt.dataset.eternalHunt }); return; }
+  const upgrade = node.closest('[data-eternal-upgrade]');
+  if (upgrade) {
+    const controller = ensureEternal();
+    const result = controller.upgradeEquipment(upgrade.dataset.eternalUpgrade);
+    showToast(result.ok ? `TIER ${result.tier} · ${result.benefit}` : result.reason === 'funds' ? 'SPIRIT SHARDS TIDAK CUKUP' : 'TIDAK DAPAT DITINGKATKAN', 2000);
+    if (result.ok) saveEternalProfile();
+    buildEternalScreen();
+    return;
+  }
+  const eventCard = node.closest('[data-eternal-event]');
+  if (eventCard) { ensureEternal().activateEvent(eventCard.dataset.eternalEvent); buildEternalScreen(); return; }
+  const eventStep = node.closest('[data-eternal-event-step]');
+  if (eventStep) { ensureEternal().contributeEvent(Number(eventStep.dataset.eternalEventStep)); buildEternalScreen(); return; }
+  const caseNode = node.closest('[data-eternal-case]');
+  if (caseNode) { const controller = ensureEternal(); controller.save.investigations.activeCase = caseNode.dataset.eternalCase; saveEternalProfile(); buildEternalScreen(); return; }
+  const coopTask = node.closest('[data-eternal-coop-task]');
+  if (coopTask) {
+    const [sessionId, taskId] = String(coopTask.dataset.eternalCoopTask).split('|');
+    const result = ensureEternal().completeExpeditionTask(sessionId, taskId);
+    showToast(result.ok ? 'TUGAS TIM TERCATAT' : 'BUTUH PEMAIN TERHUBUNG', 1800);
+    buildEternalScreen();
+    return;
+  }
+  const coopDone = node.closest('[data-eternal-coop-complete]');
+  if (coopDone) {
+    const result = ensureEternal().completeExpedition(coopDone.dataset.eternalCoopComplete);
+    showToast(result.ok ? 'EKSPEDISI SELESAI' : 'EKSPEDISI BELUM DAPAT DISELESAIKAN', 2000);
+    if (result.ok) saveEternalProfile();
+    buildEternalScreen();
+    return;
+  }
+  const action = node.closest('[data-eternal-action]');
+  if (!action) return;
+  const kind = action.dataset.eternalAction;
+  const controller = ensureEternal();
+  if (kind === 'unlock') { controller.unlock(); saveEternalProfile(); buildEternalScreen(); showToast('ARC X TERBUKA', 1800); }
+  else if (kind === 'save') { saveEternalProfile(); showToast('PROFIL MALAM TERSIMPAN', 1800); }
+  else if (kind === 'recover') { controller.veil?.sanity?.recoverFocus(30); saveEternalProfile(); buildEternalScreen(); }
+  else if (kind === 'reduce-exposure') { controller.veil?.sanity?.reduceExposure(25); saveEternalProfile(); buildEternalScreen(); }
+  else if (kind === 'analyze') {
+    const spent = controller.veil?.sanity?.spendFocus(10);
+    showToast(spent?.ok ? 'ANALISIS LANJUTAN TERBUKA · PETUNJUK OPSIONAL' : 'FOCUS TIDAK CUKUP', 2000);
+    buildEternalScreen();
+  } else if (kind === 'generate-case') {
+    const result = controller.generateCase({ seed: `ui:${controller.level}:${Date.now()}` });
+    saveEternalProfile(); buildEternalScreen(); showToast(result.ok ? 'KASUS BARU DIGENERATE' : 'FALLBACK DIGUNAKAN', 2000);
+  } else if (kind === 'generate-ancient') {
+    const result = controller.generateCase({ seed: `ancient:${controller.level}:${Date.now()}`, rarity: 'legendary' });
+    saveEternalProfile(); buildEternalScreen(); showToast(result.ok ? 'ANCIENT CASE SIAP' : 'FALLBACK DIGUNAKAN', 2000);
+  } else if (kind === 'solve-case') {
+    const activeId = controller.save.investigations.activeCase;
+    const mission = controller.save.investigations.generated.find((m) => m.id === activeId);
+    const evidence = mission?.ghostPool?.reduce((total, id) => total + (controller.veil?.index?.get(id)?.evidence.length || 0), 0) || 0;
+    const result = controller.completeCase(activeId, { steps: mission?.steps || [], evidence });
+    showToast(result.ok ? 'KASUS DITUTUP' : 'BUKTI BELUM LENGKAP', 2000);
+    if (result.ok) saveEternalProfile();
+    buildEternalScreen();
+  } else if (kind === 'schedule-event') {
+    const scheduled = controller.eventSchedule(Date.now());
+    if (scheduled) controller.activateEvent(scheduled.id, Date.now());
+    buildEternalScreen();
+  } else if (kind === 'complete-event') {
+    const result = controller.completeEvent();
+    showToast(result.ok ? 'EVENT SELESAI · TERCATAT DI JURNAL' : 'OBJEKTIF BELUM LENGKAP', 2200);
+    if (result.ok) saveEternalProfile();
+    buildEternalScreen();
+  } else if (kind === 'create-expedition') {
+    controller.createExpedition({ seed: `local:${Date.now()}`, difficulty: 'normal' });
+    saveEternalProfile(); buildEternalScreen(); showToast('SESI EKSPEDISI DIBUAT', 1800);
+  } else if (kind === 'claim-ranks') {
+    const granted = controller.claimRankRewards();
+    saveEternalProfile(); buildEternalScreen(); showToast(granted.length ? `${granted.length} HADIAH RANK DITERIMA` : 'BELUM ADA HADIAH BARU', 2200);
+  } else if (kind === 'veil-index') { openVeil(); setVeilTab('index'); }
+});
+
+document.addEventListener('input', (event) => {
+  const input = event.target;
+  if (!(input instanceof HTMLElement) || !input.dataset) return;
+  if (input.dataset.eternalSetting) {
+    const value = input.dataset.eternalType === 'toggle' ? input.checked : input.type === 'range' ? Number(input.value) : input.value;
+    applyEternalSetting(input.dataset.eternalSetting, value);
+    return;
+  }
+});
+
+document.addEventListener('change', (event) => {
+  const input = event.target;
+  if (!(input instanceof HTMLElement) || !input.dataset) return;
+  if (input.dataset.eternalSetting) { applySettings(); saveEternalProfile(); return; }
+  if (input.dataset.eternalHuntField) {
+    eternalHuntConfig = { ...eternalHuntConfig, [input.dataset.eternalHuntField]: input.value };
+    buildEternalScreen();
+  }
+});
+
+function veilDebugState() {
+  const controller = ensureVeil();
+  return {
+    ...controller.snapshot(),
+    settings: veilSettings(),
+    presentation: veilPresentation(),
+    tab: veilTab,
+    player: { hp: game.player.hp, x: Math.round(game.player.x), sanity: Math.round(controller.sanity.value) },
+    entities: (game.enemies || []).filter((e) => e.ghostKind).map((e) => ({ kind: e.ghostKind, x: Math.round(e.x), hp: e.hp, state: e.ghostState })),
+    stage: controller.activeStage,
+    boss: controller.activeBoss,
+    runKind: activeRunKind,
+  };
+}
+
+document.addEventListener('click', (event) => {
+  const node = event.target instanceof Element ? event.target : null;
+  if (!node) return;
+  if (node.closest('#btn-veil-menu') || node.closest('[data-scary-action="veil"]')) { openVeil(); return; }
+  if (node.closest('[data-veil-close]')) { closeVeil(); return; }
+  const tab = node.closest('[data-veil-tab]');
+  if (tab) { setVeilTab(tab.dataset.veilTab); return; }
+  const stage = node.closest('[data-veil-stage]');
+  if (stage) { startVeilStage(stage.dataset.veilStage); return; }
+  const boss = node.closest('[data-veil-boss]');
+  if (boss) { startVeilBoss(boss.dataset.veilBoss); return; }
+  const consume = node.closest('[data-veil-consume]');
+  if (consume && veilController) {
+    const id = consume.dataset.veilConsume;
+    const key = `item:${id}`;
+    veilController.save.flags[key] = Math.max(0, Number(veilController.save.flags[key]) || 0);
+    const inventory = { [id]: veilController.save.flags[key] };
+    if (inventory[id] <= 0) inventory[id] = 1;
+    const used = veilController.sanity.useConsumable(id, inventory);
+    veilController.save.flags[key] = inventory[id];
+    if (used.ok) { veilController.save.sanity.value = veilController.sanity.value; saveVeilProfile(); buildVeilScreen(); }
+    return;
+  }
+  const select = node.closest('[data-veil-select]');
+  if (select) { veilSelectedGhost = select.dataset.veilSelect; buildVeilScreen(); return; }
+  const evidence = node.closest('[data-veil-evidence]');
+  if (evidence && veilSelectedGhost) {
+    veilController?.evidence(veilSelectedGhost, evidence.dataset.veilEvidence);
+    ensureArchive().observeGhost(veilSelectedGhost);
+    saveArchiveProfile();
+    saveVeilProfile();
+    buildVeilScreen();
+    return;
+  }
+  const identify = node.closest('[data-veil-identify]');
+  if (identify) { veilController?.index.identify(identify.dataset.veilIdentify); buildVeilScreen(); return; }
+  const documentNode = node.closest('[data-veil-document]');
+  if (documentNode) {
+    const result = veilController?.document(documentNode.dataset.veilDocument);
+    if (result?.ok) { ensureArchive().observeGhost(documentNode.dataset.veilDocument); saveArchiveProfile(); saveVeilProfile(); showToast('ENTITAS TERDOKUMENTASI', 1800); } else showToast('BUKTI BELUM LENGKAP', 1600);
+    buildVeilScreen();
+    return;
+  }
+  const master = node.closest('[data-veil-master]');
+  if (master) { veilController?.master(master.dataset.veilMaster); saveVeilProfile(); buildVeilScreen(); return; }
+  const lore = node.closest('[data-veil-lore]');
+  if (lore) { veilController?.index.addLore(lore.dataset.veilLore, 1); saveVeilProfile(); buildVeilScreen(); return; }
+  const page = node.closest('[data-veil-page]');
+  if (page) { veilPage = Math.max(1, Number(page.dataset.veilPage) || 1); buildVeilScreen(); return; }
+  const mission = node.closest('[data-veil-mission]');
+  if (mission) { claimVeilMission(mission.dataset.veilMission); return; }
+  const caseNode = node.closest('[data-veil-case]');
+  if (caseNode && veilController) {
+    veilController.save.investigation.activeCase = caseNode.dataset.veilCase;
+    saveVeilProfile();
+    buildVeilScreen();
+    return;
+  }
+  const mind = node.closest('[data-veil-mind]');
+  if (mind && veilController) {
+    const result = veilController.progression.spendMind(mind.dataset.veilMind);
+    if (result.ok) { veilController.sanity.applyMind(veilController.progression.mind.ranks); saveVeilProfile(); buildVeilScreen(); }
+    else showToast(result.reason === 'points' ? 'POIN TIDAK CUKUP' : 'PRASYARAT BELUM TERPENUHI', 1800);
+    return;
+  }
+  const npc = node.closest('[data-veil-npc]');
+  if (npc) { const dialogue = veilNpcDialogue(npc.dataset.veilNpc); if (dialogue) showToast(`${dialogue.name}: ${dialogue.lines[0]}`, 3200); return; }
+  const hub = node.closest('[data-veil-hub]');
+  if (hub) { setVeilTab(hub.dataset.veilHub); return; }
+  const action = node.closest('[data-veil-action]');
+  if (!action) return;
+  const kind = action.dataset.veilAction;
+  if (kind === 'enter') {
+    const controller = ensureVeil();
+    const stage = VEIL_STAGES.find((s) => stageUnlocked(s.id, controller.save.campaign));
+    if (stage) startVeilStage(stage.id);
+  } else if (kind === 'save') { saveVeilProfile(); showToast('PROFIL TABIR TERSIMPAN', 1800); }
+  else if (kind === 'recover') { if (veilController) { veilController.sanity.recover(24, 'events'); veilController.save.sanity.value = veilController.sanity.value; saveVeilProfile(); buildVeilScreen(); } }
+  else if (kind === 'respec') { if (veilController) { veilController.progression.respec(); saveVeilProfile(); buildVeilScreen(); } }
+  else if (kind === 'solve-case') { solveVeilCase(); }
+});
+
+document.addEventListener('input', (event) => {
+  const input = event.target;
+  if (!(input instanceof HTMLElement) || !input.dataset) return;
+  if (input.dataset.veilSearch !== undefined) {
+    veilSearch = input.value;
+    veilPage = 1;
+    buildVeilScreen();
+    const next = document.querySelector('[data-veil-search]');
+    if (next) { next.focus(); next.value = veilSearch; }
+    return;
+  }
+  if (input.dataset.veilSetting) {
+    const value = input.dataset.veilType === 'toggle' ? input.checked : input.type === 'range' ? Number(input.value) : input.value;
+    applyVeilSetting(input.dataset.veilSetting, value);
+    if (input.dataset.veilType === 'toggle') {
+      const row = input.closest('.veil-row');
+      const badge = row ? row.querySelector('b') : null;
+      if (badge) badge.textContent = input.checked ? 'AKTIF' : 'MATI';
+    }
+    return;
+  }
+  if (input.dataset.veilFilter) { veilFilter = { ...veilFilter, [input.dataset.veilFilter]: input.value }; veilPage = 1; buildVeilScreen(); }
+});
+
+document.addEventListener('change', (event) => {
+  const input = event.target;
+  if (!(input instanceof HTMLElement) || !input.dataset) return;
+  if (input.dataset.veilSort) { veilSort = input.value; buildVeilScreen(); }
+  if (input.dataset.veilSetting) {
+    applySettings();
+    saveVeilProfile();
+  }
+});
+
+document.addEventListener('click', (event) => {
+  const node = event.target instanceof Element ? event.target : null;
+  if (!node) return;
+  if (node.closest('#btn-dread-menu') || node.closest('[data-scary-action="dread"]')) { openDread(); return; }
+  if (node.closest('#btn-dread-close')) { closeDread(); return; }
+  const tab = node.closest('[data-dread-tab]');
+  if (tab) { dreadTab = tab.dataset.dreadTab; buildDreadScreen(); return; }
+  const env = node.closest('[data-dread-enter]');
+  if (env) { enterDread(env.dataset.dreadEnter); return; }
+  const boss = node.closest('[data-dread-boss]');
+  if (boss) { startDreadBoss(boss.dataset.dreadBoss); return; }
+  const mode = node.closest('[data-dread-mode]');
+  if (mode) { playDreadMode(mode.dataset.dreadMode); return; }
+  const spawn = node.closest('[data-dread-spawn]');
+  if (spawn) {
+    if (menuView === 'none') game.spawnUnnatural(spawn.dataset.dreadSpawn, Math.max(80, game.player.x + 320));
+    return;
+  }
+  const equip = node.closest('[data-dread-equip]');
+  if (equip) { toggleDreadEquipment(equip.dataset.dreadEquip); return; }
+  if (node.closest('[data-dread-connect]')) { connectDreadClues(); return; }
+  const action = node.closest('[data-dread-action]');
+  if (!action) return;
+  if (action.dataset.dreadAction === 'ground') { dreadAwareness.ground(); buildDreadScreen(); }
+  else if (action.dataset.dreadAction === 'reset') resetDreadSettings();
+  else if (action.dataset.dreadAction === 'start') enterDread('forgotten_village');
+});
+
+document.addEventListener('input', (event) => {
+  const input = event.target;
+  if (!(input instanceof HTMLElement) || !input.dataset || !input.dataset.dreadPath) return;
+  let value = input.type === 'checkbox' ? input.checked : input.value;
+  if (input.type === 'range') value = Number(value);
+  setSettingsValue(settings, input.dataset.dreadPath, value);
+  settings.dread = sanitizeDreadSettings(settings.dread || {});
+  applySettings({ persist: false });
+  syncDread();
+  const output = input.parentElement ? input.parentElement.querySelector('output') : null;
+  if (output) output.textContent = `${value}`;
+  if (input.type === 'checkbox') {
+    const span = input.nextElementSibling;
+    if (span) span.textContent = input.checked ? 'AKTIF' : 'MATI';
+  }
+});
+
+document.addEventListener('change', (event) => {
+  const input = event.target;
+  if (!(input instanceof HTMLElement) || !input.dataset || !input.dataset.dreadPath) return;
+  applySettings();
+  syncDread();
+  if (menuView === 'dread') buildDreadScreen();
+});
 
 function discoverCurrentRoom(index = game.roomIndex) {
   if (activeRunKind === 'hack') return;
@@ -1064,6 +3924,7 @@ function prepareSpecialStage(index, kind) {
   game.events.length = 0;
   started = true;
   paused = false;
+  hunterShopOpen = false;
   shopOpen = false;
   mapOpen = false;
   codexOpen = false;
@@ -1133,6 +3994,72 @@ function hackTool(action) {
   updateHud();
 }
 
+function startEclipseStage(roomId) {
+  const room = ECLIPSE_ROOM_BY_ID[roomId];
+  if (!room) return;
+  progress.eclipse = unlockEclipse(progress.eclipse);
+  prepareSpecialStage(roomId, 'eclipse');
+  activeEclipseRoom = roomId;
+  activeGodfallFloor = 0;
+  godfallRun = null;
+  activeRaid = null;
+  eclipseRunStartedAt = performance.now();
+  game.player.relic = true;
+  game.player.maxHp = Math.max(game.player.maxHp, 210);
+  game.player.hp = game.player.maxHp;
+  game.player.maxFlasks = Math.max(game.player.maxFlasks, 4);
+  game.player.flasks = game.player.maxFlasks;
+  game.player.weapons = [...new Set(['sword', ...ECLIPSE_WEAPONS.map((weapon) => weapon.id)])];
+  game.player.weapon = ECLIPSE_CLASSES[character.characterId] ? 'halberd' : 'sword';
+  game.ash = Math.max(game.ash, 420);
+  saveProgress();
+  showToast(`${ECLIPSE_LOCAL_NAME} · ${game.room.name}`, 2600);
+}
+
+function startEclipseGodfall(floor, { practice = false } = {}) {
+  const safeFloor = clamp(Math.floor(Number(floor) || 1), 1, GODFALL_FLOOR_COUNT);
+  progress.godfall = sanitizeGodfallProgress(progress.godfall);
+  godfallRun = createGodfallRun({ startFloor: safeFloor, seed: performance.now() | 0, practice });
+  prepareSpecialStage(GODFALL_ROOM_START + safeFloor - 1, 'godfall');
+  activeGodfallFloor = safeFloor;
+  activeEclipseRoom = null;
+  activeRaid = null;
+  game.player.relic = true;
+  game.player.maxHp = Math.max(game.player.maxHp, 230);
+  game.player.hp = game.player.maxHp;
+  game.player.maxFlasks = Math.max(game.player.maxFlasks, 5);
+  game.player.flasks = game.player.maxFlasks;
+  game.player.weapons = [...new Set(['sword', ...ECLIPSE_WEAPONS.map((weapon) => weapon.id)])];
+  game.ash = Math.max(game.ash, 500);
+  if (!practice) saveProgress();
+  showToast(`GODFALL · Lantai ${safeFloor}${practice ? ' · PRACTICE' : ''}`, 2200);
+}
+
+function startEclipseRaid(encounterId, { practice = false } = {}) {
+  const raid = RAID_BY_ID[encounterId];
+  if (!raid) return;
+  const bossRoom = encounterId === 'forgotten_high_god' ? ECLIPSE_BOSS_BY_ID.forgotten_high_god.roomIndex : ECLIPSE_BOSS_BY_ID[encounterId === 'worldroot_colossus' ? 'obsidian_king' : 'first_chronomancer'].roomIndex;
+  activeRaid = createRaidRun(encounterId, { practice, players: [{ id: 'local', name: CHARACTERS[character.characterId]?.name || 'Warden', role: 'dps' }] });
+  prepareSpecialStage(bossRoom, 'raid');
+  activeEclipseRoom = bossRoom;
+  activeGodfallFloor = 0;
+  godfallRun = null;
+  if (game.boss) {
+    game.boss.maxHp = raid.maxHp;
+    game.boss.hp = raid.maxHp;
+    game.boss.maxPhases = raid.phases;
+    game.boss.phaseThresholds = raid.phases === 4 ? [0.75, 0.5, 0.25] : raid.phases === 3 ? [0.66, 0.33] : [0.5];
+    game.boss.name = raid.name;
+    game.boss.raid = true;
+  }
+  game.player.relic = true;
+  game.player.maxHp = Math.max(game.player.maxHp, 250);
+  game.player.hp = game.player.maxHp;
+  game.player.flasks = game.player.maxFlasks;
+  game.player.weapons = [...new Set(['sword', ...ECLIPSE_WEAPONS.map((weapon) => weapon.id)])];
+  showToast(`RAID · ${raid.localName}${practice ? ' · PRACTICE' : ''}`, 2400);
+}
+
 function startAstralStage(roomId) {
   progress.astral = sanitizeAstralProgress(progress.astral);
   progress.astral.unlocked = true;
@@ -1146,6 +4073,44 @@ function startAstralStage(roomId) {
   game.ash = Math.max(game.ash, 260);
   saveProgress();
   showToast(`${ASTRAL_LOCAL_NAME} · ${game.room.name}`, 2400);
+}
+
+const eclipseUI = new EclipseUI({
+  getProgress: () => progress,
+  saveProgress: () => saveProgress(),
+  toast: (message, duration) => showToast(message, duration),
+  playerName: () => CHARACTERS[character.characterId]?.name || 'Penjaga',
+  classIds: () => Object.keys(CHARACTERS),
+  classMeta: (id) => CHARACTERS[id],
+  getSettings: () => settings,
+  performance: () => framePerf.summary(),
+  runtimeErrors: () => runtimeReporter.summary(),
+  onMenu: () => showMenu(),
+  onOpen: () => {
+    menuView = 'eclipse';
+    started = false;
+    paused = false;
+    shopOpen = false;
+    mapOpen = false;
+    codexOpen = false;
+    inventoryOpen = false;
+    settingsOpen = false;
+    closeDialogue(true);
+    clearHeldKeys();
+    syncScreens();
+  },
+  onPlayEclipse: (roomId) => startEclipseStage(roomId),
+  onPlayGodfall: (floor, options) => startEclipseGodfall(floor, options),
+  onStartRaid: (raidId, options) => startEclipseRaid(raidId, options),
+  onApplySettings: ({ gameplay }) => {
+    settings = { ...settings, gameplay: { ...settings.gameplay, ...gameplay } };
+    applySettings();
+    buildSettings();
+  },
+});
+
+function showEclipse(tab = 'campaign') {
+  eclipseUI.show(tab);
 }
 
 const realmsUI = new RealmsUI({
@@ -1214,6 +4179,8 @@ let activeStage = null;
 
 function beginStage(index, label) {
   if (!Number.isInteger(index) || index < 0) return;
+  const rune = secretSpotFor(activeRunKind, index);
+  game.secretRune = rune && !hasSecret(secretsState, rune.id) ? { ...rune } : null;
   activeStage = {
     key: `${activeRunKind}:${index}`,
     index,
@@ -1473,6 +4440,7 @@ function startExpansionLevel(localIndex, options = {}) {
   game.events.length = 0;
   started = true;
   paused = false;
+  hunterShopOpen = false;
   shopOpen = false;
   mapOpen = false;
   codexOpen = false;
@@ -1540,6 +4508,7 @@ function startAtlasRoom(roomIndex) {
   game.events.length = 0;
   started = true;
   paused = false;
+  hunterShopOpen = false;
   shopOpen = false;
   mapOpen = false;
   codexOpen = false;
@@ -2110,6 +5079,7 @@ function startCourtRoom(localIndex, options = {}) {
   game.events.length = 0;
   started = true;
   paused = false;
+  hunterShopOpen = false;
   shopOpen = false;
   mapOpen = false;
   codexOpen = false;
@@ -2190,6 +5160,7 @@ function startPackRun(index = 0) {
   game.events.length = 0;
   started = true;
   paused = false;
+  hunterShopOpen = false;
   shopOpen = false;
   mapOpen = false;
   codexOpen = false;
@@ -2472,6 +5443,7 @@ function startSpeedrun(cycle = 0, options = {}) {
   game.events.length = 0;
   started = true;
   paused = false;
+  hunterShopOpen = false;
   shopOpen = false;
   mapOpen = false;
   codexOpen = false;
@@ -3121,6 +6093,7 @@ function startFairyStage(stageIndex) {
   game.events.length = 0;
   started = true;
   paused = false;
+  hunterShopOpen = false;
   shopOpen = false;
   mapOpen = false;
   codexOpen = false;
@@ -3178,6 +6151,7 @@ function startFairyBoss(bossId) {
   game.events.length = 0;
   started = true;
   paused = false;
+  hunterShopOpen = false;
   shopOpen = false;
   mapOpen = false;
   codexOpen = false;
@@ -4328,6 +7302,9 @@ function startRun(index = 0) {
   labRewardsOpen = false;
   labSummaryOpen = false;
   game.labyrinth = false;
+  horrorEventLayer = {};
+  horrorPresence = null;
+  horrorLastDone = null;
   activeExpansionIndex = null;
   activeModeId = null;
   activeTrialId = null;
@@ -4335,6 +7312,7 @@ function startRun(index = 0) {
   game.reset();
   applyCharacterToGame();
   applySkinToGame();
+  game.setHunterItems(hunterState.items);
   if (index > 0) {
     game.enterRoom(index);
     if (index >= 2) game.player.relic = true;
@@ -4343,6 +7321,7 @@ function startRun(index = 0) {
   game.events.length = 0;
   started = true;
   paused = false;
+  hunterShopOpen = false;
   shopOpen = false;
   mapOpen = false;
   codexOpen = false;
@@ -4365,6 +7344,27 @@ function startRun(index = 0) {
 
 function retryRun() {
   attempts += 1;
+  if (activeRunKind === 'eternal') {
+    const stageId = eternalController?.activeStage;
+    const bossId = eternalController?.activeBoss;
+    if (game) game.veilDeathCounted = false;
+    if (eternalRunHunt) startEternalHunt(eternalRunHunt.config || {});
+    else if (bossId) startEternalBoss(bossId);
+    else if (stageId) startEternalStage(stageId);
+    else openEternal();
+    return;
+  }
+  if (activeRunKind === 'veil') {
+    // Veil stages are synthetic arenas (rooms 9400+), so a generic campaign
+    // checkpoint retry would load a legacy room. Restart the exact fight.
+    const stageId = veilController?.activeStage;
+    const bossId = veilController?.activeBoss;
+    if (game) game.veilDeathCounted = false;
+    if (bossId) startVeilBoss(bossId);
+    else if (stageId) startVeilStage(stageId);
+    else openVeil();
+    return;
+  }
   if (activeRunKind === 'speedrun') {
     // One life: there is nothing to retry, the run is simply over.
     finishSpeedrun();
@@ -4397,11 +7397,30 @@ function retryRun() {
     else startFairyStage(Math.max(0, activeFairyStage));
     return;
   }
+  if (activeRunKind === 'eclipse') {
+    progress.eclipse.deaths += 1;
+    saveProgress();
+    if (activeEclipseRoom != null) startEclipseStage(activeEclipseRoom);
+    return;
+  }
+  if (activeRunKind === 'godfall') {
+    const failure = failGodfallRun(progress.godfall);
+    saveProgress();
+    const restartFloor = Math.max(1, failure.checkpoint || activeGodfallFloor);
+    showToast(failure.message, 2600);
+    startEclipseGodfall(restartFloor, { practice: !!godfallRun?.practice });
+    return;
+  }
+  if (activeRunKind === 'raid' && activeRaid) {
+    startEclipseRaid(activeRaid.encounterId, { practice: true });
+    return;
+  }
   const usedCheckpoint = game.respawnAtCheckpoint();
   if (!usedCheckpoint) {
     const index = game.roomIndex;
     game.reset();
     applyCharacterToGame();
+    game.setHunterItems(hunterState.items);
     if (activeRunKind === 'expansion') {
       game.setChallenge(expansionChallengeConfig());
       game.setKnownCollectibles(expState().collectibles);
@@ -4428,6 +7447,7 @@ function retryRun() {
   game.events.length = 0;
   started = true;
   paused = false;
+  hunterShopOpen = false;
   shopOpen = false;
   mapOpen = false;
   codexOpen = false;
@@ -4450,11 +7470,17 @@ function retryRun() {
 }
 
 function showMenu() {
+  hunterShopOpen = false;
   cancelPrologue();
   if (activeRunKind === 'hack' && hackSnapshot) progress = hackSnapshot;
   hackSnapshot = null;
   hackConfig = null;
   realmsUI?.hideAll();
+  eclipseUI?.hideAll();
+  godfallRun = null;
+  activeRaid = null;
+  activeEclipseRoom = null;
+  activeGodfallFloor = 0;
   if (labRun && !labRun.ended && started) finishLabRun('quit');
   teardownLabCoop(false);
   labGuestMode = false;
@@ -4551,7 +7577,7 @@ function showExpansion(tab = 'campaign') {
   syncScreens();
 }
 
-function showMode3D(subMode = 'campaign') {
+function showMode3D(subMode = 'campaign', options = {}) {
   cancelPrologue();
   started = false;
   paused = false;
@@ -4564,13 +7590,116 @@ function showMode3D(subMode = 'campaign') {
   spectating = false;
   spectateGame = null;
   menuView = 'mode3d';
+  const region = $('select-3d-region')?.value || 'thornveil';
+  const area = $('select-3d-area')?.value || '';
   if (!game3D) {
-    game3D = new Ashen3DGame({ viewW: 960, viewH: 540, subMode });
+    game3D = new Ashen3DGame({
+      viewW: 960,
+      viewH: 540,
+      subMode,
+      region,
+      quality: settings.graphics.preset === 'extreme' ? 'ultra' : settings.graphics.preset,
+      visualSettings: settings.graphics,
+      hudSettings: settings.hud,
+      cameraSensitivity: settings.controls.cameraSensitivity / 100,
+    });
   } else {
     game3D.subMode = subMode;
+    game3D.setRegion(region);
+  }
+  if (area && subMode !== 'scary') game3D.setArea(area);
+  game3D.player.weaponId = game.player.weapon;
+  if (subMode === 'scary') {
+    start3DHorrorRun(options.siteId || horror3DSiteId, options);
+  } else {
+    buildHorror3DPanel();
   }
   clearHeldKeys();
   syncScreens();
+}
+
+function start3DHorrorRun(siteId, options = {}) {
+  const site = horror3DSite(siteId);
+  if (!site || !game3D) return null;
+  horror3DSiteId = site.id;
+  const anti = options.antiJumpscare ?? $('horror3d-anti')?.checked ?? horror3D.settings.antiJumpscare;
+  const intensity = options.intensity || $('horror3d-intensity')?.value || horror3D.settings.intensity;
+  horror3D.settings.antiJumpscare = !!anti;
+  horror3D.settings.intensity = ['reduced', 'full', 'nightmare'].includes(intensity) ? intensity : 'full';
+  horror3D.lastSite = site.id;
+  save3DHorrorState();
+  const active = game3D.startHorrorSite(site.id, { antiJumpscare: !!anti, intensity: horror3D.settings.intensity });
+  if (!active) return null;
+  game3D.player.weaponId = game.player.weapon;
+  buildHorror3DPanel();
+  syncScreens();
+  return game3D.horrorSnapshot();
+}
+
+function start3DHorror(siteId = horror3DSiteId, options = {}) {
+  if (menuView !== 'mode3d' || !game3D) {
+    showMode3D('scary', { siteId, ...options });
+    return game3D?.horrorSnapshot() || null;
+  }
+  return start3DHorrorRun(siteId, options);
+}
+
+function restart3DHorror() {
+  const siteId = game3D?.horror?.siteId || horror3DSiteId;
+  return start3DHorror(siteId, {
+    antiJumpscare: game3D?.horror?.antiJumpscare,
+    intensity: game3D?.horror?.intensity,
+  });
+}
+
+function buildHorror3DPanel() {
+  const summary = horror3DSummary(horror3D);
+  const list = $('horror3d-sites');
+  if (list) {
+    list.innerHTML = summary.sites.map((entry) => `
+      <button class="horror3d-card${entry.cleared ? ' cleared' : ''}${entry.id === horror3DSiteId ? ' active' : ''}" type="button" data-horror-site="${entry.id}">
+        <span class="horror3d-card-level">SITUS ${String(entry.level).padStart(2, '0')} · ${entry.difficulty.toUpperCase()}</span>
+        <strong>${entry.name}</strong>
+        <em>${entry.cleared ? `CLEARED · ${entry.bestTime ? entry.bestTime.toFixed(1) + 's' : '—'}` : `${entry.attempts} percobaan · ${entry.deaths} mati`}</em>
+      </button>`).join('');
+  }
+  const summaryEl = $('horror3d-summary');
+  if (summaryEl) {
+    summaryEl.textContent = `${summary.clearedSites}/${summary.totalSites} situs dibersihkan · ${summary.scares} jumpscare · ${summary.deaths} kematian${summary.bestTime ? ` · rekor ${summary.bestTime.toFixed(1)}s` : ''}`;
+  }
+  const select = $('horror3d-select');
+  if (select && select.options.length !== HORROR3D_SITES.length) {
+    select.innerHTML = HORROR3D_SITES.map((entry) => `
+      <option value="${entry.id}">${entry.level} · ${entry.name} — ${entry.difficulty}</option>`).join('');
+  }
+  if (select) select.value = horror3DSiteId;
+  const anti = $('horror3d-anti');
+  if (anti) anti.checked = !!horror3D.settings.antiJumpscare;
+  const intensity = $('horror3d-intensity');
+  if (intensity) intensity.value = horror3D.settings.intensity;
+}
+
+function drain3DHorrorEvents() {
+  if (!game3D) return;
+  for (const event of game3D.drainHorrorEvents()) {
+    if (event.type === 'horrorStart') {
+      horror3D.lastSite = event.siteId;
+      horror3D.lastResult = null;
+      horror3DSiteId = event.siteId;
+      save3DHorrorState();
+    } else if (event.type === 'horrorCleared' || event.type === 'horrorDead') {
+      const result = record3DHorrorResult(horror3D, {
+        siteId: event.siteId,
+        result: event.type === 'horrorCleared' ? 'cleared' : 'dead',
+        time: event.time,
+        scares: event.scares,
+        phase: event.phase,
+      });
+      save3DHorrorState();
+      buildHorror3DPanel();
+      if (result.ok && result.unlocked.length) showToast(`PENCAPAIAN 3D SCARY · ${result.unlocked.join(' · ')}`, 3200);
+    }
+  }
 }
 
 function closeMode3D() {
@@ -6690,8 +9819,12 @@ function showUpdates() {
 }
 
 // ── settings screen ──────────────────────────────────────────────────────
-function showSettings() {
+function showSettings(tab = null) {
   settingsOpen = true;
+  if (typeof tab === 'string' && SETTINGS_CATEGORIES.some((entry) => entry.id === tab)) settingsTab = tab;
+  settingsBaseline = JSON.parse(JSON.stringify(settings));
+  settingsSearch = '';
+  settingsApplyState = 'saved';
   settingsCapture = null;
   settingsConflict = null;
   mapOpen = false;
@@ -6702,9 +9835,18 @@ function showSettings() {
   syncScreens();
 }
 
+function cancelSettings() {
+  if (settingsBaseline) {
+    settings = settingsBaseline;
+    applySettings({ persist: false });
+  }
+  closeSettings();
+}
+
 function closeSettings() {
   if (!settingsOpen) return;
   settingsOpen = false;
+  settingsBaseline = null;
   settingsCapture = null;
   settingsConflict = null;
   lastTime = performance.now();
@@ -7523,7 +10665,7 @@ function inventoryCard(item, count, canUse) {
     <article class="inventory-card" data-item="${item.id}">
       <span class="inv-glyph" aria-hidden="true">${item.glyph || '✦'}</span>
       <div class="inv-body">
-        <span class="inv-type">${item.type === 'sigil' ? 'SIGIL PASIF' : item.type === 'ritual' ? 'ITEM RITUAL' : 'KONSUMABEL'}</span>
+        <span class="inv-type">${item.type === 'sigil' ? 'SIGIL PASIF' : item.type === 'ritual' ? 'ITEM RITUAL' : item.type === 'hunter' ? 'PERLENGKAPAN PEMBURU' : 'KONSUMABEL'}</span>
         <h3>${item.name}</h3>
         <p>${item.desc}</p>
         <span class="inv-effect">${item.effect || ''}</span>
@@ -7545,6 +10687,7 @@ function buildInventory() {
   const sigils = SHOP_ITEMS.filter((item) => item.type === 'sigil' && p.sigils.includes(item.id));
   const rituals = SHOP_ITEMS.filter((item) => item.type === 'ritual' && game.itemCount(item.id) > 0);
   const consumables = SHOP_ITEMS.filter((item) => item.type === 'consumable' && game.itemCount(item.id) > 0);
+  const hunterItems = HUNTER_ITEMS.filter((item) => game.hunterItemCount(item.id) > 0);
   const quick = game.quickItemInfo();
   const quickEl = $('inventory-quick');
   if (quickEl) {
@@ -7567,6 +10710,7 @@ function buildInventory() {
     group('SIGIL', `${sigils.length} aktif · efek permanen sampai run berakhir`, sigils, false),
     group('RITUAL', `${rituals.length} jenis · sekali pakai, efek besar`, rituals, true),
     group('KONSUMABEL', `${consumables.length} jenis · stok cepat`, consumables, true),
+    group('PEMBURU', `${hunterItems.length} jenis · stun, asap, peluru roh, jimat`, hunterItems, true),
   ].join('');
 
   const loadout = $('inventory-loadout');
@@ -7610,6 +10754,7 @@ function buildInventory() {
 
 function useInventoryItem(id) {
   const result = game.useItem(id);
+  if (result.ok) syncHunterFromGame();
   if (!result.ok) {
     showToast(result.reason, 1600);
     return;
@@ -7644,45 +10789,191 @@ function toggleInventory() {
 }
 
 // ── settings UI ──────────────────────────────────────────────────────────
-const SETTINGS_TABS = [
-  { id: 'audio', label: 'AUDIO' },
-  { id: 'graphics', label: 'GRAFIK' },
-  { id: 'controls', label: 'KONTROL' },
-  { id: 'gameplay', label: 'GAMEPLAY & AKSESIBILITAS' },
-];
+function detectCapabilities() {
+  if (capabilityCache) return capabilityCache;
+  let hdr = false;
+  let p3 = false;
+  let outputDevice = false;
+  try {
+    hdr = window.matchMedia?.('(dynamic-range: high)')?.matches || false;
+    p3 = window.matchMedia?.('(color-gamut: p3)')?.matches || false;
+  } catch { /* unsupported media query */ }
+  try {
+    const probe = document.createElement('canvas').getContext('2d');
+    if (probe) probe.drawingBufferColorSpace = 'display-p3';
+    hdr = hdr && probe?.drawingBufferColorSpace === 'display-p3';
+  } catch { hdr = false; }
+  try { outputDevice = typeof AudioContext !== 'undefined' && 'setSinkId' in AudioContext.prototype; } catch { outputDevice = false; }
+  // Real adapter/extension probe. Unsupported features stay false and are
+  // reported by the diagnostics panel instead of being simulated.
+  const gpu = probeCapabilities();
+  capabilityCache = {
+    hdr,
+    p3,
+    outputDevice,
+    rayTracing: gpu.rayTracing,
+    fullscreen: Boolean(document.fullscreenEnabled),
+    webgl2: gpu.webgl2,
+    gpuRenderer: gpu.renderer,
+    gpuVendor: gpu.vendor,
+    gpuTier: gpu.adapterTier,
+    hdrRenderTarget: gpu.hdrRenderTarget,
+    maxAnisotropy: gpu.maxAnisotropy,
+    msaa: gpu.msaa,
+    timerQuery: gpu.timerQuery,
+  };
+  return capabilityCache;
+}
+
+const LANGUAGE_SHELL = {
+  id: { settings: 'PENGATURAN', apply: 'TERAPKAN', cancel: 'BATAL', search: 'Cari pengaturan atau deskripsi…' },
+  en: { settings: 'SETTINGS', apply: 'APPLY', cancel: 'CANCEL', search: 'Search settings or descriptions…' },
+  ja: { settings: '設定', apply: '適用', cancel: 'キャンセル', search: '設定を検索…' },
+  ko: { settings: '설정', apply: '적용', cancel: '취소', search: '설정 검색…' },
+  'zh-cn': { settings: '设置', apply: '应用', cancel: '取消', search: '搜索设置…' },
+  'zh-tw': { settings: '設定', apply: '套用', cancel: '取消', search: '搜尋設定…' },
+  es: { settings: 'AJUSTES', apply: 'APLICAR', cancel: 'CANCELAR', search: 'Buscar ajustes…' },
+  fr: { settings: 'PARAMÈTRES', apply: 'APPLIQUER', cancel: 'ANNULER', search: 'Rechercher un paramètre…' },
+  de: { settings: 'EINSTELLUNGEN', apply: 'ANWENDEN', cancel: 'ABBRECHEN', search: 'Einstellungen suchen…' },
+  pt: { settings: 'CONFIGURAÇÕES', apply: 'APLICAR', cancel: 'CANCELAR', search: 'Pesquisar configurações…' },
+  ru: { settings: 'НАСТРОЙКИ', apply: 'ПРИМЕНИТЬ', cancel: 'ОТМЕНА', search: 'Поиск настроек…' },
+  ar: { settings: 'الإعدادات', apply: 'تطبيق', cancel: 'إلغاء', search: 'ابحث في الإعدادات…' },
+  th: { settings: 'การตั้งค่า', apply: 'ใช้งาน', cancel: 'ยกเลิก', search: 'ค้นหาการตั้งค่า…' },
+  vi: { settings: 'CÀI ĐẶT', apply: 'ÁP DỤNG', cancel: 'HỦY', search: 'Tìm cài đặt…' },
+};
+
+function applyLanguage() {
+  const language = LANGUAGE_BY_ID[settings.language.interface] || LANGUAGE_BY_ID.id;
+  const shell = LANGUAGE_SHELL[language.id] || LANGUAGE_SHELL.id;
+  document.documentElement.lang = language.id;
+  document.documentElement.dir = language.rtl ? 'rtl' : 'ltr';
+  const title = $('settings-title');
+  if (title) title.textContent = shell.settings;
+  const apply = $('btn-settings-apply');
+  if (apply) apply.querySelector('span').textContent = shell.apply;
+  const cancel = $('btn-settings-cancel');
+  if (cancel) cancel.querySelector('span').textContent = shell.cancel;
+  const search = $('settings-search');
+  if (search) search.placeholder = shell.search;
+  document.body.classList.toggle('rtl', language.rtl);
+}
+
+function graphicsScore() {
+  const steps = { off: 0, low: 1, medium: 2, high: 3, ultra: 4 };
+  const values = [settings.graphics.textureQuality, settings.graphics.lightingQuality, settings.graphics.shadowQuality, settings.graphics.foliageQuality, settings.graphics.postProcessing];
+  const sum = values.reduce((total, value) => total + (steps[value] ?? 2), 0);
+  return Math.round((sum / (values.length * 4)) * 100);
+}
+
+let scareDirector = null;
+let aiDebugOpen = false;
+let debugOpen = false;
+let debugPanelGate = 0;
 
 function applySettings({ persist = true } = {}) {
+  const capabilities = detectCapabilities();
+  // Spatial audio is a real WebAudio listener/panner mode, not a label.
+  audio.setSpatial(settings.audio.spatial);
+  // Push the graphics controls that the WebGL2 pipeline actually consumes.
+  configure3D({
+    renderScale: settings.graphics.renderScale,
+    upscaling: settings.graphics.upscaling,
+    upscaler: settings.graphics.upscaling,
+    hdr: settings.graphics.hdr,
+    aa: settings.graphics.antiAliasing,
+    shadowQuality: settings.graphics.shadowQuality,
+    anisotropic: settings.graphics.anisotropicFiltering,
+    brightness: settings.graphics.brightness,
+    contrast: settings.graphics.contrast,
+    gamma: settings.graphics.gamma,
+    dynamicResolution: settings.performance.dynamicResolution,
+    viewDistance: settings.performance.viewDistance3d,
+  });
   audio.applyVolumes({
     master: settings.audio.master / 100,
     music: settings.audio.music / 100,
     sfx: settings.audio.sfx / 100,
+    ambient: settings.audio.ambient / 100,
+    dialogue: settings.audio.dialogue / 100,
+    combat: settings.audio.combat / 100,
+    ui: settings.audio.ui / 100,
+    footsteps: settings.audio.footsteps / 100,
+    voiceChat: settings.audio.voiceChat / 100,
+    cinematic: settings.audio.cinematic / 100,
     muted: settings.audio.muted,
+    channelMutes: settings.audio.channelMutes,
+    dynamicRange: settings.audio.dynamicRange,
+    reduceLoudSfx: settings.audio.reduceLoudSfx,
   });
   music.setVolume(1);
-  const particleScale = settings.gameplay.particleDensity === 'off'
-    ? 0
-    : settings.gameplay.particleDensity === 'low'
-      ? 0.45
-      : 1;
+  if (!scareDirector) scareDirector = new ScareDirector(settings.scary || {}, { seed: 20261119 });
+  scareDirector.configure(settings.scary || {}, settings.accessibility);
+  const particleMap = { low: 0.4, medium: 0.7, high: 1, ultra: 1.3 };
+  const particleScale = particleMap[settings.graphics.particleQuality] ?? 1;
+  const bias = graphicsScore();
   renderer.options = {
-    shakeScale:
-      settings.gameplay.screenShake === 'off' ? 0 : settings.gameplay.screenShake === 'low' ? 0.45 : 1,
-    reduceFlashing: settings.gameplay.reduceFlashing,
-    highContrast: settings.gameplay.highContrast,
-    colorblind: settings.gameplay.colorblind,
-    antiAliasing: settings.gameplay.antiAliasing,
+    shakeScale: settings.accessibility.reduceShake
+      ? 0
+      : settings.gameplay.screenShake === 'off' ? 0 : settings.gameplay.screenShake === 'low' ? 0.45 : 1,
+    reduceFlashing: settings.accessibility.reduceFlashing,
+    highContrast: settings.accessibility.highContrast,
+    colorblind: settings.accessibility.colorblind !== 'off',
+    antiAliasing: settings.graphics.antiAliasing !== 'off',
     fov: settings.gameplay.fov,
     renderDistance: settings.gameplay.renderDistance,
-    qualityBias: settings.gameplay.qualityBias,
+    qualityBias: bias,
     particleScale,
+    resolutionScale: (settings.graphics.renderScale / 100) * (settings.display.resolutionScaling / 100),
+    gamma: settings.graphics.gamma / 100,
   };
   renderer.resize();
   const root = document.documentElement;
-  root.classList.toggle('text-large', settings.gameplay.textSize === 'large');
-  root.classList.toggle('reduce-flashing', settings.gameplay.reduceFlashing);
-  root.classList.toggle('high-contrast', settings.gameplay.highContrast);
-  root.classList.toggle('colorblind', settings.gameplay.colorblind);
-
+  root.classList.toggle('text-large', settings.accessibility.textSize === 'large' || settings.accessibility.textSize === 'xlarge');
+  root.classList.toggle('text-xlarge', settings.accessibility.textSize === 'xlarge');
+  root.classList.toggle('reduce-flashing', settings.accessibility.reduceFlashing);
+  root.classList.toggle('high-contrast', settings.accessibility.highContrast);
+  root.classList.toggle('colorblind', settings.accessibility.colorblind !== 'off');
+  root.classList.toggle('reduce-motion', settings.accessibility.reduceCameraMotion);
+  root.className = root.className.replace(/colorblind-(protanopia|deuteranopia|tritanopia)/g, '').trim();
+  if (['protanopia', 'deuteranopia', 'tritanopia'].includes(settings.accessibility.colorblind)) {
+    root.classList.add(`colorblind-${settings.accessibility.colorblind}`);
+  }
+  root.style.setProperty('--ui-scale', String(settings.display.uiScale / 100));
+  root.style.setProperty('--hud-scale', String(settings.hud.scale / 100));
+  root.style.setProperty('--hud-opacity', String(settings.hud.opacity / 100));
+  root.style.setProperty('--safe-area', `${settings.display.safeArea}%`);
+  root.style.setProperty('--subtitle-bg', String(settings.accessibility.subtitleBackground / 100));
+  canvas.style.filter = `url(#ashen-gamma) brightness(${settings.graphics.brightness}%) contrast(${settings.graphics.contrast}%)`;
+  const exponent = String(1 / Math.max(0.5, settings.graphics.gamma / 100));
+  for (const id of ['gamma-r', 'gamma-g', 'gamma-b']) {
+    const node = $(id);
+    if (node) node.setAttribute('exponent', exponent);
+  }
+  canvas.dataset.hdr = capabilities.hdr && settings.graphics.hdr !== 'off' ? 'on' : 'off';
+  try {
+    const ctx = canvas.getContext('2d');
+    if (ctx) ctx.drawingBufferColorSpace = capabilities.p3 ? 'display-p3' : 'srgb';
+  } catch { /* colour space unsupported */ }
+  settings.gameplay.frameCap = settings.graphics.frameRateLimit;
+  const hud = $('hud');
+  if (hud) {
+    hud.classList.toggle('hud-hide-health', !settings.hud.showHealth);
+    hud.classList.toggle('hud-hide-stamina', !settings.hud.showStamina);
+    hud.classList.toggle('hud-hide-mana', !settings.hud.showMana);
+    hud.classList.toggle('hud-hide-boss', !settings.hud.showBoss);
+    hud.classList.toggle('hud-hide-quest', !settings.hud.showQuest);
+    hud.classList.toggle('hud-hide-map', !settings.hud.showMinimap);
+    hud.classList.toggle('hud-hide-prompts', !settings.hud.showPrompts);
+    hud.dataset.position = settings.hud.position;
+  }
+  if (game3D) {
+    game3D.quality = settings.graphics.preset === 'extreme' ? 'ultra' : settings.graphics.preset;
+    game3D.visualSettings = settings.graphics;
+    game3D.hudSettings = settings.hud;
+    game3D.cameraSensitivity = settings.controls.cameraSensitivity / 100;
+    game3D.region = MODE3D_REGIONS[game3D.region] ? game3D.region : 'thornveil';
+  }
+  applyLanguage();
   const btn = $('sound-btn');
   if (btn) {
     btn.classList.toggle('muted', settings.audio.muted);
@@ -7691,9 +10982,310 @@ function applySettings({ persist = true } = {}) {
     btn.title = settings.audio.muted ? 'Suara mati (N)' : 'Suara aktif (N)';
   }
   const fps = $('fps-badge');
-  if (fps) fps.classList.toggle('hidden', !settings.gameplay.fpsCounter);
-  if (persist) saveSettings(settingsStore, settings);
+  if (fps) fps.classList.toggle('hidden', !(settings.display.showFps || settings.gameplay.fpsCounter));
+  applyHudLayout();
+  try {
+    if (settings.display.mode === 'fullscreen' && !document.fullscreenElement && document.fullscreenEnabled) {
+      document.documentElement.requestFullscreen().catch(() => {});
+    } else if (settings.display.mode !== 'fullscreen' && document.fullscreenElement) {
+      document.exitFullscreen().catch(() => {});
+    }
+  } catch { /* fullscreen requires a user gesture or is unsupported */ }
+  if (persist) {
+    saveSettings(settingsStore, settings);
+    settingsApplyState = 'saved';
+  } else {
+    settingsApplyState = 'pending';
+  }
+  const state = $('settings-apply-state');
+  if (state) state.textContent = settingsApplyState === 'pending' ? 'BELUM DITERAPKAN' : 'TERSIMPAN';
 }
+
+function settingUnsupported(def) {
+  const caps = detectCapabilities();
+  if (def.path === 'graphics.rayTracing') return !caps.rayTracing;
+  if (def.path === 'graphics.upscaling') return !caps.webgl2;
+  if (def.path === 'graphics.anisotropicFiltering') return !caps.webgl2 || (caps.maxAnisotropy || 1) <= 1;
+  if (def.path === 'graphics.hdr' && settings.graphics.hdr !== 'off') return !caps.hdr;
+  if (def.path === 'graphics.hdrCalibration') return !caps.hdr || settings.graphics.hdr === 'off';
+  if (def.path === 'audio.outputDevice') return !caps.outputDevice;
+  if (def.path === 'display.monitor') return true;
+  if (def.path === 'account.cloudSave') return true;
+  return false;
+}
+
+function settingValueText(def, value) {
+  if (def.type === 'toggle') return value ? 'AKTIF' : 'MATI';
+  if (def.type === 'select') return def.options.find((option) => option.id === String(value))?.label || String(value);
+  return `${value}${def.suffix || ''}`;
+}
+
+function settingControl(def) {
+  const value = getSettingsValue(settings, def.path);
+  const unsupported = settingUnsupported(def);
+  const id = `set-${def.path.replace(/\./g, '-')}`;
+  if (def.type === 'toggle') {
+    return `<label class="settings-toggle settings2-toggle"><input id="${id}" type="checkbox" data-setting-path="${def.path}" ${value ? 'checked' : ''} ${unsupported ? 'disabled' : ''}/><span>${value ? 'AKTIF' : 'MATI'}</span></label>`;
+  }
+  if (def.type === 'select') {
+    return `<select id="${id}" data-setting-path="${def.path}" ${unsupported ? 'disabled' : ''}>${def.options.map((option) => `<option value="${option.id}" ${String(value) === String(option.id) ? 'selected' : ''}>${esc(option.label)}</option>`).join('')}</select>`;
+  }
+  return `<span class="settings2-range-wrap"><input id="${id}" type="range" min="${def.min}" max="${def.max}" step="${def.step}" value="${value}" data-setting-path="${def.path}" ${unsupported ? 'disabled' : ''}/><b data-setting-value="${def.path}">${settingValueText(def, value)}</b></span>`;
+}
+
+function settingRow(def) {
+  const unsupported = settingUnsupported(def);
+  return `<div class="settings2-row${unsupported ? ' unsupported' : ''}" data-setting-row="${def.path}">
+    <div class="settings2-copy"><label for="set-${def.path.replace(/\./g, '-')}">${esc(def.label)}</label><p>${esc(def.desc)}</p></div>
+    ${settingControl(def)}
+    <span class="settings2-status">${unsupported ? 'TIDAK DIDUKUNG' : def.type === 'range' ? 'LIVE' : 'SIAP'}</span>
+  </div>`;
+}
+
+function graphicsPreview() {
+  const preset = settings.graphics.preset;
+  const rows = ['shadowQuality', 'textureQuality', 'lightingQuality', 'particleQuality', 'postProcessing', 'renderScale'];
+  return `<div class="settings2-preview"><div class="settings2-preview-head"><b>PRATINJAU PRESET</b><em>${esc((GRAPHICS_PRESETS[preset] || GRAPHICS_PRESETS.custom).tagline || 'Custom')}</em></div>
+    <div class="settings2-compare">${rows.map((key) => {
+      const current = getSettingsValue(settings, `graphics.${key}`);
+      return `<span><b>${key}</b><em>${String(current)}</em></span>`;
+    }).join('')}</div></div>`;
+}
+
+function difficultyCards() {
+  return `<div class="settings2-difficulty-grid">${CAMPAIGN_DIFFICULTIES.map((entry) => {
+    const unlocked = difficultyUnlocked(entry.id, progress);
+    return `<button type="button" class="settings2-difficulty${settings.gameplay.difficulty === entry.id ? ' active' : ''}" data-difficulty-choice="${entry.id}" ${unlocked ? '' : 'disabled'}>
+      <span>${esc(entry.tag)}</span><strong>${esc(entry.name)}</strong><em>${esc(entry.desc)}</em>
+      <small>DMG ×${entry.enemyDamage.toFixed(2)} · HP ×${entry.enemyHp.toFixed(2)} · DETEKSI ×${entry.detection.toFixed(2)} · AGRO ×${entry.aggression.toFixed(2)}</small>
+      ${unlocked ? '' : '<i>TERKUNCI · selesaikan 3 ruang atau kampanye Eclipse</i>'}
+    </button>`;
+  }).join('')}</div>${difficultyWarning(settings.gameplay.difficulty) ? `<p class="settings2-warning">${esc(difficultyWarning(settings.gameplay.difficulty))}</p>` : ''}`;
+}
+
+function bindTable() {
+  const conflict = settingsConflict ? `<div class="bind-conflict"><span><b>${formatCode(settingsConflict.code)}</b> sudah dipakai oleh <b>${ACTIONS.find((a) => a.id === settingsConflict.other)?.label || settingsConflict.other}</b>.</span><button type="button" data-conflict="swap">TUKAR</button><button type="button" data-conflict="cancel">BATAL</button></div>` : '';
+  return `${conflict}<div class="settings2-binding-table"><table class="bind-table"><thead><tr><th>AKSI</th><th>UTAMA</th><th>ALTERNATIF</th><th>GAMEPAD</th><th></th></tr></thead><tbody>${ACTIONS.map((action) => {
+    const codes = settings.bindings[action.id] || [];
+    const cell = (slot) => {
+      const capturing = settingsCapture && settingsCapture.action === action.id && settingsCapture.slot === slot;
+      return `<button class="bind-btn${capturing ? ' capturing' : ''}" type="button" data-bind-action="${action.id}" data-slot="${slot}">${capturing ? 'TEKAN…' : formatCode(codes[slot] || '')}</button>`;
+    };
+    return `<tr><td>${action.label}</td><td>${cell(0)}</td><td>${cell(1)}</td><td>${action.gamepad}</td><td><button class="bind-reset" type="button" data-reset-action="${action.id}">↺</button></td></tr>`;
+  }).join('')}</tbody></table></div><div class="settings-actions"><button class="btn btn-ghost btn-small" type="button" data-reset-all-bindings>RESET SEMUA KEYBIND</button></div>`;
+}
+
+function buildSettings() {
+  const tabs = $('settings-tabs');
+  const body = $('settings-body');
+  if (!tabs || !body) return;
+  const results = settingsSearch.trim() ? searchSettings(settingsSearch) : null;
+  tabs.innerHTML = SETTINGS_CATEGORIES.map((tab) => `<button class="settings-tab${settingsTab === tab.id && !results ? ' active' : ''}" type="button" role="tab" aria-selected="${settingsTab === tab.id && !results}" data-settings-tab="${tab.id}"><span>${tab.icon}</span>${tab.label}</button>`).join('');
+  tabs.querySelectorAll('[data-settings-tab]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      settingsTab = btn.dataset.settingsTab;
+      settingsSearch = '';
+      const input = $('settings-search');
+      if (input) input.value = '';
+      settingsCapture = null;
+      settingsConflict = null;
+      buildSettings();
+    });
+  });
+  const category = SETTINGS_CATEGORIES.find((entry) => entry.id === settingsTab) || SETTINGS_CATEGORIES[0];
+  const defs = results || settingsForCategory(settingsTab);
+  const groups = new Map();
+  for (const def of defs) {
+    if (!groups.has(def.category)) groups.set(def.category, []);
+    groups.get(def.category).push(def);
+  }
+  body.innerHTML = `
+    ${results ? `<div class="settings2-results-head"><b>${results.length} HASIL</b><span>untuk “${esc(settingsSearch)}”</span></div>` : `<div class="settings2-category-head"><span>${category.icon}</span><div><b>${category.label}</b><p>${category.desc}</p></div></div>`}
+    ${settingsTab === 'difficulty' && !results ? difficultyCards() : ''}
+    ${settingsTab === 'graphics' && !results ? graphicsPreview() : ''}
+    ${settingsTab === 'audio' && !results ? `<div class="settings2-audio-test"><button class="btn btn-ghost btn-small" type="button" data-audio-test="master">TES MASTER</button><button class="btn btn-ghost btn-small" type="button" data-audio-test="music">TES MUSIK</button><button class="btn btn-ghost btn-small" type="button" data-audio-test="sfx">TES SFX</button><button class="btn btn-ghost btn-small" type="button" data-audio-test="dialogue">TES DIALOG</button></div>` : ''}
+    ${settingsTab === 'interface' && !results ? `<div class="settings2-hud-tools"><button class="btn btn-ghost btn-small" type="button" data-open-hud-layout>HUD LAYOUT EDITOR</button><span>Drag-and-drop · simpan per profil</span></div>` : ''}
+    ${[...groups.entries()].map(([categoryId, list]) => `<section class="settings2-group"><h3>${SETTINGS_CATEGORIES.find((entry) => entry.id === categoryId)?.label || categoryId}</h3>${list.map(settingRow).join('')}</section>`).join('')}
+    ${settingsTab === 'controls' && !results ? bindTable() : ''}
+    <p class="settings2-note">${settingsTab === 'language' ? 'Voice hanya tersedia untuk bahasa yang memiliki aset suara; label (teks) menandai fallback subtitle. Arab mengaktifkan tata letak RTL.' : 'Pengaturan disimpan di ashen-vow-settings-v1 dan terpisah dari progres permainan.'}</p>`;
+
+  const search = $('settings-search');
+  if (search) {
+    search.value = settingsSearch;
+    if (document.activeElement !== search) search.addEventListener('input', () => {
+      settingsSearch = search.value;
+      clearTimeout(search._settingsTimer);
+      search._settingsTimer = setTimeout(() => {
+        buildSettings();
+        const next = $('settings-search');
+        if (next) { next.focus(); next.setSelectionRange(next.value.length, next.value.length); }
+      }, 120);
+    });
+  }
+  body.querySelectorAll('[data-setting-path]').forEach((input) => {
+    input.addEventListener('input', () => {
+      const def = SETTING_BY_PATH[input.dataset.settingPath];
+      if (!def) return;
+      let value = input.type === 'checkbox' ? input.checked : input.value;
+      if (def.numeric || def.type === 'range') value = Number(value);
+      setSettingsValue(settings, def.path, value);
+      if (def.path.startsWith('graphics.') && def.path !== 'graphics.preset') {
+        settings.graphics.preset = 'custom';
+        markGraphicsCustom(settings);
+      }
+      if (def.path === 'graphics.preset') applyGraphicsPreset(settings, input.value);
+      if (def.path === 'gameplay.difficulty' && game3D) game3D.setDifficulty?.(input.value);
+      if (def.path === 'gameplay.difficulty' && game.setDifficulty) game.setDifficulty(input.value);
+      const valueEl = body.querySelector(`[data-setting-value="${def.path}"]`);
+      if (valueEl) valueEl.textContent = settingValueText(def, getSettingsValue(settings, def.path));
+      if (input.type === 'checkbox') input.nextElementSibling.textContent = input.checked ? 'AKTIF' : 'MATI';
+      applySettings({ persist: false });
+    });
+    input.addEventListener('change', () => {
+      if (input.dataset.settingPath === 'language.interface') applyLanguage();
+      buildSettings();
+    });
+  });
+  body.querySelectorAll('[data-difficulty-choice]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      settings.gameplay.difficulty = btn.dataset.difficultyChoice;
+      game.setDifficulty(settings.gameplay.difficulty);
+      applySettings({ persist: false });
+      buildSettings();
+    });
+  });
+  body.querySelectorAll('[data-audio-test]').forEach((btn) => btn.addEventListener('click', () => {
+    const channel = btn.dataset.audioTest;
+    audio.init();
+    audio.testTone(channel === 'master' ? 'master' : channel);
+    showToast(`Tes audio: ${AUDIO_CHANNELS.find((entry) => entry.id === channel)?.label || channel}`, 1200);
+  }));
+  body.querySelectorAll('[data-open-hud-layout]').forEach((btn) => btn.addEventListener('click', openHudLayout));
+  body.querySelectorAll('[data-bind-action]').forEach((btn) => btn.addEventListener('click', () => {
+    settingsConflict = null;
+    settingsCapture = { action: btn.dataset.bindAction, slot: Number(btn.dataset.slot) };
+    buildSettings();
+  }));
+  body.querySelectorAll('[data-reset-action]').forEach((btn) => btn.addEventListener('click', () => {
+    settings = resetActionBindings(settings, btn.dataset.resetAction);
+    settingsCapture = null; settingsConflict = null;
+    applySettings({ persist: false }); buildSettings();
+  }));
+  body.querySelectorAll('[data-reset-all-bindings]').forEach((btn) => btn.addEventListener('click', () => {
+    settings = resetAllBindings(settings);
+    applySettings({ persist: false }); buildSettings();
+  }));
+  body.querySelectorAll('[data-conflict]').forEach((btn) => btn.addEventListener('click', () => {
+    if (btn.dataset.conflict === 'swap' && settingsConflict) settings = applyBinding(settings, settingsConflict.action, settingsConflict.slot, settingsConflict.code).settings;
+    settingsConflict = null; settingsCapture = null;
+    applySettings({ persist: false }); buildSettings();
+  }));
+  buildDiagnostics();
+  applyLanguage();
+}
+
+function buildDiagnostics() {
+  const panel = $('settings-diagnostics');
+  if (!panel) return;
+  panel.classList.toggle('hidden', !settingsDiagnosticsOpen);
+  if (!settingsDiagnosticsOpen) return;
+  const caps = detectCapabilities();
+  const rows = [
+    ['Brightness / Contrast / Gamma', 'applied', 'Canvas colour transfer (gamma SVG + CSS)'],
+    ['HDR', caps.hdrRenderTarget ? 'applied' : caps.hdr ? 'partial' : 'unsupported', caps.hdrRenderTarget ? 'RGBA16F render target + ACES tonemap' : 'Display HDR terdeteksi tetapi render target float tidak tersedia'],
+    ['Ray Tracing', 'unsupported', 'WebGL2 tidak menyediakan pipeline ray tracing perangkat keras'],
+    ['3D pipeline', gfx3DStatus().state === 'ready' ? 'applied' : 'ready', gfx3DStatus().available ? `WebGL2 + GLB · ${gfx3DStatus().models} model · ${gfx3DStatus().props} prop` : `Fallback Canvas (${gfx3DStatus().reason || gfx3DStatus().state})`],
+    ['GPU', caps.gpuRenderer ? 'applied' : 'unsupported', caps.gpuRenderer ? `${caps.gpuRenderer}${caps.gpuTier ? ` · ${caps.gpuTier}` : ''}` : 'Identitas GPU tidak tersedia'],
+    ['Anisotropic', caps.maxAnisotropy > 1 ? 'applied' : 'unsupported', caps.maxAnisotropy > 1 ? `maksimum ${caps.maxAnisotropy}×` : 'Ekstensi aniso tidak tersedia'],
+    ['Spatial audio', settings.audio.spatial === 'stereo' ? 'off' : 'applied', settings.audio.spatial === 'spatial' ? 'HRTF PannerNode + listener' : settings.audio.spatial === 'surround' ? 'Equal-power panner + listener' : 'Mix stereo non-posisional'],
+    ['Anti-Aliasing', settings.graphics.antiAliasing === 'off' ? 'off' : 'applied', 'Canvas smoothing + 3D line detail'],
+    ['Audio buses', 'applied', `${AUDIO_CHANNELS.length} bus independen`],
+    ['Output device', caps.outputDevice ? 'applied' : 'unsupported', caps.outputDevice ? 'AudioContext.setSinkId tersedia' : 'Browser tidak menyediakan pemilihan output'],
+    ['Language', 'applied', `${LANGUAGE_BY_ID[settings.language.interface]?.name || 'Indonesia'} · dir ${document.documentElement.dir}`],
+    ['HUD layout', settings.hud.position === 'custom' ? 'applied' : 'ready', 'HUD Layout Editor'],
+    ['Frame limit', 'applied', settings.graphics.frameRateLimit ? `${settings.graphics.frameRateLimit} FPS` : 'Unlimited'],
+    ['Cloud save', 'unsupported', 'Tidak ada layanan cloud pada build lokal'],
+  ];
+  const stateLabels = { applied: 'DITERAPKAN', unsupported: 'TIDAK DIDUKUNG', ready: 'SIAP', off: 'MATI', pending: 'MENUNGGU APPLY' };
+  panel.innerHTML = `<div class="settings-diag-head"><b>DIAGNOSTIK PENERAPAN</b><span>${settingsApplyState === 'pending' ? 'MENUNGGU APPLY' : 'TERSIMPAN'}</span></div>${rows.map(([label, state, detail]) => `<div class="settings-diag-row ${state}"><b>${label}</b><span>${stateLabels[state] || state.toUpperCase()}</span><em>${detail}</em></div>`).join('')}`;
+}
+
+function hudLayoutTargets() {
+  return {
+    vitals: document.querySelector('.vitals'),
+    map: document.querySelector('.hud-right'),
+    notifications: $('toast'),
+    quest: document.querySelector('.hud-right'),
+    boss: null,
+  };
+}
+
+function applyHudLayout() {
+  const layout = settings.hud.layout || {};
+  const targets = hudLayoutTargets();
+  for (const [id, entry] of Object.entries(layout)) {
+    const el = targets[id];
+    if (!el || !entry) continue;
+    el.style.transform = `translate(${entry.x || 0}px, ${entry.y || 0}px)`;
+  }
+  const hud = $('hud');
+  if (hud) {
+    hud.classList.toggle('hud-layout-compact', settings.hud.position === 'compact');
+    hud.classList.toggle('hud-layout-split', settings.hud.position === 'split');
+    hud.classList.toggle('hud-layout-custom', settings.hud.position === 'custom');
+  }
+}
+
+function buildHudLayoutEditor() {
+  const stage = $('hud-layout-stage');
+  if (!stage) return;
+  const layout = settings.hud.layout || {};
+  stage.querySelectorAll('[data-hud-drag]').forEach((el) => {
+    const id = el.dataset.hudDrag;
+    const entry = layout[id] || { x: el.offsetLeft || 0, y: el.offsetTop || 0 };
+    el.style.left = `${entry.x || 0}px`;
+    el.style.top = `${entry.y || 0}px`;
+    el.style.transform = 'none';
+  });
+}
+
+function openHudLayout() {
+  hudLayoutOpen = true;
+  settingsOpen = false;
+  buildHudLayoutEditor();
+  syncScreens();
+}
+
+function installHudLayoutDrag() {
+  const stage = $('hud-layout-stage');
+  if (!stage) return;
+  let drag = null;
+  stage.addEventListener('pointerdown', (event) => {
+    const el = event.target.closest('[data-hud-drag]');
+    if (!el) return;
+    drag = { el, id: el.dataset.hudDrag, startX: event.clientX, startY: event.clientY, x: el.offsetLeft, y: el.offsetTop };
+    el.setPointerCapture?.(event.pointerId);
+  });
+  stage.addEventListener('pointermove', (event) => {
+    if (!drag) return;
+    const maxX = stage.clientWidth - drag.el.offsetWidth;
+    const maxY = stage.clientHeight - drag.el.offsetHeight;
+    const x = clamp(drag.x + event.clientX - drag.startX, 0, maxX);
+    const y = clamp(drag.y + event.clientY - drag.startY, 0, maxY);
+    drag.el.style.left = `${x}px`;
+    drag.el.style.top = `${y}px`;
+  });
+  const finish = () => {
+    if (!drag) return;
+    settings.hud.layout[drag.id] = { x: drag.el.offsetLeft, y: drag.el.offsetTop };
+    settings.hud.position = 'custom';
+    applyHudLayout();
+    drag = null;
+  };
+  stage.addEventListener('pointerup', finish);
+  stage.addEventListener('pointercancel', finish);
+}
+installHudLayoutDrag();
 
 function settingsSliderRow(key, label, value) {
   return `
@@ -7720,281 +11312,6 @@ function settingsCheckboxRow(kind, key, label, checked, hint = '') {
       <label class="settings-toggle"><input type="checkbox" data-${kind}="${key}" ${checked ? 'checked' : ''} /> ${checked ? 'AKTIF' : 'MATI'}</label>
       ${hint ? `<span class="settings-hint">${hint}</span>` : '<span></span>'}
     </div>`;
-}
-
-function buildSettings() {
-  const tabs = $('settings-tabs');
-  const body = $('settings-body');
-  if (!tabs || !body) return;
-
-  tabs.innerHTML = SETTINGS_TABS.map(
-    (tab) =>
-      `<button class="settings-tab${settingsTab === tab.id ? ' active' : ''}" type="button" role="tab" aria-selected="${settingsTab === tab.id}" data-settings-tab="${tab.id}">${tab.label}</button>`,
-  ).join('');
-  tabs.querySelectorAll('[data-settings-tab]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      settingsTab = btn.dataset.settingsTab;
-      settingsCapture = null;
-      settingsConflict = null;
-      buildSettings();
-    });
-  });
-
-  if (settingsTab === 'audio') {
-    body.innerHTML = `
-      <div class="settings-group">
-        <span class="settings-group-title">VOLUME</span>
-        ${settingsSliderRow('master', 'Master', settings.audio.master)}
-        ${settingsSliderRow('music', 'Musik', settings.audio.music)}
-        ${settingsSliderRow('sfx', 'Efek Suara (SFX)', settings.audio.sfx)}
-      </div>
-      <div class="settings-group">
-        <span class="settings-group-title">PERILAKU AUDIO</span>
-        ${settingsCheckboxRow('audio-toggle', 'muted', 'Bisukan semua suara', settings.audio.muted, 'Tombol musik di HUD tetap sinkron dengan pengaturan ini.')}
-        ${settingsCheckboxRow('audio-toggle', 'muteOnBlur', 'Bisukan saat tab kehilangan fokus', settings.audio.muteOnBlur)}
-      </div>
-      <p class="map-note">Musik dihasilkan langsung lewat Web Audio — tidak ada file audio yang perlu diunduh. Zona yang sedang aktif memutar track-nya sendiri dan crossfade saat kau berpindah ruang.</p>
-    `;
-    body.querySelectorAll('[data-audio]').forEach((input) => {
-      input.addEventListener('input', () => {
-        const key = input.dataset.audio;
-        settings.audio[key] = clamp(Math.round(Number(input.value) || 0), 0, 100);
-        const label = body.querySelector(`[data-audio-value="${key}"]`);
-        if (label) label.textContent = String(settings.audio[key]);
-        applySettings();
-      });
-    });
-    body.querySelectorAll('[data-audio-toggle]').forEach((input) => {
-      input.addEventListener('change', () => {
-        settings.audio[input.dataset.audioToggle] = input.checked;
-        if (input.dataset.audioToggle === 'muted') {
-          audio.init();
-          audio.setMuted(settings.audio.muted);
-        }
-        applySettings();
-        buildSettings();
-      });
-    });
-    return;
-  }
-
-  if (settingsTab === 'graphics') {
-    body.innerHTML = `
-      <div class="settings-group">
-        <span class="settings-group-title">PRESET & BEBAN RENDER</span>
-        <div class="settings-row">
-          <label for="set-graphics-preset">Preset grafis</label>
-          <select id="set-graphics-preset" data-graphics-select="graphicsPreset">
-            ${['low', 'med', 'high', 'ultra'].map((id) => `<option value="${id}" ${settings.gameplay.graphicsPreset === id ? 'selected' : ''}>${id.toUpperCase()}</option>`).join('')}
-          </select>
-          <span class="settings-hint">Preset awal; slider di bawah tetap bisa menimpa beban render.</span>
-        </div>
-        ${settingsRangeRow('graphics', 'qualityBias', 'Performance ↔ Quality', settings.gameplay.qualityBias, 0, 100, 1, '%')}
-        <div class="graphics-bias-labels"><span>PERFORMA</span><span>SEIMBANG</span><span>KUALITAS</span></div>
-        ${settingsRangeRow('graphics', 'fov', 'Field of View', settings.gameplay.fov, 80, 120, 1, '°')}
-        ${settingsRangeRow('graphics', 'renderDistance', 'Render distance', settings.gameplay.renderDistance, 50, 100, 5, '%')}
-      </div>
-      <div class="settings-group">
-        <span class="settings-group-title">KUALITAS GAMBAR</span>
-        ${settingsCheckboxRow('graphics-toggle', 'antiAliasing', 'Anti-aliasing canvas', settings.gameplay.antiAliasing, 'Menghaluskan tepi sprite dan teks canvas; matikan untuk performa.')}
-        <div class="settings-row">
-          <label for="set-particles">Kepadatan partikel</label>
-          <select id="set-particles" data-graphics-select="particleDensity">
-            <option value="off" ${settings.gameplay.particleDensity === 'off' ? 'selected' : ''}>OFF</option>
-            <option value="low" ${settings.gameplay.particleDensity === 'low' ? 'selected' : ''}>LOW</option>
-            <option value="full" ${settings.gameplay.particleDensity === 'full' ? 'selected' : ''}>FULL</option>
-          </select>
-          <span></span>
-        </div>
-        ${settingsCheckboxRow('gameplay-toggle', 'fpsCounter', 'Tampilkan penghitung FPS', settings.gameplay.fpsCounter)}
-      </div>
-      <p class="map-note">Bias di bawah 25% membatasi resolusi internal ke 1× dan menipiskan cuaca; di atas 65% canvas memakai resolusi perangkat penuh. FOV mengubah zoom dunia, render distance menambah kabut tepi dan mengurangi partikel jauh.</p>
-    `;
-    body.querySelectorAll('[data-graphics-range]').forEach((input) => {
-      input.addEventListener('input', () => {
-        const key = input.dataset.graphicsRange;
-        settings.gameplay[key] = Math.round(Number(input.value) || 0);
-        if (key === 'qualityBias') {
-          const bias = settings.gameplay.qualityBias;
-          settings.gameplay.graphicsPreset = bias < 25 ? 'low' : bias < 55 ? 'med' : bias < 85 ? 'high' : 'ultra';
-        }
-        const label = body.querySelector(`[data-graphics-value="${key}"]`);
-        if (label) label.textContent = `${settings.gameplay[key]}${key === 'fov' ? '°' : '%'}`;
-        applySettings();
-        if (key === 'qualityBias') {
-          const preset = body.querySelector('[data-graphics-select="graphicsPreset"]');
-          if (preset) preset.value = settings.gameplay.graphicsPreset;
-        }
-      });
-    });
-    body.querySelectorAll('[data-graphics-select]').forEach((select) => {
-      select.addEventListener('change', () => {
-        settings.gameplay[select.dataset.graphicsSelect] = select.value;
-        applySettings();
-        buildSettings();
-      });
-    });
-    body.querySelectorAll('[data-graphics-toggle]').forEach((input) => {
-      input.addEventListener('change', () => {
-        settings.gameplay[input.dataset.graphicsToggle] = input.checked;
-        applySettings();
-        buildSettings();
-      });
-    });
-    return;
-  }
-
-  if (settingsTab === 'controls') {
-    const conflict = settingsConflict
-      ? `<div class="bind-conflict">
-          <span><b>${formatCode(settingsConflict.code)}</b> sudah dipakai oleh <b>${ACTIONS.find((a) => a.id === settingsConflict.other)?.label || settingsConflict.other}</b>. Tukar binding?</span>
-          <button type="button" data-conflict="swap">TUKAR</button>
-          <button type="button" data-conflict="cancel">BATAL</button>
-        </div>`
-      : '';
-    const rows = ACTIONS.map((action) => {
-      const codes = settings.bindings[action.id] || [];
-      const cell = (slot) => {
-        const capturing =
-          settingsCapture && settingsCapture.action === action.id && settingsCapture.slot === slot;
-        const code = codes[slot] || '';
-        return `<button class="bind-btn${capturing ? ' capturing' : ''}${code ? '' : ' empty'}" type="button" data-bind-action="${action.id}" data-slot="${slot}">${capturing ? 'TEKAN…' : formatCode(code)}</button>`;
-      };
-      return `<tr>
-        <td>${action.label}</td>
-        <td>${cell(0)}</td>
-        <td>${cell(1)}</td>
-        <td>${action.gamepad}</td>
-        <td><button class="bind-reset" type="button" data-reset-action="${action.id}" title="Reset ${action.label}" aria-label="Reset ${action.label}">↺</button></td>
-      </tr>`;
-    }).join('');
-    body.innerHTML = `
-      ${conflict}
-      <div class="settings-group">
-        <span class="settings-group-title">KEYBIND — DUA SLOT PER AKSI</span>
-        <table class="bind-table">
-          <thead><tr><th>AKSI</th><th>UTAMA</th><th>ALTERNATIF</th><th>GAMEPAD</th><th></th></tr></thead>
-          <tbody>${rows}</tbody>
-        </table>
-        <p class="map-note">Klik tombol lalu tekan tombol baru. <kbd>ESC</kbd> membatalkan. Jika tombol sudah dipakai, pilih TUKAR atau BATAL.</p>
-      </div>
-      <div class="settings-group">
-        <span class="settings-group-title">GAMEPAD</span>
-        ${settingsCheckboxRow('gameplay-toggle', 'gamepad', 'Aktifkan Gamepad API', settings.gameplay.gamepad, 'Gamepad standar: A lompat, B dash, X serang, Y skill, LB flask, RB shuriken, Start jeda.')}
-      </div>
-      <div class="settings-actions">
-        <button class="bind-conflict button" type="button" data-reset-all>RESET SEMUA KEYBIND</button>
-      </div>
-    `;
-    body.querySelectorAll('[data-bind-action]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        settingsConflict = null;
-        settingsCapture = { action: btn.dataset.bindAction, slot: Number(btn.dataset.slot) };
-        buildSettings();
-      });
-    });
-    body.querySelectorAll('[data-reset-action]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        settings = resetActionBindings(settings, btn.dataset.resetAction);
-        settingsCapture = null;
-        settingsConflict = null;
-        applySettings();
-        buildSettings();
-      });
-    });
-    body.querySelectorAll('[data-conflict]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        if (btn.dataset.conflict === 'swap' && settingsConflict) {
-          const result = applyBinding(
-            settings,
-            settingsConflict.action,
-            settingsConflict.slot,
-            settingsConflict.code,
-          );
-          settings = result.settings;
-          applySettings();
-          showToast('Binding ditukar.', 1500);
-        }
-        settingsConflict = null;
-        settingsCapture = null;
-        buildSettings();
-      });
-    });
-    const resetAll = body.querySelector('[data-reset-all]');
-    if (resetAll) {
-      resetAll.addEventListener('click', () => {
-        settings = resetAllBindings(settings);
-        settingsCapture = null;
-        settingsConflict = null;
-        applySettings();
-        buildSettings();
-        showToast('Semua keybind kembali ke bawaan.', 1600);
-      });
-    }
-    body.querySelectorAll('[data-gameplay-toggle]').forEach((input) => {
-      input.addEventListener('change', () => {
-        settings.gameplay[input.dataset.gameplayToggle] = input.checked;
-        applySettings();
-        buildSettings();
-      });
-    });
-    return;
-  }
-
-  // Gameplay & accessibility
-  body.innerHTML = `
-    <div class="settings-group">
-      <span class="settings-group-title">GAMEPLAY</span>
-      <div class="settings-row">
-        <label for="set-shake">Screen shake</label>
-        <select id="set-shake" data-gameplay-select="screenShake">
-          <option value="off" ${settings.gameplay.screenShake === 'off' ? 'selected' : ''}>OFF</option>
-          <option value="low" ${settings.gameplay.screenShake === 'low' ? 'selected' : ''}>LOW</option>
-          <option value="full" ${settings.gameplay.screenShake === 'full' ? 'selected' : ''}>FULL</option>
-        </select>
-        <span></span>
-      </div>
-      <div class="settings-row">
-        <label for="set-fps">Batas frame</label>
-        <select id="set-fps" data-gameplay-select="frameCap">
-          <option value="60" ${settings.gameplay.frameCap === 60 ? 'selected' : ''}>60 FPS</option>
-          <option value="120" ${settings.gameplay.frameCap === 120 ? 'selected' : ''}>120 FPS</option>
-          <option value="0" ${settings.gameplay.frameCap === 0 ? 'selected' : ''}>UNCAPPED</option>
-        </select>
-        <span></span>
-      </div>
-      ${settingsCheckboxRow('gameplay-toggle', 'fpsCounter', 'Tampilkan penghitung FPS', settings.gameplay.fpsCounter)}
-    </div>
-    <div class="settings-group">
-      <span class="settings-group-title">AKSESIBILITAS</span>
-      ${settingsCheckboxRow('gameplay-toggle', 'reduceFlashing', 'Kurangi kilatan cahaya', settings.gameplay.reduceFlashing, 'Vignette darah rendah dan denyut UI menjadi statis.')}
-      ${settingsCheckboxRow('gameplay-toggle', 'highContrast', 'Kontras tinggi', settings.gameplay.highContrast, 'Garis tepi UI, bar darah, dan proyektil dipertegas.')}
-      ${settingsCheckboxRow('gameplay-toggle', 'colorblind', 'Mode ramah buta warna', settings.gameplay.colorblind, 'Proyektil musuh menjadi biru, proyektilmu kuning — warna zona tidak berubah.')}
-      <div class="settings-row">
-        <label for="set-text">Ukuran teks</label>
-        <select id="set-text" data-gameplay-select="textSize">
-          <option value="normal" ${settings.gameplay.textSize === 'normal' ? 'selected' : ''}>NORMAL</option>
-          <option value="large" ${settings.gameplay.textSize === 'large' ? 'selected' : ''}>BESAR</option>
-        </select>
-        <span></span>
-      </div>
-    </div>
-    <p class="map-note">Pengaturan disimpan di <code>ashen-vow-settings-v1</code>, terpisah dari progres permainan. Menghapus progres tidak menghapus kontrol atau audio.</p>
-  `;
-  body.querySelectorAll('[data-gameplay-select]').forEach((select) => {
-    select.addEventListener('change', () => {
-      const key = select.dataset.gameplaySelect;
-      settings.gameplay[key] = key === 'frameCap' ? Number(select.value) : select.value;
-      applySettings();
-    });
-  });
-  body.querySelectorAll('[data-gameplay-toggle]').forEach((input) => {
-    input.addEventListener('change', () => {
-      settings.gameplay[input.dataset.gameplayToggle] = input.checked;
-      applySettings();
-      buildSettings();
-    });
-  });
 }
 
 function handleCapturedKey(code) {
@@ -8194,6 +11511,22 @@ window.addEventListener('keydown', (e) => {
     e.preventDefault();
   }
 
+  if (creditSceneOpen) {
+    if (['Space', 'Enter', 'Escape', 'Backspace'].includes(e.code)) closeCreditScene();
+    return;
+  }
+
+  if (hunterShopOpen) {
+    if (e.code === 'Escape' || e.code === 'Backspace') closeHunterShop();
+    return;
+  }
+
+  // The same quiet sequence works in every mode. It is intentionally not
+  // documented in the UI; the toast only whispers, it never names the find.
+  if (!e.repeat && !settingsCapture && !settingsOpen && !cutsceneActive) {
+    if (advanceSecretSequence(secretBuffer, e.code, performance.now())) claimModeSecret();
+  }
+
   if (wdActive) {
     e.preventDefault();
     if (wdMatch?.phase === 'ended') {
@@ -8295,6 +11628,7 @@ window.addEventListener('keydown', (e) => {
       e.preventDefault();
       input3D.lockOnJustPressed = true;
     }
+    if (e.code === 'KeyR' && game3D?.horror && !game3D.horror.active) restart3DHorror();
     return;
   }
 
@@ -8462,6 +11796,7 @@ window.addEventListener('keydown', (e) => {
   }
 
   if (actionForCode(settings, e.code) === 'interact' && game.state === 'playing') {
+    if (tryCollectSecretRune()) return;
     openShop();
     return;
   }
@@ -8546,7 +11881,7 @@ document.querySelectorAll('.tbtn').forEach((btn) => {
 
 function inputSnapshot() {
   const input = {};
-  for (const action of ['left', 'right', 'jump', 'attack', 'dash', 'heal', 'swap', 'consume', 'cycleItem', 'ability']) {
+  for (const action of ['left', 'right', 'jump', 'attack', 'dash', 'heal', 'swap', 'consume', 'cycleItem', 'ability', 'weaponSkill']) {
     input[action] = !!(keys[action] || touchInput[action] || padHeld.has(action));
   }
   return input;
@@ -10229,6 +13564,7 @@ window.addEventListener('keydown', (event) => {
 }, true);
 $('btn-fairy-back')?.addEventListener('click', () => closeFairy());
 $('btn-cutscene-skip')?.addEventListener('click', () => finishCutscene(true));
+$('btn-credit-scene-skip')?.addEventListener('click', () => closeCreditScene());
 $('btn-court-back')?.addEventListener('click', closeCourt);
 $('court-screen')?.addEventListener('click', (event) => {
   const tab = event.target.closest('[data-court-tab]');
@@ -10422,7 +13758,8 @@ $('btn-admin-menu')?.addEventListener('click', () => window.open('/admin', '_bla
 fetch('/api/admin/session', { credentials: 'same-origin' })
   .then((response) => { if (response.ok) $('btn-admin-menu')?.classList.remove('hidden'); })
   .catch(() => {});
-$('btn-settings-menu').addEventListener('click', () => showSettings(false));
+$('btn-settings-menu').addEventListener('click', () => showSettings('graphics'));
+$('btn-difficulty-menu')?.addEventListener('click', () => showSettings('difficulty'));
 $('btn-credits').addEventListener('click', showCredits);
 $('btn-updates').addEventListener('click', showUpdates);
 $('btn-map-menu').addEventListener('click', openMap);
@@ -10433,7 +13770,28 @@ $('btn-credits-back').addEventListener('click', showMenu);
 $('btn-updates-back').addEventListener('click', showMenu);
 $('btn-expansion-back').addEventListener('click', showMenu);
 $('btn-mode3d-menu')?.addEventListener('click', () => showMode3D('campaign'));
+$('btn-horror3d-menu')?.addEventListener('click', () => showMode3D('scary'));
 $('btn-mode3d-back')?.addEventListener('click', closeMode3D);
+$('btn-horror3d-start')?.addEventListener('click', () => start3DHorrorRun($('horror3d-select')?.value || horror3DSiteId));
+$('horror3d-select')?.addEventListener('change', (event) => {
+  horror3DSiteId = event.target.value;
+  buildHorror3DPanel();
+});
+$('horror3d-anti')?.addEventListener('change', (event) => {
+  horror3D.settings.antiJumpscare = !!event.target.checked;
+  save3DHorrorState();
+  if (game3D?.horror) game3D.horror.antiJumpscare = !!event.target.checked;
+});
+$('horror3d-intensity')?.addEventListener('change', (event) => {
+  horror3D.settings.intensity = event.target.value;
+  save3DHorrorState();
+  if (game3D?.horror) game3D.horror.intensity = event.target.value;
+});
+$('horror3d-sites')?.addEventListener('click', (event) => {
+  const card = event.target.closest('[data-horror-site]');
+  if (!card) return;
+  start3DHorror(card.dataset.horrorSite);
+});
 $('btn-frontier-menu')?.addEventListener('click', () => showFrontier('campaign200'));
 $('btn-frontier-back')?.addEventListener('click', closeFrontier);
 $('btn-overdrive-menu')?.addEventListener('click', () => showOverdrive('campaign301'));
@@ -10490,6 +13848,15 @@ $('atlas-quickbar')?.addEventListener('click', (event) => {
   useAtlasQuickSlot(Number(button.dataset.atlasQuickUse));
 });
 
+$('select-3d-area')?.addEventListener('change', (e) => {
+  if (!game3D) return;
+  if (game3D.setArea(e.target.value)) showToast(`${game3D.area.name} — ${game3D.area.subtitle}`, 2200);
+});
+$('select-3d-region')?.addEventListener('change', (e) => {
+  if (!game3D) return;
+  game3D.setRegion(e.target.value);
+  showToast(`3D region: ${MODE3D_REGIONS[e.target.value]?.name || e.target.value}`, 1800);
+});
 $('select-3d-submode')?.addEventListener('change', (e) => {
   if (game3D) game3D.subMode = e.target.value;
 });
@@ -10513,7 +13880,7 @@ if (canvas3D) {
     isPointerDown = true;
     lastMouseX = e.clientX;
     lastMouseY = e.clientY;
-    input3D.attackJustPressed = true;
+    if (!game3D?.horror?.active) input3D.attackJustPressed = true;
   });
   window.addEventListener('mouseup', () => {
     isPointerDown = false;
@@ -10525,7 +13892,7 @@ if (canvas3D) {
       lastMouseX = e.clientX;
       lastMouseY = e.clientY;
       game3D.camera.yaw += dx * 0.004;
-      game3D.camera.pitch = clamp(game3D.camera.pitch + dy * 0.004, -0.4, 0.7);
+      game3D.camera.pitch = clamp(game3D.camera.pitch + dy * 0.004, game3D.horror?.active ? -0.7 : -0.4, 0.7);
     }
   });
 }
@@ -10541,7 +13908,68 @@ $('expansion-body').addEventListener('click', (event) => {
   event.preventDefault();
   handleExpansionAction(target);
 });
-$('btn-settings-back').addEventListener('click', closeSettings);
+$('btn-settings-apply')?.addEventListener('click', () => {
+  settingsBaseline = JSON.parse(JSON.stringify(settings));
+  applySettings({ persist: true });
+  settingsApplyState = 'saved';
+  closeSettings();
+  showToast('Pengaturan diterapkan dan tersimpan.', 1500);
+});
+$('btn-settings-cancel')?.addEventListener('click', cancelSettings);
+$('btn-settings-reset-category')?.addEventListener('click', () => {
+  if (!window.confirm(`Reset kategori “${SETTINGS_CATEGORIES.find((entry) => entry.id === settingsTab)?.label || settingsTab}”?`)) return;
+  const defaults = defaultSettings();
+  const defs = settingsForCategory(settingsTab);
+  for (const def of defs) setSettingsValue(settings, def.path, getSettingsValue(defaults, def.path));
+  const map = { interface: 'hud', difficulty: 'gameplay', language: 'language', advanced: 'advanced' };
+  const group = map[settingsTab] || settingsTab;
+  if (settings[group] && defaults[group]) settings[group] = JSON.parse(JSON.stringify(defaults[group]));
+  applySettings({ persist: false });
+  buildSettings();
+});
+$('btn-settings-reset-all')?.addEventListener('click', () => {
+  if (!window.confirm('Reset SEMUA pengaturan ke default? Progres permainan tidak dihapus.')) return;
+  settings = defaultSettings();
+  game.setDifficulty(settings.gameplay.difficulty);
+  applySettings({ persist: false });
+  buildSettings();
+});
+$('btn-scare-preview')?.addEventListener('click', () => {
+  previewScare();
+});
+$('btn-debug-close')?.addEventListener('click', () => closeDebug());
+$('btn-debug-ai')?.addEventListener('click', (event) => {
+  const on = toggleAiDebug();
+  event.currentTarget.setAttribute('aria-pressed', String(on));
+});
+window.addEventListener('keydown', (event) => {
+  if (event.key === 'F9' && debugUnlocked()) {
+    event.preventDefault();
+    if (debugOpen) closeDebug();
+    else openDebug();
+  }
+}, true);
+
+$('btn-settings-diagnostics')?.addEventListener('click', () => {
+  settingsDiagnosticsOpen = !settingsDiagnosticsOpen;
+  $('btn-settings-diagnostics')?.setAttribute('aria-pressed', String(settingsDiagnosticsOpen));
+  buildDiagnostics();
+});
+$('btn-hud-layout-close')?.addEventListener('click', () => {
+  settings.hud.position = 'custom';
+  applySettings({ persist: false });
+  saveSettings(settingsStore, settings);
+  hudLayoutOpen = false;
+  settingsOpen = true;
+  buildSettings();
+  syncScreens();
+});
+$('btn-hud-layout-reset')?.addEventListener('click', () => {
+  settings.hud.layout = {};
+  settings.hud.position = 'default';
+  applyHudLayout();
+  buildHudLayoutEditor();
+});
 $('btn-peek-back').addEventListener('click', stopSpectate);
 $('btn-map-close').addEventListener('click', closeMap);
 $('btn-map-codex').addEventListener('click', () => openCodex());
@@ -10552,7 +13980,7 @@ $('btn-dialogue-next').addEventListener('click', advanceDialogue);
 $('btn-pause-map').addEventListener('click', openMap);
 $('btn-pause-codex').addEventListener('click', () => openCodex());
 $('btn-pause-inventory').addEventListener('click', openInventory);
-$('btn-pause-settings').addEventListener('click', () => showSettings(true));
+$('btn-pause-settings').addEventListener('click', () => showSettings('gameplay'));
 wireMapControls();
 
 $('btn-retry').addEventListener('click', retryRun);
@@ -10560,6 +13988,8 @@ $('btn-again').addEventListener('click', () => startRun(0));
 $('btn-resume').addEventListener('click', () => togglePause(false));
 $('btn-shop').addEventListener('click', () => openShop(true));
 $('btn-shop-close').addEventListener('click', closeShop);
+$('btn-pause-hunter-shop')?.addEventListener('click', openHunterShop);
+$('btn-hunter-shop-close')?.addEventListener('click', closeHunterShop);
 $('btn-pause-levels').addEventListener('click', showLevels);
 $('btn-pause-menu').addEventListener('click', showMenu);
 $('btn-death-levels').addEventListener('click', showLevels);
@@ -10801,7 +14231,7 @@ function syncScreens() {
   const s = game.state;
   const inMenu = menuView !== 'none';
   const inRun = started && !spectating && menuView === 'none';
-  const covered = settingsOpen;
+  const covered = settingsOpen || hudLayoutOpen;
 
   $('moba-screen')?.classList.toggle('hidden', menuView !== 'moba' || covered);
   $('moba-battle')?.classList.toggle('hidden', !mobaActive || covered);
@@ -10813,7 +14243,14 @@ function syncScreens() {
   $('credits-screen').classList.toggle('hidden', menuView !== 'credits' || covered);
   $('updates-screen').classList.toggle('hidden', menuView !== 'updates' || covered);
   $('character-screen').classList.toggle('hidden', menuView !== 'character' || covered);
+  $('scary-screen')?.classList.toggle('hidden', menuView !== 'scary' || covered);
+  $('dread-screen')?.classList.toggle('hidden', menuView !== 'dread' || covered);
+  $('veil-screen')?.classList.toggle('hidden', menuView !== 'veil' || covered);
+  $('eternal-screen')?.classList.toggle('hidden', menuView !== 'eternal' || covered);
+  $('archive-screen')?.classList.toggle('hidden', menuView !== 'archive' || covered);
+  $('archive-preview-screen')?.classList.toggle('hidden', !(menuView === 'archive' && archivePreviewId) || covered);
   $('expansion-screen').classList.toggle('hidden', menuView !== 'expansion' || covered);
+  $('eclipse-screen')?.classList.toggle('hidden', menuView !== 'eclipse' || covered);
   $('frontier-screen').classList.toggle('hidden', menuView !== 'frontier' || covered);
   $('mode3d-screen').classList.toggle('hidden', menuView !== 'mode3d' || covered);
   $('overdrive-screen')?.classList.toggle('hidden', menuView !== 'overdrive' || covered);
@@ -10840,23 +14277,27 @@ function syncScreens() {
   if (!inRun || activeRunKind !== 'atlas') $('atlas-quickbar')?.classList.add('hidden');
   $('prologue-screen').classList.toggle('hidden', !prologueActive);
   $('cutscene-screen')?.classList.toggle('hidden', !cutsceneActive);
+  $('credit-scene-screen')?.classList.toggle('hidden', !creditSceneOpen);
   $('spectate-ui').classList.toggle('hidden', !spectating);
   $('map-screen').classList.toggle('hidden', !mapOpen);
   $('codex-screen').classList.toggle('hidden', !codexOpen);
   $('inventory-screen').classList.toggle('hidden', !inventoryOpen);
   $('settings-screen').classList.toggle('hidden', !settingsOpen);
+  $('hud-layout-screen')?.classList.toggle('hidden', !hudLayoutOpen);
   $('dialogue-screen').classList.toggle('hidden', !dialogueOpen);
 
-  $('pause-screen').classList.toggle('hidden', !(inRun && paused && !shopOpen && s === 'playing') || covered);
+  $('pause-screen').classList.toggle('hidden', !(inRun && paused && !shopOpen && !hunterShopOpen && s === 'playing') || covered);
   $('shop-screen').classList.toggle('hidden', !(inRun && shopOpen));
+  $('hunter-shop-screen')?.classList.toggle('hidden', !hunterShopOpen);
   $('blessing-screen').classList.toggle('hidden', !(inRun && !paused && !shopOpen && s === 'blessing'));
   $('dead-screen').classList.toggle('hidden', !(inRun && s === 'dead' && activeRunKind !== 'labyrinth' && activeRunKind !== 'speedrun'));
   $('victory-screen').classList.toggle('hidden', !(inRun && s === 'victory' && activeRunKind !== 'fallen' && activeRunKind !== 'crusade'));
 
-  const hudVisible = inRun && !paused && !shopOpen && !mapOpen && !codexOpen && !inventoryOpen && !dialogueOpen
+  const hudVisible = inRun && !paused && !shopOpen && !hunterShopOpen && !mapOpen && !codexOpen && !inventoryOpen && !dialogueOpen
     && !settingsOpen && !cutsceneActive
     && (s === 'playing' || s === 'blessing');
   $('hud').classList.toggle('hidden', !hudVisible);
+  $('veil-hud')?.classList.toggle('hidden', !(hudVisible && (activeRunKind === 'veil' || activeRunKind === 'eternal')));
   $('trial-hud')?.classList.toggle('hidden', !(inRun && activeRunKind === 'trials' && !paused && s === 'playing'));
   $('touch').classList.toggle(
     'hidden',
@@ -10988,9 +14429,115 @@ function updateHud() {
 }
 
 // ── game loop ────────────────────────────────────────────────────────────
+/** Update X: route a confirmed hit into the Scary Mode director. */
+function handlePlayerHurt(ev) {
+  if (!scareDirector) return null;
+  const effect = scareDirector.onPlayerHit(
+    { source: ev.source || {}, x: ev.source?.x || 0, y: ev.source?.y || 0 },
+    {
+      hp: game.player.hp,
+      menu: menuView !== 'none' || settingsOpen || mapOpen || codexOpen || inventoryOpen,
+      paused,
+      uiOpen: shopOpen || labRewardsOpen || labSummaryOpen,
+      loading: false,
+      cinematic: prologueActive || cutsceneActive || !!game.awaitingBlessing,
+      dialogue: dialogueOpen,
+      dead: game.state !== 'playing',
+      difficultyMul: 1,
+    },
+  );
+  if (effect) audio.playScare(effect);
+  return effect;
+}
+
+/** Settings-screen preview: real effect + real sting, without combat. */
+function previewScare() {
+  if (!scareDirector) scareDirector = new ScareDirector(settings.scary || {}, { seed: 20261119 });
+  scareDirector.configure(settings.scary || {}, settings.accessibility);
+  const effect = scareDirector.preview({ type: 'sentinel' });
+  if (!effect) return false;
+  audio.playScare(effect);
+  const overlay = $('scare-preview');
+  if (overlay) {
+    overlay.className = `scare-preview active intensity-${effect.intensity} shake-${Math.round(effect.shake * 10)}`;
+    overlay.querySelector('[data-scare-line]').textContent = effect.profile.line;
+    overlay.querySelector('[data-scare-name]').textContent = effect.profile.label;
+    clearTimeout(previewScare.timer);
+    previewScare.timer = setTimeout(() => {
+      overlay.className = 'scare-preview';
+    }, effect.duration * 1000);
+  }
+  return true;
+}
+
+function debugUnlocked() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('dev') === '1' || localStorage.getItem('ashen-vow-dev') === '1';
+  } catch {
+    return false;
+  }
+}
+
+function buildDebugPanels() {
+  if (!debugOpen) return;
+  const aiPanel = $('debug-ai');
+  const bossPanel = $('debug-boss');
+  const scarePanel = $('debug-scare');
+  if (aiPanel) {
+    const rows = game.aiDebug();
+    aiPanel.innerHTML = rows.length
+      ? rows.map((e) => `<div class="debug-row"><b>${esc(e.id)}</b><span>${esc(e.state)}</span><em>${esc(e.profile)}</em><small>aggro ${e.aggro ? 'Y' : 'N'} · path ${e.pathLength} · stuck ${e.stuckEvents} · repath ${e.repaths} · ${e.grounded ? 'grounded' : 'air'}</small></div>`).join('')
+      : '<p class="debug-empty">Tidak ada musuh aktif.</p>';
+  }
+  if (bossPanel) {
+    const snap = bossDebugSnapshot(game.boss);
+    bossPanel.innerHTML = snap
+      ? `<div class="debug-row"><b>${esc(snap.kind)}</b><span>fase ${snap.phase}/${snap.maxPhases}</span><em>${snap.hp}/${snap.maxHp}</em><small>state ${esc(snap.state || '-')} · attack ${esc(snap.activeAttack || '-')} · hitbox ${snap.hitboxes.length} · vx ${snap.velocity.vx} vy ${snap.velocity.vy} · ${snap.grounded ? 'grounded' : 'air'} · arena ${snap.inArena ? 'ok' : 'OUT'} · invuln ${snap.invulnerable ? 'Y' : 'N'}</small></div>`
+      : '<p class="debug-empty">Tidak ada boss aktif.</p>';
+  }
+  if (scarePanel) {
+    const snap = scareDirector ? scareDirector.snapshot() : null;
+    scarePanel.innerHTML = snap
+      ? `<div class="debug-row"><b>${snap.enabled ? 'ON' : 'OFF'}</b><span>${esc(snap.activeState)}</span><em>${esc(snap.intensity)}</em><small>source ${esc(snap.triggerSource || '-')} · fx ${esc(snap.presentation || '-')} · cooldown ${snap.cooldown}s · eligibility ${esc(snap.eligibility)} · audio ${esc(snap.audio)}</small></div>`
+      : '<p class="debug-empty">Director belum aktif.</p>';
+  }
+}
+
+function openDebug() {
+  if (!debugUnlocked() && !debugOpen) return false;
+  debugOpen = true;
+  $('debug-screen')?.classList.add('active');
+  buildDebugPanels();
+  return true;
+}
+
+function closeDebug() {
+  debugOpen = false;
+  $('debug-screen')?.classList.remove('active');
+}
+
+function toggleAiDebug() {
+  aiDebugOpen = !aiDebugOpen;
+  return aiDebugOpen;
+}
+
 function drainEvents() {
   if (!game.events.length) return;    const events = game.events.splice(0, game.events.length);
     for (const ev of events) {
+      if (ev.type === 'bossDown') maybeCreditScene(ev);
+      if (ev.type === 'playerHurt') handlePlayerHurt(ev);
+      if (ev.type === 'spiritDown') {
+        hunterReward(hunterState, ev.marks, Date.now());
+        hunterState.banished = (Number(hunterState.banished) || 0) + 1;
+        saveHunterState();
+        showToast(`ROH DIUSIR · ${ev.name || ev.kind} · ◈ +${ev.marks}`, 1700);
+      } else if (ev.type === 'hunterItemUse') {
+        syncHunterFromGame();
+        showToast(`${ev.name} · ${ev.stunned ? `${ev.stunned} roh distun` : 'efek aktif'} · sisa ${ev.remaining}`, 1700);
+      } else if (ev.type === 'hunterWard') {
+        showToast(`JIMAT PENJAGA · damage roh −${ev.reduction}%`, 1300);
+      }
       if (ev.type === 'gatePass') recordStageTime(ev.from, activeStage?.label);
       else if (ev.type === 'bossDown') recordStageTime(ev.room, ev.name);
       else if (ev.type === 'roomEnter') beginStage(ev.room, ev.name);
@@ -11125,6 +14672,71 @@ function drainEvents() {
             if (result?.ok) showToast(result.final ? 'THE ARCHITECT OF ETERNITY GUGUR — The Unwritten Expanse mulai terlihat.' : 'Wilayah Astral ditaklukkan.', 3000);
           }
         }
+      } else if (activeRunKind === 'eclipse') {
+        if (ev.type === 'gatePass') {
+          const room = ECLIPSE_ROOM_BY_ID[ev.from];
+          if (room?.eclipseStandard) {
+            const result = recordEclipseRoom(progress.eclipse, ev.from);
+            if (result.first) saveProgress();
+          }
+        } else if (ev.type === 'bossDown') {
+          const room = ECLIPSE_ROOM_BY_ID[ev.room];
+          const source = [...ECLIPSE_BOSSES, ECLIPSE_SECRET_BOSS].find((boss) => boss.kind === ev.kind);
+          if (room && source) {
+            const result = recordEclipseBoss(progress.eclipse, source.id);
+            grantMastery(progress.awakening, character.characterId, 12);
+            saveProgress();
+            if (result.ok) {
+              const fragment = result.fragment;
+              showToast(result.first ? `${ev.name} gugur.${fragment ? ` Pecahan terbaca (${progress.eclipse.fragments.length}/6).` : ''}` : `${ev.name} kembali gugur.`, 2800);
+              if (result.secret && !progress.eclipse.firstAuthor) showToast('ENAM PECAHAN TERBACA — The First Author menunggu di halaman terakhir.', 3600);
+              if (source.final) showToast('ARC VIII SELESAI — Forgotten Pantheon tercatat.', 3400);
+            }
+          }
+        } else if (ev.type === 'perfectDodge') {
+          showToast('PERFECT DODGE — counter window terbuka.', 1000);
+        } else if (ev.type === 'bossBreak') {
+          showToast(`${ev.name} BREAK — stagger ${Math.round((ev.duration || 1.45) * 10) / 10}s.`, 1200);
+        } else if (ev.type === 'elementalReaction') {
+          showToast(`REACTION · ${ev.name}`, 1100);
+        }
+      } else if (activeRunKind === 'godfall') {
+        if (ev.type === 'gatePass') {
+          const floor = ev.from - GODFALL_ROOM_START + 1;
+          if (floor >= 1 && floor <= GODFALL_FLOOR_COUNT && !godfallRun?.practice) {
+            recordGodfallFloor(progress.godfall, godfallRun, floor);
+            saveProgress();
+          }
+          if (godfallRun) godfallRun.floor = Math.min(GODFALL_FLOOR_COUNT, floor + 1);
+          activeGodfallFloor = Math.min(GODFALL_FLOOR_COUNT, floor + 1);
+        } else if (ev.type === 'bossDown') {
+          const floor = ev.room - GODFALL_ROOM_START + 1;
+          if (floor >= 1 && floor <= GODFALL_FLOOR_COUNT) {
+            if (!godfallRun?.practice) {
+              const result = recordGodfallFloor(progress.godfall, godfallRun, floor);
+              saveProgress();
+              if (result.reward) showToast(`GODFALL MILESTONE — ${result.reward.name}`, 3000);
+            }
+            if (floor === GODFALL_FLOOR_COUNT) {
+              showToast('GODFALL 100 — The Ascension selesai.', 3600);
+              if (godfallRun) godfallRun.state = 'victory';
+            }
+          }
+        } else if (ev.type === 'perfectDodge') {
+          if (godfallRun) godfallRun.perfects = (godfallRun.perfects || 0) + 1;
+        }
+      } else if (activeRunKind === 'raid') {
+        if (ev.type === 'bossDown' && activeRaid) {
+          activeRaid.state = 'victory';
+          for (const objective of activeRaid.objectives) objective.done = true;
+          const result = recordRaidResult(progress.guild, activeRaid);
+          if (result.ok) {
+            progress.guild = result.state;
+            progress.guild = advanceGuildWeek(progress.guild, { raid: true, bosses: 1 });
+            saveProgress();
+            showToast(activeRaid.practice ? 'Raid practice selesai.' : `RAID CLEAR — ${result.reward || 'reward tercatat'}.`, 3000);
+          }
+        }
       } else if (activeRunKind === 'hack') {
         // Isolated testing session: deliberately no progression side effects.
       } else if (activeRunKind === 'fallen') {
@@ -11221,7 +14833,10 @@ function desiredTrack() {
   if (menuView === 'fallen') return 'lastvigil';
   if (menuView === 'crusadeMenu') return 'hearth';
   if (menuView === 'crusade') return 'cinderworks';
+  if (menuView === 'eclipse') return 'forgotten';
   if (started && !spectating && menuView === 'none') {
+    if ((activeRunKind === 'eclipse' || activeRunKind === 'raid') && game.room) return game.boss && game.state === 'playing' ? 'bossJudge' : (game.room.music || 'forgotten');
+    if (activeRunKind === 'godfall' && game.room) return game.boss && game.state === 'playing' ? 'bossJudge' : (game.room.music || 'lastvigil');
     if (game.state === 'victory') {
       if (activeRunKind === 'fairy' && game.roomIndex >= FAIRY_ROOM_START) return 'celebration';
       return 'victory';
@@ -11316,6 +14931,14 @@ function frame(now) {
     renderGate = now;
   }
 
+  framePerf.sample(raw * 1000, performance.memory ? performance.memory.usedJSHeapSize / 1048576 : 0);
+
+  // Scary Mode 2.0: events, presence, and difficulty sync. Never runs in menus.
+  if (started && !paused && menuView === 'none') horrorTick(raw);
+  if (started && !paused && menuView === 'none') dreadTick(raw);
+  veilTick(raw);
+  eternalTick(raw);
+
   fpsAccum += raw;
   fpsFrames += 1;
   if (fpsAccum >= 0.5) {
@@ -11359,6 +14982,11 @@ function frame(now) {
 
   pollGamepad();
   syncMusic(raw);
+  scareDirector?.tick(Math.min(raw, 0.1));
+  if (debugOpen && now - debugPanelGate > 250) {
+    debugPanelGate = now;
+    buildDebugPanels();
+  }
   if (activeRunKind === 'fallen' && started && !fallenEndingOpen) updateFallenHud();
   if (activeRunKind === 'crusade' && started && !crusadeClearOpen) updateCrusadeHud();
 
@@ -11398,7 +15026,7 @@ function frame(now) {
     if (peekDir !== 0) peekOffset = clamp(peekOffset + peekDir * 330 * raw, -WORLD_W, WORLD_W);
     renderer.render(spectateGame, { spectate: true, cameraX: spectateCamera() });
   } else {
-    if (started && !paused && !shopOpen && !mapOpen && !codexOpen && !inventoryOpen && !dialogueOpen && !settingsOpen && !prologueActive && !cutsceneActive && !labRewardsOpen && !labSummaryOpen && !labGuestMode && !coopGuestMode && menuView === 'none') {
+    if (started && !paused && !shopOpen && !hunterShopOpen && !mapOpen && !codexOpen && !inventoryOpen && !dialogueOpen && !settingsOpen && !prologueActive && !cutsceneActive && !labRewardsOpen && !labSummaryOpen && !labGuestMode && !coopGuestMode && menuView === 'none') {
       // Speedrun multiplies the clock, not the timestep: the simulation still
       // advances in 1/120 s slices, just more of them per rendered frame.
       const speedScale = activeRunKind === 'speedrun' && speedrunRun ? speedrunRun.multiplier : 1;
@@ -11430,7 +15058,10 @@ function frame(now) {
     const menuCoversGame = !started && !prologueActive && !cutsceneActive && menuView !== 'none';
     if (!menuCoversGame || now - menuRenderGate >= 1000 / 20 - 0.6) {
       menuRenderGate = menuCoversGame ? now : 0;
-      renderer.render(game);
+      renderer.render(game, { scare: scareDirector?.active || null, aiDebug: aiDebugOpen, horror: horrorRenderLayer(), dread: dreadRenderLayer() });
+      if ((activeRunKind === 'veil' || activeRunKind === 'eternal') && veilController) {
+        drawVeilAtmosphere(renderer.ctx, veilRenderLayer(), renderer.canvas.width, renderer.canvas.height, renderer.dpr);
+      }
     }
     if (mapOpen) mapView.draw(now / 1000);
 
@@ -11440,10 +15071,34 @@ function frame(now) {
 
     if (menuView === 'mode3d' && game3D) {
       game3D.update(raw, input3D);
+      drain3DHorrorEvents();
+      // Position the listener at the live camera and play world effects through
+      // HRTF panners when spatial audio is enabled.
+      {
+        const cam3D = game3D.camera;
+        const forwardX = cam3D.targetX - cam3D.x;
+        const forwardY = cam3D.targetY - cam3D.y;
+        const forwardZ = cam3D.targetZ - cam3D.z;
+        const forwardLength = Math.hypot(forwardX, forwardY, forwardZ) || 1;
+        audio.setListener(
+          { x: cam3D.x, y: cam3D.y, z: cam3D.z },
+          { x: forwardX / forwardLength, y: forwardY / forwardLength, z: forwardZ / forwardLength },
+        );
+        for (const soundEvent of game3D.drainSounds()) {
+          audio.playAt(soundEvent.type, { x: soundEvent.x, y: soundEvent.y, z: soundEvent.z });
+        }
+      }
       const canvas3D = $('canvas-3d');
       if (canvas3D) {
         const ctx3D = canvas3D.getContext('2d');
-        if (ctx3D) render3D(ctx3D, game3D);
+        if (ctx3D) {
+          render3D(ctx3D, game3D);
+          // Scary Mode presents in 3D too: same effect data, camera-aware layer.
+          const horror3D = horrorRenderLayer();
+          if (horror3D) renderer.drawHorrorAtmosphere(ctx3D, horror3D, canvas3D.width, canvas3D.height);
+          const scare3D = scareDirector?.active;
+          if (scare3D) renderer.drawScareOverlay(ctx3D, scare3D, canvas3D.width, canvas3D.height);
+        }
       }
       input3D.jumpJustPressed = false;
       input3D.attackJustPressed = false;
@@ -11920,6 +15575,7 @@ function beginFallenRun(roomIndex, run) {
   game.events.length = 0;
   started = true;
   paused = false;
+  hunterShopOpen = false;
   shopOpen = false;
   mapOpen = false;
   codexOpen = false;
@@ -12530,6 +16186,7 @@ function beginCrusadeRun(roomIndex, run) {
   game.events.length = 0;
   started = true;
   paused = false;
+  hunterShopOpen = false;
   shopOpen = false;
   mapOpen = false;
   codexOpen = false;
@@ -12683,6 +16340,595 @@ window.addEventListener('keydown', crusadeKeydown);
 
 // ── debug hooks (used by automated smoke tests) ─────────────────────────
 window.__ashen = {
+  get secrets() {
+    return {
+      state: JSON.parse(JSON.stringify(secretsState)),
+      summary: secretSummary(secretsState),
+      mode: currentSecretMode(),
+      levelRunes: SECRET_LEVEL_RUNES.length,
+      modes: SECRET_MODE_KEYS.length,
+      rune: game.secretRune ? { ...game.secretRune } : null,
+    };
+  },
+  get secretSpots() {
+    return SECRET_LEVEL_RUNES.map((rune) => ({ ...rune }));
+  },
+  get secretSequence() {
+    return SECRET_SEQUENCE.slice();
+  },
+  claimSecret(id) {
+    const result = recordSecret(secretsState, id);
+    if (result.ok) { secretsState = result.state; saveSecretsState(); }
+    return result;
+  },
+  get creditScene() {
+    return {
+      open: creditSceneOpen,
+      arc: creditSceneCurrent?.id || null,
+      title: creditSceneCurrent?.title || null,
+      roles: creditSceneCurrent?.roles?.map((entry) => ({ ...entry })) || [],
+    };
+  },
+  get creditArcs() {
+    return CREDIT_ARCS.map((arc) => ({ id: arc.id, numeral: arc.numeral, title: arc.title, bosses: JSON.parse(JSON.stringify(arc.bosses)) }));
+  },
+  get creditDebug() {
+    return {
+      lastEvent: lastCreditEvent ? { ...lastCreditEvent } : null,
+      lastAttempt: lastCreditAttempt ? { ...lastCreditAttempt } : null,
+      pendingTimer: !!creditSceneDelayTimer,
+      open: creditSceneOpen,
+      started,
+      menuView,
+      runKind: activeRunKind,
+      gameState: game.state,
+    };
+  },
+  creditArcFor(runKind, kind) {
+    const arc = creditArcFor(runKind, kind);
+    return arc ? { id: arc.id, numeral: arc.numeral, title: arc.title } : null;
+  },
+  openCreditScene(arcId = 'arc1') {
+    return openCreditScene(arcId);
+  },
+  closeCreditScene,
+  get veil() {
+    return veilDebugState();
+  },
+  get veilStages() {
+    return VEIL_STAGES.map((stage) => ({ id: stage.id, chapter: stage.chapter, name: stage.name, room: stage.room, enemies: 20, elite: 1 }));
+  },
+  get veilBosses() {
+    return VEIL_BOSSES.map((boss) => ({ id: boss.id, name: boss.name, phases: boss.maxPhases }));
+  },
+  get veilChapters() {
+    return VEIL_CHAPTERS.map((chapter) => ({ id: chapter.id, name: chapter.name, boss: chapter.boss }));
+  },
+  get veilGhosts() {
+    return GHOSTS.map((ghost) => ({ id: ghost.id, name: ghost.name, classification: ghost.classification, rarity: ghost.rarity, secret: ghost.secret, evidence: ghost.requiredEvidence.slice() }));
+  },
+  get veilTabs() {
+    return VEIL_TABS.slice();
+  },
+  get veilFacilities() {
+    return VEIL_FACILITIES.slice();
+  },
+  get veilAchievements() {
+    return VEIL_ACHIEVEMENTS.slice();
+  },
+  get veilSettings() {
+    return veilSettings();
+  },
+  get eternal() {
+    const controller = ensureEternal();
+    return { ...controller.snapshot(), tab: eternalTab, runKind: activeRunKind, settings: eternalSettings(), stages: ETERNAL_STAGES.length, bosses: ETERNAL_BOSSES.length };
+  },
+  get eternalSettings() {
+    return eternalSettings();
+  },
+  get eternalChapters() {
+    return ETERNAL_CHAPTERS.slice();
+  },
+  get eternalStages() {
+    return ETERNAL_STAGES.slice();
+  },
+  get eternalBosses() {
+    return ETERNAL_BOSSES.slice();
+  },
+  get eternalEquipment() {
+    return ETERNAL_EQUIPMENT.slice();
+  },
+  get eternalHuntVariants() {
+    return HUNT_VARIANTS.slice();
+  },
+  get eternalWorldEvents() {
+    return WORLD_EVENTS.slice();
+  },
+  get eternalRankMilestones() {
+    return INDEX_RANK_MILESTONES.slice();
+  },
+  showVeil: openVeil,
+  openVeil,
+  closeVeil,
+  buildVeilScreen,
+  setVeilTab,
+  startVeilStage,
+  startVeilBoss,
+  veilTick(dt = 1 / 60) {
+    return veilTick(dt);
+  },
+  veilRecover(amount = 20) {
+    if (!veilController) return null;
+    veilController.sanity.recover(amount, 'events');
+    veilController.save.sanity.value = veilController.sanity.value;
+    return veilController.sanity.snapshot();
+  },
+  veilSpawnGhost(kind) {
+    if (activeRunKind !== 'veil') return null;
+    const ghost = game.spawnGhost(kind, Math.max(80, game.player.x + 260));
+    if (ghost) veilController?.witness(kind);
+    return ghost;
+  },
+  veilCompleteBoss() {
+    return completeVeilBoss();
+  },
+  veilEvidence(kind, type) {
+    const result = veilController?.evidence(kind, type);
+    if (result?.ok) { ensureArchive().observeGhost(kind); saveArchiveProfile(); saveVeilProfile(); }
+    return result;
+  },
+  veilDocument(kind) {
+    const result = veilController?.document(kind);
+    if (result) { if (result.ok) ensureArchive().observeGhost(kind); saveArchiveProfile(); saveVeilProfile(); }
+    return result;
+  },
+  veilClaimMission(id) {
+    return claimVeilMission(id);
+  },
+  veilSolveCase() {
+    return solveVeilCase();
+  },
+  veilSave: saveVeilProfile,
+  veilSetSanity(value) {
+    const controller = ensureVeil();
+    controller.sanity.setValue(Number(value) || 0);
+    controller.save.sanity.value = controller.sanity.value;
+    veilHudCache = '';
+    updateVeilHud();
+    return controller.sanity.snapshot();
+  },
+  veilSetZone(id) {
+    const controller = ensureVeil();
+    controller.sanity.setZone(id);
+    controller.save.sanity.zone = controller.sanity.zone;
+    return controller.sanity.snapshot();
+  },
+  veilUnlockAll() {
+    const controller = ensureVeil();
+    controller.save.campaign.completedStages = VEIL_STAGES.map((stage) => stage.id);
+    controller.save.campaign.bossClears = VEIL_BOSSES.filter((boss) => !boss.final).map((boss) => boss.id);
+    controller.save.campaign.chapterClears = VEIL_CHAPTERS.map((chapter) => chapter.id);
+    saveVeilProfile();
+    return controller.save.campaign;
+  },
+  veilSetSetting(path, value) {
+    return applyVeilSetting(path, value);
+  },
+  showEternal: openEternal,
+  openEternal,
+  closeEternal,
+  buildEternalScreen,
+  setEternalTab,
+  startEternalStage,
+  startEternalBoss,
+  startEternalHunt,
+  eternalTick(dt = 1 / 60) { return eternalTick(dt); },
+  eternalCompleteBoss() { return completeEternalBoss(); },
+  eternalUnlockAll() {
+    const controller = ensureEternal();
+    controller.unlock();
+    controller.save.campaign.completedStages = ETERNAL_STAGES.map((stage) => stage.id);
+    controller.save.campaign.bossClears = ETERNAL_BOSSES.filter((boss) => !boss.final).map((boss) => boss.id);
+    controller.save.campaign.chapterClears = ETERNAL_CHAPTERS.map((chapter) => chapter.id);
+    saveEternalProfile();
+    buildEternalScreen();
+    return controller.save.campaign;
+  },
+  eternalUnlockFinal() {
+    const controller = ensureEternal();
+    controller.unlock();
+    controller.save.campaign.completedStages = ETERNAL_STAGES.map((stage) => stage.id);
+    controller.save.campaign.bossClears = ETERNAL_BOSSES.filter((boss) => !boss.final).map((boss) => boss.id);
+    controller.save.campaign.chapterClears = ETERNAL_CHAPTERS.map((chapter) => chapter.id);
+    saveEternalProfile();
+    buildEternalScreen();
+    return controller.save.campaign;
+  },
+  eternalSetSetting(path, value) {
+    return applyEternalSetting(path, value);
+  },
+  eternalSetSanity(value) {
+    const controller = ensureVeil();
+    controller.sanity.setValue(Number(value) || 0);
+    veilHudCache = '';
+    updateVeilHud();
+    return controller.sanity.snapshot();
+  },
+  eternalSetExposure(value) {
+    const controller = ensureVeil();
+    controller.sanity.exposure = Math.max(0, Math.min(100, Number(value) || 0));
+    veilHudCache = '';
+    return controller.sanity.snapshot();
+  },
+  eternalSetFocus(value) {
+    const controller = ensureVeil();
+    controller.sanity.focus = Math.max(0, Math.min(100, Number(value) || 0));
+    veilHudCache = '';
+    return controller.sanity.snapshot();
+  },
+  eternalGenerateCase(seed, options = {}) {
+    const result = ensureEternal().generateCase({ seed, ...options });
+    saveEternalProfile();
+    return result;
+  },
+  eternalCompleteCase(id, evidence = 99) {
+    const controller = ensureEternal();
+    const mission = controller.save.investigations.generated.find((m) => m.id === id);
+    const result = controller.completeCase(id, { steps: mission?.steps || [], evidence });
+    if (result.ok) {
+      ensureArchive().recordCase({ stageId: controller.activeStage });
+      saveArchiveProfile();
+      saveEternalProfile();
+    }
+    return result;
+  },
+  get archive() {
+    const controller = ensureArchive();
+    return { ...controller.dashboard(), tab: archiveTab, arc: archiveArc, stage: archiveStageId, save: controller.toJSON(), statuses: Object.fromEntries(ARCHIVE_STAGES.map((s) => [s.id, controller.stageStatus(s.id)])) };
+  },
+  get archiveData() {
+    return { arcs: ARCHIVE_ARCS, chapters: ARCHIVE_CHAPTERS, stages: ARCHIVE_STAGES, bosses: ARCHIVE_BOSSES, ghosts: GHOSTS.length, jumpscares: JUMPSCARE_EVENTS, tools: ARCHIVE_TOOLS, achievements: ARCHIVE_ACHIEVEMENTS };
+  },
+  openArchive,
+  closeArchive,
+  buildArchiveScreen,
+  setArchiveTab,
+  archivePreview(stageId) { return openArchivePreview(stageId); },
+  closeArchivePreview,
+  archiveCheck(stageId) { archiveStageId = stageId; archiveTab = 'checker'; const result = ensureArchive().checkStage(stageId); buildArchiveScreen(); return result; },
+  archiveDocGhost(id) { return archiveGhostAction('document', id); },
+  archiveDocScare(id) { return archiveDocumentScare(id); },
+  archiveCapture(id) { const result = ensureArchive().captureGhost(id); if (result.ok) { saveArchiveProfile(); saveVeilProfile(); buildArchiveScreen(); } return result; },
+  archivePrepare(id) { archivePrepareGhost = id; archiveTab = 'equipment'; buildArchiveScreen(); return ensureArchive().prepare(id); },
+  archiveSave: saveArchiveProfile,
+  eternalUpgrade(id) {
+    const result = ensureEternal().upgradeEquipment(id);
+    if (result.ok) saveEternalProfile();
+    return result;
+  },
+  eternalEvent(id) {
+    const controller = ensureEternal();
+    const result = controller.activateEvent(id, Date.now());
+    return result;
+  },
+  eternalEventStep(index) {
+    return ensureEternal().contributeEvent(index);
+  },
+  eternalEventComplete() {
+    const result = ensureEternal().completeEvent();
+    if (result.ok) saveEternalProfile();
+    return result;
+  },
+  eternalCreateExpedition(options = {}) {
+    const session = ensureEternal().createExpedition(options);
+    saveEternalProfile();
+    return session;
+  },
+  eternalJoinExpedition(sessionId, playerId = 'guest', role = 'archivist') {
+    const result = ensureEternal().joinExpedition(sessionId, playerId, role);
+    if (result.ok) saveEternalProfile();
+    return result;
+  },
+  eternalGrant(currency, amount) {
+    const controller = ensureVeil();
+    const result = controller.progression.award(currency, amount, `debug:${currency}:${Date.now()}`);
+    saveVeilProfile();
+    return result;
+  },
+  eternalCoopTask(sessionId, taskId) {
+    return ensureEternal().completeExpeditionTask(sessionId, taskId);
+  },
+  eternalCoopComplete(sessionId) {
+    const result = ensureEternal().completeExpedition(sessionId);
+    if (result.ok) saveEternalProfile();
+    return result;
+  },
+  eternalClaimRanks() {
+    const result = ensureEternal().claimRankRewards();
+    saveEternalProfile();
+    return result;
+  },
+  eternalProfile() {
+    return ensureEternal().dashboard();
+  },
+  eternalSave: saveEternalProfile,
+  get gfx3D() {
+    return gfx3DStatus();
+  },
+  get mode3dContent() {
+    return content3DSummary();
+  },
+  get horror3D() {
+    return {
+      save: horror3D,
+      summary: horror3DSummary(horror3D),
+      sites: HORROR3D_SITES.map((entry) => ({ id: entry.id, name: entry.name, level: entry.level, difficulty: entry.difficulty, building: entry.building })),
+      snapshot: game3D?.horrorSnapshot() || null,
+    };
+  },
+  get horror3DSnapshot() {
+    return game3D?.horrorSnapshot() || null;
+  },
+  get game3D() {
+    return game3D;
+  },
+  horror3DCollect(index = 0) {
+    const h = game3D?.horror;
+    if (!h || !h.active) return null;
+    const echo = h.site.echoes[index];
+    if (!echo) return null;
+    game3D.player.x = echo.x;
+    game3D.player.z = echo.z;
+    game3D.update(1 / 60, { interactJustPressed: true });
+    drain3DHorrorEvents();
+    return game3D.horrorSnapshot();
+  },
+  horror3DExit() {
+    const h = game3D?.horror;
+    if (!h || !h.active) return null;
+    game3D.player.x = h.site.exit.x;
+    game3D.player.z = h.site.exit.z - 10;
+    game3D.update(1 / 60, {});
+    drain3DHorrorEvents();
+    return game3D.horrorSnapshot();
+  },
+  render3DFrame() {
+    const canvas = $('canvas-3d');
+    const ctx = canvas?.getContext('2d');
+    if (!ctx || !game3D) return null;
+    render3D(ctx, game3D);
+    return gfx3DStatus();
+  },
+  start3DHorror,
+  restart3DHorror,
+  buildHorror3DPanel,
+  get mode3dAreas() {
+    return game3D
+      ? {
+          area: game3D.areaId,
+          relics: [...game3D.relics],
+          echoes: game3D.echoes,
+          modifiers: { ...game3D.modifiers },
+          vault: game3D.vault ? { ...game3D.vault } : null,
+          enemies: game3D.enemies.length,
+          elite: game3D.elite ? game3D.elite.name : null,
+          boss: game3D.boss ? game3D.boss.name : null,
+        }
+      : null;
+  },
+  setArea3D(areaId) {
+    return game3D ? game3D.setArea(areaId) : false;
+  },
+  pickRelic3D(relicId) {
+    return game3D ? game3D.pickRelic(relicId) : false;
+  },
+  get capabilities() {
+    return detectCapabilities();
+  },
+  get scary() {
+    return scareDirector ? scareDirector.snapshot() : null;
+  },
+  get scary2() {
+    return horrorPresentation
+      ? {
+        enabled: horrorPresentation.enabled,
+        difficulty: horrorPresentation.difficulty,
+        antiJumpscare: horrorPresentation.antiJumpscare,
+        suppression: horrorPresentation.suppression.slice(),
+        jumpscares: { ...horrorPresentation.jumpscares },
+        visual: { ...horrorPresentation.visual },
+        audio: { ...horrorPresentation.audio },
+        gameplay: { ...horrorPresentation.gameplay },
+        enemy: { ...horrorPresentation.enemy },
+      }
+      : null;
+  },
+  get horror() {
+    return {
+      enabled: horrorSettings().enabled,
+      difficulty: horrorSettings().difficulty,
+      antiJumpscare: horrorSettings().antiJumpscare,
+      presentation: horrorPresentation,
+      director: horrorDirector ? horrorDirector.snapshot() : null,
+      journal: horrorJournal.snapshot(),
+      ledger: horrorLedger.snapshot(),
+      presence: horrorPresence ? { ...horrorPresence } : null,
+      events: horrorEventLayer,
+      quickToggle: document.getElementById('btn-pause-anti')?.textContent || null,
+    };
+  },
+  get horrorEvents() {
+    return HORROR_EVENT_LIST.map((entry) => ({ id: entry.id, label: entry.label, duration: entry.duration, cooldown: entry.cooldown, antiJumpscare: entry.antiJumpscare, minDifficulty: entry.minDifficulty, requires: entry.requires.slice() }));
+  },
+  get horrorJournal() {
+    return horrorJournal.snapshot();
+  },
+  get horrorTabs() {
+    return HORROR_TABS.map((tab) => ({ ...tab, count: horrorSettingsForTab(tab.id).length }));
+  },
+  get scaryEnemies() {
+    return Object.values(SCARY_ENEMIES).map((entry) => ({ id: entry.id, name: entry.name, tactic: entry.tactic, hp: entry.hp, damage: entry.damage }));
+  },
+  get dread() {
+    return {
+      settings: dreadSettings(),
+      presentation: resolveDreadPresentation(dreadSettings(), settings.scary || {}),
+      environment: game.dreadEnvironmentId,
+      environmentLabel: game.dreadEnv ? game.dreadEnv.label : null,
+      journal: dreadJournal.snapshot(),
+      events: dreadDirector.snapshot(),
+      awareness: dreadAwareness.snapshot(),
+      boss: game.boss && game.boss.dreadBoss ? { kind: game.boss.dreadBoss, phase: game.boss.phase, hp: game.boss.hp, maxHp: game.boss.maxHp } : null,
+      mode: dreadActiveMode,
+      equipment: dreadEquipmentLoadout.slice(),
+      layer: { ...dreadEventLayer },
+    };
+  },
+  get dreadEnvironments() {
+    return DREAD_ENVIRONMENT_LIST.map((env) => ({ id: env.id, label: env.label, mechanics: env.mechanics.slice(), ceilings: env.ceilings.length, platforms: env.room.platforms.length, props3D: env.threeD.props.length }));
+  },
+  get dreadEnemies() {
+    return UNNATURAL_LIST.map((entry) => ({ id: entry.id, name: entry.name, tactic: entry.tactic, sight: entry.sightRange, cone: entry.coneDeg, hearing: entry.hearingRange, memory: entry.memoryTime }));
+  },
+  get dreadBosses() {
+    return DREAD_BOSS_LIST.map((entry) => ({ id: entry.id, name: entry.name, phases: entry.phases.length, arena: { ...entry.arena } }));
+  },
+  get dreadModes() {
+    return DREAD_MODE_LIST.map((entry) => ({ id: entry.id, label: entry.label, objectives: entry.objectives.map((goal) => ({ ...goal })), reward: entry.reward, progress: dreadModeProgress(entry.id, dreadModeState(entry.id)) }));
+  },
+  get dreadEquipment() {
+    return DREAD_EQUIPMENT.map((entry) => ({ ...entry }));
+  },
+  get dreadJournal2() {
+    return dreadJournal.snapshot();
+  },
+  get dreadTabs() {
+    return DREAD_VIEW_TABS.map((tab) => ({ ...tab }));
+  },
+  openDread,
+  closeDread,
+  enterDread,
+  startDreadBoss,
+  playDreadMode,
+  buildDreadScreen,
+  setDreadPath,
+  resetDreadSettings,
+  toggleDreadEquipment,
+  connectDreadClues,
+  groundAwareness() {
+    return dreadAwareness.ground();
+  },
+  setAwareness(value) {
+    dreadAwareness.value = Math.max(0, Math.min(100, Number(value) || 0));
+    return dreadAwareness.snapshot();
+  },
+  spawnUnnatural(kind, x = 500) {
+    const enemy = game.spawnUnnatural(kind, x);
+    return enemy ? { kind: enemy.unnaturalKind, name: enemy.unnaturalName, hp: enemy.hp, tactic: enemy.unnaturalTactic, surface: enemy.surface } : null;
+  },
+  dreadEvent(id, ctx = {}) {
+    return dreadDirector.tryStart(id, { ...dreadContext(), ...ctx });
+  },
+  cancelDreadEvent(reason = 'manual') {
+    return dreadDirector.active.map((entry) => dreadDirector.cancel(entry.id, reason));
+  },
+  dreadTick(dt = 1 / 60) {
+    dreadTick(dt);
+    return { events: dreadDirector.snapshot(), awareness: dreadAwareness.snapshot(), journal: dreadJournal.progress() };
+  },
+  recordDread(kind, id) {
+    const ok = kind === 'mode' ? dreadJournal.recordMode(id)
+      : kind === 'boss' ? dreadJournal.recordBoss(id)
+        : kind === 'area' ? dreadJournal.completeArea(id)
+          : kind === 'entry' ? dreadJournal.discover(id).ok
+            : false;
+    if (ok) { dreadJournal.grantRewards(); saveDreadState(); }
+    return ok;
+  },
+  recordDreadObjective(modeId, objectiveId, amount = 1) {
+    return recordDreadObjective(modeId, objectiveId, amount);
+  },
+  completeDreadMode,
+  openScary,
+  closeScary,
+  startScaryRun,
+  buildScaryScreen,
+  setHorror(partial = {}) {
+    settings.scary = { ...settings.scary, ...(partial || {}) };
+    applySettings();
+    syncHorror();
+    if (menuView === 'scary') buildScaryScreen();
+    return horrorSettings();
+  },
+  setHorrorPath,
+  startHorrorEvent(id, ctx = {}) {
+    if (!horrorDirector) ensureHorrorDirector();
+    const started = horrorDirector.tryStart(id, { ...horrorContext(), ...ctx });
+    return typeof started === 'string'
+      ? started
+      : { id: started.id, phase: started.phase, suppressed: started.suppressed, antiJumpscare: started.antiJumpscare };
+  },
+  cancelHorrorEvent(reason = 'manual') {
+    const ended = horrorDirector ? horrorDirector.cancel(reason) : null;
+    return ended ? { id: ended.id, reason: ended.reason } : null;
+  },
+  toggleAntiJumpscare,
+  previewHorrorAudio,
+  previewHorrorVisual,
+  resetHorrorSettings,
+  spawnScaryEnemy(kind, x = 400) {
+    const enemy = game.spawnScaryEnemy(kind, x);
+    return enemy ? { kind: enemy.scaryKind, name: enemy.scaryName, hp: enemy.hp, x: Math.round(enemy.x) } : null;
+  },
+  horrorTick(dt = 1 / 60) {
+    horrorTick(dt);
+    return horrorDirector ? horrorDirector.snapshot() : null;
+  },
+  get horrorSettings() {
+    return horrorSettings();
+  },
+  recordHorror(kind, id) {
+    const ok = horrorJournal.record(kind, id);
+    if (ok) {
+      horrorJournal.grantRewards();
+      saveHorrorState();
+    }
+    return ok;
+  },
+  previewScare,
+  setScary(partial = {}) {
+    settings.scary = { ...settings.scary, ...(partial || {}) };
+    applySettings();
+    return scareDirector ? scareDirector.snapshot() : null;
+  },
+  simulateHit(type = 'sentinel', force = false) {
+    game.player.invuln = 0;
+    const before = game.player.hp;
+    const dealt = game.damagePlayer(5, game.player.x + 40, {
+      source: { type, family: type, name: type },
+    });
+    drainEvents();
+    if (force && scareDirector) {
+      const effect = scareDirector.onPlayerHit(
+        { source: { type, family: type, name: type } },
+        { hp: game.player.hp, force: true },
+      );
+      if (effect) audio.playScare(effect);
+      return { dealt, before, after: game.player.hp, forced: !!effect, scary: scareDirector.snapshot() };
+    }
+    return { dealt, before, after: game.player.hp, scary: scareDirector ? scareDirector.snapshot() : null };
+  },
+  openDebug,
+  closeDebug,
+  toggleAiDebug,
+  get aiDebug() {
+    return {
+      open: aiDebugOpen,
+      enemies: game.aiDebug(),
+      boss: game.boss ? bossDebugSnapshot(game.boss) : null,
+      nav: game.nav ? game.nav.snapshot() : null,
+    };
+  },
   get speedrun() {
     return {
       run: speedrunRun ? { ...speedrunRun } : null,
@@ -12845,6 +17091,9 @@ window.__ashen = {
   get shopOpen() {
     return shopOpen;
   },
+  get hunter() {
+    return { ...hunterSummary(hunterState), shopOpen: hunterShopOpen, items: { ...game.player.hunterItems } };
+  },
   get mapOpen() {
     return mapOpen;
   },
@@ -12883,12 +17132,24 @@ window.__ashen = {
   },
   get settings() {
     return {
-      audio: { ...settings.audio },
-      gameplay: { ...settings.gameplay },
+      ...JSON.parse(JSON.stringify(settings)),
       bindings: Object.fromEntries(
         Object.entries(settings.bindings).map(([key, codes]) => [key, [...codes]]),
       ),
     };
+  },
+  get mode3D() {
+    return game3D ? {
+      region: game3D.region,
+      quality: game3D.quality,
+      subMode: game3D.subMode,
+      canvas: { w: $('canvas-3d')?.width, h: $('canvas-3d')?.height },
+      player: { hp: game3D.player.hp, stamina: game3D.player.stamina },
+      enemies: game3D.enemies.filter((enemy) => enemy.hp > 0).length,
+    } : null;
+  },
+  get difficulty() {
+    return { active: settings.gameplay.difficulty, engine: game.campaignDifficulty, config: game.campaignConfig };
   },
   get musicTrack() {
     return desiredMusic;
@@ -12907,6 +17168,10 @@ window.__ashen = {
   },
   showSettings,
   closeSettings,
+  showDifficulty: () => showSettings('difficulty'),
+  showMode3D,
+  openHudLayout,
+  applyHudLayout,
   buildSettings,
   applySettings,
   showCharacter,
@@ -12942,6 +17207,24 @@ window.__ashen = {
   showRealms() { realmsUI.showRealms(); },
   showStageAccess(arcId) { realmsUI.showStageAccess(arcId); },
   showAstral() { realmsUI.showAstral(); },
+  showEclipse(tab) { showEclipse(tab); },
+  startEclipseStage,
+  startEclipseGodfall,
+  startEclipseRaid,
+  get eclipse() { return progress.eclipse; },
+  get godfall() { return progress.godfall; },
+  get guild() { return progress.guild; },
+  get awakening() { return progress.awakening; },
+  get eclipseRuntime() { return { room: activeEclipseRoom, godfallFloor: activeGodfallFloor, godfallRun, raid: activeRaid }; },
+  get performance() { return framePerf.summary(); },
+  get runtimeErrors() { return runtimeReporter.summary(); },
+  get releaseGate() { return releaseChecklist(); },
+  grantAwakeningMastery(classId, amount) {
+    grantMastery(progress.awakening, classId, amount);
+    saveProgress();
+    eclipseUI.render();
+    return progress.awakening.mastery[classId] || 0;
+  },
   startHackStage,
   exitHackStage,
   hackTool,
@@ -13298,6 +17581,16 @@ window.__ashen = {
   openShop,
   closeShop,
   buyShopItem,
+  showHunterShop: openHunterShop,
+  closeHunterShop,
+  buyHunterItem,
+  syncHunterFromGame,
+  giveHunterMarks(n) {
+    hunterReward(hunterState, n, Date.now());
+    saveHunterState();
+    if (hunterShopOpen) buildHunterShop();
+    return hunterState.marks;
+  },
   respawnAtCheckpoint() {
     const ok = game.respawnAtCheckpoint();
     if (ok) {
@@ -13382,6 +17675,8 @@ window.__ashen = {
       sigils: [...game.player.sigils],
       rituals: { ...game.player.rituals },
       consumables: { ...game.player.consumables },
+      hunterItems: { ...game.player.hunterItems },
+      hunterWard: game.player.spiritWardTimer,
       quickItem: game.quickItemInfo(),
       checkpointRoom: game.checkpointRoom,
       blessings: [...game.blessings],
@@ -13430,6 +17725,7 @@ window.__ashen = {
 if (ascendProgress(progress).ok) saveProgress();
 updateMenuProgress();
 buildLevelCards();
+buildHorror3DPanel();
 applyCharacterToGame();
 applySettings();
 if (progress.crusade?.cleared) {

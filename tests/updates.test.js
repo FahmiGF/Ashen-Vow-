@@ -28,23 +28,19 @@ test('update log is complete and ordered newest first', () => {
   }
 });
 
-test('the latest update documents Infinite Realms and Arc VI', () => {
-  const latest = LATEST_UPDATE;
-  assert.equal(latest.version, '0.17.0');
+test('the Settings 2.0 and 3D visual overhaul release remains documented', () => {
+  const latest = UPDATE_LOG.find((entry) => entry.version === '0.19.0');
+  assert.ok(latest, 'the v0.19.0 entry is retained');
   const text = [latest.title, latest.summary, ...latest.highlights, ...(latest.fixes || [])].join(' ');
-  assert.match(text, /Infinite Realms/i);
-  assert.match(text, /Astral Dominion/i);
-  assert.match(text, /Stage Access/i);
-  assert.match(text, /Admin Control Center/i);
-  assert.match(text, /Riftfall/i);
-  assert.match(text, /HACK/i);
-  assert.match(text, /The Architect of Eternity/i);
-  assert.match(text, /Enam mode baru/i);
-  assert.match(text, /progress\.realms/);
-  assert.match(text, /progress\.astral/);
-  assert.match(text, /Arc VI/i);
-  assert.match(text, /400 test/i);
-  assert.match(text, /WebSocket zero-dependency/i);
+  assert.match(text, /Settings 2\.0/i);
+  assert.match(text, /14 kategori/i);
+  assert.match(text, /Story, Easy, Normal, Hard, Nightmare, Abyssal/i);
+  assert.match(text, /Audio 2\.0/i);
+  assert.match(text, /HUD Layout Editor/i);
+  assert.match(text, /Thornveil Forest/i);
+  assert.match(text, /Elder Yggvar/i);
+  assert.match(text, /420 test/i);
+  assert.match(text, /ashen-vow-settings-v1/i);
 });
 
 test('the Fivefold Trials, Puzzle Adventure and Riftwar release remains documented', () => {
@@ -240,4 +236,114 @@ test('the update log documents the Echoes of the Forgotten World expansion', () 
   assert.match(text, /Ashen Chronicle/i);
   assert.match(text, /Jurnal Koleksi/i);
   assert.match(text, /New Game Plus/i);
+});
+
+test('Update XIV remains documented after the archive update', () => {
+  const latest = UPDATE_LOG.find((item) => item.version === '0.25.0');
+  assert.ok(latest);
+  const text = [latest.title, latest.summary, ...latest.highlights, ...(latest.fixes || [])].join(' ');
+  for (const pattern of [/Eternal Night/i, /tujuh bab|7 bab/i, /35 tahap|tiga puluh lima/i, /8 bos|delapan bos/i, /First Forgotten/i, /Sanity 3\.0/i, /Veil Exposure/i, /Mental Focus/i, /72 entri|72 entitas/i, /Ravenant|Revenant/i, /procedural|prosedural/i, /Spectral Pursuit/i, /Workshop 2\.0/i, /world event/i, /ekspedisi|expedition/i, /ashen-vow-eternal-v1/, /20 musuh/i, /1 elite/i]) {
+    assert.match(text, pattern);
+  }
+});
+
+test('Update XV remains documented after the Unwritten Wing expansion', () => {
+  const latest = UPDATE_LOG.find((item) => item.version === '0.26.0');
+  assert.ok(latest);
+  const text = [latest.title, latest.summary, ...latest.highlights, ...(latest.fixes || [])].join(' ');
+  for (const pattern of [/Stage Archive/i, /65 tahap/i, /Level Checker/i, /Sneak Peek/i, /Ghost Index 3\.0/i, /72 entri/i, /Jumpscare Index/i, /27 tool/i, /30 event|30 peristiwa/i, /ashen-vow-archive-v1/i, /Anti-Jumpscare/i, /Missing Entries/i]) {
+    assert.match(text, pattern);
+  }
+});
+
+test('the latest update documents the new ghosts and jumpscares', () => {
+  const latest = LATEST_UPDATE;
+  assert.equal(latest.version, '0.31.0');
+  const text = [latest.title, latest.summary, ...latest.highlights, ...(latest.fixes || [])].join(' ');
+  for (const pattern of [/Mourning Choir/i, /empat roh|4 roh|delapan roh|8 roh/i, /Weeping Mother/i, /Mirror Double/i, /Lantern Eater/i, /Drowned Bell/i, /tujuh jumpscare|7 jumpscare/i, /Second Shadow/i, /Glass Twin/i, /Mourning Wake/i, /Dread/i, /17 peristiwa|tujuh belas/i, /Anti-Jumpscare/i, /ashen-vow-horror-v1/i]) {
+    assert.match(text, pattern);
+  }
+});
+
+test('the hunter kit release remains documented', () => {
+  const latest = UPDATE_LOG.find((entry) => entry.version === '0.30.0');
+  assert.ok(latest);
+  const text = [latest.title, latest.summary, ...latest.highlights, ...(latest.fixes || [])].join(' ');
+  for (const pattern of [/Hunter's Kit/i, /lima alat|5 alat|Lima alat/i, /Toko Pemburu/i, /Tanda Pemburu/i, /stun/i, /Granat Asap|smoke/i, /Peluru Roh|spirit/i, /Jimat Penjaga|ward/i, /ashen-vow-hunter-v1/i, /Scary Mode/i, /Dread/i, /Veil/i, /Eternal/i, /item cepat/i]) {
+    assert.match(text, pattern);
+  }
+});
+
+test('the credit scene and hidden secret release remains documented', () => {
+  const latest = UPDATE_LOG.find((entry) => entry.version === '0.29.0');
+  assert.ok(latest);
+  const text = [latest.title, latest.summary, ...latest.highlights, ...(latest.fixes || [])].join(' ');
+  for (const pattern of [/Credit Scene/i, /11 arc|sebelas arc/i, /Sealius/i, /Technical Lead/i, /Artist & Designer/i, /ashen-vow-secrets-v1/i, /easter egg|rahasia/i, /tidak ada marker|tidak diberi petunjuk/i, /Speedrun/i, /3D Scary/i, /setiap mode/i, /bossDown/i]) {
+    assert.match(text, pattern);
+  }
+});
+
+test('the 3D Scary Mode release remains documented after the credit update', () => {
+  const latest = UPDATE_LOG.find((item) => item.version === '0.28.0');
+  assert.ok(latest);
+  const text = [latest.title, latest.summary, ...latest.highlights, ...(latest.fixes || [])].join(' ');
+  for (const pattern of [/3D Scary Mode/i, /Blackveil/i, /lima bangunan|5 bangunan/i, /15 fase|lima belas fase/i, /WebGL2/i, /GLB/i, /jumpscare/i, /Anti-Jumpscare/i, /ashen-vow-3dhorror-v1/i, /The Unlit|pemburu/i, /\.glb|horror_manor|horror_lighthouse/i]) {
+    assert.match(text, pattern);
+  }
+});
+
+test('the Unwritten Wing release remains documented after 3D Scary Mode', () => {
+  const latest = UPDATE_LOG.find((item) => item.version === '0.27.0');
+  assert.ok(latest);
+  assert.equal(latest.version, '0.27.0');
+  const text = [latest.title, latest.summary, ...latest.highlights, ...(latest.fixes || [])].join(' ');
+  for (const pattern of [/Unwritten Wing/i, /8 bab|delapan bab/i, /40 tahap/i, /the_unwritten|The Unwritten/i, /4 fase|empat fase/i, /anomaly/i, /80 entitas/i, /13 kategori/i, /38 event|38 peristiwa/i, /30 tool/i, /Visual Distortion/i, /Spatial Shift/i, /Psychic/i, /Resonance Anchor/i, /Memory Loom/i, /Veil Divider/i, /Anti-Jumpscare/i]) {
+    assert.match(text, pattern);
+  }
+});
+
+test('the Veil of the Forgotten release remains documented after Update XV', () => {
+  const entry = UPDATE_LOG.find((item) => item.version === '0.24.0');
+  assert.ok(entry);
+  const text = [entry.title, entry.summary, ...entry.highlights, ...(entry.fixes || [])].join(' ');
+  for (const pattern of [/Veil of the Forgotten/i, /30 tahap/i, /Sanity 2\.0/i, /Ghost Index/i, /ashen-vow-veil-v1/, /Arsitek Tabir/i]) {
+    assert.match(text, pattern);
+  }
+});
+
+test('the v0.23.0 release still documents The Dread Beyond environments, Unnatural enemies and bosses', () => {
+  const entry = UPDATE_LOG.find((item) => item.version === '0.23.0');
+  assert.ok(entry, 'the Update XII release must stay in the log');
+  const text = [entry.title, entry.summary, ...entry.highlights, ...(entry.fixes || [])].join(' ');
+  for (const pattern of [/Dread Beyond/i, /lima lingkungan|5 lingkungan/i, /Unnatural/i, /persepsi/i, /peristiwa/i, /bos horor/i, /Awareness/i, /jurnal/i, /mode/i, /kosmetik/i, /ashen-vow-dread-v1/]) {
+    assert.match(text, pattern);
+  }
+});
+
+test('the Scary Mode 2.0 release still documents difficulty, anti-jumpscare, events and journal', () => {
+  const latest = UPDATE_LOG.find((entry) => entry.version === '0.22.0');
+  assert.ok(latest, 'the Update XI release must stay in the log');
+  assert.equal(latest.version, '0.22.0');
+  const text = [latest.title, latest.summary, ...latest.highlights, ...(latest.fixes || [])].join(' ');
+  for (const pattern of [/Scary Mode/i, /Anti-Jumpscare/i, /kesulitan/i, /peristiwa|event/i, /achievement/i, /jurnal/i, /kabar|kabut/i, /navigasi/i]) {
+    assert.match(text, pattern);
+  }
+});
+
+test('the v0.21.0 release still documents navigation, boss core and Scary Mode v1', () => {
+  const entry = UPDATE_LOG.find((item) => item.version === '0.21.0');
+  assert.ok(entry, 'the Update X release must stay in the log');
+  const text = [entry.title, entry.summary, ...entry.highlights, ...(entry.fixes || [])].join(' ');
+  for (const pattern of [/A\*/i, /state machine/i, /hitbox/i, /fase/i, /Scary Mode/i, /line of sight/i, /cooldown/i, /debug/i]) {
+    assert.match(text, pattern);
+  }
+});
+
+test('the v0.20.0 release still documents the GLB pipeline and the WebGL2 renderer', () => {
+  const entry = UPDATE_LOG.find((item) => item.version === '0.20.0');
+  assert.ok(entry, 'the GLB release must stay in the log');
+  const text = [entry.title, entry.summary, ...entry.highlights, ...(entry.fixes || [])].join(' ');
+  for (const pattern of [/GLB/i, /WebGL2/i, /skin/i, /HDR/i, /anisotropic/i, /HRTF/i, /relik/i, /vault/i, /LOD/i]) {
+    assert.match(text, pattern);
+  }
 });

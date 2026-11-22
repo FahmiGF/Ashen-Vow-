@@ -1,9 +1,9 @@
 {
   "name": "ashen-vow",
-  "version": "0.17.0",
+  "version": "0.31.0",
   "private": true,
   "type": "module",
-  "description": "Ashen Vow v0.17.0 — Infinite Realms (six modes), Arc VI The Astral Dominion, Stage Access with Sneak Peek and isolated HACK testing, server-validated mode rewards, a separate /admin control center with roles and audit logs, plus all previous campaigns, modes and WebSocket co-op",
+  "description": "Ashen Vow v0.31.0 — The Mourning Choir: eight Scary Mode ghosts, seventeen jumpscares, expanded Dread Unnatural, journal achievements, and procedural horror effects",
   "scripts": {
     "start": "node server.js",
     "test": "node --test tests/*.test.js",
@@ -25,6 +25,19 @@
     "smoke:moba": "node tools/moba-smoke.mjs",
     "smoke:wavedefense": "node tools/wavedefense-smoke.mjs",
     "smoke:realms": "node tools/realms-smoke.mjs",
-    "bench:wavedefense": "node tools/wavedefense-bench.mjs"
+    "bench:wavedefense": "node tools/wavedefense-bench.mjs",
+    "smoke:eclipse": "node tools/eclipse-smoke.mjs",
+    "smoke:settings3d": "node tools/settings3d-smoke.mjs",
+    "smoke:updatex": "node tools/updatex-smoke.mjs",
+    "bench:3d": "node tools/bench3d.mjs",
+    "assets:3d": "node tools/export-glb.mjs",
+    "smoke:scary2": "node tools/scary2-smoke.mjs",
+    "smoke:dread": "node tools/dread-smoke.mjs",
+    "smoke:veil": "node tools/veil-smoke.mjs",
+    "smoke:eternal": "node tools/eternal-smoke.mjs",
+    "smoke:archive": "node tools/archive-smoke.mjs",
+    "smoke:horror3d": "node tools/horror3d-smoke.mjs",
+    "smoke:credits": "node tools/credits-smoke.mjs",
+    "smoke:hunter": "node tools/hunter-smoke.mjs"
   }
 }

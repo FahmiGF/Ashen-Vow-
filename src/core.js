@@ -18,6 +18,34 @@ import {
   ATLAS_ABILITY_BY_ID,
 } from './atlas.js';
 import { buildPlatformGraph, BossNavigator } from './boss_pathfinding.js';
+import { buildRoomNav, EnemyBrain } from './ai_nav.js';
+import { HitboxSet } from './boss_core.js';
+import {
+  SCARY_DIFFICULTY_IDS,
+  SCARY_ENEMIES,
+  makeScaryEnemy,
+  scaryDifficultyProfile,
+} from './scary2.js';
+import {
+  DREAD_ENVIRONMENTS,
+  UNNATURAL,
+  makeUnnatural,
+  UnnaturalBrain,
+  DREAD_BOSSES,
+  dreadBossSpawn,
+  DreadBossManager,
+  dreadRoom,
+} from './dread.js';
+import {
+  veilRoom,
+  veilArena,
+  veilStageEnemies,
+  veilBossSpawn,
+  makeGhost,
+  GhostBrain,
+} from './veil.js';
+import { eternalRoom, eternalArena, eternalStageEnemies, eternalBossSpawn } from './eternal.js';
+import { difficultyConfig } from './difficulty.js';
 import {
   COURT_ROOMS,
   COURT_ENEMY_INFO,
@@ -46,7 +74,42 @@ import {
   ASTRAL_ENEMY_INFO,
   ASTRAL_BOSS_INFO,
 } from './astral.js';
+import {
+  ECLIPSE_ROOMS,
+  GODFALL_ROOMS,
+  ECLIPSE_ENEMY_INFO,
+  ECLIPSE_BOSS_INFO,
+  GODFALL_BOSS_INFO,
+  ECLIPSE_CLASSES,
+  ECLIPSE_WEAPON_META,
+  ECLIPSE_WEAPON_PROFILES,
+  ECLIPSE_SHOP_ITEMS,
+  calculateDamage,
+  createCombatState,
+  classifyDodge,
+  registerBreak,
+  applyReaction,
+  reactionFor,
+  grantWeaponMastery,
+  BREAK_STAGGER,
+} from './eclipse.js';
 import { DEFAULT_SKILL_BONUSES } from './skills.js';
+import {
+  HUNTER_ITEM_BY_ID,
+  HUNTER_ITEM_IDS,
+  HUNTER_MARK_BONUS,
+  HUNTER_MAX_STACK,
+  isSpiritEnemy,
+  isSpiritSource,
+  spiritBounty,
+} from './hunter.js';
+
+export const WEAPON_ELEMENTS = {
+  sword: 'physical', pike: 'physical', bow: 'physical', greataxe: 'physical', twinblades: 'wind',
+  spear: 'physical', warhammer: 'physical', crossbow: 'physical', emberwand: 'fire', scythe: 'void',
+  oathblade: 'astral', war_scythe: 'void', twin_blades: 'wind', war_gauntlets: 'physical',
+  rune_cannon: 'astral', chain_whip: 'lightning', halberd: 'physical', spellbook: 'astral',
+};
 
 export const VIEW_W = 960;
 export const VIEW_H = 540;
@@ -71,7 +134,9 @@ export const WEAPONS = {
   pike: { id: 'pike', name: 'Pike Penjaga', short: 'PIKE' },
   bow: { id: 'bow', name: 'Busur Abu', short: 'BUSUR', ammo: 'arrows' },
   ...COURT_WEAPON_META,
+  ...ECLIPSE_WEAPON_META,
 };
+Object.assign(COURT_WEAPON_PROFILES, ECLIPSE_WEAPON_PROFILES);
 
 export const ENEMY_INFO = {
   crawler: {
@@ -528,6 +593,7 @@ export const CHARACTERS = {
     },
   },
 };
+Object.assign(CHARACTERS, ECLIPSE_CLASSES);
 
 export const DEFAULT_APPEARANCE = { race: 'human', skin: '#c98f6a', outfit: '#6d2323', armor: 'medieval' };
 
@@ -1075,11 +1141,12 @@ export const ROOMS = [
     hint: 'The Sporebound menumbuhkan tubuhnya dari altar. Awan spora menutup setiap arah.',
   },
 ];
+SHOP_ITEMS.push(...ECLIPSE_SHOP_ITEMS);
 
 // Legacy rooms stay exactly as they were so old saves, map layout and tests keep
 // their meaning. The campaign is a second set of rooms appended at indices 14+.
-export const ALL_ROOMS = [...ROOMS, ...EXPANSION_ROOMS, ...ATLAS_ROOMS, ...COURT_ROOMS, ...FAIRY_ROOMS, ...FALLEN_ROOMS, ...CRUSADE_ROOMS, ...ASTRAL_ROOMS];
-export const ALL_ENEMY_INFO = { ...ENEMY_INFO, ...EXPANSION_ENEMY_INFO, ...ATLAS_ENEMY_INFO, ...COURT_ENEMY_INFO, ...FAIRY_ENEMY_INFO, ...FALLEN_ENEMY_INFO, ...CRUSADE_ENEMY_INFO, ...ASTRAL_ENEMY_INFO };
+export const ALL_ROOMS = [...ROOMS, ...EXPANSION_ROOMS, ...ATLAS_ROOMS, ...COURT_ROOMS, ...FAIRY_ROOMS, ...FALLEN_ROOMS, ...CRUSADE_ROOMS, ...ASTRAL_ROOMS, ...ECLIPSE_ROOMS, ...GODFALL_ROOMS];
+export const ALL_ENEMY_INFO = { ...ENEMY_INFO, ...EXPANSION_ENEMY_INFO, ...ATLAS_ENEMY_INFO, ...COURT_ENEMY_INFO, ...FAIRY_ENEMY_INFO, ...FALLEN_ENEMY_INFO, ...CRUSADE_ENEMY_INFO, ...ASTRAL_ENEMY_INFO, ...ECLIPSE_ENEMY_INFO };
 
 const BOSS_INFO = {
   warden: {
@@ -1251,7 +1318,7 @@ const BOSS_INFO = {
   },
 };
 
-export const ALL_BOSS_INFO = { ...BOSS_INFO, ...EXPANSION_BOSS_INFO, ...ATLAS_BOSS_INFO, ...COURT_BOSS_INFO, ...PACK_BOSS_INFO, ...FAIRY_BOSS_INFO, ...FALLEN_BOSS_INFO, ...CRUSADE_BOSS_INFO, ...ASTRAL_BOSS_INFO };
+export const ALL_BOSS_INFO = { ...BOSS_INFO, ...EXPANSION_BOSS_INFO, ...ATLAS_BOSS_INFO, ...COURT_BOSS_INFO, ...PACK_BOSS_INFO, ...FAIRY_BOSS_INFO, ...FALLEN_BOSS_INFO, ...CRUSADE_BOSS_INFO, ...ASTRAL_BOSS_INFO, ...ECLIPSE_BOSS_INFO, ...GODFALL_BOSS_INFO };
 export const EXPANSION_BOSS_IDS = Object.keys(EXPANSION_BOSS_INFO);
 
 export const CODEX = {
@@ -1414,6 +1481,7 @@ export class AshenGame {
   }
 
   reset() {
+    const activeCampaignDifficulty = this.campaignDifficulty || 'normal';
     this.time = 0;
     this.state = 'playing';
     this.roomIndex = 0;
@@ -1428,6 +1496,8 @@ export class AshenGame {
     this.wallHp = {};
     this.wallHitFlash = 0;
     this.difficulty = 'normal';
+    this.campaignDifficulty = activeCampaignDifficulty;
+    this.campaignConfig = difficultyConfig(activeCampaignDifficulty);
     this.modifiers = [];
     this.ngPlus = 0;
     this.echoes = 0;
@@ -1471,6 +1541,7 @@ export class AshenGame {
     this.allies = [];
     this.damageDealt = 0;
     this.damageReceived = 0;
+    this.combat = createCombatState();
 
     this.player = {
       x: 0,
@@ -1518,9 +1589,19 @@ export class AshenGame {
       sigils: [],
       rituals: {},
       consumables: {},
+      hunterItems: {},
+      spiritWardTimer: 0,
+      spiritWardReduction: 0,
+      spiritWardFlash: 0,
       quickItem: 'shuriken',
       damageBuff: 1,
       damageBuffTimer: 0,
+      weaponSkillCooldown: 0,
+      weaponSkillIndex: 0,
+      dashStartedAt: -99,
+      counterWindow: 0,
+      lastElement: null,
+      weaponSkillReady: true,
     };
 
     this.loadRoom(0, true);
@@ -1640,9 +1721,15 @@ export class AshenGame {
     this.arenaTheme = null;
     this.checkpoint = room.checkpoint ? { ...room.checkpoint, active: true } : null;
     this.checkpointRoom = room.checkpoint ? index : null;
+    this.dreadEnvironmentId = room.dreadEnvironment || null;
+    this.dreadEnv = room.dreadEnvironment ? DREAD_ENVIRONMENTS[room.dreadEnvironment] || null : null;
+    this.dreadBossManager = null;
+    this.dreadArena = null;
+    this.noises = [];
     this.blessingChoices = null;
     this.awaitingBlessing = false;
     this.bossIntro = room.boss ? 1.0 : 0;
+    this.rebuildNav();
     this.hazardState = {};
     this.hazardTime = 0;
     const p = this.player;
@@ -1713,6 +1800,7 @@ export class AshenGame {
     p.pitGrace = false;
     p.climbing = false;
     this.shake = 0;
+    this.rebuildNav();
     this.emit({ type: 'roomEnter', room: this.roomIndex, name: room.name, subtitle: room.subtitle });
     return this.room;
   }
@@ -1724,6 +1812,30 @@ export class AshenGame {
 
   setAbilities(list) {
     this.abilities = new Set(Array.isArray(list) ? list : []);
+  }
+
+  setDifficulty(id) {
+    const next = difficultyConfig(id);
+    const prev = this.campaignConfig || difficultyConfig('normal');
+    const hpRatio = next.enemyHp / Math.max(0.01, prev.enemyHp);
+    const bossRatio = next.bossHp / Math.max(0.01, prev.bossHp);
+    for (const enemy of this.enemies || []) {
+      if (!enemy || enemy.dead) continue;
+      enemy.maxHp = Math.max(1, Math.round(enemy.maxHp * hpRatio));
+      enemy.hp = Math.max(1, Math.round(enemy.hp * hpRatio));
+      enemy.aggroMul = next.detection;
+      enemy.attackRate = next.attackRate;
+      enemy.reactionMul = next.reaction;
+      enemy.speed = Math.max(20, Math.round(enemy.speed * (next.enemySpeed / Math.max(0.01, prev.enemySpeed))));
+    }
+    if (this.boss && this.boss.hp > 0 && !this.boss.dying) {
+      this.boss.maxHp = Math.max(1, Math.round(this.boss.maxHp * bossRatio));
+      this.boss.hp = Math.max(1, Math.round(this.boss.hp * bossRatio));
+      this.boss.actionRate = next.attackRate;
+    }
+    this.campaignDifficulty = next.id;
+    this.campaignConfig = next;
+    return next;
   }
 
   spawnEnemy(def) {
@@ -1784,17 +1896,25 @@ export class AshenGame {
       chapter: info.chapter ?? null,
       elite: !!def.elite,
       eliteRank: def.eliteRank || null,
-      hp: Math.max(1, Math.round(info.hp * variant.hp * difficulty.enemyHp * mods.hp * ngScale * hpScale)),
-      maxHp: Math.max(1, Math.round(info.hp * variant.hp * difficulty.enemyHp * mods.hp * ngScale * hpScale)),
+      archetype: info.behavior || 'chaser',
+      hp: Math.max(1, Math.round(info.hp * variant.hp * difficulty.enemyHp * this.campaignConfig.enemyHp * mods.hp * ngScale * hpScale)),
+      maxHp: Math.max(1, Math.round(info.hp * variant.hp * difficulty.enemyHp * this.campaignConfig.enemyHp * mods.hp * ngScale * hpScale)),
       dmg: Math.max(1, Math.round(info.dmg * variant.dmg * difficulty.enemyDmg * mods.incoming * ngScale * dmgScale)),
-      speed: Math.max(20, Math.round(info.speed * variant.speed * difficulty.enemySpeed * speedScale)),
+      speed: Math.max(20, Math.round(info.speed * variant.speed * difficulty.enemySpeed * this.campaignConfig.enemySpeed * speedScale)),
+      aggroMul: this.campaignConfig.detection,
+      attackRate: this.campaignConfig.attackRate,
+      reactionMul: this.campaignConfig.reaction,
       reward: Math.max(1, Math.round(info.reward * variant.reward * difficulty.reward * mods.ash * (def.elite ? 2.2 : 1))),
       flying: def.type === 'wraith' || !!info.flying || info.behavior === 'ranged',
-      castCooldown: 0.8,
-      spawnCooldown: info.behavior === 'spawner' || def.type === 'broodmother' ? 2.4 : 0,
+      castCooldown: 0.8 * this.campaignConfig.attackRate,
+      spawnCooldown: info.behavior === 'spawner' || def.type === 'broodmother' ? 2.4 * this.campaignConfig.attackRate : 0,
       childType: info.childType || (expansion ? `echo_${info.chapter + 1}_1` : 'sporeling'),
     };
     e.y = e.flying ? FLOOR_Y - 148 : FLOOR_Y - e.h;
+    // Scary Mode difficulty is a second, independent multiplier on top of the
+    // campaign difficulty. It is only applied while the mode is enabled.
+    if (this.scaryEnabled) this.applyScaryScaling(e);
+    e.aiState = e.state;
     this.enemies.push(e);
     return e;
   }
@@ -1814,7 +1934,7 @@ export class AshenGame {
     const expansion = !!info.chapter && !BOSS_INFO[kind];
     const maxPhases = expansion && difficulty.extraPhase && (info.maxPhases || 2) === 2 ? 3 : info.maxPhases || 2;
     const thresholds = maxPhases === 3 && !info.phaseThresholds ? [0.66, 0.33] : info.phaseThresholds || [0.5];
-    const maxHp = Math.max(1, Math.round(info.maxHp * difficulty.bossHp * mods.hp * ngScale));
+    const maxHp = Math.max(1, Math.round(info.maxHp * difficulty.bossHp * this.campaignConfig.bossHp * mods.hp * ngScale));
     const b = {
       kind,
       name: info.name,
@@ -1829,7 +1949,8 @@ export class AshenGame {
       vy: 0,
       maxHp,
       hp: maxHp,
-      contact: Math.max(1, Math.round(info.contact * difficulty.bossDmg * mods.incoming * ngScale)),
+      contact: Math.max(1, Math.round(info.contact * difficulty.bossDmg * (this.campaignConfig.bossDamage / Math.max(0.01, this.campaignConfig.enemyDamage)) * mods.incoming * ngScale)),
+      actionRate: this.campaignConfig.attackRate,
       facing: -1,
       phase: 1,
       maxPhases,
@@ -1859,6 +1980,7 @@ export class AshenGame {
       // the right tool (Blinding Burst, parry) rather than brute force.
       purityShield: Math.max(0, info.purityShield || 0),
       purityMax: Math.max(0, info.purityShield || 0),
+      stagger: 0,
     };
     if (info.atlas) {
       b.atlas = true;
@@ -2082,6 +2204,15 @@ export class AshenGame {
     if (p.coyote > 0) p.coyote -= dt;
     if (p.consumeCooldown > 0) p.consumeCooldown -= dt;
     if (p.abilityCooldown > 0) p.abilityCooldown = Math.max(0, p.abilityCooldown - dt);
+    if (p.counterWindow > 0) p.counterWindow = Math.max(0, p.counterWindow - dt);
+    if (p.spiritWardTimer > 0) p.spiritWardTimer = Math.max(0, p.spiritWardTimer - dt);
+    if (p.spiritWardFlash > 0) p.spiritWardFlash = Math.max(0, p.spiritWardFlash - dt);
+    if (p.weaponSkillCooldown > 0) p.weaponSkillCooldown = Math.max(0, p.weaponSkillCooldown - dt);
+    if (p.timeField > 0) p.timeField = Math.max(0, p.timeField - dt);
+    if (this.combat) {
+      if (this.combat.counterWindow > 0) this.combat.counterWindow = Math.max(0, this.combat.counterWindow - dt);
+      if (this.combat.stagger > 0) this.combat.stagger = Math.max(0, this.combat.stagger - dt);
+    }
     if (p.damageBuffTimer > 0) {
       p.damageBuffTimer -= dt;
       if (p.damageBuffTimer <= 0) {
@@ -2096,7 +2227,7 @@ export class AshenGame {
       p.vx *= Math.pow(0.001, dt);
       if (p.healing <= 0) {
         p.flasks -= 1;
-        p.hp = Math.min(p.maxHp, p.hp + (38 + (this.healBonus || 0)) * (p.healMult || 1));
+        p.hp = Math.min(p.maxHp, p.hp + (38 + (this.healBonus || 0)) * (p.healMult || 1) * (this.campaignConfig?.recovery ?? 1));
         this.emit({ type: 'heal' });
         this.burst(p.x + p.w / 2, p.y + p.h / 2, 10, '#8fd98a', 110);
       }
@@ -2108,6 +2239,7 @@ export class AshenGame {
     // dash
     if (pressed('dash') && p.dashCooldown <= 0 && p.dashTimer <= 0 && p.healing <= 0) {
       p.dashTimer = 0.17;
+      p.dashStartedAt = this.time;
       p.dashCooldown = p.dashCooldownMax;
       p.dashDir = input.left && !input.right ? -1 : input.right && !input.left ? 1 : p.facing;
       p.facing = p.dashDir;
@@ -2161,6 +2293,14 @@ export class AshenGame {
       p.dashTimer <= 0
     ) {
       this.useAbility();
+    }
+    if (
+      pressed('weaponSkill') &&
+      p.weaponSkillCooldown <= 0 &&
+      p.dashTimer <= 0 &&
+      p.healing <= 0
+    ) {
+      this.useWeaponSkill();
     }
 
     // horizontal movement
@@ -2332,6 +2472,61 @@ export class AshenGame {
       });
     }
     return used;
+  }
+
+  useWeaponSkill() {
+    const p = this.player;
+    if (!p || p.weaponSkillCooldown > 0) return false;
+    const weapon = p.weapon;
+    const skillId = `${weapon}_skill`;
+    const element = WEAPON_ELEMENTS[weapon] || 'physical';
+    const dir = p.facing;
+    const hit = (box, dmg, extra = {}) => {
+      for (const e of this.enemies) {
+        if (!e.dead && rectHitsRect(box, e)) this.hurtEnemy(e, { dmg, knock: 240, name: skillId, element, ...extra }, dir);
+      }
+      if (this.boss && !this.boss.dying && rectHitsRect(box, this.boss)) this.hurtBoss(dmg * p.damageMult, 180, dir, false, element);
+    };
+    if (weapon === 'war_scythe') {
+      hit({ x: p.x - 120, y: p.y - 30, w: p.w + 240, h: p.h + 60 }, 40, { breakPower: 30 });
+      this.burst(p.x + p.w / 2, p.y + p.h / 2, 24, '#b48cff', 260);
+    } else if (weapon === 'twin_blades') {
+      const oldX = p.x;
+      p.x = clamp(p.x + dir * 120, 10, WORLD_W - p.w - 10);
+      p.invuln = Math.max(p.invuln, 0.24);
+      hit({ x: Math.min(oldX, p.x) - 16, y: p.y - 8, w: Math.abs(p.x - oldX) + p.w + 32, h: p.h + 16 }, 26, { breakPower: 18 });
+      hit({ x: p.x - 60, y: p.y - 8, w: 120, h: p.h + 16 }, 20, { breakPower: 18 });
+      this.burst(p.x + p.w / 2, p.y + p.h / 2, 20, '#a8e6ff', 220);
+    } else if (weapon === 'war_gauntlets') {
+      hit({ x: p.x - 78, y: p.y - 12, w: p.w + 156, h: p.h + 30 }, 48, { breakPower: 55 });
+      this.shake = Math.max(this.shake, 0.4);
+      this.burst(p.x + p.w / 2, FLOOR_Y - 8, 28, '#ffb066', 280);
+    } else if (weapon === 'rune_cannon') {
+      this.spawnPlayerProjectile('rune_bolt', {
+        x: p.x + p.w / 2 + dir * 20, y: p.y + p.h * 0.44, vx: dir * 760, vy: 0, r: 12, dmg: 48, life: 1.2, pierce: true, element,
+      });
+    } else if (weapon === 'chain_whip') {
+      hit({ x: dir > 0 ? p.x : p.x - 210, y: p.y - 10, w: 230, h: p.h + 20 }, 34, { breakPower: 24 });
+      for (const e of this.enemies) if (!e.dead && Math.abs(e.x - p.x) < 240) e.x += (p.x - e.x) * 0.2;
+    } else if (weapon === 'halberd') {
+      hit({ x: dir > 0 ? p.x : p.x - 170, y: p.y - 6, w: 190, h: p.h + 12 }, 42, { breakPower: 40 });
+      p.invuln = Math.max(p.invuln, 0.18);
+    } else if (weapon === 'spellbook') {
+      for (let i = 0; i < 3; i += 1) {
+        this.spawnPlayerProjectile('spell_seek', {
+          x: p.x + p.w / 2 + dir * 18, y: p.y + p.h * 0.35 + i * 9, vx: dir * 420, vy: -60 + i * 60, r: 7, dmg: 22, life: 1.8, element,
+        });
+      }
+      p.invuln = Math.max(p.invuln, 0.2);
+    } else {
+      hit({ x: p.x - 20, y: p.y - 16, w: p.w + 120, h: p.h + 32 }, 28, { breakPower: 24 });
+    }
+    p.weaponSkillCooldown = 6.5;
+    p.weaponSkillIndex = (p.weaponSkillIndex || 0) + 1;
+    grantWeaponMastery(this.combat, weapon, 34);
+    this.shake = Math.max(this.shake, 0.24);
+    this.emit({ type: 'weaponSkill', weapon, name: WEAPONS[weapon]?.name || weapon, element, index: p.weaponSkillIndex });
+    return true;
   }
 
   performAbility(skills = DEFAULT_SKILL_BONUSES) {
@@ -2699,6 +2894,79 @@ export class AshenGame {
       return true;
     }
 
+    if (abilityId === 'dawn_aegis') {
+      const cx = p.x + p.w / 2;
+      const cy = p.y + p.h / 2;
+      p.hp = Math.min(p.maxHp, p.hp + Math.round(p.maxHp * 0.24));
+      p.invuln = Math.max(p.invuln, 2.4);
+      const box = { x: cx - 150, y: cy - 108, w: 300, h: 216 };
+      for (const e of this.enemies) {
+        if (!e.dead && rectHitsRect(box, e)) this.hurtEnemy(e, { dmg: 32, knock: 300, name: 'dawn_aegis', element: 'fire' }, sign(e.x + e.w / 2 - cx) || p.facing);
+      }
+      if (this.boss && !this.boss.dying && rectHitsRect(box, this.boss)) this.hurtBoss(32 * p.damageMult, 220, p.facing, false, 'fire');
+      this.spawnFx('dash', cx, cy, { life: 0.6, size: 78, color: '#ffe6a8' });
+      this.burst(cx, cy, 28, '#ffe0a0', 240);
+      this.emit({ type: 'ability', ability: abilityId, name: p.ability.name });
+      return true;
+    }
+
+    if (abilityId === 'rift_lance') {
+      const oldX = p.x;
+      const targetX = clamp(p.x + p.facing * 210, 10, WORLD_W - p.w - 10);
+      const minX = Math.min(oldX, targetX);
+      const maxX = Math.max(oldX + p.w, targetX + p.w);
+      const box = { x: minX, y: p.y - 12, w: maxX - minX, h: p.h + 24 };
+      for (const e of this.enemies) {
+        if (!e.dead && rectHitsRect(box, e)) this.hurtEnemy(e, { dmg: 52, knock: 180, name: 'rift_lance', element: 'void' }, p.facing);
+      }
+      if (this.boss && !this.boss.dying && rectHitsRect(box, this.boss)) this.hurtBoss(52 * p.damageMult, 120, p.facing, false, 'void');
+      p.x = targetX;
+      p.invuln = Math.max(p.invuln, 0.38);
+      for (let sx = minX; sx <= maxX; sx += 22) this.spawnFx('spark', sx, p.y + p.h * 0.5, { life: 0.3, size: 8, color: '#b48cff' });
+      this.emit({ type: 'ability', ability: abilityId, name: p.ability.name });
+      return true;
+    }
+
+    if (abilityId === 'root_circle') {
+      const cx = p.x + p.w / 2;
+      for (const e of this.enemies) {
+        if (e.dead) continue;
+        if (Math.abs(e.x + e.w / 2 - cx) < 250) {
+          this.hurtEnemy(e, { dmg: 24, knock: 80, name: 'root_circle', element: 'nature' }, sign(e.x - cx) || p.facing);
+          e.snare = Math.max(e.snare || 0, 1.8);
+        }
+      }
+      if (this.boss && !this.boss.dying && Math.abs(this.boss.x + this.boss.w / 2 - cx) < 280) this.hurtBoss(24 * p.damageMult, 40, p.facing, false, 'nature');
+      p.hp = Math.min(p.maxHp, p.hp + Math.round(p.maxHp * 0.12));
+      for (let i = 0; i < 7; i += 1) this.spawnFx('dust', p.x + p.w / 2 + rand(-100, 100), FLOOR_Y - 8, { life: 0.8, size: 16, color: '#8fbf6a' });
+      this.emit({ type: 'ability', ability: abilityId, name: p.ability.name });
+      return true;
+    }
+
+    if (abilityId === 'time_field') {
+      p.timeField = 3;
+      p.invuln = Math.max(p.invuln, 0.2);
+      p.abilityCooldown *= 0.85;
+      if (this.boss) this.boss.slow = 3;
+      for (let i = 0; i < 18; i += 1) this.spawnFx('glass', p.x + p.w / 2 + rand(-130, 130), p.y + p.h / 2 + rand(-90, 90), { life: 1.2, size: rand(3, 8), color: '#ffd88a' });
+      this.emit({ type: 'ability', ability: abilityId, name: p.ability.name });
+      return true;
+    }
+
+    if (abilityId === 'void_construct') {
+      const cx = p.x + p.w / 2 + p.facing * 40;
+      for (let i = 0; i < 4; i += 1) {
+        this.spawnPlayerProjectile('void_construct', {
+          x: cx + rand(-20, 20), y: p.y + p.h * 0.3 + rand(-16, 16), vx: p.facing * rand(80, 140), vy: 0,
+          r: 12, dmg: 18, life: 2.4, pierce: true, element: 'void',
+        });
+      }
+      this.burst(cx, p.y + p.h * 0.45, 20, '#9d7be8', 190);
+      this.shake = Math.max(this.shake, 0.18);
+      this.emit({ type: 'ability', ability: abilityId, name: p.ability.name });
+      return true;
+    }
+
     if (abilityId === 'thorn_volley') {
       // The Warden: a fan of thorn projectiles.
       for (let i = 0; i < 5; i++) {
@@ -2820,7 +3088,7 @@ export class AshenGame {
       if (b && !b.dying && !a.hitIds.includes('boss') && rectHitsRect(hb, b)) {
         a.hitIds.push('boss');
         a.landed = true;
-        this.hurtBoss(def.dmg * p.damageMult * (p.damageBuff || 1), def.knock, p.facing, def.name !== 'slash');
+        this.hurtBoss(def.dmg * p.damageMult * (p.damageBuff || 1), def.knock, p.facing, def.name !== 'slash', def.element || WEAPON_ELEMENTS[a.weapon] || 'physical');
       }
       // A blade can also carve the secret mycelial wall.
       const wall = this.activeWall();
@@ -2921,23 +3189,150 @@ export class AshenGame {
   itemCount(id) {
     const p = this.player;
     if (id === 'shuriken') return p.shurikens || 0;
+    if (p.hunterItems && p.hunterItems[id] != null) return p.hunterItems[id];
     if (p.consumables && p.consumables[id] != null) return p.consumables[id];
     if (p.rituals && p.rituals[id] != null) return p.rituals[id];
     return 0;
   }
 
+  /** Copy the persistent stock into this run without leaking references. */
+  setHunterItems(items = {}) {
+    const next = {};
+    for (const id of HUNTER_ITEM_IDS) {
+      const count = Math.max(0, Math.min(HUNTER_MAX_STACK, Math.round(Number(items[id]) || 0)));
+      if (count > 0) next[id] = count;
+    }
+    this.player.hunterItems = next;
+    if (!this.itemCount(this.player.quickItem)) {
+      this.player.quickItem = Object.keys(next)[0] || 'shuriken';
+    }
+    return { ...next };
+  }
+
+  addHunterItem(id, amount = 1, select = false) {
+    if (!HUNTER_ITEM_BY_ID[id]) return false;
+    const p = this.player;
+    p.hunterItems = p.hunterItems && typeof p.hunterItems === 'object' ? p.hunterItems : {};
+    p.hunterItems[id] = Math.min(HUNTER_MAX_STACK, (Number(p.hunterItems[id]) || 0) + Math.max(0, Math.round(amount)));
+    if (select && p.hunterItems[id] > 0) p.quickItem = id;
+    return p.hunterItems[id] > 0;
+  }
+
+  hunterItemCount(id) {
+    return this.itemCount(id);
+  }
+
   ownedQuickItems() {
-    return ['shuriken', 'knives', 'bomb'].filter((id) => this.itemCount(id) > 0);
+    return [
+      ...HUNTER_ITEM_IDS.filter((id) => this.itemCount(id) > 0),
+      ...['shuriken', 'knives', 'bomb'].filter((id) => this.itemCount(id) > 0),
+    ];
   }
 
   quickItemInfo() {
     const p = this.player;
-    const item = SHOP_ITEM_BY_ID[p.quickItem] || SHOP_ITEM_BY_ID.shuriken;
+    const item = SHOP_ITEM_BY_ID[p.quickItem] || HUNTER_ITEM_BY_ID[p.quickItem] || SHOP_ITEM_BY_ID.shuriken;
     return {
       id: item.id,
       name: item.shortName || item.name.toUpperCase(),
       count: this.itemCount(item.id),
+      hunter: !!HUNTER_ITEM_BY_ID[item.id],
     };
+  }
+
+  spiritTargets(cx, cy, radius) {
+    const rr = Number(radius) || 0;
+    return this.enemies.filter((e) => {
+      if (!e || e.dead || !isSpiritEnemy(e)) return false;
+      const ex = e.x + e.w / 2;
+      const ey = e.y + e.h / 2;
+      return Math.abs(ex - cx) <= rr && Math.abs(ey - cy) <= rr;
+    });
+  }
+
+  /**
+   * One deterministic entry point for every anti-ghost consumable. Items only
+   * touch spirit entities; normal campaign enemies keep their existing balance.
+   */
+  useHunterItem(id, options = {}) {
+    const item = HUNTER_ITEM_BY_ID[id];
+    if (!item) return { ok: false, reason: 'Barang tidak ditemukan.' };
+    const p = this.player;
+    if (p.consumeCooldown > 0) return { ok: false, reason: 'Masih bersiap.' };
+    if (this.itemCount(id) <= 0) return { ok: false, reason: 'Stok habis.' };
+    const cx = p.x + p.w / 2;
+    const cy = p.y + p.h / 2;
+    const targets = item.radius ? this.spiritTargets(cx, cy, item.radius) : [];
+    if (item.damage > 0 && item.radius && !targets.length) {
+      return { ok: false, reason: 'Tidak ada roh dalam jangkauan.' };
+    }
+
+    p.hunterItems[id] = Math.max(0, (Number(p.hunterItems[id]) || 0) - 1);
+    if (p.hunterItems[id] <= 0) delete p.hunterItems[id];
+    p.quickItem = id;
+    p.consumeCooldown = item.cooldown || 0.55;
+
+    if (item.projectile) {
+      this.spawnPlayerProjectile('spirit_bane', {
+        x: cx + p.facing * 18,
+        y: p.y + p.h * 0.42,
+        vx: p.facing * item.projectile.speed,
+        vy: 0,
+        r: item.projectile.r,
+        dmg: item.damage,
+        spiritDamage: item.spiritDamage,
+        hunterStun: item.stun,
+        hunterMark: item.mark,
+        pierce: !!item.pierce,
+        maxHits: item.maxHits || 1,
+        life: item.projectile.life,
+      });
+      this.emit({ type: 'hunterShot', id, name: item.name });
+      // The projectile branch must report consumption too, otherwise the
+      // browser shell cannot persist the spent round back to the hunter save.
+      this.emit({
+        type: 'hunterItemUse',
+        id,
+        name: item.name,
+        stunned: 0,
+        remaining: p.hunterItems[id] || 0,
+        thrown: !!options.thrown,
+      });
+      return { ok: true, item, targets: 0 };
+    }
+
+    for (const e of targets) {
+      if (item.damage > 0) {
+        this.hurtEnemy(e, { dmg: item.damage, knock: 70, name: item.id, spiritBane: true }, sign((e.x + e.w / 2) - cx) || 1);
+      }
+      if (!e.dead) {
+        if (item.stun) e.stunTimer = Math.max(Number(e.stunTimer) || 0, item.stun);
+        if (item.mark) e.spiritMarkTimer = Math.max(Number(e.spiritMarkTimer) || 0, item.mark);
+        if (item.aggroReset) e.brain = null;
+        e.hidden = false;
+        e.ghostHidden = false;
+        e.ghostAlpha = 1;
+        e.fade = 0;
+        this.burst(e.x + e.w / 2, e.y + e.h / 2, 7, item.color || '#f3ddb4', 120);
+      }
+    }
+    if (item.invuln) p.invuln = Math.max(p.invuln, item.invuln);
+    if (item.duration) {
+      p.spiritWardTimer = Math.max(p.spiritWardTimer, item.duration);
+      p.spiritWardReduction = clamp(item.reduction || 0.5, 0, 0.9);
+    }
+    this.spawnFx('dash', cx, cy, { life: Math.min(0.75, item.cooldown || 0.5), size: item.radius ? 54 : 38, color: item.color || '#f3ddb4' });
+    this.burst(cx, cy, item.radius ? 22 : 12, item.color || '#f3ddb4', item.radius ? 230 : 150);
+    this.shake = Math.max(this.shake, item.radius ? 0.28 : 0.12);
+    this.emit({
+      type: 'hunterItemUse',
+      id,
+      name: item.name,
+      stunned: targets.length,
+      remaining: p.hunterItems[id] || 0,
+      thrown: !!options.thrown,
+    });
+    return { ok: true, item, targets: targets.length };
   }
 
   cycleItem() {
@@ -2955,6 +3350,7 @@ export class AshenGame {
   }
 
   throwConsumable(kind = this.player.quickItem) {
+    if (HUNTER_ITEM_BY_ID[kind]) return this.useHunterItem(kind, { thrown: true }).ok;
     const p = this.player;
     const id = kind === 'knives' || kind === 'bomb' ? kind : 'shuriken';
     if (this.itemCount(id) <= 0) {
@@ -3024,6 +3420,7 @@ export class AshenGame {
   }
 
   useItem(id) {
+    if (HUNTER_ITEM_BY_ID[id]) return this.useHunterItem(id);
     const item = SHOP_ITEM_BY_ID[id];
     if (!item) return { ok: false, reason: 'Item tidak ditemukan.' };
     const p = this.player;
@@ -3193,11 +3590,38 @@ export class AshenGame {
   hurtEnemy(e, def, dir) {
     if (e.burrowed) return;
     const p = this.player;
+    const spirit = isSpiritEnemy(e);
+    const marked = spirit && (Number(e.spiritMarkTimer) || 0) > 0;
+    let dmg = Number(def.dmg) || 0;
+    if (spirit && def.spiritBane) dmg *= 1.25;
+    if (marked) dmg *= HUNTER_MARK_BONUS;
     const crit = (p.critChance || 0) > 0 && Math.random() < p.critChance;
-    const dealt = def.dmg * p.damageMult * (p.damageBuff || 1) * (crit ? 2 : 1) * (this._abilityScale || 1);
+    const counter = (this.combat?.counterWindow || 0) > 0;
+    if (counter) {
+      this.combat.counters += 1;
+      this.combat.counterWindow = 0;
+      this.emit({ type: 'counterHit', target: e.type });
+    }
+    const dealt = calculateDamage({
+      attackerId: 'player', targetId: e.id, baseDamage: dmg,
+      damageType: def.element || WEAPON_ELEMENTS[p.weapon] || 'physical', critical: crit,
+      criticalMultiplier: counter ? 1.35 : 1.5, elementalModifier: p.damageMult * (p.damageBuff || 1) * (this._abilityScale || 1),
+      defenseMultiplier: 1, targetValid: !e.dead, targetInvulnerable: false,
+    });
     e.hp -= dealt;
     this.damageDealt = (this.damageDealt || 0) + dealt;
+    grantWeaponMastery(this.combat, p.weapon, dealt);
+    if (registerBreak(this.combat, def.breakPower || (def.name === 'heavy' ? 30 : 16))) {
+      e.state = 'broken';
+      e.timer = 1.2;
+      this.emit({ type: 'break', target: e.type, kind: 'enemy' });
+      this.burst(e.x + e.w / 2, e.y + e.h / 2, 18, '#9fe6ff', 210);
+    }
     e.hitFlash = 0.12;
+    if (marked) {
+      e.spiritMarkTimer = Math.max(0, (Number(e.spiritMarkTimer) || 0) - 0.5);
+      this.emit({ type: 'hunterMarkHit', kind: e.scaryKind || e.unnaturalKind || e.ghostKind || e.type, bonus: HUNTER_MARK_BONUS });
+    }
     e.x = clamp(e.x + dir * def.knock * 0.12, 20, WORLD_W - e.w - 20);
     e.state = 'hurt';
     e.timer = 0.16;
@@ -3226,15 +3650,32 @@ export class AshenGame {
           });
         }
       }
+      this.rewardSpirit(e);
       this.emit({ type: 'enemyDown' });
       this.emit({ type: 'ashGain', amount: reward, total: this.ash });
     }
   }
 
-  hurtBoss(amount, knock = 0, dir = 1, crit = false) {
+  /** Award Hunter's Marks once per spirit, even if two damage paths land. */
+  rewardSpirit(entity) {
+    if (!isSpiritEnemy(entity) || entity.spiritRewarded) return 0;
+    entity.spiritRewarded = true;
+    const marks = spiritBounty(entity);
+    if (marks > 0) {
+      this.emit({
+        type: 'spiritDown',
+        kind: entity.scaryKind || entity.unnaturalKind || entity.ghostKind || entity.dreadBoss || entity.veilBoss || entity.eternalBoss || entity.type,
+        name: entity.scaryName || entity.unnaturalName || entity.name || entity.type,
+        marks,
+      });
+    }
+    return marks;
+  }
+
+  hurtBoss(amount, knock = 0, dir = 1, crit = false, element = null) {
     const b = this.boss;
     if (!b || b.dying || b.invuln > 0) return;
-    amount *= this._abilityScale || 1;
+    amount = calculateDamage({ attackerId: 'player', targetId: b.kind, baseDamage: amount * (this._abilityScale || 1), damageType: element || 'physical' });
     // Purity Shield: the boss loses shield equal to the incoming blow but only
     // bleeds 15% of it to HP, so breaking the shield is the real objective.
     if (b.purityShield > 0) {
@@ -3249,8 +3690,30 @@ export class AshenGame {
       });
       if (b.purityShield <= 0) this.burst(b.x + b.w / 2, b.y + b.h / 2, 20, '#eaf6ff', 240);
     }
+    if (this.combat?.counterWindow > 0) {
+      amount *= 1.35;
+      this.combat.counters += 1;
+      this.combat.counterWindow = 0;
+      this.emit({ type: 'counterHit', target: 'boss', kind: b.kind });
+    }
+    if (element) {
+      const reaction = applyReaction(this.combat, this.combat.lastElement, element, amount);
+      if (reaction.reaction) {
+        amount += reaction.bonusDamage;
+        b.hitFlash = 0.2;
+        this.emit({ type: 'elementalReaction', reaction: reaction.reaction.id, name: reaction.reaction.name, kind: b.kind, bonus: reaction.bonusDamage });
+        this.burst(b.x + b.w / 2, b.y + b.h / 2, 22, element === 'void' ? '#b48cff' : '#ffcf70', 240);
+      }
+    }
+    if (registerBreak(this.combat, this.player.weapon === 'war_gauntlets' ? 34 : 20)) {
+      b.stagger = BREAK_STAGGER;
+      b.invuln = 0;
+      this.emit({ type: 'bossBreak', kind: b.kind, name: b.name, duration: BREAK_STAGGER });
+      this.burst(b.x + b.w / 2, b.y + b.h / 2, 30, '#9fe6ff', 280);
+    }
     crit = crit || !!this._abilityCrit;
     b.hp = Math.max(0, b.hp - amount);
+    if (!Number.isFinite(b.hp)) b.hp = 0;
     this.damageDealt = (this.damageDealt || 0) + amount;
     b.hitFlash = 0.1;
     b.x = clamp(b.x + dir * knock * 0.03, 40, WORLD_W - b.w - 40);
@@ -3260,6 +3723,7 @@ export class AshenGame {
     this.burst(b.x + b.w / 2, b.y + b.h * 0.4, crit ? 16 : 9, '#e9c46a', 200);
     while (
       b.phase < b.maxPhases &&
+      !b.dying && b.hp >= 0 &&
       b.hp <= b.maxHp * (b.phaseThresholds[b.phase - 1] ?? 0.5)
     ) {
       b.phase += 1;
@@ -3308,7 +3772,26 @@ export class AshenGame {
 
   damagePlayer(amount, sourceX = 0, opts = {}) {
     const p = this.player;
-    if (this.state !== 'playing' || p.invuln > 0 || p.dashTimer > 0 || p.hp <= 0) return false;
+    if (this.state !== 'playing' || p.hp <= 0) return false;
+    amount = amount * (this.campaignConfig?.enemyDamage ?? 1);
+    if (p.dashTimer > 0) {
+      if (classifyDodge(this.combat, this.time - p.dashStartedAt)) {
+        p.counterWindow = 1.2;
+        p.abilityCooldown = 0;
+        p.invuln = Math.max(p.invuln, 0.18);
+        this.emit({ type: 'perfectDodge', x: p.x + p.w / 2, y: p.y + p.h / 2 });
+        this.burst(p.x + p.w / 2, p.y + p.h / 2, 10, '#eaf6ff', 150);
+        this.shake = Math.max(this.shake, 0.08);
+      }
+      return false;
+    }
+    if (p.invuln > 0) return false;
+    let warded = false;
+    if (p.spiritWardTimer > 0 && isSpiritSource(opts.source)) {
+      amount *= 1 - clamp(p.spiritWardReduction || 0.6, 0, 0.9);
+      p.spiritWardFlash = Math.max(p.spiritWardFlash || 0, 0.3);
+      warded = true;
+    }
     const incoming = Math.max(1, Math.round(amount * (p.incomingMult || 1)));
     p.hp = Math.max(0, p.hp - incoming);
     this.damageReceived = (this.damageReceived || 0) + incoming;
@@ -3324,8 +3807,20 @@ export class AshenGame {
     }
     this.hitstop = Math.max(this.hitstop, 0.055);
     this.shake = Math.max(this.shake, 0.4);
-    this.emit({ type: 'playerHurt' });
-    this.burst(p.x + p.w / 2, p.y + p.h / 2, 12, '#b84040', 200);
+    this.lastHit = {
+      type: opts.source?.type || opts.source?.kind || 'unknown',
+      family: opts.source?.family || opts.source?.ai || opts.source?.type || 'unknown',
+      name: opts.source?.name || '',
+      boss: !!opts.source?.boss || opts.source?.owner === 'boss',
+      bossKind: opts.source?.bossKind || (opts.source?.boss ? opts.source.type : undefined),
+      damage: incoming,
+      x: sourceX,
+      y: p.y + p.h / 2,
+      time: this.time,
+    };
+    this.emit({ type: 'playerHurt', source: this.lastHit, warded });
+    if (warded) this.emit({ type: 'hunterWard', reduction: Math.round(clamp(p.spiritWardReduction || 0.6, 0, 0.9) * 100) });
+    this.burst(p.x + p.w / 2, p.y + p.h / 2, 12, warded ? '#d8b96c' : '#b84040', 200);
     if (p.hp <= 0) {
       this.state = 'dead';
       this.deathTimer = 0;
@@ -3394,6 +3889,1206 @@ export class AshenGame {
       }
     }
     this.integrateEnemy(e, dt);
+  }
+
+  // ── Update X: navigation, shared AI state machine, boss guards ───────────
+
+  // ── Update XIII: The Veil of the Forgotten ────────────────────────────
+  loadVeilStage(stageId, options = {}) {
+    const room = veilRoom(stageId, { worldW: WORLD_W, floorY: FLOOR_Y, ...options });
+    if (!room) return null;
+    this.loadArena(room);
+    this.veilStageId = stageId;
+    this.veilBossId = null;
+    this.veilGhosts = [];
+    this.ghostSerial = 0;
+    const plan = veilStageEnemies(stageId, { worldW: WORLD_W });
+    for (const def of plan) {
+      const e = this.spawnEnemy(def);
+      if (e) { e.veilEncounter = true; e.veilStage = stageId; }
+    }
+    this.emit({ type: 'veilStageEnter', stage: stageId, room: this.roomIndex, enemies: plan.length, elite: plan.filter((d) => d.elite).length });
+    return room;
+  }
+
+  startVeilBoss(bossId) {
+    const spawn = veilBossSpawn(bossId);
+    const room = veilArena(bossId, { worldW: WORLD_W, floorY: FLOOR_Y });
+    if (!spawn || !room) return null;
+    this.loadArena(room);
+    this.veilStageId = null;
+    this.veilBossId = bossId;
+    const boss = this.spawnBoss(bossId, {
+      ...spawn,
+      spawn: { x: Math.round(WORLD_W * 0.62), y: FLOOR_Y - 130 },
+    });
+    if (boss) boss.veilBoss = bossId;
+    this.emit({ type: 'veilBossEnter', boss: bossId, name: spawn.name, phases: spawn.maxPhases });
+    return boss;
+  }
+
+  // ── Update XIV: The Eternal Night (Arc X) ─────────────────────────────
+  loadEternalStage(stageId, options = {}) {
+    const room = eternalRoom(stageId, { worldW: WORLD_W, floorY: FLOOR_Y, ...options });
+    if (!room) return null;
+    this.loadArena(room);
+    this.veilStageId = null;
+    this.eternalStageId = stageId;
+    this.eternalBossId = null;
+    this.veilGhosts = [];
+    this.ghostSerial = 0;
+    const plan = eternalStageEnemies(stageId, { worldW: WORLD_W });
+    for (const def of plan) {
+      const e = this.spawnEnemy(def);
+      if (e) { e.eternalEncounter = true; e.eternalStage = stageId; }
+    }
+    this.emit({ type: 'eternalStageEnter', stage: stageId, room: this.roomIndex, enemies: plan.length, elite: plan.filter((d) => d.elite).length });
+    return room;
+  }
+
+  startEternalBoss(bossId) {
+    const spawn = eternalBossSpawn(bossId);
+    const room = eternalArena(bossId, { worldW: WORLD_W, floorY: FLOOR_Y });
+    if (!spawn || !room) return null;
+    this.loadArena(room);
+    this.eternalStageId = null;
+    this.eternalBossId = bossId;
+    const boss = this.spawnBoss(bossId, {
+      ...spawn,
+      spawn: { x: Math.round(WORLD_W * 0.62), y: FLOOR_Y - 130 },
+    });
+    if (boss) boss.eternalBoss = bossId;
+    this.emit({ type: 'eternalBossEnter', boss: bossId, name: spawn.name, phases: spawn.maxPhases });
+    return boss;
+  }
+
+  /** Spawn a Ghost Index entity with its own perception and navigation. */
+  spawnGhost(kind, x, overrides = {}) {
+    const def = makeGhost(kind, x, { minX: 60, maxX: WORLD_W - 60, ...overrides });
+    if (!def) return null;
+    const e = this.spawnEnemy({
+      type: 'wraith',
+      x: clamp(def.x, 60, Math.max(60, WORLD_W - def.w - 60)),
+      minX: def.minX,
+      maxX: def.maxX,
+      name: def.name,
+    });
+    e.ghostKind = kind;
+    e.ghostClassification = def.classification;
+    e.ghostRarity = def.rarity;
+    e.ghostBehavior = overrides.behavior || def.behavior;
+    e.ghostSecret = !!def.secret;
+    e.hostile = overrides.hostile !== false;
+    e.w = def.w;
+    e.h = def.h;
+    e.hp = e.maxHp = Math.max(1, Math.round(def.hp));
+    e.dmg = Math.max(1, Math.round(def.damage));
+    e.speed = def.speed;
+    e.flying = !!def.flying;
+    e.attackRange = def.attackRange;
+    e.sightRange = def.sightRange;
+    e.hearingRange = def.hearingRange;
+    e.ghostHidden = false;
+    e.ghostAlpha = 1;
+    e.ghostAttackLock = 0;
+    e.ghostPhase = 0;
+    e.ghostState = 'idle';
+    e.ghostInstance = `ghost_${this.roomIndex}_${(this.ghostSerial = (this.ghostSerial || 0) + 1)}`;
+    e.uid = e.ghostInstance;
+    e.ghostBrain = null;
+    e.spiritEntity = true;
+    e.stunTimer = 0;
+    e.spiritMarkTimer = 0;
+    e.smokeTimer = 0;
+    if (e.flying) e.y = FLOOR_Y - e.h - 46;
+    if (!Array.isArray(this.veilGhosts)) this.veilGhosts = [];
+    this.veilGhosts.push(e);
+    this.emit({ type: 'ghostSpawn', kind, name: def.name, classification: def.classification, instance: e.ghostInstance });
+    return e;
+  }
+
+  ghostBrain(e) {
+    if (!e.ghostBrain) {
+      e.ghostBrain = new GhostBrain(
+        { classification: e.ghostClassification, behavior: e.ghostBehavior },
+        { id: e.ghostInstance, nav: this.nav },
+      );
+    }
+    e.ghostBrain.setNav(this.nav);
+    if (e.ghostBehavior) e.ghostBrain.profile = { ...e.ghostBrain.profile, behavior: e.ghostBehavior };
+    return e.ghostBrain;
+  }
+
+  /** Ghost movement is brain-owned; damage is applied once per attack window. */
+  updateGhost(e, dt) {
+    const p = this.player;
+    if (!p || e.dead) return;
+    if (e.ghostAttackLock > 0) e.ghostAttackLock -= dt;
+    const cx = p.x + p.w / 2;
+    const cy = p.y + p.h / 2;
+    const ex = e.x + e.w / 2;
+    const ey = e.y + e.h / 2;
+    const los = this.nav && typeof this.nav.lineOfSight === 'function' ? !!this.nav.lineOfSight(ex, ey, cx, cy) : true;
+    let noise = null;
+    for (const source of this.noises || []) {
+      if (!noise || Math.abs(source.x - ex) < Math.abs(noise.x - ex)) noise = source;
+    }
+    const brain = this.ghostBrain(e);
+    const view = brain.update(dt, { entity: e, player: p, nav: this.nav, los, noise, dark: true, anchorX: e.minX + 180 });
+    e.ghostState = view.state;
+    e.ghostPhase = brain.attacks;
+    e.ghostHidden = !view.visible;
+    e.ghostAlpha = view.visible ? 1 : 0.15;
+    if (view.teleport && Number.isFinite(view.teleport.x)) {
+      e.x = clamp(view.teleport.x, e.minX, Math.max(e.minX, e.maxX - e.w));
+      this.emit({ type: 'ghostBlink', kind: e.ghostKind, instance: e.ghostInstance, x: Math.round(e.x) });
+    }
+    if (e.flying) {
+      const targetY = FLOOR_Y - e.h - 46 + Math.sin((this.time || 0) * 1.4 + e.x * 0.01) * 8;
+      e.y += clamp(targetY - e.y, -140 * dt, 140 * dt);
+    }
+    if (view.attack && e.hostile && e.ghostAttackLock <= 0 && los && Math.abs(cx - ex) < (e.attackRange || 44) + 18 && Math.abs(cy - ey) < 110) {
+      e.ghostAttackLock = 0.7;
+      this.damagePlayer(view.attack.damage, ex, { source: `ghost:${e.ghostKind}` });
+      this.emit({ type: 'ghostTouch', kind: e.ghostKind, name: e.name, instance: e.ghostInstance });
+    }
+    if (view.despawn || e.hp <= 0) {
+      e.dead = true;
+      e.ghostBanished = true;
+      e.ghostHidden = true;
+      this.rewardSpirit(e);
+      this.emit({ type: 'ghostBanished', kind: e.ghostKind, instance: e.ghostInstance });
+    }
+  }
+
+  banishGhost(e) {
+    if (!e) return false;
+    e.dead = true;
+    this.rewardSpirit(e);
+    e.ghostBanished = true;
+    e.ghostHidden = true;
+    return true;
+  }
+
+  rebuildNav() {
+    this.nav = buildRoomNav(this.room || { platforms: [] });
+    this.navRoom = this.roomIndex;
+    for (const e of this.enemies) {
+      if (!e.brain) continue;
+      e.brain.nav = this.nav;
+      e.brain.pathVersion = -1;
+    }
+    return this.nav;
+  }
+
+  brainFor(e) {
+    if (!this.nav || this.navRoom !== this.roomIndex) this.rebuildNav();
+    if (e.brain) return e.brain;
+    e.brain = new EnemyBrain(e, { nav: this.nav, seed: 7 + this.enemies.indexOf(e) });
+    return e.brain;
+  }
+
+  // ── Scary Mode 2.0 ────────────────────────────────────────────────────────
+  /** Enable/disable the horror layer. Never touches campaign difficulty. */
+  setScaryMode(options = {}) {
+    this.scaryEnabled = !!options.enabled;
+    if (SCARY_DIFFICULTY_IDS.includes(options.difficulty)) this.scaryDifficulty = options.difficulty;
+    this.scaryDifficulty = this.scaryDifficulty || 'normal';
+    this.scaryProfile = scaryDifficultyProfile(this.scaryDifficulty);
+    if (this.scaryEnabled) for (const e of this.enemies) this.applyScaryScaling(e);
+    return { enabled: this.scaryEnabled, difficulty: this.scaryDifficulty, profile: this.scaryProfile };
+  }
+
+  /** Stack the horror difficulty on top of the campaign baseline exactly once. */
+  applyScaryScaling(e) {
+    const profile = this.scaryProfile || scaryDifficultyProfile(this.scaryDifficulty || 'normal');
+    if (!e.scaryBase) {
+      e.scaryBase = {
+        aggro: e.aggroMul ?? 1,
+        speed: e.speed,
+        reaction: e.reactionMul ?? 1,
+        damage: e.dmg,
+      };
+    }
+    e.aggroMul = e.scaryBase.aggro * profile.detection;
+    e.reactionMul = e.scaryBase.reaction * profile.reaction;
+    e.speed = Math.max(20, Math.round(e.scaryBase.speed * profile.speed));
+    e.dmg = Math.max(1, Math.round(e.scaryBase.damage * profile.damage));
+    return e;
+  }
+
+  /** Spawn one of the four horror personalities with real navigation. */
+  spawnScaryEnemy(kind, x, overrides = {}) {
+    const profile = SCARY_ENEMIES[kind];
+    if (!profile) return null;
+    const def = makeScaryEnemy(kind, x, this.scaryDifficulty || 'normal');
+    const e = this.spawnEnemy({ ...def, ...overrides });
+    e.scaryKind = kind;
+    e.scaryName = profile.name;
+    e.scaryTactic = profile.tactic;
+    e.spiritEntity = true;
+    e.stunTimer = 0;
+    e.spiritMarkTimer = 0;
+    e.smokeTimer = 0;
+    e.fade = 0;
+    e.hidden = false;
+    e.hiddenTimer = 0;
+    e.phase = 1;
+    e.stalkSide = this.enemies.length % 2 === 0 ? 1 : -1;
+    e.strikeCooldown = profile.strikeCooldown || 0;
+    e.volleyCooldown = 2.2;
+    e.wailCooldown = profile.wailCooldown || 0;
+    e.mirrorCooldown = profile.mirrorCooldown || 0;
+    e.tollCooldown = profile.tollCooldown || 0;
+    e.ghostAlpha = 1;
+    e.brain = null;
+    this.emit({ type: 'scarySpawn', kind, name: profile.name });
+    return e;
+  }
+
+  enemySource(e) {
+    if (!e) return undefined;
+    return {
+      type: e.scaryKind || e.unnaturalKind || e.type,
+      family: e.scaryKind || e.unnaturalKind || e.family || e.type,
+      name: e.scaryName || e.name || e.type,
+      ai: e.ai,
+      boss: !!e.scaryBoss,
+    };
+  }
+
+  /** Move a faded enemy to a valid navigation point (never through a wall). */
+  reappearScary(e) {
+    const nav = this.nav;
+    const p = this.player;
+    const cx = p.x + p.w / 2;
+    let chosen = null;
+    if (nav && nav.nodes && nav.nodes.length) {
+      for (const node of nav.nodes) {
+        const d = Math.abs(node.x - cx);
+        if (d > 220 && d < 560 && !nav.lineOfSight(node.x, node.y - 24, cx, p.y + p.h / 2)) { chosen = node; break; }
+      }
+      if (!chosen) {
+        let best = 0;
+        for (const node of nav.nodes) {
+          const d = Math.abs(node.x - cx);
+          if (d > 220 && d > best) { best = d; chosen = node; }
+        }
+      }
+    }
+    if (chosen) {
+      e.x = chosen.x;
+      e.y = Math.max(0, chosen.y - e.h);
+      e.onGround = false;
+    } else {
+      e.x = clamp(cx + (cx > WORLD_W / 2 ? -320 : 320), 40, WORLD_W - e.w - 40);
+    }
+    e.hidden = false;
+    e.hiddenTimer = 0;
+    e.fade = 1;
+    e.brain = null;
+    e.vx = 0;
+    e.vy = 0;
+    this.emit({ type: 'scaryReappear', kind: e.scaryKind, x: Math.round(e.x) });
+    return e;
+  }
+
+  updateScaryEnemy(e, dt, view, distX, aggro) {
+    const p = this.player;
+    const profile = SCARY_ENEMIES[e.scaryKind];
+    if (!profile) return false;
+    const pcx = p.x + p.w / 2;
+    const ecx = e.x + e.w / 2;
+    const gap = Math.abs(pcx - ecx);
+    const dirToPlayer = pcx >= ecx ? 1 : -1;
+    const lanternWatched = e.scaryKind === 'lantern_eater'
+      && gap < (profile.stareRange || 430)
+      && (ecx - pcx) * (p.facing || 1) > 0;
+    if (e.hidden) {
+      e.hiddenTimer -= dt;
+      e.vx *= Math.pow(0.001, dt);
+      this.integrateEnemy(e, dt);
+      if (e.hiddenTimer <= 0) this.reappearScary(e);
+      return true;
+    }
+    if (rectHitsRect(e, p) && !e.hidden && !lanternWatched) {
+      this.damagePlayer(e.dmg, e.x + e.w / 2, { source: this.enemySource(e) });
+    }
+
+    if (e.scaryKind === 'hollow_wraith') {
+      const targetY = FLOOR_Y - e.h - 92 + Math.sin(this.time * 1.6 + e.homeX * 0.02) * 26;
+      e.y += (targetY - e.y) * Math.min(1, dt * 2.2);
+      e.x = clamp(e.x, 20, WORLD_W - e.w - 20);
+      e.facing = dirToPlayer;
+      if (e.castCooldown > 0) e.castCooldown -= dt;
+      if (gap < profile.fadeRange) {
+        // Dissolve in place: backing off mid-fade would make the vanish unreachable.
+        e.state = 'fade';
+        e.vx = 0;
+        e.fade += dt / profile.fadeTime;
+        if (e.fade >= 1) {
+          e.hidden = true;
+          e.hiddenTimer = profile.vanishTime;
+          e.fade = 0;
+          e.state = 'hidden';
+          this.emit({ type: 'scaryVanish', kind: e.scaryKind });
+        }
+        return true;
+      }
+      if (e.fade > 0) e.fade = Math.max(0, e.fade - dt * 1.6);
+      if (aggro) {
+        e.state = gap > profile.keepRange + 40 ? 'chase' : gap < profile.keepRange - 50 ? 'retreat' : 'hover';
+        if (gap > profile.keepRange + 40) e.x += dirToPlayer * e.speed * dt;
+        else if (gap < profile.keepRange - 50) e.x -= dirToPlayer * e.speed * 0.8 * dt;
+        if (e.castCooldown <= 0 && gap < 560 && this.enemyLineOfSight(e, p)) {
+          e.castCooldown = profile.castCooldown;
+          const angle = Math.atan2((p.y + p.h / 2) - (e.y + e.h / 2), pcx - ecx);
+          this.spawnEnemyProjectile({
+            owner: 'boss',
+            type: profile.projectile.type,
+            x: ecx,
+            y: e.y + e.h / 2,
+            vx: Math.cos(angle) * profile.projectile.vx,
+            vy: Math.sin(angle) * profile.projectile.vx,
+            r: profile.projectile.r,
+            dmg: profile.projectile.dmg,
+            life: 3,
+            source: this.enemySource(e),
+          });
+          this.emit({ type: 'enemyTelegraph' });
+        }
+      } else {
+        e.state = 'patrol';
+        e.x += e.patrolDir * e.speed * 0.4 * dt;
+        if (e.x <= e.minX) e.patrolDir = 1;
+        if (e.x + e.w >= e.maxX) e.patrolDir = -1;
+      }
+      return true;
+    }
+
+    if (e.scaryKind === 'night_stalker') {
+      e.strikeCooldown = Math.max(0, e.strikeCooldown - dt);
+      if (aggro) {
+        // Flank: approach a point behind the player, not the player itself.
+        const behind = pcx - dirToPlayer * profile.flankDistance;
+        const targetX = clamp(behind, Math.max(24, e.minX), Math.min(WORLD_W - 40, e.maxX));
+        const dx = targetX - ecx;
+        e.facing = Math.abs(dx) > 8 ? sign(dx) : dirToPlayer;
+        if (Math.abs(dx) > 24) this.moveEnemy(e, dt, sign(dx), e.speed, true);
+        else { e.vx *= Math.pow(0.02, dt); this.integrateEnemy(e, dt); }
+        if (e.strikeCooldown <= 0 && gap < profile.strikeRange && Math.abs(dx) <= 34) {
+          e.strikeCooldown = profile.strikeCooldown;
+          e.state = 'strike';
+          e.vx = e.facing * 260;
+          this.damagePlayer(Math.round(e.dmg * 1.35), e.x + e.w / 2, { source: this.enemySource(e), knock: true });
+          this.emit({ type: 'enemyLunge' });
+        }
+      } else {
+        e.state = 'patrol';
+        if (e.x <= e.minX) e.patrolDir = 1;
+        if (e.x + e.w >= e.maxX) e.patrolDir = -1;
+        this.moveEnemy(e, dt, e.patrolDir, e.speed * 0.6, false);
+        e.x = clamp(e.x, e.minX, Math.max(e.minX, e.maxX - e.w));
+      }
+      return true;
+    }
+
+    if (e.scaryKind === 'silent_knight') {
+      if (e.state === 'wind') {
+        e.vx = 0;
+        this.integrateEnemy(e, dt);
+        if (e.timer <= 0) {
+          e.state = 'lunge';
+          e.timer = 0.32;
+          e.vx = e.facing * profile.lungeSpeed;
+          e.attackLanded = false;
+        }
+        return true;
+      }
+      if (e.state === 'lunge') {
+        this.integrateEnemy(e, dt);
+        if (!e.attackLanded && rectHitsRect(e, p)) {
+          e.attackLanded = true;
+          this.damagePlayer(profile.lungeDamage, e.x + e.w / 2, { source: this.enemySource(e) });
+        }
+        if (e.timer <= 0) { e.state = 'recover'; e.timer = 0.7; e.vx = 0; e.cooldown = profile.lungeCooldown; }
+        return true;
+      }
+      if (e.cooldown > 0) e.cooldown -= dt;
+      if (aggro) {
+        e.facing = dirToPlayer;
+        if (gap < 96 && e.cooldown <= 0) {
+          e.state = 'wind';
+          e.timer = profile.windup;
+          e.vx = 0;
+          if (e.aggroSeen !== true) { e.aggroSeen = true; this.emit({ type: 'enemyTelegraph' }); }
+        } else if (gap > 80) {
+          e.state = 'chase';
+          this.moveEnemy(e, dt, view.dir || dirToPlayer, e.speed, true);
+        } else {
+          e.vx = 0;
+          this.integrateEnemy(e, dt);
+        }
+      } else {
+        e.state = 'patrol';
+        if (e.x <= e.minX) e.patrolDir = 1;
+        if (e.x + e.w >= e.maxX) e.patrolDir = -1;
+        e.facing = e.patrolDir;
+        this.moveEnemy(e, dt, e.patrolDir, e.speed * 0.55, false);
+        e.x = clamp(e.x, e.minX, Math.max(e.minX, e.maxX - e.w));
+      }
+      return true;
+    }
+
+    if (e.scaryKind === 'weeping_mother') {
+      const hover = FLOOR_Y - e.h - 78 + Math.sin(this.time * 1.4 + e.homeX * 0.02) * 18;
+      e.y += (hover - e.y) * Math.min(1, dt * 2.2);
+      e.x = clamp(e.x, 20, WORLD_W - e.w - 20);
+      e.facing = dirToPlayer;
+      e.wailCooldown = Math.max(0, (e.wailCooldown || 0) - dt);
+      if (e.state === 'wailWind') {
+        e.timer -= dt;
+        e.vx = 0;
+        if (e.timer <= 0) {
+          const base = Math.atan2((p.y + p.h / 2) - (e.y + e.h / 2), pcx - ecx);
+          for (let i = 0; i < profile.tearCount; i += 1) {
+            const angle = base + (i - (profile.tearCount - 1) / 2) * 0.18;
+            this.spawnEnemyProjectile({
+              owner: 'boss', type: 'wisp', x: ecx, y: e.y + e.h * 0.45,
+              vx: Math.cos(angle) * profile.tearSpeed, vy: Math.sin(angle) * profile.tearSpeed,
+              r: 7, dmg: profile.tearDamage, life: 3.2, source: this.enemySource(e),
+            });
+          }
+          // The wail drags the player toward the source, not away from it.
+          p.vx += dirToPlayer * 95;
+          e.state = 'recover';
+          e.timer = 0.8;
+          e.wailCooldown = profile.wailCooldown;
+          this.shake = Math.max(this.shake, 0.24);
+          this.emit({ type: 'scaryWail', kind: e.scaryKind, count: profile.tearCount });
+        }
+        return true;
+      }
+      if (e.state === 'recover') {
+        e.timer = (e.timer || 0) - dt;
+        if (e.timer > 0) return true;
+        e.state = aggro ? 'chase' : 'patrol';
+      }
+      if (aggro) {
+        e.state = gap > profile.keepRange + 40 ? 'chase' : gap < profile.keepRange - 50 ? 'retreat' : 'mourn';
+        if (gap > profile.keepRange + 40) e.x += dirToPlayer * e.speed * 0.7 * dt;
+        else if (gap < profile.keepRange - 50) e.x -= dirToPlayer * e.speed * 0.55 * dt;
+        if (e.wailCooldown <= 0 && gap < profile.wailRadius && this.enemyLineOfSight(e, p)) {
+          e.state = 'wailWind';
+          e.timer = profile.wailWindup;
+          e.vx = 0;
+          this.emit({ type: 'enemyTelegraph' });
+        }
+      } else {
+        e.state = 'patrol';
+        e.x += e.patrolDir * e.speed * 0.35 * dt;
+        if (e.x <= e.minX) e.patrolDir = 1;
+        if (e.x + e.w >= e.maxX) e.patrolDir = -1;
+      }
+      return true;
+    }
+
+    if (e.scaryKind === 'mirror_double') {
+      e.mirrorCooldown = Math.max(0, (e.mirrorCooldown || 0) - dt);
+      if (e.state === 'mirrorWind') {
+        e.timer -= dt;
+        e.vx = 0;
+        this.integrateEnemy(e, dt);
+        if (e.timer <= 0) e.state = 'chase';
+        return true;
+      }
+      if (aggro) {
+        e.facing = dirToPlayer;
+        if (e.mirrorCooldown <= 0 && gap > 90) {
+          const nav = this.nav;
+          let chosen = null;
+          if (nav && nav.nodes && nav.nodes.length) {
+            for (const node of nav.nodes) {
+              const d = Math.abs(node.x - pcx);
+              const behind = (node.x - pcx) * dirToPlayer < 0;
+              if (d > 120 && d < profile.mirrorRange && behind && nav.lineOfSight(node.x, node.y - 24, pcx, p.y + p.h / 2)) {
+                chosen = node;
+                break;
+              }
+            }
+          }
+          if (chosen) {
+            e.x = clamp(chosen.x, 20, WORLD_W - e.w - 20);
+            e.y = Math.max(0, chosen.y - e.h);
+            e.vx = 0;
+            e.vy = 0;
+            e.onGround = false;
+            e.mirrorCooldown = profile.mirrorCooldown;
+            e.state = 'mirrorWind';
+            e.timer = 0.24;
+            this.spawnFx('dash', e.x + e.w / 2, e.y + e.h / 2, { life: 0.35, size: 30, color: '#c8d8e8' });
+            this.emit({ type: 'scaryMirror', kind: e.scaryKind, x: Math.round(e.x) });
+            this.emit({ type: 'enemyTelegraph' });
+            return true;
+          }
+        }
+        if (gap > 64) this.moveEnemy(e, dt, view.dir || dirToPlayer, e.speed, true);
+        else { e.vx *= Math.pow(0.01, dt); this.integrateEnemy(e, dt); }
+      } else {
+        e.state = 'patrol';
+        if (e.x <= e.minX) e.patrolDir = 1;
+        if (e.x + e.w >= e.maxX) e.patrolDir = -1;
+        e.facing = e.patrolDir;
+        this.moveEnemy(e, dt, e.patrolDir, e.speed * 0.55, false);
+        e.x = clamp(e.x, e.minX, Math.max(e.minX, e.maxX - e.w));
+      }
+      return true;
+    }
+
+    if (e.scaryKind === 'lantern_eater') {
+      e.ghostAlpha = lanternWatched
+        ? Math.max(0.08, (e.ghostAlpha ?? 1) - dt * 4)
+        : Math.min(1, (e.ghostAlpha ?? 0.08) + dt * 5);
+      e.lungeCooldown = Math.max(0, (e.lungeCooldown || 0) - dt);
+      if (lanternWatched) {
+        e.state = 'frozen';
+        e.vx *= Math.pow(0.001, dt);
+        e.facing = p.facing || 1;
+        this.integrateEnemy(e, dt);
+        return true;
+      }
+      if (aggro) {
+        e.facing = dirToPlayer;
+        if (gap > 58) {
+          e.state = 'stalk';
+          this.moveEnemy(e, dt, view.dir || dirToPlayer, e.speed, true);
+        } else {
+          e.state = 'strike';
+          e.vx = 0;
+          this.integrateEnemy(e, dt);
+          if (e.lungeCooldown <= 0) {
+            e.lungeCooldown = profile.lungeCooldown;
+            this.damagePlayer(Math.round(e.dmg * 1.25), e.x + e.w / 2, { source: this.enemySource(e) });
+            this.emit({ type: 'enemyLunge' });
+          }
+        }
+      } else {
+        e.state = 'patrol';
+        if (e.x <= e.minX) e.patrolDir = 1;
+        if (e.x + e.w >= e.maxX) e.patrolDir = -1;
+        e.facing = e.patrolDir;
+        this.moveEnemy(e, dt, e.patrolDir, e.speed * 0.5, false);
+        e.x = clamp(e.x, e.minX, Math.max(e.minX, e.maxX - e.w));
+      }
+      return true;
+    }
+
+    if (e.scaryKind === 'drowned_bell') {
+      e.tollCooldown = Math.max(0, (e.tollCooldown || 0) - dt);
+      if (e.state === 'tollWind') {
+        e.timer -= dt;
+        e.vx = 0;
+        this.integrateEnemy(e, dt);
+        if (e.timer <= 0) {
+          this.spawnBruteShockwaves(e);
+          if (gap < profile.tollRadius) {
+            this.damagePlayer(profile.tollDamage, e.x + e.w / 2, { source: this.enemySource(e), knock: true });
+          }
+          this.shake = Math.max(this.shake, 0.45);
+          e.state = 'recover';
+          e.timer = 0.7;
+          e.tollCooldown = profile.tollCooldown;
+          this.emit({ type: 'bossSlam' });
+          this.emit({ type: 'scaryToll', kind: e.scaryKind, radius: profile.tollRadius });
+        }
+        return true;
+      }
+      if (e.state === 'recover') {
+        e.timer = (e.timer || 0) - dt;
+        if (e.timer > 0) {
+          this.integrateEnemy(e, dt);
+          return true;
+        }
+        e.state = aggro ? 'chase' : 'patrol';
+      }
+      if (aggro) {
+        e.facing = dirToPlayer;
+        if (gap > 130) {
+          e.state = 'chase';
+          this.moveEnemy(e, dt, view.dir || dirToPlayer, e.speed, true);
+        } else {
+          e.state = 'toll';
+          e.vx *= Math.pow(0.02, dt);
+          this.integrateEnemy(e, dt);
+        }
+        if (e.tollCooldown <= 0 && gap < profile.tollRadius && this.enemyLineOfSight(e, p)) {
+          e.state = 'tollWind';
+          e.timer = profile.tollWindup;
+          e.vx = 0;
+          this.emit({ type: 'enemyTelegraph' });
+        }
+      } else {
+        e.state = 'patrol';
+        if (e.x <= e.minX) e.patrolDir = 1;
+        if (e.x + e.w >= e.maxX) e.patrolDir = -1;
+        e.facing = e.patrolDir;
+        this.moveEnemy(e, dt, e.patrolDir, e.speed * 0.4, false);
+        e.x = clamp(e.x, e.minX, Math.max(e.minX, e.maxX - e.w));
+      }
+      return true;
+    }
+
+    if (e.scaryKind === 'forgotten_one') {
+      e.volleyCooldown -= dt;
+      const threshold = profile.phaseThreshold;
+      if (e.phase === 1 && e.hp <= e.maxHp * threshold) {
+        e.phase = 2;
+        e.speed = Math.round(e.speed * 1.15);
+        e.volleyCooldown = 0.6;
+        e.hitboxes?.closeAll?.('phase');
+        this.shake = Math.max(this.shake, 0.5);
+        this.emit({ type: 'bossPhase', name: e.scaryName, phase: 2 });
+        this.emit({ type: 'scaryPhone', kind: e.scaryKind, phase: 2 });
+      }
+      if (aggro) {
+        e.facing = dirToPlayer;
+        if (gap > 120) this.moveEnemy(e, dt, view.dir || dirToPlayer, e.speed, true);
+        else { e.vx *= Math.pow(0.01, dt); this.integrateEnemy(e, dt); }
+        if (e.volleyCooldown <= 0) {
+          e.volleyCooldown = e.phase >= 2 ? 2.1 : 3.4;
+          const count = e.phase >= 2 ? profile.volley + 4 : profile.volley;
+          for (let i = 0; i < count; i += 1) {
+            const angle = (Math.PI * 2 * i) / count;
+            this.spawnEnemyProjectile({
+              owner: 'boss',
+              type: 'wisp',
+              x: ecx,
+              y: e.y + e.h * 0.4,
+              vx: Math.cos(angle) * 210,
+              vy: Math.sin(angle) * 190,
+              r: 9,
+              dmg: 12 + (e.phase >= 2 ? 5 : 0),
+              life: 3.4,
+              source: this.enemySource(e),
+            });
+          }
+          if (gap < profile.slamRadius) {
+            this.spawnBruteShockwaves(e);
+            this.shake = Math.max(this.shake, 0.45);
+            this.emit({ type: 'bossSlam' });
+          }
+          this.emit({ type: 'fireball' });
+        }
+      } else {
+        e.state = 'patrol';
+        if (e.x <= e.minX) e.patrolDir = 1;
+        if (e.x + e.w >= e.maxX) e.patrolDir = -1;
+        e.facing = e.patrolDir;
+        this.moveEnemy(e, dt, e.patrolDir, e.speed * 0.5, false);
+        e.x = clamp(e.x, e.minX, Math.max(e.minX, e.maxX - e.w));
+      }
+      return true;
+    }
+    return false;
+  }
+
+  // ── Update XII: The Dread Beyond ─────────────────────────────────────────
+  /** Load one of the five horror environments without touching ALL_ROOMS. */
+  loadDreadEnvironment(id, options = {}) {
+    const env = DREAD_ENVIRONMENTS[id];
+    if (!env) return null;
+    const room = dreadRoom(id, options);
+    this.loadArena(room);
+    this.dreadEnvironmentId = id;
+    this.dreadEnv = env;
+    this.noises = [];
+    this.dreadBossManager = null;
+    this.dreadArena = null;
+    this.emit({ type: 'dreadEnvironment', environment: id, name: env.label, mechanics: env.mechanics.slice() });
+    return room;
+  }
+
+  /** A real, expiring sound the Unnatural enemies can hear. */
+  emitNoise(kind, x, options = {}) {
+    if (!Array.isArray(this.noises)) this.noises = [];
+    const noise = {
+      kind,
+      x: Number(x) || 0,
+      y: options.y ?? FLOOR_Y - 30,
+      w: 2,
+      h: 2,
+      loudness: Math.max(0.1, Number(options.loudness) || 1),
+      radius: Math.max(0.1, Number(options.radius) || 1),
+      ttl: Math.max(0.05, Number(options.ttl) || 1.2),
+    };
+    this.noises.push(noise);
+    while (this.noises.length > 24) this.noises.shift();
+    return noise;
+  }
+
+  /** Spawn an Unnatural enemy with perception, memory and its own tactic. */
+  spawnUnnatural(kind, x, overrides = {}) {
+    const profile = UNNATURAL[kind];
+    if (!profile) return null;
+    const def = makeUnnatural(kind, x, this.scaryDifficulty || 'normal');
+    const e = this.spawnEnemy({ ...def, ...overrides });
+    e.unnaturalKind = kind;
+    e.unnaturalName = profile.name;
+    e.unnaturalTactic = profile.tactic;
+    e.spiritEntity = true;
+    e.stunTimer = 0;
+    e.spiritMarkTimer = 0;
+    e.smokeTimer = 0;
+    e.sightRange = profile.sightRange;
+    e.coneDeg = profile.coneDeg;
+    e.hearingRange = profile.hearingRange;
+    e.contactCooldown = 0;
+    e.decoyTimer = 2.5;
+    e.hidden = false;
+    e.hiddenTimer = 0;
+    e.alpha = 1;
+    e.brain = null;
+    e.surface = profile.tactic === 'ceiling-ambush' ? 'ceiling' : 'ground';
+    e.surfaceMode = e.surface;
+    if (e.surface === 'ceiling') {
+      const spans = this.room?.ceilingSpans || [];
+      const span = spans[0] || { x1: 80, x2: WORLD_W - 80, y: 120 };
+      e.ceilingSpan = { ...span };
+      e.ceilingY = span.y;
+      e.y = e.ceilingY;
+      e.x = clamp(e.x, span.x1 + 10, Math.max(span.x1 + 10, span.x2 - e.w - 10));
+    }
+    this.emit({ type: 'unnaturalSpawn', kind, name: profile.name, tactic: profile.tactic });
+    return e;
+  }
+
+  unnaturalBrain(e) {
+    if (!e.dreadBrain) {
+      e.dreadBrain = new UnnaturalBrain(e, { nav: this.nav, seed: 97 + this.enemies.indexOf(e) });
+      this.emit({ type: 'unnaturalAwake', kind: e.unnaturalKind, name: e.unnaturalName });
+    }
+    e.dreadBrain.nav = this.nav;
+    if (UNNATURAL[e.unnaturalKind]) e.dreadBrain.profile = UNNATURAL[e.unnaturalKind];
+    return e.dreadBrain;
+  }
+
+  /** Fade out in place, then return at a navigation point with no line of sight. */
+  vanishUnnatural(e, seconds = 2.4) {
+    e.hidden = true;
+    e.hiddenTimer = Math.max(0.5, seconds);
+    e.alpha = 0;
+    e.vx = 0;
+    this.emit({ type: 'unnaturalVanish', kind: e.unnaturalKind, x: Math.round(e.x) });
+    return e;
+  }
+
+  reappearUnnatural(e) {
+    const nav = this.nav;
+    const p = this.player;
+    const cx = p.x + p.w / 2;
+    let chosen = null;
+    if (nav && nav.nodes && nav.nodes.length) {
+      for (const node of nav.nodes) {
+        const d = Math.abs(node.x - cx);
+        if (d > 260 && d < 620 && !nav.lineOfSight(node.x, node.y - 24, cx, p.y + p.h / 2)) { chosen = node; break; }
+      }
+      if (!chosen) {
+        let best = 0;
+        for (const node of nav.nodes) {
+          const d = Math.abs(node.x - cx);
+          if (d > 220 && d > best) { best = d; chosen = node; }
+        }
+      }
+    }
+    if (chosen) {
+      e.x = chosen.x;
+      e.y = Math.max(0, chosen.y - e.h);
+    } else {
+      e.x = clamp(cx + (cx > WORLD_W / 2 ? -340 : 340), 40, WORLD_W - e.w - 40);
+    }
+    e.hidden = false;
+    e.hiddenTimer = 0;
+    e.alpha = 1;
+    e.onGround = false;
+    e.vx = 0;
+    e.vy = 0;
+    e.dreadBrain = null;
+    this.emit({ type: 'unnaturalReappear', kind: e.unnaturalKind, x: Math.round(e.x) });
+    return e;
+  }
+
+  updateUnnatural(e, dt) {
+    const profile = UNNATURAL[e.unnaturalKind];
+    if (!profile) return false;
+    const p = this.player;
+    const pcx = p.x + p.w / 2;
+    const ecx = e.x + e.w / 2;
+    const gap = Math.abs(pcx - ecx);
+    const brain = this.unnaturalBrain(e);
+    const noises = (this.noises || []).filter((noise) => noise.ttl > 0);
+    const view = brain.update(dt, { player: p, nav: this.nav, noises });
+    e.aiState = view.state;
+    e.state = view.state;
+    e.awareness = view.alert;
+    e.contactCooldown = Math.max(0, (e.contactCooldown || 0) - dt);
+    // Real stuck detection: compare against the previous frame's position, so a
+    // blocked enemy re-paths or hops instead of walking into geometry forever.
+    if (e.stuckRef == null) e.stuckRef = e.x;
+    const frameMoved = Math.abs(e.x - e.stuckRef);
+    if (view.dir !== 0 && frameMoved < dt * 6) e.stuckTime = (e.stuckTime || 0) + dt;
+    else e.stuckTime = 0;
+    e.stuckRef = e.x;
+    if (e.stuckTime > 0.8) {
+      e.stuckTime = 0;
+      if (e.onGround && e.jumpCooldown <= 0) {
+        e.vy = -560;
+        e.vx = (view.dir || 1) * 160;
+        e.onGround = false;
+        e.jumpCooldown = 0.7;
+      }
+      e.dreadBrain = null;
+      this.emit({ type: 'aiRecover', id: e.id, kind: 'unnatural', recoveries: view.recoveries });
+    }
+    if (e.hidden) {
+      e.hiddenTimer -= dt;
+      if (e.hiddenTimer <= 0) this.reappearUnnatural(e);
+      return true;
+    }
+    if (e.surface === 'ceiling') { this.updateCeilingDweller(e, dt, view, profile); return true; }
+    if (e.unnaturalKind === 'forgotten_twin') { this.updateForgottenTwin(e, dt, view, profile); return true; }
+
+    if (e.unnaturalKind === 'faceless_visitor') {
+      const lookingAway = p.facing !== 0 && Math.sign(ecx - pcx) !== Math.sign(p.facing);
+      if (view.state === 'hunt' && gap < profile.disappearRange && !lookingAway) {
+        this.vanishUnnatural(e, profile.repositionDistance / profile.speed);
+        return true;
+      }
+      const speedMul = view.state === 'hunt' ? (gap > profile.observeRange ? 0.9 : 0.3) : 0.55;
+      this.moveEnemy(e, dt, view.dir, e.speed * speedMul, true);
+    } else if (e.unnaturalKind === 'pale_echo') {
+      e.decoyTimer -= dt;
+      if (e.decoyTimer <= 0) {
+        e.decoyTimer = 3.4 + Math.random();
+        const spot = brain.memory.nearestTo(pcx) || { x: pcx };
+        this.emit({ type: 'dreadDecoy', x: Math.round(spot.x + (Math.random() - 0.5) * 120), kind: 'voice', enemy: e.unnaturalKind });
+      }
+      const seek = view.dir || (brain.memory.last() ? Math.sign(brain.memory.last().x - ecx) : 0);
+      this.moveEnemy(e, dt, seek, e.speed * (view.state === 'hunt' ? 1.05 : 0.7), true);
+    } else if (e.unnaturalKind === 'empty_knight') {
+      this.updateUnnaturalKnight(e, dt, view, profile, gap);
+      return true;
+    } else {
+      this.moveEnemy(e, dt, view.dir, e.speed * (view.state === 'hunt' ? 1.1 : 0.6), true);
+    }
+
+    if (gap < 52 && e.contactCooldown <= 0 && rectHitsRect(e, p)) {
+      e.contactCooldown = 1.1;
+      this.damagePlayer(e.dmg, ecx, { source: this.enemySource(e) });
+      this.emit({ type: 'unnaturalStrike', kind: e.unnaturalKind });
+    }
+    return true;
+  }
+
+  /** Guard behaviour: patrols its room, reacts to noise, punishes at close range. */
+  updateUnnaturalKnight(e, dt, view, profile, gap) {
+    const p = this.player;
+    if (e.unnaturalState === 'wind') {
+      e.vx = 0;
+      this.integrateEnemy(e, dt);
+      e.unnaturalTimer -= dt;
+      if (e.unnaturalTimer <= 0) {
+        e.unnaturalState = 'lunge';
+        e.unnaturalTimer = 0.3;
+        e.vx = e.facing * profile.lungeSpeed;
+        e.attackLanded = false;
+      }
+      return true;
+    }
+    if (e.unnaturalState === 'lunge') {
+      this.integrateEnemy(e, dt);
+      if (!e.attackLanded && rectHitsRect(e, p)) {
+        e.attackLanded = true;
+        this.damagePlayer(profile.lungeDamage, e.x + e.w / 2, { source: this.enemySource(e) });
+        this.emit({ type: 'unnaturalStrike', kind: e.unnaturalKind });
+      }
+      e.unnaturalTimer -= dt;
+      if (e.unnaturalTimer <= 0) {
+        e.unnaturalState = 'recover';
+        e.unnaturalTimer = 0.7;
+        e.vx = 0;
+        e.lungeCooldown = profile.lungeCooldown;
+      }
+      return true;
+    }
+    e.lungeCooldown = Math.max(0, (e.lungeCooldown || 0) - dt);
+    const anchor = e.guardAnchor ?? (e.guardAnchor = e.x);
+    const minX = Math.max(e.minX, anchor - profile.guardRadius);
+    const maxX = Math.min(e.maxX, anchor + profile.guardRadius);
+    e.x = clamp(e.x, minX, Math.max(minX, maxX - e.w));
+    e.facing = Math.sign(p.x + p.w / 2 - (e.x + e.w / 2)) || e.facing;
+    if (view.state === 'hunt' && gap < 100 && e.lungeCooldown <= 0) {
+      e.unnaturalState = 'wind';
+      e.unnaturalTimer = profile.windup;
+      e.vx = 0;
+      this.emit({ type: 'dreadTelegraph', kind: e.unnaturalKind, windup: profile.windup });
+    } else {
+      this.moveEnemy(e, dt, view.dir, e.speed * (view.state === 'hunt' ? 1 : 0.5), true);
+      e.x = clamp(e.x, minX, Math.max(minX, maxX - e.w));
+    }
+    return true;
+  }
+
+  /** Ceiling Dweller: only travels on designated ceiling spans, then drops. */
+  updateCeilingDweller(e, dt, view, profile) {
+    const span = e.ceilingSpan || { x1: 40, x2: WORLD_W - 40, y: 120 };
+    const p = this.player;
+    const pcx = p.x + p.w / 2;
+    e.dropCooldown = Math.max(0, (e.dropCooldown || 0) - dt);
+    if (e.surfaceMode === 'ceiling') {
+      const targetX = clamp(pcx - e.w / 2, span.x1 + 8, Math.max(span.x1 + 8, span.x2 - e.w - 8));
+      const approach = view.state === 'hunt' ? targetX : e.x + view.dir * 40;
+      e.x += Math.sign(approach - e.x) * Math.min(Math.abs(approach - e.x), profile.ceilingSpeed * dt);
+      e.y = e.ceilingY;
+      e.vx = 0;
+      e.vy = 0;
+      if (view.state === 'hunt' && Math.abs(pcx - (e.x + e.w / 2)) < profile.dropRange && e.dropCooldown <= 0) {
+        e.surfaceMode = 'drop';
+        e.dropTimer = 0.9;
+        e.dropCooldown = profile.dropCooldown;
+        this.emit({ type: 'unnaturalDrop', kind: e.unnaturalKind, x: Math.round(e.x) });
+      }
+    } else if (e.surfaceMode === 'drop') {
+      e.dropTimer -= dt;
+      const targetY = FLOOR_Y - e.h;
+      e.y = Math.min(targetY, e.y + 620 * dt);
+      if (rectHitsRect(e, p) && e.contactCooldown <= 0) {
+        e.contactCooldown = 1.2;
+        this.damagePlayer(e.dmg, e.x + e.w / 2, { source: this.enemySource(e) });
+      }
+      if (e.dropTimer <= 0 || e.y >= targetY - 1) {
+        e.surfaceMode = 'ground';
+        e.groundTimer = 2.6;
+        e.onGround = true;
+      }
+    } else if (e.surfaceMode === 'ground') {
+      e.groundTimer -= dt;
+      this.moveEnemy(e, dt, view.dir || Math.sign(pcx - (e.x + e.w / 2)), e.speed * 0.9, true);
+      if (e.groundTimer <= 0) {
+        e.surfaceMode = 'climb';
+        this.emit({ type: 'unnaturalClimb', kind: e.unnaturalKind });
+      }
+    } else {
+      e.y = Math.max(e.ceilingY, e.y - profile.climbSpeed * dt);
+      e.vx = 0;
+      if (e.y <= e.ceilingY + 1) {
+        e.surfaceMode = 'ceiling';
+        e.y = e.ceilingY;
+      }
+    }
+    e.x = clamp(e.x, span.x1 + 4, Math.max(span.x1 + 4, span.x2 - e.w - 4));
+    return true;
+  }
+
+  /** Forgotten Twin: mirrors the player's position inside its arena. */
+  updateForgottenTwin(e, dt, view, profile) {
+    const p = this.player;
+    const arena = this.dreadArena || { minX: 140, maxX: WORLD_W - 140 };
+    const mirrored = clamp(arena.minX + (arena.maxX - arena.minX) - (p.x - arena.minX) - e.w, arena.minX, arena.maxX - e.w);
+    const targetX = view.state === 'hunt' ? mirrored : clamp(e.homeX ?? e.x, arena.minX, arena.maxX - e.w);
+    const dx = targetX - e.x;
+    if (Math.abs(dx) > 10) this.moveEnemy(e, dt, Math.sign(dx), e.speed * (view.state === 'hunt' ? 1 : 0.45), true);
+    else {
+      e.vx *= Math.pow(0.01, dt);
+      this.integrateEnemy(e, dt);
+    }
+    e.facing = p.facing ? -p.facing : e.facing;
+    if (rectHitsRect(e, p) && e.contactCooldown <= 0) {
+      e.contactCooldown = 1;
+      this.damagePlayer(e.dmg, e.x + e.w / 2, { source: this.enemySource(e) });
+      this.emit({ type: 'dreadMirrorHit', kind: e.unnaturalKind });
+    }
+    return true;
+  }
+
+  /** Spawn one of the three horror bosses with arena containment. */
+  spawnDreadBoss(kind) {
+    const profile = DREAD_BOSSES[kind];
+    if (!profile) return null;
+    const b = this.spawnBoss(kind, dreadBossSpawn(kind));
+    if (!b) return null;
+    b.dreadBoss = kind;
+    b.arena = { ...profile.arena };
+    b.phaseName = profile.phases[0].name;
+    b.patternTimer = 1.6;
+    b.dreadManager = new DreadBossManager();
+    b.dreadManager.begin(kind);
+    b.hitboxes?.closeAll?.('spawn');
+    this.dreadBossManager = b.dreadManager;
+    this.dreadArena = { ...b.arena };
+    this.emit({ type: 'dreadBossSpawn', kind, name: profile.name, phases: profile.phases.length, arena: { ...b.arena } });
+    return b;
+  }
+
+  updateDreadBoss(dt, b) {
+    const profile = DREAD_BOSSES[b.dreadBoss];
+    if (!profile) return;
+    const phase = profile.phases.find((entry) => entry.phase === b.phase) || profile.phases[0];
+    const manager = b.dreadManager || (b.dreadManager = new DreadBossManager());
+    if (!manager.boss) manager.begin(b.dreadBoss);
+    b.phaseName = phase.name;
+    b.state = phase.pattern;
+    const p = this.player;
+    const pcx = p.x + p.w / 2;
+    const arena = b.arena || profile.arena;
+    const dir = Math.sign(pcx - (b.x + b.w / 2)) || 1;
+    b.facing = dir;
+    // Mirror the live HP into the encounter manager so phases, the hidden arena
+    // and death all follow the real fight instead of a parallel copy.
+    if (manager.boss) {
+      manager.boss.maxHp = b.maxHp;
+      manager.boss.hp = b.hp;
+      manager.evaluate();
+    }
+    // Containment: the boss can never be knocked or lured out of its arena.
+    if (!manager.boss.hiddenPhaseEntered) manager.boss.arena = { ...arena };
+    manager.clamp(b);
+    b.patternTimer = (b.patternTimer ?? 1.6) - dt;
+    if (phase.pattern === 'gaze' || phase.pattern === 'reach' || phase.pattern === 'unblinking') {
+      b.x = clamp(b.x + dir * profile.speed * 0.3 * dt, arena.minX, Math.max(arena.minX, arena.maxX - b.w));
+    }
+    if (b.patternTimer <= 0) {
+      b.patternTimer = (phase.pattern === 'unblinking' ? 1.5 : 2.4) / Math.max(0.4, b.actionRate || 1);
+      this.dreadBossAttack(b, phase, profile);
+    }
+    for (const hitbox of manager.hitboxes.slice()) {
+      if (hitbox.data?.rect && !hitbox.data.hit && hitbox.ttl > 0 && rectHitsRect(hitbox.data.rect, p)) {
+        hitbox.data.hit = true;
+        this.damagePlayer(hitbox.data.damage || profile.contact, hitbox.data.rect.x, { source: this.bossSource(b) });
+      }
+    }
+    manager.tick(dt);
+    while (manager.events.length) {
+      const managerEvent = manager.events.shift();
+      // The Hollow King moves to a hidden second arena; keep the live boss in sync.
+      if (managerEvent.type === 'dreadBossArena' && manager.boss) b.arena = { ...manager.boss.arena };
+      this.emit(managerEvent);
+    }
+  }
+
+  dreadBossAttack(b, phase, profile) {
+    const manager = b.dreadManager;
+    const p = this.player;
+    const pcx = p.x + p.w / 2;
+    const cx = b.x + b.w / 2;
+    const cy = b.y + b.h * 0.45;
+    const pattern = phase.pattern;
+    this.emit({ type: 'dreadTelegraph', kind: b.dreadBoss, name: b.name, pattern, windup: 0.5 });
+    if (pattern === 'gaze' || pattern === 'unblinking') {
+      const count = pattern === 'unblinking' ? 10 : 6;
+      for (let i = 0; i < count; i += 1) {
+        const angle = (Math.PI * 2 * i) / count + this.time * 0.2;
+        this.spawnEnemyProjectile({
+          owner: 'boss', type: 'wisp', x: cx, y: cy,
+          vx: Math.cos(angle) * 190, vy: Math.sin(angle) * 170,
+          r: 9, dmg: Math.max(1, Math.round(profile.contact * 0.7)), life: 3.2, source: this.bossSource(b),
+        });
+      }
+      this.emit({ type: 'dreadVolley', kind: b.dreadBoss, count });
+    } else if (pattern === 'shift') {
+      const anchors = [profile.arena.minX + 90, Math.round((profile.arena.minX + profile.arena.maxX) / 2), profile.arena.maxX - b.w - 90];
+      const next = anchors.find((x) => Math.abs(x - b.x) > 160) ?? anchors[0];
+      b.x = clamp(next, profile.arena.minX, Math.max(profile.arena.minX, profile.arena.maxX - b.w));
+      if (typeof this.spawnBruteShockwaves === 'function') this.spawnBruteShockwaves(b);
+      manager.openHitbox(`shift_${Math.round(this.time * 100)}`, phase.hitboxTtl + 0.3, {
+        rect: { x: pcx - 110, y: FLOOR_Y - 60, w: 220, h: 60 }, damage: Math.round(profile.contact * 1.1),
+      });
+      this.emit({ type: 'dreadSlam', kind: b.dreadBoss, x: Math.round(b.x) });
+    } else if (pattern === 'reach' || pattern === 'counter') {
+      const behind = pattern === 'counter' ? pcx - Math.sign(p.facing || 1) * 90 : pcx;
+      manager.openHitbox(`${pattern}_${Math.round(this.time * 100)}`, phase.hitboxTtl + 0.35, {
+        rect: { x: behind - 80, y: p.y - 10, w: 160, h: p.h + 30 }, damage: Math.round(profile.contact * 1.2),
+      });
+      this.emit({ type: 'dreadStrike', kind: b.dreadBoss, pattern });
+    } else if (pattern === 'summon') {
+      const alive = this.enemies.filter((e) => e.unnaturalKind).length;
+      if (alive < 2) {
+        const kind = profile.summons[(b.phase + this.enemies.length) % profile.summons.length];
+        this.spawnUnnatural(kind, clamp(cx + (b.facing > 0 ? -180 : 180), 60, WORLD_W - 120));
+      }
+      this.emit({ type: 'dreadSummon', kind: b.dreadBoss });
+    } else if (pattern === 'arena') {
+      if (typeof this.spawnBruteShockwaves === 'function') this.spawnBruteShockwaves(b);
+      manager.openHitbox(`arena_${Math.round(this.time * 100)}`, phase.hitboxTtl + 0.5, {
+        rect: { x: profile.arena.minX, y: FLOOR_Y - 46, w: profile.arena.maxX - profile.arena.minX, h: 46 },
+        damage: Math.round(profile.contact * 0.9),
+      });
+      this.emit({ type: 'dreadSlam', kind: b.dreadBoss, x: Math.round(cx) });
+    } else if (pattern === 'mirror') {
+      b.x = clamp(profile.arena.minX + (profile.arena.maxX - profile.arena.minX) - pcx - b.w / 2, profile.arena.minX, Math.max(profile.arena.minX, profile.arena.maxX - b.w));
+      manager.openHitbox(`mirror_${Math.round(this.time * 100)}`, phase.hitboxTtl + 0.3, {
+        rect: { x: pcx - 70, y: p.y - 8, w: 140, h: p.h + 24 }, damage: Math.round(profile.contact * 1.1),
+      });
+      this.emit({ type: 'dreadMirrorStrike', kind: b.dreadBoss });
+    } else if (pattern === 'illusions') {
+      b.illusions = ((b.illusions || 0) + 1) % ((profile.illusions || 2) + 1);
+      const offsets = [-160, 160].slice(0, profile.illusions || 2);
+      this.emit({ type: 'dreadIllusions', kind: b.dreadBoss, offsets, count: offsets.length });
+      manager.openHitbox(`illusion_${Math.round(this.time * 100)}`, phase.hitboxTtl + 0.3, {
+        rect: { x: cx - 200, y: p.y - 6, w: 400, h: p.h + 20 }, damage: Math.round(profile.contact * 0.8),
+      });
+    } else {
+      this.spawnEnemyProjectile({
+        owner: 'boss', type: 'wisp', x: cx, y: cy,
+        vx: dir * 260, vy: -40, r: 10, dmg: profile.contact, life: 3.4, source: this.bossSource(b),
+      });
+      this.emit({ type: 'dreadVolley', kind: b.dreadBoss, count: 1 });
+    }
+  }
+
+  enemyLineOfSight(a, b) {
+    if (!a || !b) return false;
+    if (!this.nav) return true;
+    return this.nav.lineOfSight(
+      a.x + a.w / 2, a.y + a.h / 2,
+      b.x + b.w / 2, b.y + b.h / 2,
+    );
+  }
+
+  bossSource(b) {
+    return b
+      ? { type: b.kind, bossKind: b.kind, boss: true, name: b.name, family: 'boss' }
+      : { type: 'unknown' };
+  }
+
+  /** Drive an enemy along its shared-AI intent (search / return / retreat). */
+  driveBrain(e, dt, view) {
+    const dir = view.dir || 0;
+    this.moveEnemy(e, dt, dir, (e.speed || 60) * (view.speed || 1), true);
+    if (view.jump && e.onGround && e.jumpCooldown <= 0) {
+      e.vy = -620;
+      e.onGround = false;
+      e.jumpCooldown = 0.5;
+    }
+  }
+
+  /** Deterministic recovery hop so an enemy cannot wedge in a corner forever. */
+  unstickEnemy(e, view) {
+    if (e.unstickLock > 0) return;
+    e.unstickLock = 1.1;
+    const dir = view.dir || (Math.random() < 0.5 ? -1 : 1);
+    e.vy = -540;
+    e.vx = dir * 150;
+    e.onGround = false;
+    e.jumpCooldown = 0.35;
+    if (e.brain) e.brain.pathVersion = -1;
+    this.emit({ type: 'aiRecover', id: e.id, kind: e.type });
+  }
+
+  /** AI debug data for the developer dashboard. */
+  aiDebug() {
+    return this.enemies
+      .filter((e) => !e.dead && e.brain)
+      .map((e) => e.brain.debugSnapshot());
   }
 
   /** Register co-op companions. The host owns their authoritative state. */
@@ -3534,12 +5229,41 @@ export class AshenGame {
 
   updateEnemies(dt) {
     const p = this.player;
+    if (this.noises && this.noises.length) {
+      for (const noise of this.noises) noise.ttl -= dt;
+      this.noises = this.noises.filter((noise) => noise.ttl > 0).slice(-24);
+    }
     for (const e of this.enemies) {
       if (e.dead) continue;
       if (e.hitFlash > 0) e.hitFlash -= dt;
       if (e.timer > 0) e.timer -= dt;
       if (e.cooldown > 0) e.cooldown -= dt;
       if (e.jumpCooldown > 0) e.jumpCooldown -= dt;
+      if (e.unstickLock > 0) e.unstickLock -= dt;
+      // The Veil of the Forgotten: ghost brains own perception, pathing and
+      // manifestation, so they bypass the generic horror/AI layers entirely.
+      if ((Number(e.stunTimer) || 0) > 0 || (Number(e.smokeTimer) || 0) > 0) {
+        if (e.stunTimer > 0) e.stunTimer = Math.max(0, e.stunTimer - dt);
+        if (e.smokeTimer > 0) e.smokeTimer = Math.max(0, e.smokeTimer - dt);
+        if (e.spiritMarkTimer > 0) e.spiritMarkTimer = Math.max(0, e.spiritMarkTimer - dt);
+        e.state = 'stunned';
+        e.vx *= Math.pow(0.001, dt);
+        e.hidden = false;
+        e.ghostHidden = false;
+        e.ghostAlpha = 1;
+        e.fade = 0;
+        if (e.flying) {
+          e.x = clamp(e.x + e.vx * dt, 20, WORLD_W - e.w - 20);
+        } else {
+          this.integrateEnemy(e, dt);
+        }
+        continue;
+      }
+      if (e.spiritMarkTimer > 0) e.spiritMarkTimer = Math.max(0, e.spiritMarkTimer - dt);
+      if (e.ghostKind) {
+        this.updateGhost(e, dt);
+        continue;
+      }
       if (e.snared > 0) {
         e.snared = Math.max(0, e.snared - dt);
         e.vx *= Math.pow(0.001, dt);
@@ -3551,8 +5275,34 @@ export class AshenGame {
       const distX = pcx - ecx;
       const dy = p.y + p.h - (e.y + e.h);
       const ai = e.ai || e.type;
-      const aggroRange = ai === 'sentinel' || ai === 'wraith' ? 720 : 540;
-      const aggro = Math.abs(distX) < aggroRange && Math.abs(dy) < (e.flying ? 420 : 300);
+      const brain = this.brainFor(e);
+      const view = brain.update(dt, { player: p, enemies: this.enemies });
+      e.aiState = view.state;
+      e.aiStuck = brain.stuckEvents;
+      const aggro = view.aggro;
+
+      if (view.state === 'stunned') {
+        e.state = 'hurt';
+        e.vx *= Math.pow(0.002, dt);
+        this.integrateEnemy(e, dt);
+        continue;
+      }
+      // Horror personalities own their movement: distance keeping, flanking and
+      // fades must not be overridden by the generic search/return/retreat layer.
+      if (e.scaryKind) {
+        this.updateScaryEnemy(e, dt, view, distX, aggro);
+        continue;
+      }
+      if (e.unnaturalKind) {
+        this.updateUnnatural(e, dt);
+        continue;
+      }
+      if (view.state === 'search' || view.state === 'return' || view.state === 'retreat' || view.state === 'assist' || view.state === 'guard') {
+        e.state = view.state;
+        this.driveBrain(e, dt, view);
+        continue;
+      }
+      if (view.stuck) this.unstickEnemy(e, view);
 
       if (ai === 'wraith') {
         this.updateWraith(e, dt, aggro, distX);
@@ -3608,7 +5358,7 @@ export class AshenGame {
       } else if (ai === 'crawler') {
         if (aggro) {
           e.state = 'chase';
-          const dir = Math.abs(distX) > 10 ? sign(distX) : 0;
+          const dir = view.dir || (Math.abs(distX) > 10 ? sign(distX) : 0);
           this.moveEnemy(e, dt, dir, e.speed * 1.35, true);
         } else {
           e.state = 'patrol';
@@ -3649,7 +5399,7 @@ export class AshenGame {
             this.emit({ type: 'enemyTelegraph' });
           } else {
             e.state = 'chase';
-            const dir = Math.abs(distX) > 18 ? sign(distX) : 0;
+            const dir = view.dir || (Math.abs(distX) > 18 ? sign(distX) : 0);
             this.moveEnemy(e, dt, dir, e.speed, true);
           }
         } else {
@@ -3693,7 +5443,7 @@ export class AshenGame {
             this.emit({ type: 'enemyTelegraph' });
           } else {
             e.state = 'chase';
-            const dir = Math.abs(distX) > 12 ? sign(distX) : 0;
+            const dir = view.dir || (Math.abs(distX) > 12 ? sign(distX) : 0);
             this.moveEnemy(e, dt, dir, e.speed, true);
           }
         } else {
@@ -3763,7 +5513,7 @@ export class AshenGame {
       this.integrateEnemy(e, dt);
       if (!e.attackLanded && rectHitsRect(e, p)) {
         e.attackLanded = true;
-        this.damagePlayer(e.dmg, e.x + e.w / 2);
+        this.damagePlayer(e.dmg, e.x + e.w / 2, { source: this.enemySource(e) });
       }
       if (e.timer <= 0) {
         e.state = 'recover';
@@ -3913,12 +5663,21 @@ export class AshenGame {
   updateBoss(dt) {
     const b = this.boss;
     if (!b) return;
+    if (!b.hitboxes) b.hitboxes = new HitboxSet(b);
+    b.hitboxes.update(dt);
+    if (!b.dying && b.stagger > 0) b.hitboxes.closeAll('stagger');
+    if (!b.dying && b.stunTimer > 0) b.hitboxes.closeAll('stun');
+    if (b.dying) b.hitboxes.closeAll('death');
+    dt *= b.actionRate || 1;
+    if (b.slow > 0) {
+      b.slow = Math.max(0, b.slow - dt);
+      dt *= 0.55;
+    }
     if (b.hitFlash > 0) b.hitFlash -= dt;
     if (b.invuln > 0) b.invuln -= dt;
-    if (b.intro > 0) {
-      b.intro -= dt;
-      return;
-    }
+    // A dying boss must finish its death animation even if the killing blow
+    // also broke its stance. Stagger/intro would otherwise delay or swallow
+    // the death timer and leave the encounter stuck.
     if (b.dying) {
       b.deathTimer -= dt;
       if (Math.random() < 0.4) {
@@ -3933,6 +5692,21 @@ export class AshenGame {
       if (b.deathTimer <= 0) this.finishBoss();
       return;
     }
+    if (b.stunTimer > 0) {
+      b.stunTimer = Math.max(0, b.stunTimer - dt);
+      b.state = 'stunned';
+      return;
+    }
+    if (b.stagger > 0) {
+      b.stagger = Math.max(0, b.stagger - dt);
+      b.state = 'stagger';
+      return;
+    }
+    if (b.intro > 0) {
+      b.intro -= dt;
+      return;
+    }
+    if (b.dreadBoss) { this.updateDreadBoss(dt, b); return; }
     if (b.kind === 'warden') this.updateWarden(b, dt);
     else if (b.kind === 'wyrm') this.updateWyrm(b, dt);
     else if (b.kind === 'choir') this.updateChoir(b, dt);
@@ -4021,15 +5795,25 @@ export class AshenGame {
       }
       case 'slashActive': {
         if (!b.attackLanded) {
-          const hb = {
-            x: b.facing > 0 ? b.x + b.w - 12 : b.x - 118,
-            y: b.y + 8,
-            w: 130,
-            h: b.h - 6,
-          };
-          if (rectHitsRect(hb, p)) {
+          if (!b.hitboxes) b.hitboxes = new HitboxSet(b);
+          let box = b.hitboxes.get('slash');
+          if (!box) {
+            box = b.hitboxes.open('slash', {
+              windup: 0,
+              active: 0.16,
+              recovery: 0,
+              width: 130,
+              height: b.h - 6,
+              offsetX: b.w / 2 + 53,
+              offsetY: 11,
+              damage: b.phase === 2 ? 26 : 19,
+              knock: 230,
+            });
+          }
+          b.activeAttack = 'slash';
+          if (box.tryHit(p) && this.enemyLineOfSight(b, p)) {
             b.attackLanded = true;
-            this.damagePlayer(b.phase === 2 ? 26 : 19, bcx);
+            this.damagePlayer(b.phase === 2 ? 26 : 19, bcx, { source: this.bossSource(b) });
           }
         }
         if (b.timer <= 0) {
@@ -5036,6 +6820,15 @@ export class AshenGame {
     this.arenaTheme = null;
     this.projectiles = [];
     this.emitBossDialogue(b, 'defeat');
+    if (b.dreadBoss) {
+      // Horror bosses end their own encounter: no blessing, no campaign gate.
+      this.state = 'playing';
+      this.dreadArena = null;
+      this.rewardSpirit(b);
+      this.emit({ type: 'dreadBossDown', kind: b.dreadBoss, name: b.name, room });
+      this.emit({ type: 'bossDown', room, kind: b.dreadBoss, name: b.name });
+      return;
+    }
     if (info?.reward === 'victory') {
       this.state = 'victory';
       this.deathTimer = 0;
@@ -5160,10 +6953,26 @@ export class AshenGame {
             } else {
               pr.dead = true;
             }
-            this.hurtEnemy(e, { dmg: pr.dmg, knock: 120, name: pr.type }, sign(pr.vx) || p.facing);
+            const spirit = isSpiritEnemy(e);
+            const hitDamage = spirit && pr.spiritDamage ? pr.spiritDamage : pr.dmg;
+            this.hurtEnemy(e, {
+              dmg: hitDamage,
+              knock: 120,
+              name: pr.type,
+              spiritBane: !!pr.spiritDamage,
+            }, sign(pr.vx) || p.facing);
+            if (spirit && !e.dead) {
+              if (pr.hunterStun) e.stunTimer = Math.max(Number(e.stunTimer) || 0, pr.hunterStun);
+              if (pr.hunterMark) e.spiritMarkTimer = Math.max(Number(e.spiritMarkTimer) || 0, pr.hunterMark);
+              this.emit({ type: 'hunterHit', kind: e.scaryKind || e.unnaturalKind || e.ghostKind || e.type, damage: hitDamage });
+            }
+            if (pr.maxHits) {
+              pr.hits = (Number(pr.hits) || 0) + 1;
+              if (pr.hits >= pr.maxHits) pr.dead = true;
+            }
             if (pr.snare) e.snared = Math.max(e.snared || 0, pr.snare);
             if (pr.type === 'bomb') this.explodeBomb(pr);
-            this.burst(pr.x, pr.y, 7, '#d8c08a', 130);
+            this.burst(pr.x, pr.y, 7, pr.spiritDamage ? '#e8f6ff' : '#d8c08a', 130);
           }
         }
         const b = this.boss;
@@ -5172,15 +6981,19 @@ export class AshenGame {
             pr.hitIds = pr.hitIds || [];
             if (!pr.hitIds.includes('boss')) {
               pr.hitIds.push('boss');
-              this.hurtBoss(pr.dmg * mult, 90, sign(pr.vx) || p.facing, false);
+              const bossDamage = isSpiritEnemy(b) && pr.spiritDamage ? pr.spiritDamage : pr.dmg;
+              this.hurtBoss(bossDamage * mult, 90, sign(pr.vx) || p.facing, false);
+              if (isSpiritEnemy(b) && pr.hunterStun && !b.dying) b.stunTimer = Math.max(Number(b.stunTimer) || 0, pr.hunterStun * 0.5);
               if (pr.type === 'bomb') this.explodeBomb(pr);
               this.burst(pr.x, pr.y, 8, '#d8c08a', 140);
             }
           } else {
             pr.dead = true;
-            this.hurtBoss(pr.dmg * mult, 90, sign(pr.vx) || p.facing, false);
+            const bossDamage = isSpiritEnemy(b) && pr.spiritDamage ? pr.spiritDamage : pr.dmg;
+            this.hurtBoss(bossDamage * mult, 90, sign(pr.vx) || p.facing, false);
+            if (isSpiritEnemy(b) && pr.hunterStun && !b.dying) b.stunTimer = Math.max(Number(b.stunTimer) || 0, pr.hunterStun * 0.5);
             if (pr.type === 'bomb') this.explodeBomb(pr);
-            this.burst(pr.x, pr.y, 8, '#d8c08a', 140);
+            this.burst(pr.x, pr.y, 8, pr.spiritDamage ? '#e8f6ff' : '#d8c08a', 140);
           }
         }
         const wall = this.activeWall();
@@ -5204,7 +7017,9 @@ export class AshenGame {
           : { x: pr.x - pr.r, y: pr.y - pr.r, w: pr.r * 2, h: pr.r * 2 };
         if (pr.warmup > 0) continue;
         if (rectHitsRect(box, p)) {
-          if (this.damagePlayer(pr.dmg, pr.x + (pr.w || 0) / 2)) {
+          if (this.damagePlayer(pr.dmg, pr.x + (pr.w || 0) / 2, {
+            source: { type: pr.type, family: pr.type, owner: 'boss', boss: true },
+          })) {
             if (pr.type === 'fireball') pr.dead = true;
             this.burst(pr.x, pr.y, 10, '#ff9d55', 170);
           }
@@ -5224,7 +7039,9 @@ export class AshenGame {
           : e.type === 'brute' && e.state === 'slam'
             ? 24
             : e.dmg;
-        this.damagePlayer(dmg, e.x + e.w / 2);
+        this.damagePlayer(dmg, e.x + e.w / 2, {
+          source: { type: e.type, family: e.ai || e.type, ai: e.ai, name: e.name },
+        });
       }
     }
     const b = this.boss;
@@ -5232,7 +7049,7 @@ export class AshenGame {
       const heavyHit =
         (b.kind === 'wyrm' && b.state === 'dive') ||
         (b.kind === 'oathbreaker' && b.state === 'dash');
-      this.damagePlayer(heavyHit ? 24 : b.contact, b.x + b.w / 2);
+      this.damagePlayer(heavyHit ? 24 : b.contact, b.x + b.w / 2, { source: this.bossSource(b) });
     }
   }
 

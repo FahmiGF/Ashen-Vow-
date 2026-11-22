@@ -49,7 +49,7 @@ function memoryStorage(initial = {}) {
 
 test('default settings define one or two unique bindings per action', () => {
   const settings = defaultSettings();
-  assert.equal(ACTIONS.length, 14);
+  assert.equal(ACTIONS.length, 15);
   const used = new Set();
   for (const action of ACTIONS) {
     const codes = settings.bindings[action.id];

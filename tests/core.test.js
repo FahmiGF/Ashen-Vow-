@@ -909,10 +909,11 @@ test('room 2 opens its western mycelial gate after the warden falls', () => {
 
 test('selectable characters expose balanced stats, valid appearances, and unique abilities', () => {
   const ids = Object.keys(CHARACTERS);
-  assert.equal(ids.length, 13);
+  assert.equal(ids.length, 18);
   assert.deepEqual(ids.sort(), [
-    'ashwright', 'gladiator', 'glassblade', 'hearthkeeper', 'ignis', 'kael', 'karn', 'lyna',
-    'retiarius', 'sentinel', 'sera', 'stormcaller', 'warden',
+    'ashwright', 'chrono_weaver', 'dawn_paladin', 'gladiator', 'glassblade', 'hearthkeeper',
+    'ignis', 'kael', 'karn', 'lyna', 'retiarius', 'rift_assassin', 'sentinel', 'sera',
+    'stormcaller', 'void_herald', 'warden', 'worldroot_druid',
   ]);
   for (const c of Object.values(CHARACTERS)) {
     assert.ok(c.name && c.title && c.desc && c.glyph);
@@ -1314,7 +1315,7 @@ test('tonic, smoke, and whetstone apply their consumable effects', () => {
 });
 
 test('the Warung Abu catalogue includes sigils, rituals, and the expanded consumables', () => {
-  assert.equal(SHOP_ITEMS.length, 18);
+  assert.equal(SHOP_ITEMS.length, 25);
   for (const type of ['weapon', 'sigil', 'ritual', 'consumable', 'ammo', 'flask']) {
     assert.ok(SHOP_ITEMS.some((item) => item.type === type), `catalogue is missing ${type}`);
   }

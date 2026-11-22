@@ -52,7 +52,7 @@ test('faewood defines 10 stages and 2 boss arenas after Hearthfall', () => {
   assert.equal(FAIRY_NPCS.length, 4);
   assert.equal(ALL_ROOMS[FAIRY_ROOM_START], FAIRY_ROOMS[0]);
   assert.equal(ALL_ROOMS[FAIRY_ROOM_START + 11], FAIRY_ROOMS[11]);
-  assert.equal(ALL_ROOMS.length, 14 + 100 + 240 + 60 + 12 + 59 + 20 + 20);
+  assert.equal(ALL_ROOMS.length, 662);
   assert.equal(ALL_ENEMY_INFO.cap_chaser, FAIRY_ENEMY_INFO.cap_chaser);
   assert.equal(ALL_BOSS_INFO.fairy_magma_slime, FAIRY_BOSS_INFO.fairy_magma_slime);
   assert.equal(ALL_BOSS_INFO.fairy_spectral_dragon, FAIRY_BOSS_INFO.fairy_spectral_dragon);

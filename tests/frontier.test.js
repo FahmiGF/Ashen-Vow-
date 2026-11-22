@@ -197,17 +197,21 @@ test('3D projection math handles screen transforms and clipping properly', () =>
 test('3D canvas renderer executes without errors on mock context', () => {
   const game = new Ashen3DGame();
   const ops = [];
+  const gradient = { addColorStop: () => {} };
   const mockCtx = {
-    createLinearGradient: () => ({ addColorStop: () => {} }),
-    fillStyle: '',
-    strokeStyle: '',
-    lineWidth: 1,
-    font: '',
-    textAlign: '',
+    createLinearGradient: () => gradient,
+    createRadialGradient: () => gradient,
+    save: () => ops.push(['save']),
+    restore: () => ops.push(['restore']),
+    clearRect: () => ops.push(['clearRect']),
+    fillStyle: '', strokeStyle: '', lineWidth: 1, font: '', textAlign: '',
+    globalAlpha: 1, globalCompositeOperation: 'source-over',
     fillRect: (x, y, w, h) => ops.push(['fillRect', x, y, w, h]),
     beginPath: () => ops.push(['beginPath']),
     moveTo: (x, y) => ops.push(['moveTo', x, y]),
     lineTo: (x, y) => ops.push(['lineTo', x, y]),
+    quadraticCurveTo: () => ops.push(['quadraticCurveTo']),
+    bezierCurveTo: () => ops.push(['bezierCurveTo']),
     arc: (x, y, r) => ops.push(['arc', x, y, r]),
     ellipse: (x, y, rx, ry) => ops.push(['ellipse', x, y, rx, ry]),
     fill: () => ops.push(['fill']),
@@ -215,6 +219,7 @@ test('3D canvas renderer executes without errors on mock context', () => {
     closePath: () => ops.push(['closePath']),
     fillText: (txt, x, y) => ops.push(['fillText', txt, x, y]),
     roundRect: (x, y, w, h, r) => ops.push(['roundRect', x, y, w, h, r]),
+    measureText: (text) => ({ width: String(text).length * 6 }),
   };
 
   render3D(mockCtx, game);

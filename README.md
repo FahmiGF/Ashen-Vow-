@@ -1,4 +1,214 @@
-# Ashen Vow — v0.17.0
+# Ashen Vow — v0.31.0
+
+## Update XX — The Mourning Choir & Second Shadows (v0.31.0)
+
+## Horror expansion
+
+- **Eight Scary Mode ghosts**: the four existing hunters are joined by **The Weeping Mother** (a wail that pulls and fires tears), **The Mirror Double** (repositions through valid navigation points), **The Lantern Eater** (freezes while observed, advances when you look away), and **The Drowned Bell** (a toll that releases real shockwaves).
+- **Seventeen jumpscares**: seven new events add double shadows, counting knocks, a floor hand, a mirror guest, hungry light, a buried bell, and a mourning wake. Four of them can summon a new ghost into the live room.
+- **New procedural visuals**: double silhouettes, floor hands/faces, window and mirror faces, inverted corridors, glitch bands, bell ripples, lantern glow, mirror shards, and tears. Anti-Jumpscare still removes startling screens while leaving safe atmosphere.
+- **Journal 2.0 continued**: 9 achievements and 9 cosmetic rewards, including **The Uninvited** and **Every Last Whisper**.
+- **The Dread Beyond**: two new Unnatural — **The Mirror Mourner** and **The Hollow Nurse** — plus four new psychological events with audio, screen, and lighting outcomes.
+
+Verification: `npm test` **693/693**; affected browser smokes: Scary Mode 2.0 **44/44**, Dread Beyond **48/48**, Hunter **27/27**, plus the Archive/Veil/Eternal/3D Scary regression checks.
+
+Honest limits: the new ghosts reuse the existing platform navigation and physics contracts; they are not fully bespoke animation rigs. Jumpscare screens are still procedural Canvas art, not pre-rendered video, and the Dread additions reuse five established tactical families.
+
+## Update XIX — The Hunter's Kit & Ghost Combat (v0.30.0)
+
+The horror modes now have a real answer to ghosts: a persistent field shop, five consumable tools, and status combat that only affects spirits.
+
+- **Five hunter tools**: Suluh Garam (stun + mark), Lonceng Kubur (longer stun), Granat Asap (stun + escape i-frames), Peluru Roh (heavy ghost projectile with pierce), and Jimat Penjaga (60% ghost damage reduction for 8 seconds).
+- **Persistent shop**: buy with Hunter's Marks earned by banishing ghosts. Open it from Scary Mode or the pause menu; stock is stored in `ashen-vow-hunter-v1` and copied into every relevant run.
+- **Shared ghost combat**: Scary Mode, The Dread Beyond, The Veil of the Forgotten, and The Eternal Night all use the same stun, smoke, mark, ward, and spirit-damage rules. Ordinary campaign enemies never receive these statuses or bonuses.
+- **Quick-item integration**: hunter tools appear in the existing quick-item cycle (`K`/`X` to use, `R` to cycle), in the inventory, and in the HUD ammo/quick slot.
+- **Real rewards**: wraiths, stalkers, knights, Unnatural, and horror bosses pay marks on a one-time bounty flag, so overlapping damage cannot double-pay.
+
+Verification: `npm test` **690/690**; `npm run smoke:hunter` drives real Chrome through the shop, purchases, a live scary ghost, salt stun, smoke i-frames, spirit-round damage, bounty payout, ward damage reduction, in-run buying, inventory visibility, reload persistence, and zero console errors.
+
+Honest limits: the tools are consumables, not a new permanent weapon tree; the 3D first-person horror sites keep their unkillable hunter design; and the shop economy is local-save only.
+
+## Update XVIII — Credit Scenes & Hidden Secrets (v0.29.0)
+
+Every arc now closes its final boss with a credit scene, and the world keeps a few things off the map.
+
+- **Eleven arc credit scenes**: The Ashen Vow, Echoes of the Forgotten World, Faewood, The Fallen Ones, The Radiant Crusade, The Astral Dominion, Eclipse of the Forgotten Gods, The Veil of the Forgotten, The Eternal Night, The Sundered Atlas, and Hearthfall. Each is triggered by the shared `bossDown` event for that arc's real final-boss kind, skippable with `LEWATI CREDIT`/Space/Enter/Escape, and auto-closes after 22 seconds.
+- **Sealius in every role**: Technical Lead, Artist & Designer, Game Design, Systems & Engineering, World & Narrative, UI & UX Design, QA & Verification, and Release & Support. The canonical line **“Made by SealiusHQ with a lot of support from Contributors”** is unchanged on the Credits screen and in every scene.
+- **Hidden level runes**: five campaign rooms contain a faint glyph that only responds to the interaction key when the player stands on it. No map marker, quest, codex entry or prompt names it. Speedrun reuses the same rooms and runes.
+- **A secret in every mode**: one quiet mode mark is available in every listed mode — including campaign, Every Arc, 3D, 3D Scary, Scary, Dread, MOBA, Wave Defense, Realms, fishing, hubs and title — through one hidden sequence that the UI never explains.
+- **Separate ledger**: `ashen-vow-secrets-v1` stores only found ids, counts and timestamps. It contains no HP, damage, speed, ash, reward or multiplier values, so secrets cannot affect balance or multiplayer.
+
+Verification: `npm test` **669/669 at release**; `npm run smoke:credits` drives real Chrome through the credit overlay, all eleven arc mappings, the actual base-campaign final boss, a real rune pickup, the hidden mode sequence, and reload persistence with zero console errors.
+
+Honest limits: the credit scenes are DOM overlays, not new rendered cinematics; the hidden sequence is intentionally absent from in-game documentation, so only the source and tests enumerate it.
+
+## Update XVII — 3D Scary Mode: Blackveil Nightfall (v0.28.0)
+
+A real first-person horror mode built on the existing WebGL2 + GLB renderer, not a 2D overlay pretending to be 3D.
+
+- **Five playable 3D buildings**: Blackveil Manor, Saint Orra Sanatorium, The Drowned Chapel, Cinder Mill and The Hollow Lighthouse. Each has its own authored GLB architecture, site props, palette, fog, exit gate and hunting entity.
+- **Fifteen stage-levels**: every site runs three real phases — Ambang, Turun, Keluar. Collect three visible echo runes, then reach the exit while The Unlit hunts you.
+- **Five hunters**: The Governess, Nurse Orra, The Drowned Cantor, The Miller and The Keeper Below use the existing skinned GLB rigs. They cannot be killed; hitting them only staggers them.
+- **Twenty authored jumpscares**: four per site with `figure`, `face`, `hand`, `mirror`, `static` and `atmospheric` shapes, procedural audio stings, camera shake and subtitles. Anti-Jumpscare turns every scare atmospheric and removes flashes.
+- **First-person runtime**: the player mesh is skipped in both WebGL and the Canvas fallback, the camera locks to the player eye line, and the overlay draws darkness, fear/sanity, objective prompts, echo markers and the result screen.
+- **Persistence**: `ashen-vow-3dhorror-v1` schema 1 stores per-site attempts/clears/deaths/scares, best and last time, anti-jumpscare preference and six achievements. Campaign, Arc IX/X, Scary Mode 2.0, Dread, settings and character saves are untouched.
+- **Content pack**: `MODE3D_AREAS` grows from 10 to **15 areas**; `assets/3d/props.glb` gains `horror_manor`, `horror_asylum`, `horror_chapel`, `horror_mill` and `horror_lighthouse`.
+
+Verification: `npm test` **658/658**; `npm run smoke:horror3d` **22/22** in headless Chrome — real WebGL2 draw calls (31), a lit 3D canvas, first-person stage start, three echo phases, exit clear, anti-jumpscare, save reload and zero console errors.
+
+Honest limits: the five hunters reuse the existing stalker/brute animation rigs rather than bespoke horror rigs; darkness and jumpscares are Canvas-composited over the WebGL scene; there is no server-authoritative 3D horror economy.
+
+## Update XVI — The Unwritten Wing (v0.27.0)
+
+Arc X gains a playable eighth chapter without changing the existing Arc IX/X save formats.
+
+- **The Unwritten Wing**: five anomaly stages before The Eternal Nightfall, each still spawning exactly **20 enemies — 19 normal + 1 elite — across four existing archetypes**.
+- **The Unwritten**: a new four-phase chapter boss with intro, phase 2–4 and defeat dialogue plus `ink_surge`, `margin_grasp`, `erasure_wave` and `blank_page` patterns.
+- **Ghost Index growth**: eight new entities — Ink Scholar, Margin Stalker, Erased Reader, Footnote Wisp, Blank Archivist, Redaction Hound, Seventh Draft and Unwritten Choir — bringing the index to **80 records** while keeping all original IDs.
+- **Jumpscare Index growth**: **38 events across 13 categories**; the new Visual Distortion, Spatial Shift and Psychic categories each have real triggers, evidence and lore, and remain compatible with Anti-Jumpscare.
+- **Equipment growth**: Resonance Anchor, Memory Loom and Veil Divider bring the equipment matrix to **30 tools**, with real ownership and per-entity requirements.
+- **Archive totals**: **70 stages**, **14 chapters**, **16 bosses**. The Unwritten Wing stages expose `stageType: anomaly` in stage details.
+- **Persistence unchanged**: Arc IX stays `ashen-vow-veil-v1`, Arc X stays `ashen-vow-eternal-v1`, and the archive stays `ashen-vow-archive-v1`. Stage IDs are stable; stage room numbers remain unique.
+
+Verification: `npm test` **642/642**; `npm run smoke:archive` **29/29**, `npm run smoke:veil` **35/35**, and `npm run smoke:eternal` **30/30** in headless Chrome, all with zero console errors.
+
+## Update XV — Stage Archive, Level Checker & Supernatural Research (v0.26.0)
+
+Scary Mode gains an archive and research layer over every existing stage, entity, scare event and tool. Arc IX, Arc X, their saves and the campaign are not rewritten.
+
+- **Stage Archive 2.0** (`src/archive_data.js` + `src/archive.js`): all **65 stages at the time of the release** (30 Arc IX, 35 Arc X; 70 after Update XVI), 13 chapters and 15 bosses, browsable by arc/chapter. Each stage has a real `CLEARED`, `UNLOCKED`, `UNCLEARED`, `LOCKED` or `100% DOCUMENTED` status, stage details, boss archive and attempt/discovery statistics.
+- **Sneak Peek** is a separate overlay with an **archive preview** and a developer-only preview path. It shows environment, permitted known ghosts, unknown presence, threat, recommended tools, objectives, collectibles, a boss only when already discovered, reward categories and stage conditions. It never enters gameplay, spawns enemies, grants rewards, consumes inventory, changes checkpoints or documents an entity.
+- **Level Checker** reports eleven separate categories — main objective, enemies, elite, boss, investigation, ghost documentation, collectibles, secret areas, jumpscare records, rewards and integrity — with separate percentages instead of one misleading total.
+- **Ghost Index 3.0** keeps the existing **72 records / 12 classifications** and adds discovery states (`undiscovered` → `mastered`), threat/location/tool filters, full search, missing-entry tracking and per-entity required/optional tools. No duplicate records were added.
+- **Jumpscare Index** is separate from the Ghost Index: **30 events across 10 categories**, with triggers, related ghost/stage, evidence, lore, repeatability and an Anti-Jumpscare-compatible evidence path. Opening the index never auto-plays audio or flashes.
+- **Investigation Equipment Index**: **27 tools** covering all existing Arc IX/Arc X equipment plus the field kit, with live ownership from both inventories, upgrade levels, missing-tool highlighting, `Prepare Investigation`, multiple documentation methods and eligible containment.
+- **Persistence**: a new `ashen-vow-archive-v1` schema-1 save holds previews, scare records, tool upgrades, stage records and achievements. Arc IX stays `ashen-vow-veil-v1` v2; Arc X stays `ashen-vow-eternal-v1` v1.
+- **UI**: `#archive-screen` with six tabs, plus an isolated `#archive-preview-screen`, accessible from Scary Mode, The Veil of the Forgotten and The Eternal Night.
+
+Verification: `npm test` **638/638**; `npm run smoke:archive` **29/29** headless-Chrome checks covering 65-stage navigation, locked preview isolation, separate completion values, Ghost/Jumpscare separation, tool preparation, real ghost documentation and save separation.
+
+Honest limits: progression and reward checks are local and deterministic, not server-authoritative; there is no authenticated backend for archive claims. The archive contains the two arcs that actually exist (IX and X), with arc/chapter structures ready for future content but no placeholder stages. Multiplayer archive discovery is not a real-time synchronized server feature.
+
+## Update XIV — The Eternal Night (Arc X) (v0.25.0)
+
+Scary Mode continues past The Veil of the Forgotten with a separate Arc X profile while Arc IX, the main campaign and every earlier save key stay intact.
+
+- **Campaign** (`src/eternal_data.js` + `src/eternal.js`): seven chapters, **35 standard stages** (rooms 9600–9634) and **eight bosses**, ending in the five-phase **The First Forgotten**. Every standard stage spawns exactly **20 enemies — 19 normal + 1 guaranteed elite — across four archetypes**; boss rooms are separate. Real core loaders are `loadEternalStage()` / `startEternalBoss()`.
+- **Sanity 3.0**: independent **Sanity**, **Veil Exposure** and **Mental Focus**. Exposure is per-run and resets on a new run; Focus gates optional analysis tools, never basic objectives or player control. No permanent stat loss, no forced jumpscare, no loss of control; Anti-Jumpscare remains effective.
+- **Ghost Index 2.0**: **72 initial records** (66 standard + 6 secret) across **12 classifications**, adding Revenant, Wisp, Aberration, Spectral Beast, Mimic and Primordial. Records carry subclassification, threat, sanity influence, environment, active conditions, behaviour, abilities, weaknesses, variants and mastery challenges. **Rank 1–100** with ten milestone rewards.
+- **Procedural Investigation Generator**: ten templates, deterministic seeds, validated location/entity/evidence/reward combinations, stable IDs, persistent progress and an authored fallback that is always solvable.
+- **Spectral Pursuit**: seven variants (Standard, Advanced, Multi-Entity, Ancient, Endless, Co-op, Custom) with location, classification, rarity, duration, difficulty and Anti-Jumpscare configuration.
+- **Workshop 2.0**: twelve items, six categories, five tiers with measured costs; essential gear works at Tier I without mandatory upgrades.
+- **Eleven dynamic world events** with schedules, objectives, one-time or replayable rewards, and a permanent journal. **Ghost Research Expedition** models two-to-four investigators with five roles, shared objectives, individual records, team sanity display without merging values, voting, reconnect tokens and one reward per session.
+- **Dashboard 2.0** reads the real save, and **Project Eternal Performance** instruments frame time, FPS, ghosts, AI updates, path requests, particles, audio emitters, replication, heap, latency and save duration against warning thresholds.
+- **Persistence**: Arc X uses `ashen-vow-eternal-v1` schema v1; Arc IX remains `ashen-vow-veil-v1` schema v2 and is never structurally overwritten. Settings persist as `settings.eternal` inside `ashen-vow-settings-v1`.
+
+Verification: `npm test` **616/616** and `npm run smoke:eternal` **30/30** in headless Chrome — boot, all eleven tabs, 35 stages/8 bosses, a live 20-enemy/1-elite stage, the three sanity bars, death retry, generated case, hunt, workshop tier, world event, two-investigator expedition, five-phase final boss, save separation and zero console errors.
+
+Honest limits: co-op expeditions are a local, host-authoritative model with reconnect tokens, not production matchmaking or server-verified authority. Performance thresholds are instrumentation and architectural limits; no FPS benchmark is claimed. Arc X ghosts reuse the shared navigation/perception archetypes rather than bespoke animation rigs.
+
+## Update XIII — The Veil of the Forgotten (v0.24.0)
+
+Scary Mode gains a standalone horror campaign with its own save profile, while Updates XI/XII remain untouched.
+
+- **Campaign** (`src/veil_data.js` + `src/veil.js`): six chapters, **30 standard stages** (rooms 9400–9429), and **seven bosses** ending in the five-phase **Veil Architect**. Every standard stage spawns exactly **20 enemies — 19 normal + 1 guaranteed elite** — drawn from four archetypes; boss arenas and investigation rooms are counted separately.
+- **Sanity 2.0**: seven conditions (Clear → Veil Touched), seven zones, fourteen events with cooldowns, six consumables, temporary conditions, and an eight-node Mind & Spirit tree. Sanity is independent of Easy/Normal/Hard, never reduces HP, never kills, never removes control, and never forces a jumpscare. At zero it opens a non-lethal Veil Anchor recovery.
+- **Ghost Index 2.0**: **42 entities** — 36 standard plus 6 secrets — across six classifications and seven rarities, with variants, four lore fragments, required evidence, six research stages (Rumored → Encountered → Identified → Investigated → Documented → Mastered), search/filter/sort/pagination, completion percentages and dedupe-safe rewards.
+- **Investigation**: five tools (Spectral Detector, Spirit Camera, Echo Recorder, Veil Lens, Investigator Journal) with mastery, twelve cases, daily/weekly rotations, six special contracts, five currencies, Investigator Level 1–100, Index Rank 1–50, Mastery 1–25, fourteen achievements, seven difficulty-separated leaderboards, eight secret locations and eight collectible categories.
+- **Ghost AI** (`src/veil_ai.js`): perception, memory, validated navigation, manifestation pooling, evidence triggers, an encounter director and batched replication behind one `GhostBrain`. Ten behaviours; attacks land once per window, only with line of sight, and never through geometry.
+- **Refuge**: ten facilities and four NPCs, driven by the same save state as the campaign.
+- **Persistence**: `ashen-vow-veil-v1` schema v2 with a v1 migration and duplicate-transaction protection; settings live in `settings.veil` under `ashen-vow-settings-v1`. Campaign progress, settings and character saves are unchanged.
+
+Verification: `npm test` **597/597** (including live-engine stage, boss and ghost tests) and `npm run smoke:veil` **33 checks** in headless Chrome — hub, 8 tabs, a real 20/1 stage, ghost evidence/documentation, sanity HUD states, stage clear, a three-phase boss clear, save persistence and zero console errors.
+
+## Update XII — The Dread Beyond (v0.23.0)
+
+Scary Mode expands into a full horror adventure while keeping its three independent layers (horror difficulty, scare presentation, Anti-Jumpscare).
+
+- **Five horror environments** (`src/dread.js`): The Forgotten Village, The Hollow Hospital, The Silent Underground, The Black Manor, The Endless Forest. Each has a real 2D arena, ceiling surfaces, environment mechanics, three clues, and a separate 3D description.
+- **Five Unnatural enemies**: Faceless Visitor, Pale Echo, Empty Knight, Ceiling Dweller, Forgotten Twin. Sight cones, hearing, perception memory, investigate/search states, patrols and stuck recovery all run on the shared navigation graph — no teleporting through walls.
+- **Fourteen psychological events** with real outcomes (journal, passage, puzzle, collectible, recording, lore, encounter, mirror, or nothing), cooldowns, repetition protection, concurrency limits, save handling, anti-jumpscare overrides and safe exits.
+- **Three horror bosses**: The Watcher Beyond (4 phases), The Hollow King (2 phases plus a hidden arena), The Forgotten Twin (3 phases). Arena containment and hitbox lifetimes are enforced in `DreadBossManager`.
+- **Ten exploration tools** that grant no combat power, an optional **Awareness** meter that never removes control and always stabilizes, and **ten modes** with objectives, completion checks and cosmetic rewards.
+- **Journal 2.0**: 10 categories, 60 entries, discovery dates, evidence, recordings, story fragments, completion percentages, an optional mystery board, 8 achievements, and 8 cosmetics obtainable with Anti-Jumpscare enabled.
+- **Settings**: atmosphere, per-event frequency, per-enemy scare controls, boss presentation, independent 2D/3D profiles and per-mode overrides. Stored under `ashen-vow-settings-v1`; the journal lives in `ashen-vow-dread-v1`.
+
+Verification: `npm test` (unit + live-engine) and `npm run smoke:dread` (headless Chrome, real game).
+
+## Update XI — Scary Mode 2.0: The Nightmare Protocol (v0.22.0)
+
+Scary Mode is now a complete optional horror configuration with three layers that never overwrite each other.
+
+- **Horror difficulty** (`src/scary2.js`) — Atmospheric, Haunted, and Nightmare change **gameplay**, not just effects: detection, aggression, reaction time, movement speed, damage, search duration, warning lead, surprise chance, event complexity, and survival pressure. It never reads or writes `gameplay.difficulty`, so Nightmare + horror Easy and Story + horror Hard both work.
+- **Scare presentation** — five settings tabs (`Jumpscare`, `Audio Horor`, `Visual Horor`, `Musuh Horor`, `Kenyamanan`) with 60+ controls: frequency (Very Low–High), duration, cooldown, per-session ceiling, repeat prevention, boss-intro surprises, environmental surprises, ambience layers (wind, whispers, creatures, footsteps, reverb, occlusion, dynamic range, max volume), fog, darkness, vignette, desaturation, silhouette visibility, particles, flicker, shadow movement, camera zoom/shake, stalking, disappearance, roaming, fake-outs, and encounter frequency.
+- **Anti-Jumpscare** — one switch (also a live button in the pause screen) that removes full-screen face reveals, sudden camera movement, audio stings, screen transitions, flashing, distortion, and shake — while keeping fog, darkness, silhouettes, ambience, suspense music, and unsettling sounds. It applies immediately, mid-run, without restarting.
+- **Scare memory** — `ScareLedger` prevents back-to-back repeats and enforces the per-session ceiling.
+- **Ten horror events** — Silent Hallway, The Watcher, Forgotten Footsteps, Haunted Room, The Pursuit, Broken Reflection, Lost Signal, The Locked Door, Whispering Relic, Nightmare Rift. Each has activation requirements, duration, cooldown, cancellation rules, a safe exit, accessibility behaviour, and a hard timeout, so a room change or death can never leave one stuck.
+- **Four horror enemies** — The Hollow Wraith (keeps range, dissolves, reappears at a valid navigation node), The Night Stalker (flanks and strikes from the blind side), The Silent Knight (patrols, telegraphs, lunges), The Forgotten One (two phases, projectile volley, slam). They share the existing nav graph, so they never clip through walls.
+- **Horror Journal** — separate progression in `ashen-vow-horror-v1`: encountered enemies, discovered events, cleared areas, optional bosses, relics, challenges, seven achievements, and seven cosmetic-only rewards (no combat stats, no multiplayer advantage).
+- **Dedicated screen** — `#scary-screen` with status summary, difficulty cards (eight real comparison rows each), five settings tabs, journal, event collection, achievements, rewards, and statistics.
+
+Honest limits: the horror enemies are new personalities driven by existing archetypes (wraith, stalker, sentinel, brute) with their own tactics, stats and sound identity, not four bespoke animation rigs. Horror ambience reuses the procedural audio engine; there are no recorded stingers. The journal is local-only. Anti-Jumpscare is presentation control, not a content filter.
+
+## Update X — Perfect Path, Boss Core & Scary Mode (v0.21.0)
+
+Enemies now share one navigation and decision layer, bosses have independent hitboxes with guarded phases, and an optional Scary Mode adds presentation-only jumpscares.
+
+- `src/ai_nav.js` — **hybrid navigation**: `NavGraph` samples platform surfaces into nodes, connects them with typed `walk`/`jump`/`drop` edges, and searches with A*, while `lineOfSight` rejects routes, perception, and attacks that cross solid geometry. `EnemyBrain` implements the shared state machine (`idle`, `patrol`, `detect`, `chase`, `attack`, `search`, `return`, `retreat`, `guard`, `assist`, `stunned`, `recover`) with entry/exit hooks, timeouts, validated transitions, target memory, local separation, repath budgeting, and deterministic stuck recovery.
+- **Profiles** — melee, ranged, magic, flyer, heavy, assassin, elite, and boss families differ in detection range, attack range, preferred/minimum range, reaction time, flanking, retreat thresholds, and movement speed. Enemies no longer share one approach routine.
+- `src/boss_core.js` — `AttackHitbox`/`HitboxSet` define windup/active/recovery windows, damage, knockback, cancellation on death or stagger, and **one hit per target per activation** (continuous attacks use an explicit interval). `BossPhysics` owns gravity, ground detection, step assist, arena/wall clamping, decaying knockback, and non-finite guards. `PhaseController` sorts thresholds, blocks duplicate transitions, dying/zero-HP transitions, and cooldown violations. `validateBossConfig` covers the whole roster.
+- **Engine wiring** — `core.js` builds a nav graph per room, gives every enemy a brain, routes crawler/brute/sentinel movement through path following, handles search/return/retreat/assist globally, clamps boss HP, stops phase loops after death, closes hitboxes on stagger/death, and gates the Warden slash through the hitbox registry plus line of sight.
+- `src/scary.js` — **Scary Mode**, off by default. A scare can only be requested by a confirmed hit; it never carries damage, never blocks input, and never fires in menus, loading, dialogue, or cutscenes. Intensities (Mild/Standard/Intense), frequencies (Low/Medium/High), and an adjustable cooldown drive per-family presentations for crawler, sentinel, wraith, brute, sporeling, stalker, brood mother, and every boss. `resolveFlashing`, `reduceCameraMotion`, `reduceShake`, and `reduceLoudSfx` override the presentation.
+- **2D and 3D presentation** — `render.js` draws the silhouette, vignette, distortion and chromatic layer on the 2D canvas and on the 3D canvas after `render3D`; `audio.playScare` plays a procedural sting that already reflects intensity and volume caps.
+- **Developer dashboard** — `?dev=1` (or F9 once unlocked) opens AI, boss, and Scary Mode panels; `toggleAiDebug()` draws paths, detection/attack radii, and last-known positions over the 2D scene. The dashboard is client-side gated and hidden from normal players; the authoritative admin server keeps its own permissions.
+- **Tests** — 41 new Node tests for navigation, boss core, and Scary Mode, plus settings-schema coverage. Suite: **479/479**.
+
+Honest limits: the AI is platform-graph navigation, not a full navmesh or crowd simulator; expansion enemies still reuse the seven archetype attack routines even though they now share perception, pathing, and recovery. Scary Mode is presentation only — it has no gameplay effect besides atmosphere. Debug gating is client-side, not a security boundary.
+
+## GLB Asset Pipeline & Real WebGL2 3D Renderer (v0.20.0)
+
+3D Mode now renders authored binary glTF assets instead of runtime vector primitives.
+
+- `tools/export-glb.mjs` generates `assets/3d/*.glb` (7 characters + a prop kit) with indexed meshes, UVs, PBR metallic-roughness materials, skeletons up to 20 joints, inverse bind matrices, three authored clips (Idle/Walk/Attack), three LODs, and a collision proxy.
+- `src/glb.js` is a pure glTF 2.0/GLB parser (accessors with byteStride, skins, node hierarchy, animations with quaternion SLERP, materials, LOD/collision discovery) used by both the renderer and the Node tests.
+- `src/webgl3d.js` is a WebGL2 pipeline: GPU skinning, GGX PBR, a 1024² shadow map with PCF, half-float (RGBA16F) HDR target, optional 4× MSAA, ACES tonemapping, a spatial upscale/sharpen pass, real anisotropic filtering, distance-based LOD selection, and instanced world props.
+- `src/gpu.js` measures the real adapter, extensions, MSAA support, anisotropy limit, timer queries, HRTF support, and refresh rate. Unsupported features are reported, never simulated.
+- `src/mode3d_content.js` adds 10 areas, 5 dungeons, 5 elite types, 5 bosses, 20 relics with real stat effects, and 10 vaults.
+- Spatial audio uses WebAudio PannerNodes (HRTF for the `spatial` mode) with a listener that follows the 3D camera.
+
+If WebGL2 or the assets are unavailable, 3D Mode falls back to the illustrated Canvas renderer without errors; `window.__ashen.gfx3D` reports the state.
+
+## Previously: Ultimate Settings & 3D Visual Overhaul (v0.19.0)
+
+Update IX replaces the compact settings panel with **Settings 2.0**: fourteen categories, search by name and description, per-category and full reset with confirmation, live previews, Apply/Cancel, and an honest diagnostics view. The save key stays `ashen-vow-settings-v1` with a version-2 payload, so existing bindings, progress, and account-independent profiles survive.
+
+- **Graphics** — six real presets (Low, Medium, High, Ultra, Extreme, Custom), brightness/contrast/gamma as separate controls, HDR detection with SDR fallback, AA, shadows, textures, lighting, AO, reflections, fog, particles, water, foliage, view distance, post-processing, motion blur, DoF, bloom, chromatic aberration, lens flare, SSR, ray tracing when supported, upscaling, render scale, V-Sync, frame limit, and anisotropic filtering.
+- **Audio 2.0** — ten independent buses (master, music, SFX, ambient, dialogue, combat, UI, footsteps, voice chat, cinematic), independent mutes, dynamic range, subtitle offset, combat music, loud-SFX reduction, and an audio test.
+- **Display & HUD** — window mode, resolution, refresh, UI scale, safe area, FPS/performance readouts; HUD visibility for vitals, minimap, quests, boss bar, damage numbers, status effects, prompts, and 3D crosshair; opacity, scale, position, and a drag-and-drop HUD Layout Editor with Restore Default.
+- **Language** — fourteen languages with separate interface, subtitle, voice, and dialogue preferences, Arabic RTL layout, and truthful "(teks)" labels where no voice assets exist.
+- **Difficulty** — Story, Easy, Normal, Hard, Nightmare, and Abyssal are real engine profiles affecting incoming damage, enemy HP/speed/detection/attack rate/reaction/aggression, boss damage/HP/action rate, recovery flasks, hazards, elites, and rewards. Changing difficulty never resets campaign progress or deletes achievements; Nightmare and Abyssal unlock through play.
+- **3D Mode** — the Canvas 3D renderer is rebuilt around layered illustrated characters, NPCs, four-legged Prowlers and Spore Beetles, a horned Thornveil Alpha, and Elder Yggvar as a root titan with a glowing core. Six regions — Thornveil Forest, Infernal Fortress, Drowned Kingdom, Gothic Citadel, Crystal Caverns, Astral Islands — have distinct skies, terrain, vegetation, architecture, weather, and fog. Camera follow, collision, region selection, quality presets, and HUD settings are wired to Settings 2.0.
+
+**Honest limits:** the project remains dependency-free Canvas 2D. The 3D overhaul is a high-detail procedural vector renderer, not rigged GLB models with UV/PBR texture maps, facial rigs, or authored animation clips. HDR, ray tracing, upscalers, GPU/VRAM telemetry, and surround/spatial audio are only enabled where the browser actually exposes them; diagnostics reports unsupported or waiting states instead of pretending. Full translation of every game string and the proposed additional 3D areas/dungeons/elites/bosses are not part of this release.
+
+Verification: **420/420 Node tests**, plus `npm run smoke:settings3d` (14 tabs, search, presets, independent audio, Apply/persistence, six difficulty cards, HUD editor, six 3D regions, reload persistence, no console errors).
+
+## Eclipse of the Forgotten Gods (v0.18.0)
+
+**ARC VIII — THE FORGOTTEN PANTHEON** membuka enam biome baru setelah Worldroot: **Obsidian Kingdom, Celestial Graveyard, Shattered Clockwork, Hollow Divinity, Eternal Eclipse, dan Throne Beyond Creation**. Tiga puluh stage standar masing-masing berisi tepat **20 musuh, empat archetype, dan satu elite**; boss berdiri di room terpisah. Tujuh encounter menanti — The Obsidian King, The Gravekeeper of Eternity, The First Chronomancer, The Silent Divinity, The Eclipse Monarch, The Forgotten High God, dan **The First Author**. Enam pecahan dari enam penjaga membuka The First Author; bos rahasia itu opsional dan tidak memblokir kampanye.
+
+**COMBAT EVOLUTION 2.0** menyatukan seluruh damage ke satu pipeline deterministik: validasi sumber/target, i-frame, critical, resistensi, status, elemental modifier, dan batas damage. Perfect dodge membuka counter window, musuh tertentu punya **break gauge** dan stagger, senjata punya mastery serta **weapon skill** (`G`/`T`), dan elemental reaction menghasilkan efek terkontrol seperti Fire + Wind, Frost + Lightning, Water + Lightning, Nature + Fire, serta Astral + Void.
+
+**LIMA KELAS & TUJUH SENJATA BARU** — Dawn Paladin, Rift Assassin, Worldroot Druid, Chrono Weaver, Void Herald; War Scythe, Twin Blades, War Gauntlets, Rune Cannon, Chain Whip, Halberd, Spellbook. Semuanya memakai engine yang sama, punya ability/attack profile, mastery, dan tetap kompatibel dengan 13 kelas lama.
+
+**GODFALL ASCENSION** adalah endgame 100 lantai native: boss setiap 10 lantai, milestone setiap 25, checkpoint dan recovery, practice mode tanpa reward, serta reward track di `progress.godfall`. **CHARACTER AWAKENING** membuka wujud kedua, ability unik, dan pilihan passive setelah 100 mastery untuk seluruh 18 kelas — kelas asli tetap dapat dimainkan.
+
+**GUILD & RAIDS** menambahkan pembuatan guild, emblem, lima rank, manajemen anggota, chat, weekly challenges, leaderboard, dan tiga raid: Worldroot Colossus, Astral Devourer, serta Forgotten High God. Raid mendukung objective, solo practice, dan validasi reward lokal. **PROJECT SMOOTHFALL** menambahkan sampler frame time average/P95/P99, preset **Low/Medium/High/Ultra/Custom**, sebelas kontrol grafis lanjutan, rekomendasi otomatis, frame cap 30/60/120, dan resolution scaling. **SAVE v2** memakai `schemaVersion: 2`, backup sebelum migrasi, quarantine untuk payload rusak, dan tetap menyimpan semua progres di key lama `ashen-vow-progress-v1`.
+
+**PROJECT CLEAN REALM** menyediakan registry bug dengan severity/regression, validasi konten dan fase bos, runtime exception reporter, deteksi musuh stuck, serta release gate 30 poin. Gate yang belum dapat dibuktikan di mesin ini — profil hardware low/medium/high, memory soak, dan beban multiplayer skala penuh — dilaporkan sebagai **blocked**, bukan diklaim lulus.
+
+- **Verifikasi:** `npm test` — **413/413 lulus**, termasuk 13 test Eclipse untuk data 6 biome/30 stage/7 bos, progres, Godfall, Combat 2.0, kelas/senjata, guild, raid, Awakening, save v2, dan gate QA. `npm run smoke:eclipse` menjalankan **30 pemeriksaan browser nyata** untuk hub, encounter 20/4/1, Godfall floor 1, guild + chat, Awakening, preset Low 30 FPS, QA gate, backup save, sampler frame time, dan nol console error.
+- **Kontrol:** weapon skill memakai `G`/`T` dan dapat di-rebind; Godfall/guild/Awakening/graphics/QA dibuka dari hub **ECLIPSE OF THE FORGOTTEN GODS** di menu utama.
 
 ## Infinite Realms, Astral Dominion, Stage Access & Admin Control Center (v0.17.0)
 

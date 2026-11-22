@@ -1,0 +1,59 @@
+/* Update XIII — The Veil of the Forgotten */
+.veil-inner { max-width: 1220px; }
+.veil-body { display: flex; flex-direction: column; gap: 16px; }
+.veil-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(268px, 1fr)); gap: 14px; }
+.veil-card { background: rgba(11, 12, 18, 0.86); border: 1px solid rgba(150, 138, 190, 0.28); border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 8px; }
+.veil-card.active { border-color: rgba(183, 154, 214, 0.75); box-shadow: 0 0 0 1px rgba(183, 154, 214, 0.25) inset; }
+.veil-card h3 { margin: 0; font-size: 15px; color: #e8dcc3; }
+.veil-card header { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.veil-card header span { font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: #9d8f78; }
+.veil-card p { margin: 0; font-size: 13px; color: #c3b9a6; line-height: 1.45; }
+.veil-card ul { margin: 0; padding-left: 16px; font-size: 12px; color: #a99c86; line-height: 1.5; }
+.veil-card .btn { margin-top: auto; align-self: flex-start; }
+.veil-muted { color: #8f8574; font-size: 12px; }
+.veil-row { display: grid; grid-template-columns: 1fr auto auto; gap: 10px; align-items: center; padding: 7px 9px; background: rgba(255, 255, 255, 0.025); border-radius: 6px; font-size: 13px; color: #d8cdb8; }
+.veil-row b { color: #e8dcc3; font-variant-numeric: tabular-nums; }
+.veil-row em { font-style: normal; color: #9d8f78; font-variant-numeric: tabular-nums; }
+.veil-chip { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; border: 1px solid rgba(183, 154, 214, 0.4); color: #cbb8e0; }
+.veil-chip.locked { border-color: rgba(150, 138, 120, 0.35); color: #8f8574; }
+.veil-toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.veil-toolbar input, .veil-toolbar select { background: rgba(0, 0, 0, 0.35); border: 1px solid rgba(183, 154, 214, 0.3); color: #e8dcc3; border-radius: 6px; padding: 7px 10px; font: inherit; font-size: 13px; }
+.veil-toolbar input { min-width: 190px; }
+.veil-meter { height: 10px; border-radius: 999px; background: rgba(255, 255, 255, 0.08); overflow: hidden; }
+.veil-meter i { display: block; height: 100%; background: linear-gradient(90deg, #8fd0a8, #c8b46a 55%, #c46a5a); transition: width 0.25s ease; }
+.veil-tabs { flex-wrap: wrap; }
+.veil-pager { display: flex; gap: 8px; align-items: center; font-size: 12px; color: #9d8f78; }
+.veil-stat { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; }
+.veil-stat div { background: rgba(255, 255, 255, 0.03); border-radius: 6px; padding: 8px 10px; }
+.veil-stat span { display: block; font-size: 10px; letter-spacing: 0.07em; text-transform: uppercase; color: #8f8574; }
+.veil-stat b { font-size: 16px; color: #e8dcc3; font-variant-numeric: tabular-nums; }
+.veil-branch { border-left: 2px solid rgba(183, 154, 214, 0.35); padding-left: 12px; display: flex; flex-direction: column; gap: 8px; }
+
+.veil-hud {
+  position: absolute;
+  top: 12px;
+  left: 16px;
+  z-index: 26;
+  width: min(260px, 44vw);
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: linear-gradient(180deg, rgba(10, 8, 16, 0.86), rgba(10, 8, 16, 0.56));
+  border: 1px solid rgba(183, 154, 214, 0.32);
+  pointer-events: none;
+  backdrop-filter: blur(3px);
+}
+.veil-hud.hidden { display: none; }
+.veil-hud-head { display: flex; align-items: baseline; gap: 6px; font-size: 10px; letter-spacing: 0.1em; color: #9d8f78; text-transform: uppercase; }
+.veil-hud-head b { margin-left: auto; font-size: 15px; color: #e8dcc3; font-variant-numeric: tabular-nums; }
+.veil-hud-head em { font-style: normal; font-size: 9px; color: #cbb8e0; }
+.veil-hud-bar { height: 6px; margin: 5px 0 4px; border-radius: 999px; background: rgba(255, 255, 255, 0.08); overflow: hidden; }
+.veil-hud-bar i { display: block; height: 100%; width: 82%; background: linear-gradient(90deg, #c46a5a, #c8b46a 45%, #8fd0a8); transition: width 0.2s linear; }
+.veil-hud-meta { display: flex; justify-content: space-between; gap: 8px; font-size: 10px; color: #9d8f78; letter-spacing: 0.04em; }
+.veil-hud.critical { border-color: rgba(196, 106, 90, 0.7); }
+
+@media (max-width: 700px) {
+  .veil-grid { grid-template-columns: 1fr; }
+  .veil-row { grid-template-columns: 1fr auto; }
+  .veil-row em { grid-column: 1 / -1; text-align: left; }
+  .veil-hud { width: min(210px, 52vw); top: 8px; left: 8px; }
+}

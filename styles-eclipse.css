@@ -1,0 +1,257 @@
+/* Ashen Vow — Eclipse of the Forgotten Gods */
+.eclipse-menu-btn {
+  border-color: rgba(226, 189, 117, .55);
+  background: linear-gradient(135deg, rgba(48, 38, 18, .92), rgba(16, 13, 8, .96));
+}
+
+.eclipse-screen {
+  background:
+    radial-gradient(circle at 50% 0%, rgba(226, 189, 117, .11), transparent 44%),
+    linear-gradient(180deg, #0c0a07 0%, #12100b 55%, #080706 100%);
+  overflow-y: auto;
+}
+
+.eclipse-shell {
+  width: min(1240px, 96vw);
+  margin: 0 auto;
+  padding: 30px 0 70px;
+}
+
+.eclipse-top {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  border-bottom: 1px solid rgba(226, 189, 117, .24);
+  padding-bottom: 20px;
+}
+
+.eclipse-brand { flex: 1; text-align: center; }
+.eclipse-brand h2 {
+  margin: 4px 0;
+  font-family: var(--font-display, serif);
+  font-size: clamp(24px, 3.3vw, 44px);
+  letter-spacing: .09em;
+  color: #f4e5bd;
+  text-shadow: 0 0 30px rgba(226, 189, 117, .28);
+}
+.eclipse-brand p { margin: 0; color: #a79a7b; font-size: 12px; letter-spacing: .18em; text-transform: uppercase; }
+.eclipse-kicker { color: #c7a95f; font-size: 10px; letter-spacing: .18em; text-transform: uppercase; }
+.eclipse-fragments { min-width: 130px; text-align: right; }
+.eclipse-fragments-label { display: block; color: #d9c28b; font-size: 10px; letter-spacing: .14em; }
+.eclipse-fragment-dots { display: flex; justify-content: flex-end; gap: 5px; margin-top: 7px; }
+.eclipse-fragment-dots i {
+  width: 12px; height: 12px; border: 1px solid #665b43; border-radius: 50%;
+  background: #1a1610;
+}
+.eclipse-fragment-dots i.lit { background: #f1cf7b; border-color: #f1cf7b; box-shadow: 0 0 10px rgba(241, 207, 123, .7); }
+
+.eclipse-tabs {
+  display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin: 18px 0 26px;
+}
+.eclipse-tabs button {
+  border: 1px solid rgba(226, 189, 117, .2); background: rgba(22, 18, 12, .8);
+  color: #a99c80; padding: 9px 15px; border-radius: 4px; cursor: pointer;
+  font: inherit; font-size: 10px; letter-spacing: .13em;
+}
+.eclipse-tabs button:hover, .eclipse-tabs button.active {
+  color: #ffe9af; border-color: #c7a95f; background: rgba(65, 51, 24, .55);
+}
+
+.eclipse-body { display: grid; gap: 18px; }
+.eclipse-hero {
+  display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(280px, 1fr); gap: 24px;
+  align-items: center; padding: 24px;
+  border: 1px solid rgba(226, 189, 117, .24); border-radius: 8px;
+  background: linear-gradient(120deg, rgba(38, 31, 16, .86), rgba(14, 12, 9, .92));
+}
+.eclipse-hero h3 { margin: 5px 0 8px; font-family: var(--font-display, serif); font-size: clamp(22px, 2.5vw, 34px); color: #f0dca8; }
+.eclipse-hero p { margin: 0; max-width: 700px; color: #ae9f83; line-height: 1.6; font-size: 13px; }
+.eclipse-hero-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.eclipse-stat { border: 1px solid rgba(226, 189, 117, .13); background: rgba(10, 8, 6, .55); border-radius: 4px; padding: 10px 12px; }
+.eclipse-stat span { display: block; color: #8f8269; font-size: 9px; letter-spacing: .13em; }
+.eclipse-stat strong { color: #f0d79b; font-size: 16px; }
+.eclipse-progress-bar { margin-top: -6px; }
+
+.eclipse-meter { position: relative; height: 18px; border: 1px solid rgba(226, 189, 117, .24); border-radius: 3px; background: #0d0b08; overflow: hidden; }
+.eclipse-meter > span { display: block; height: 100%; background: linear-gradient(90deg, #8c6a2e, #e5c270); }
+.eclipse-meter > em { position: absolute; inset: 0; display: grid; place-items: center; font-size: 9px; font-style: normal; letter-spacing: .1em; color: #1d1609; font-weight: 700; text-shadow: 0 1px rgba(255, 255, 255, .25); }
+
+.eclipse-biome-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.eclipse-biome-card {
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  border-radius: 7px; padding: 15px; background: rgba(12, 10, 7, .78);
+  box-shadow: inset 0 1px rgba(255, 255, 255, .025);
+}
+.eclipse-biome-card > header { display: flex; align-items: center; gap: 10px; }
+.eclipse-biome-glyph { display: grid; place-items: center; width: 42px; height: 42px; border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent); color: var(--accent); font-size: 22px; border-radius: 50%; }
+.eclipse-biome-card h4 { margin: 0; color: #eadbba; font-size: 15px; }
+.eclipse-biome-card header em { color: #8e826c; font-size: 10px; font-style: normal; }
+.eclipse-biome-count { margin-left: auto; color: var(--accent); font-size: 11px; }
+.eclipse-biome-card > p { min-height: 36px; color: #93866f; font-size: 11px; line-height: 1.5; }
+.eclipse-level-list { display: grid; gap: 4px; }
+.eclipse-level {
+  display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; align-items: center; gap: 7px;
+  border: 1px solid rgba(226, 189, 117, .12); border-radius: 3px; background: rgba(28, 23, 14, .6);
+  color: #cdbb95; padding: 7px 8px; text-align: left; cursor: pointer; font: inherit;
+}
+.eclipse-level:hover:not(:disabled) { border-color: var(--accent); background: rgba(53, 42, 21, .7); }
+.eclipse-level > span { display: grid; place-items: center; width: 20px; height: 20px; border: 1px solid rgba(226, 189, 117, .25); border-radius: 50%; color: #bda66f; font-size: 9px; }
+.eclipse-level strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; font-weight: 500; }
+.eclipse-level em { color: #8f7a4d; font-size: 8px; font-style: normal; letter-spacing: .1em; }
+.eclipse-level.locked { opacity: .42; cursor: not-allowed; }
+.eclipse-level.boss { border-color: rgba(220, 100, 80, .35); }
+.eclipse-biome-card footer { display: flex; justify-content: space-between; margin-top: 10px; color: #716552; font-size: 8px; letter-spacing: .08em; }
+
+.eclipse-secret {
+  display: flex; align-items: center; gap: 20px; padding: 19px 22px;
+  border: 1px solid rgba(170, 150, 110, .2); border-radius: 7px; background: rgba(13, 11, 8, .85);
+  opacity: .7;
+}
+.eclipse-secret.unlocked { opacity: 1; border-color: rgba(241, 207, 123, .55); box-shadow: 0 0 30px rgba(241, 207, 123, .07); }
+.eclipse-secret-mark { font-size: 34px; color: #e7cc8e; }
+.eclipse-secret > div:nth-child(2) { flex: 1; }
+.eclipse-secret h4 { margin: 3px 0; color: #efdfb5; font-family: var(--font-display, serif); }
+.eclipse-secret p { margin: 0; color: #91846c; font-size: 11px; }
+.eclipse-lock { color: #84775f; font-size: 9px; letter-spacing: .1em; }
+
+.eclipse-godfall-layout { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(300px, .8fr); gap: 16px; }
+.eclipse-floor-browser, .eclipse-floor-detail, .eclipse-panel {
+  border: 1px solid rgba(226, 189, 117, .18); border-radius: 7px; background: rgba(12, 10, 7, .8); padding: 18px;
+}
+.eclipse-section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 13px; }
+.eclipse-section-head h4 { margin: 0; color: #e2c98e; font-family: var(--font-display, serif); font-size: 14px; letter-spacing: .08em; }
+.eclipse-section-head span { color: #877a62; font-size: 9px; letter-spacing: .09em; text-transform: uppercase; }
+.eclipse-floor-grid { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 4px; }
+.eclipse-floor {
+  aspect-ratio: 1; border: 1px solid rgba(226, 189, 117, .13); border-radius: 3px;
+  background: rgba(26, 21, 13, .7); color: #b9a67e; cursor: pointer; display: grid; place-items: center; padding: 2px;
+}
+.eclipse-floor:disabled { opacity: .26; cursor: not-allowed; }
+.eclipse-floor:hover:not(:disabled), .eclipse-floor.selected { border-color: #e2bd75; background: rgba(73, 55, 22, .7); }
+.eclipse-floor.cleared { border-color: rgba(122, 163, 100, .4); }
+.eclipse-floor.boss { border-color: rgba(206, 97, 80, .45); }
+.eclipse-floor span { font-size: 10px; font-weight: 700; }
+.eclipse-floor em { font-size: 6px; font-style: normal; color: #776a51; }
+.eclipse-floor-detail h4 { margin: 4px 0 8px; color: #f0dca8; font-family: var(--font-display, serif); font-size: 25px; }
+.eclipse-floor-detail > p { min-height: 40px; color: #93866d; font-size: 11px; line-height: 1.55; }
+.eclipse-detail-rows { display: grid; gap: 5px; margin: 14px 0; }
+.eclipse-detail-rows > span { display: flex; justify-content: space-between; border-bottom: 1px solid rgba(226, 189, 117, .08); padding-bottom: 5px; color: #857861; font-size: 10px; }
+.eclipse-detail-rows strong { color: #c9b58c; font-weight: 500; }
+.eclipse-check { display: flex; gap: 7px; align-items: center; color: #a29479; font-size: 10px; margin: 12px 0; }
+.eclipse-milestones { display: grid; gap: 5px; margin-top: 18px; }
+.eclipse-milestones > div { display: flex; justify-content: space-between; padding: 6px 8px; border-left: 2px solid #4a3c22; background: rgba(30, 24, 14, .5); color: #7e725d; font-size: 9px; }
+.eclipse-milestones > div.earned { border-color: #e2bd75; color: #d8c28e; }
+.eclipse-milestones em { font-style: normal; }
+
+.eclipse-guild-onboard { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.eclipse-guild-onboard section { border: 1px solid rgba(226, 189, 117, .18); border-radius: 7px; background: rgba(12, 10, 7, .8); padding: 20px; display: grid; gap: 9px; }
+.eclipse-guild-onboard h4 { margin: 0 0 4px; color: #e2c98e; }
+.eclipse-guild-onboard input { background: #0b0906; border: 1px solid rgba(226, 189, 117, .22); color: #e7d7b2; padding: 10px; border-radius: 3px; font: inherit; }
+.eclipse-guild-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.eclipse-member { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 7px 0; border-bottom: 1px solid rgba(226, 189, 117, .08); color: #c7b58e; font-size: 11px; }
+.eclipse-member select { background: #0c0a07; color: #cdbb95; border: 1px solid rgba(226, 189, 117, .2); padding: 3px 5px; font-size: 9px; }
+.eclipse-weekly { display: grid; gap: 7px; margin-top: 14px; }
+.eclipse-weekly > div { display: grid; gap: 4px; color: #92856d; font-size: 9px; }
+.eclipse-chat { min-height: 150px; max-height: 230px; overflow-y: auto; display: grid; align-content: start; gap: 4px; }
+.eclipse-chat p { margin: 0; padding: 4px 6px; background: rgba(30, 25, 15, .5); color: #a99b80; font-size: 10px; }
+.eclipse-chat strong { color: #d6bd83; }
+.eclipse-chat-form { display: flex; gap: 6px; margin-top: 10px; }
+.eclipse-chat-form input { flex: 1; background: #0b0906; border: 1px solid rgba(226, 189, 117, .2); color: #ddcba4; padding: 8px; font: inherit; font-size: 10px; }
+.eclipse-raid-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.eclipse-raid { border: 1px solid rgba(226, 189, 117, .18); border-radius: 4px; padding: 14px; background: rgba(22, 18, 11, .65); }
+.eclipse-raid h4 { margin: 4px 0 7px; color: #e6d2a3; }
+.eclipse-raid p { color: #93866e; font-size: 10px; line-height: 1.5; min-height: 46px; }
+.eclipse-raid > em { display: block; color: #786b55; font-size: 9px; margin-bottom: 10px; font-style: normal; }
+.eclipse-raid > div { display: flex; gap: 5px; }
+
+.eclipse-awaken-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.eclipse-awaken-card { border: 1px solid rgba(226, 189, 117, .18); border-radius: 6px; padding: 14px; background: rgba(12, 10, 7, .8); display: grid; gap: 8px; }
+.eclipse-awaken-card.awakened { border-color: rgba(146, 190, 133, .45); }
+.eclipse-awaken-card header { display: flex; align-items: center; gap: 8px; }
+.eclipse-awaken-card header > span { font-size: 22px; color: #d9bd7f; }
+.eclipse-awaken-card h4 { margin: 0; color: #e6d3a5; font-size: 14px; }
+.eclipse-awaken-card header em { color: #83765f; font-size: 9px; font-style: normal; }
+.eclipse-awaken-title { color: #b79a5d; font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }
+.eclipse-awaken-card p { margin: 0; min-height: 32px; color: #90836b; font-size: 10px; line-height: 1.5; }
+.eclipse-passive { border-left: 2px solid #8fbf6a; padding-left: 8px; display: grid; gap: 3px; }
+.eclipse-passive strong { color: #c4d9a8; font-size: 10px; }
+.eclipse-passive span { color: #857a65; font-size: 9px; }
+.eclipse-passive-actions { display: flex; flex-wrap: wrap; gap: 4px; }
+.eclipse-chip { border: 1px solid rgba(146, 190, 133, .2); background: transparent; color: #827960; border-radius: 10px; font-size: 8px; padding: 3px 7px; cursor: pointer; }
+.eclipse-chip.active { border-color: #8fbf6a; color: #c4d9a8; }
+.eclipse-passive-archive { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.eclipse-passive-archive > div { display: grid; gap: 3px; padding: 8px; background: rgba(30, 24, 14, .4); border-left: 2px solid #665733; }
+.eclipse-passive-archive strong { color: #d2bc89; font-size: 10px; }
+.eclipse-passive-archive span { color: #897d66; font-size: 9px; }
+
+.eclipse-combat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.eclipse-reaction { display: grid; gap: 3px; padding: 8px 0; border-bottom: 1px solid rgba(226, 189, 117, .08); }
+.eclipse-reaction > span { color: #b79a5d; font-size: 8px; letter-spacing: .12em; }
+.eclipse-reaction strong { color: #d7c396; font-size: 11px; }
+.eclipse-reaction em { color: #857961; font-size: 9px; font-style: normal; }
+.eclipse-weapon-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+.eclipse-weapon { display: grid; grid-template-columns: 22px 1fr; gap: 2px 5px; padding: 6px; background: rgba(30, 24, 14, .4); }
+.eclipse-weapon > span { grid-row: span 2; color: #d9bd7f; font-size: 17px; }
+.eclipse-weapon strong { color: #d2bd8b; font-size: 10px; }
+.eclipse-weapon em { color: #7f735c; font-size: 8px; font-style: normal; }
+.eclipse-mastery { grid-column: 2; display: flex; gap: 3px; }
+.eclipse-mastery i { width: 14px; height: 3px; background: #3c321f; border-radius: 2px; }
+.eclipse-weakness-grid, .eclipse-class-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.eclipse-weakness-grid > div, .eclipse-class-grid > div { display: grid; gap: 3px; padding: 8px; background: rgba(30, 24, 14, .4); }
+.eclipse-weakness-grid strong, .eclipse-class-grid strong { color: #d2bd8b; font-size: 10px; }
+.eclipse-weakness-grid span, .eclipse-class-grid em { color: #82765f; font-size: 8px; font-style: normal; }
+.eclipse-class-grid span { color: #d9bd7f; font-size: 16px; }
+
+.eclipse-settings-grid { display: grid; grid-template-columns: .9fr 1.1fr; gap: 16px; }
+.eclipse-preset-row { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; }
+.eclipse-preset { border: 1px solid rgba(226, 189, 117, .17); background: rgba(25, 20, 12, .7); color: #a79a7e; border-radius: 3px; padding: 8px 10px; cursor: pointer; display: grid; gap: 3px; text-align: left; }
+.eclipse-preset.active { border-color: #e2bd75; color: #f0d79b; }
+.eclipse-preset em { color: #7e725b; font-size: 8px; font-style: normal; }
+.eclipse-setting-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px solid rgba(226, 189, 117, .07); color: #a99b80; font-size: 10px; }
+.eclipse-setting-row select { background: #0b0906; border: 1px solid rgba(226, 189, 117, .2); color: #cfbb91; padding: 4px 6px; font-size: 9px; }
+.eclipse-budget { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.eclipse-budget > div { display: grid; gap: 2px; padding: 9px; background: rgba(30, 24, 14, .45); }
+.eclipse-budget span { color: #877a63; font-size: 9px; }
+.eclipse-budget strong { font-size: 17px; }
+.eclipse-budget strong.good { color: #9fc78d; }
+.eclipse-budget strong.bad { color: #de8a72; }
+.eclipse-budget em { color: #6f644f; font-size: 8px; font-style: normal; }
+.muted { color: #7f735e; font-size: 10px; line-height: 1.55; }
+
+.eclipse-qa-grid { display: grid; grid-template-columns: 1.1fr .9fr; gap: 16px; }
+.eclipse-checklist, .eclipse-bugs { display: grid; gap: 4px; max-height: 650px; overflow-y: auto; }
+.eclipse-checklist > div, .eclipse-bugs > div { display: grid; grid-template-columns: 18px 1fr; gap: 2px 6px; padding: 6px; background: rgba(28, 23, 14, .45); }
+.eclipse-checklist > div > span { grid-row: span 2; color: #8fbf6a; }
+.eclipse-checklist > div.blocked > span { color: #d58a70; }
+.eclipse-checklist strong, .eclipse-bugs strong { color: #cdb98e; font-size: 10px; }
+.eclipse-checklist em, .eclipse-bugs em { color: #7f735e; font-size: 8px; font-style: normal; }
+.eclipse-bugs > div { grid-template-columns: 50px 1fr; }
+.eclipse-bugs > div > span { color: #b59a62; font-size: 8px; }
+.eclipse-bugs .sev-p0 { border-left: 2px solid #d56f5b; }
+.eclipse-bugs .sev-p1 { border-left: 2px solid #d2a85f; }
+.eclipse-bugs .sev-p2 { border-left: 2px solid #7f8a69; }
+
+.eclipse-screen .btn-sm { padding: 6px 10px; font-size: 9px; }
+.eclipse-screen .btn:disabled { opacity: .35; cursor: not-allowed; }
+
+@media (max-width: 950px) {
+  .eclipse-hero, .eclipse-godfall-layout, .eclipse-guild-grid, .eclipse-combat-grid, .eclipse-settings-grid, .eclipse-qa-grid { grid-template-columns: 1fr; }
+  .eclipse-biome-grid, .eclipse-awaken-grid { grid-template-columns: 1fr 1fr; }
+  .eclipse-floor-grid { grid-template-columns: repeat(8, 1fr); }
+  .eclipse-raid-grid { grid-template-columns: 1fr; }
+  .eclipse-weakness-grid, .eclipse-class-grid { grid-template-columns: 1fr 1fr; }
+}
+
+@media (max-width: 620px) {
+  .eclipse-shell { width: 100%; padding: 16px 12px 46px; }
+  .eclipse-top { flex-wrap: wrap; gap: 10px; }
+  .eclipse-brand { order: -1; width: 100%; text-align: left; }
+  .eclipse-fragments { margin-left: auto; }
+  .eclipse-biome-grid, .eclipse-awaken-grid, .eclipse-passive-archive { grid-template-columns: 1fr; }
+  .eclipse-floor-grid { grid-template-columns: repeat(5, 1fr); }
+  .eclipse-guild-onboard { grid-template-columns: 1fr; }
+  .eclipse-tabs { justify-content: flex-start; }
+  .eclipse-tabs button { padding: 7px 9px; font-size: 8px; }
+  .eclipse-weakness-grid, .eclipse-class-grid, .eclipse-budget { grid-template-columns: 1fr; }
+  .eclipse-screen .screen-inner { min-height: 100%; }
+}
