@@ -94,7 +94,7 @@ try {
     scary: window.__ashen.settings.scary,
     campaign: window.__ashen.settings.gameplay.difficulty,
   }))()`);
-  check(/0\.31\.0/.test(String(boot.version)), `boots v0.31.0 (${String(boot.version).slice(0, 42)})`);
+  check(/0\.34\.0/.test(String(boot.version)), `boots v0.34.0 (${String(boot.version).slice(0, 42)})`);
   check(boot.scary.enabled === false && boot.scary.antiJumpscare === false, 'Scary Mode and anti-jumpscare are off by default');
   check(boot.scary.difficulty === 'normal', 'default horror difficulty is Normal');
 

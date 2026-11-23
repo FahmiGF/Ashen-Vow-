@@ -80,7 +80,7 @@ async function attach() {
     } else if (message.method === 'Log.entryAdded' && message.params.entry.level === 'error') {
       const text = message.params.entry.text || '';
       const url = message.params.entry.url || '';
-      if (!/favicon/i.test(text) && !(url.includes('fonts.googleapis.com') || /Failed to load resource.*429/.test(text))) errors.push(text);
+      if (!/favicon|429|Too Many Requests/i.test(text) && !(url.includes('fonts.googleapis.com') || /Failed to load resource.*429/.test(text))) errors.push(text);
     }
   });
   await send('Runtime.enable');
@@ -132,6 +132,12 @@ try {
   check(opened.cards === 5, 'the horror site rail is populated');
 
   await sleep(1800);
+  // WebGL initialisation may still be compiling shaders behind the loading state.
+  for (let i = 0; i < 100; i += 1) {
+    const state = await evaluate('window.__ashen.gfx3D.state');
+    if (state === 'ready' || state === 'failed' || state === 'unsupported') break;
+    await sleep(200);
+  }
   const gfx = await evaluate(`(() => {
     const status = window.__ashen.render3DFrame();
     const c = document.getElementById('canvas-3d');

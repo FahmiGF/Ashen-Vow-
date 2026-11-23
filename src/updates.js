@@ -1,9 +1,79 @@
 // Ashen Vow — release history shown in the in-game Update Log.
 // Keep the newest entry first. `GAME_VERSION` is the single source of truth
 // for the version shown by the Update Log screen and the debug hooks.
-export const GAME_VERSION = '0.31.0';
+export const GAME_VERSION = '0.34.0';
 
 export const UPDATE_LOG = [
+  {
+    version: '0.34.0',
+    date: '23 November 2026',
+    title: 'UPDATE XXIII — PASANG TAK BERUJUNG & BENTENG KARAM',
+    tag: 'PASANG TAK BERUJUNG · PETA KEEMPAT · 2 MENARA · 2 MUSUH · GELOMBANG 999 · PROFIL FRAME · v0.34.0',
+    summary:
+      'Dua mode terbaru mendapat kelanjutan tanpa akhir. Pirate Tide membuka Pasang Tak Berujung: satu laut yang sama, tanpa kapten terakhir, dengan armada yang menguat setiap pasang. Wave Defense mendapat peta keempat Sunken Causeway, dua menara pendukung baru, dua musuh baru, dan mode Tanpa Akhir sampai gelombang 999. Rilis ini juga menambahkan alat profil frame sungguhan (LoAF, rAF, sampling CPU, dan biaya canvas langsung) supaya klaim performa diukur, bukan ditebak. Tidak ada key save baru: semua rekor tetap berada di progress.pirates dan progress.wavedefense.',
+    highlights: [
+      'Pasang Tak Berujung: pelayaran tanpa kapten terakhir. Setiap 34 detik pasang naik, lambung maksimum bertambah 12 dan dipulihkan 24, damage pemain naik 6%, armada musuh bertambah, dan kapten muncul setiap pasang ketiga. Menenggelamkan kapten hanya bonus bounty, bukan garis finis.',
+      'Rekor tanpa akhir disimpan terpisah di progress.pirates.endless: runs, bestScore, bestSurge, bestKills, bestTime, dan totalKills. Reward pasang tidak pernah menambah voyages, wins, atau membuka kartu rute.',
+      'Peta keempat Wave Defense, Sunken Causeway (Jalan Karam), menambah 24 slot bangun dengan jalur berkelok di antara menara tua. Totalnya kini 4 peta, 14 menara, 20 musuh, dan 6 bos.',
+      'Dua menara baru: Panji Sumpah tidak menembak tetapi memberi menara lain dalam radius +20% damage dan +12% laju tembak per level; Lentera Roh menandai musuh selama empat detik dan target bertanda menerima 20% damage lebih banyak.',
+      'Dua musuh baru: Drowned Reaver yang cepat dengan armor 16%, dan Bone Herald yang membagikan +12% armor kepada musuh di dekatnya. Keduanya memperluas komposisi gelombang tanpa mengubah 24 gelombang kampanye.',
+      'Mode Tanpa Akhir Wave Defense berjalan melewati gelombang 24 dengan definisi gelombang prosedural sampai batas 999. Rekor gelombang, skor, kill, dan waktu disimpan di progress.wavedefense.endless tanpa menambah wins atau losses kampanye.',
+      'Alat profil baru: tools/frame-profile.mjs mengukur Long Animation Frames, cadence requestAnimationFrame, sampling CPU, dan biaya canvas per lapisan; tools/bg-probe.mjs memisahkan biaya background kampanye per tipe ruang. Di Chrome headless 1280x900 dengan raster software, canvas kampanye mencatat 13,8 ms (drawBackground 8,9 ms), Pirate Tide 7-9 ms, Wave Defense 7-9 ms, dan p95 sekitar 7,1 ms tanpa frame drop; angka ini milik raster software, bukan GPU nyata.',
+      'Percobaan cache sprite OffscreenCanvas untuk pulau justru memperlambat canvas laut dari 7,04 ms menjadi 21,07 ms, sehingga dibatalkan. Yang dipertahankan hanya cache gradien pulau per canvas dan wake satu goresan. Benchmark simulasi mencatat 10.689-18.095 langkah/detik, 3.343 canvas call per frame, dan predikat pulau 182 ns (2,96x lebih cepat dari versi lama).',
+    ],
+    fixes: [
+      'Kapal kapten di Pasang Tak Berujung tidak lagi mengakhiri pelayaran: fase tetap sailing dan pemain dapat melanjutkan ke pasang berikutnya.',
+      'Wave Defense Tanpa Akhir tidak menulis wins/losses kampanye, sehingga rekor 24 gelombang tetap bersih dan terpisah.',
+      'Sanitizer membatasi bestSurge dan bestWave ke batas mode, dan menolak clear rute Pirate Tide yang melompati urutan.',
+    ],
+  },
+  {
+    version: '0.33.0',
+    date: '23 November 2026',
+    title: 'UPDATE XXII — PIRATE TIDE: SUMPAH LAUT',
+    tag: '10 RUTE · 10 PULAU · 7 PELABUHAN · 8 JENIS KAPAL · 10 KAPTEN · CULLING & SIM LEBIH CEPAT · v0.33.0',
+    summary:
+      'Pirate Tide mendapat act kedua: lima rute kapten baru yang membuka laut lebih dalam, tiga pulau baru, dua kelas kapal musuh baru, dan lima flagship baru, sehingga totalnya sepuluh kapten. Sepuluh rute kini berurutan dari Pasang Pertama sampai Sumpah Pertama, masing-masing dengan target kapal, kapten, emas, dan skor sendiri. Rilis ini juga mengoptimasi mode laut: renderer tidak lagi menggambar pulau, kapal, bola meriam, atau efek yang berada di luar kamera, gradien laut disimpan per canvas, dan tabrakan pulau memakai penolakan sumbu sebelum jarak kuadrat. Tidak ada key save baru; progress.pirates yang sama menyimpan seluruh sepuluh rute.',
+    highlights: [
+      'Lima rute act kedua: Perburuan Kabut (Gosong Bara), Pasang Kosong (Pulau Duka), Takhta Garam (Karang Bintang Jatuh), Kawal Baja (Tangga Tenggelam), dan Sumpah Pertama (Pusaran Laut). Target naik dari 9 sampai 13 kapal, hadiah emas 510–950, dan skor 4.600–8.600.',
+      'Lima kapten baru: Kapten Heron (Pemburu Kabut), Pasang Kosong (Armada Kosong, spectral), Ratu Garam (Takhta Karam), Marsekal Kade (Tangan Baja), dan Kapten Pertama (Sumpah Laut, spectral). HP flagship naik 1.900–3.200 dengan meriam 7–8 per sisi, sehingga rute akhir tetap menantang tanpa menembak mati pemain dalam satu salvo penuh.',
+      'Tiga pulau baru memperluas laut tanpa memindahkan konten lama: Gosong Bara (tanpa pelabuhan), Pulau Duka dan Karang Bintang Jatuh (pelabuhan reparasi). Totalnya 10 pulau dan 7 pelabuhan; semua posisi start rute sudah diuji tidak berada di dalam pulau.',
+      'Dua kelas kapal musuh baru: Pemotong Badai (cepat, 138 knot, muncul mulai rute 6) dan Lewiatan Baja (lambung 560, muncul mulai rute 7). Pool musuh tetap dijaga per rute supaya armada awal tidak langsung diisi kapal act dua.',
+      'Optimasi renderer: culling kamera untuk pulau, kapal, bola meriam, dan efek; gradien laut di-cache per canvas dan ukuran; gelombang dikurangi dari 18 baris menjadi 14. Pada beban 10 lambung, canvas call turun dari 4.376 menjadi 3.345 per frame (−24%), kamera rute pertama kini hanya menggambar 2 dari 10 pulau, dan minimap tetap menampilkan seluruh laut.',
+      'Optimasi simulasi: tabrakan pulau dan lambung memakai penolakan sumbu lalu jarak kuadrat sebelum akar. A/B benchmark mencatat predikat pulau turun dari 465 ns menjadi 157 ns per panggilan (≈2,9× lebih cepat, hasil hit identik), sedangkan simulasi mencatat sekitar 10.000–11.000 langkah/detik pada rute pertama (10 lambung, 87 bola) dan 19.000–21.000 langkah/detik pada rute terakhir.',
+      'Sanitizer menyimpan urutan sepuluh rute: clear rute 6–10 ditolak bila rute sebelumnya belum selesai, sehingga save lama tetap valid dan tidak ada unlock yang bisa dilompati.',
+    ],
+    fixes: [
+      'Rute act dua selalu terkunci sampai lima rute pertama selesai; sanitizer memeriksa rantai penuh, bukan hanya tetangga terdekat.',
+      'Kapal act dua tidak pernah muncul di rute lama karena pool musuh memakai index rute, dan flagship baru tidak dihitung sebagai bounty tambahan.',
+      'Pulau, kapal, dan efek di luar kamera tidak lagi digambar, tetapi peta mini dan snapshot tetap memuat seluruh dunia.',
+    ],
+  },
+  {
+    version: '0.32.0',
+    date: '22 November 2026',
+    title: 'UPDATE XXI — PIRATE TIDE: OPEN SEA',
+    tag: 'LAUT TERBUKA 3.200×2.200 · 7 PULAU · 5 PELABUHAN · MERIAM BROADSIDE · 5 KAPTEN · v0.32.0',
+    summary:
+      'Pirate Tide adalah mode tempur laut baru di atas satu peta terbuka 3.200×2.200: tujuh pulau, lima pelabuhan reparasi, kapal patroli yang berlayar bebas, dan lima rute kapten berurutan. Pemain mengemudikan kapal dengan W/S dan A/D, menembakkan meriam port dan starboard dengan Q/E atau klik laut, menabrak karang, dan berlabuh untuk memulihkan lambung dengan emas hasil rampasan. Setelah bounty setiap rute terpenuhi, kapal flagship kapten muncul; menenggelamkannya membuka rute berikutnya. Semua progres memakai objek progress.pirates di save utama, tanpa key baru.',
+    highlights: [
+      'Satu laut terbuka 3.200×2.200 dengan tujuh pulau, lima pelabuhan (Pelabuhan Abu, Karang Lentera, Tangga Tenggelam, Kunci Bara, Lentera Terakhir), dan kamera yang mengikuti kapal tanpa layar pemuatan.',
+      'Lima rute kapten berurutan: Pasang Pertama, Lonceng di Bawah, Bangun Janda, Pasang Baja, dan Mahkota Tenggelam. Setiap rute memiliki target kapal, satu flagship, dialog nama kapten, hadiah emas, dan skor.',
+      'Enam jenis kapal AI (Perompak Abu, Korsar Garam, Sloop Hitam, Brig Meriam, Galiung Roh, Fregat Pemburu) dan lima kapal kapten. AI menjaga jarak, memutar lambung untuk memberi sudut tembak, menghindari pantai, dan memilih sisi meriam.',
+      'Meriam broadside nyata: tiga sampai enam bola per sisi, cooldown per sisi, damage per kapal, hit detection terhadap lambung dan pulau, efek muzzle, percikan, tenggelam, serta layar hasil. Klik laut memilih sisi yang paling dekat dengan arah bidik.',
+      'Ekonomi pelayaran: emas dari setiap kapal yang tenggelam, biaya 25 emas untuk reparasi 50% lambung di pelabuhan terdekat, dan skor dari kapal, flagship, serta penyelesaian rute. Tidak ada upgrade yang mengubah balance kampanye.',
+      'HUD lengkap dan responsif: lambung, rute, target, emas, skor, kecepatan, health bar flagship, feed, minimap, kompas, kontrol sentuh D-pad, tombol meriam port/starboard, tombol berlabuh, jeda, dan result overlay.',
+      'Save progress.pirates menyimpan voyages, wins, losses, totalKills, totalGold, totalShots, totalHits, bestScore, dan catatan per rute. Sanitizer menolak clear rute yang melompati rute sebelumnya dan mempertahankan progres valid setelah reload.',
+    ],
+    fixes: [
+      'Tabrakan pulau mendorong lambung menjauh dan mengurangi kecepatan alih-alih membiarkan kapal melewati daratan.',
+      'Bola meriam dari kedua sisi memakai reload terpisah, sehingga menembak port tidak membatalkan cooldown starboard.',
+      'Pemain yang tenggelam mengakhiri pelayaran sebagai kekalahan; flagship yang tenggelam selalu menyelesaikan rute dan menulis hasil ke save.',
+      'Lambung kapal sekarang bertabrakan dan terpisah; Sloop Hitam meram untuk damage nyata. Flagship tidak dihitung sebagai bounty tambahan, dan kapal patroli berhenti muncul saat kapten tiba.',
+      'Di ponsel portrait, pertempuran laut keluar dari frame 16:9, memenuhi viewport, dan menyesuaikan resolusi canvas. Tombol meriam sentuh tetap di layar.',
+      'Preset grafis Eclipse kini menyinkronkan frame cap dan skala resolusi ke Settings 2.0, sehingga preset tidak kembali ke nilai lama saat disimpan.',
+    ],
+  },
   {
     version: '0.31.0',
     date: '22 November 2026',

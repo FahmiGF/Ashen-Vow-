@@ -4,6 +4,7 @@
 
 export const WAVE_DEFENSE_VERSION = '0.1.0';
 export const WAVE_DEFENSE_TOTAL_WAVES = 24;
+export const WAVE_DEFENSE_ENDLESS_WAVES = 999;
 export const WAVE_DEFENSE_WORLD_W = 960;
 export const WAVE_DEFENSE_WORLD_H = 540;
 export const WAVE_DEFENSE_MAX_TOWER_LEVEL = 3;
@@ -40,6 +41,8 @@ export const WAVE_DEFENSE_ENEMY_TYPES = [
   { id: 'shadow_stalker', name: 'Shadow Stalker', glyph: '◈', hp: 88, speed: 74, bounty: 9, damage: 3, armor: 0.08, radius: 9, color: '#735d9b', desc: 'Bergerak di sela bayangan menuju tembok terlemah.' },
   { id: 'ember_hound', name: 'Ember Hound', glyph: '◆', hp: 116, speed: 57, bounty: 7, damage: 3, armor: 0.05, radius: 10, color: '#e08a45', desc: 'Anjing bara yang mengejar celah pertahanan.' },
   { id: 'void_priest', name: 'Void Priest', glyph: '✧', hp: 158, speed: 31, bounty: 12, damage: 4, armor: 0.12, radius: 11, color: '#9b6bd6', desc: 'Memberi perlindungan gelap kepada gerombolan di dekatnya.' },
+  { id: 'drowned_reaver', name: 'Drowned Reaver', glyph: '⚔', hp: 96, speed: 61, bounty: 8, damage: 4, armor: 0.16, radius: 10, color: '#6fa3a8', desc: 'Perampas dari jalur karam: cepat dan berlapis karat.' },
+  { id: 'bone_herald', name: 'Bone Herald', glyph: '♞', hp: 210, speed: 28, bounty: 13, damage: 5, armor: 0.22, radius: 13, color: '#cbbf96', armorAura: 0.12, desc: 'Membagikan pelat tulang: musuh di dekatnya mendapat +12% armor.' },
   { id: 'bone_colossus', name: 'Bone Colossus', glyph: '♛', hp: 1900, speed: 18, bounty: 60, damage: 16, armor: 0.2, radius: 24, color: '#efe2bb', boss: true, desc: 'BOS · Rangka raksasa yang memimpin gelombang keempat.' },
   { id: 'ember_wyrm', name: 'Ember Wyrm', glyph: '♨', hp: 3100, speed: 20, bounty: 90, damage: 19, armor: 0.15, radius: 25, color: '#ff7a45', boss: true, desc: 'BOS · Sayap bara yang membakar jalan di belakangnya.' },
   { id: 'plague_matriarch', name: 'Plague Matriarch', glyph: '✹', hp: 4400, speed: 18, bounty: 115, damage: 21, armor: 0.12, radius: 26, color: '#8ccf66', boss: true, desc: 'BOS · Induk wabah yang memanggil kultus dari tanah.' },
@@ -65,6 +68,8 @@ export const WAVE_DEFENSE_TOWERS = [
   { id: 'sniper_nest', name: "Sniper's Nest", glyph: '✜', cost: 180, damage: 98, rate: 0.33, range: 278, projectileSpeed: 850, color: '#d8d2b5', shape: 'sniper', desc: 'Tembakan sangat jauh; setiap tembakan keempat menjadi kritikal.' },
   { id: 'holy_chapel', name: 'Holy Chapel', glyph: '✚', cost: 150, damage: 31, rate: 0.72, range: 154, projectileSpeed: 500, magic: true, healCastle: 0.7, color: '#f0d58a', shape: 'holy', desc: 'Cahaya suci yang memulihkan sedikit HP kastil setiap tembakan.' },
   { id: 'rift_obelisk', name: 'Rift Obelisk', glyph: '◎', cost: 220, damage: 70, rate: 0.6, range: 188, splash: 32, projectileSpeed: 480, magic: true, slow: 0.82, slowTime: 1.1, color: '#b67bdf', shape: 'rift', desc: 'Ledakan dimensi yang memperlambat semua musuh di area.' },
+  { id: 'vow_banner', name: 'Panji Sumpah', glyph: '⚑', cost: 190, damage: 0, rate: 0.1, range: 0, projectileSpeed: 0, support: true, aura: { radius: 136, damage: 0.2, rate: 0.12 }, color: '#e3c37c', shape: 'banner', desc: 'Tidak menembak. Menara lain dalam radius mendapat +20% damage dan +12% laju tembak per level.' },
+  { id: 'spirit_lantern', name: 'Lentera Roh', glyph: '✶', cost: 165, damage: 18, rate: 0.9, range: 138, projectileSpeed: 640, magic: true, mark: 4, color: '#a9e6d6', shape: 'lantern', desc: 'Menandai musuh selama empat detik; target bertanda menerima 20% damage lebih banyak.' },
 ];
 
 export const WAVE_DEFENSE_TOWER_BY_ID = Object.fromEntries(WAVE_DEFENSE_TOWERS.map((tower) => [tower.id, tower]));
@@ -155,6 +160,19 @@ const MAP_BLUEPRINTS = [
     ],
   },
   {
+    id: 'sunken_causeway',
+    name: 'SUNKEN CAUSEWAY',
+    subtitle: 'Jalan Karam',
+    lore: 'Jalan tenggelam berkelok di antara menara tua; setiap tikungan menutup satu jalur pelarian.',
+    theme: { ground: '#0c1416', earth: '#1e3336', path: '#3d5a5c', edge: '#070f11', accent: '#b6d9c4', mist: '#5f8a86' },
+    castle: { x: 884, y: 300 },
+    path: [
+      { x: -30, y: 470 }, { x: 150, y: 470 }, { x: 150, y: 96 }, { x: 348, y: 96 },
+      { x: 348, y: 300 }, { x: 520, y: 300 }, { x: 520, y: 470 }, { x: 704, y: 470 },
+      { x: 704, y: 150 }, { x: 842, y: 150 }, { x: 842, y: 300 }, { x: 878, y: 300 },
+    ],
+  },
+  {
     id: 'frostgate',
     name: 'FROSTGATE CITADEL',
     subtitle: 'Benteng Beku',
@@ -183,7 +201,7 @@ export const WAVE_DEFENSE_WAVES = [
   { label: 'Perisai Tulang', groups: [['ashen_ghoul', 8, 0.72], ['bone_shield', 3, 1.15, 3.4]] },
   { label: 'Rangka Raksasa', groups: [['bone_colossus', 1, 1, 1.1], ['ashen_ghoul', 4, 0.9, 3.6]] },
   { label: 'Sayap Malam', groups: [['grave_bat', 10, 0.52]] },
-  { label: 'Bara dan Bastion', groups: [['ember_hound', 8, 0.62], ['bone_shield', 4, 1, 2.8]] },
+  { label: 'Bara dan Bastion', groups: [['ember_hound', 8, 0.62], ['bone_shield', 4, 1, 2.8], ['drowned_reaver', 6, 0.55, 1.8]] },
   { label: 'Wabah Berjalan', groups: [['plague_cultist', 4, 1.2], ['ashen_ghoul', 10, 0.58, 2]] },
   { label: 'Naga Bara', groups: [['ember_wyrm', 1, 1, 1], ['ash_runner', 6, 0.58, 3.8]] },
   { label: 'Langkah Besi', groups: [['iron_ogre', 4, 1.45], ['bone_shield', 6, 0.82, 3]] },
@@ -196,7 +214,7 @@ export const WAVE_DEFENSE_WAVES = [
   { label: 'Warden Baja', groups: [['iron_warden', 1, 1, 1], ['bone_shield', 8, 0.7, 4.2]] },
   { label: 'Perburuan Bara', groups: [['ember_hound', 12, 0.5], ['shadow_stalker', 10, 0.48, 2.3]] },
   { label: 'Gunung Berjalan', groups: [['iron_ogre', 8, 1.1], ['plague_cultist', 6, 0.9, 3.2]] },
-  { label: 'Mesin Pengepung', groups: [['siege_ram', 5, 1.6], ['void_priest', 6, 0.9, 2.8]] },
+  { label: 'Mesin Pengepung', groups: [['siege_ram', 5, 1.6], ['void_priest', 6, 0.9, 2.8], ['bone_herald', 3, 1.2, 2.4]] },
   { label: 'Titan Es', groups: [['frost_titan', 1, 1, 1], ['frost_wraith', 10, 0.52, 4.4]] },
   { label: 'Malam Tanpa Menara', groups: [['shadow_stalker', 16, 0.34], ['grave_bat', 12, 0.4, 2.7]] },
   { label: 'Tembok Retak', groups: [['iron_ogre', 10, 0.9], ['siege_ram', 5, 1.5, 2.2]] },
@@ -204,8 +222,28 @@ export const WAVE_DEFENSE_WAVES = [
   { label: 'Raja Abu', groups: [['ashen_sovereign', 1, 1, 1], ['iron_ogre', 6, 1.1, 4.4], ['plague_cultist', 4, 0.9, 6]] },
 ];
 
+// Past wave 24 (or immediately, once the campaign is done) the endless mode
+// builds waves from the whole roster with a deterministic composition.
+function endlessWaveDef(wave) {
+  const pool = WAVE_DEFENSE_ENEMY_TYPES.filter((enemy) => !enemy.boss);
+  const groups = [];
+  const base = 8 + Math.floor(wave / 3);
+  for (let i = 0; i < 3; i += 1) {
+    const type = pool[(wave * 3 + i * 7) % pool.length];
+    groups.push([type.id, Math.max(3, Math.round(base / (i + 1))), 0.42 + i * 0.09, i * 1.5]);
+  }
+  if (wave % 5 === 0) {
+    groups.unshift([WAVE_DEFENSE_BOSSES[(wave / 5) % WAVE_DEFENSE_BOSSES.length].id, 1, 1, 0.6]);
+  }
+  return { label: `Tanpa Akhir ${wave}`, groups };
+}
+
+function waveDefFor(match) {
+  return WAVE_DEFENSE_WAVES[match.wave - 1] || (match.endless ? endlessWaveDef(match.wave) : null);
+}
+
 function buildWaveQueue(match) {
-  const def = WAVE_DEFENSE_WAVES[match.wave - 1];
+  const def = waveDefFor(match);
   const queue = [];
   if (!def) return queue;
   for (const [type, count, gap, delay = 0] of def.groups) {
@@ -216,7 +254,7 @@ function buildWaveQueue(match) {
 }
 
 // ── Match lifecycle ────────────────────────────────────────────────────────
-export function createWaveDefense({ mapId = 'ashen_keep', difficulty = 'knight', seed = 1 } = {}) {
+export function createWaveDefense({ mapId = 'ashen_keep', difficulty = 'knight', seed = 1, endless = false } = {}) {
   const map = WAVE_DEFENSE_MAP_BY_ID[mapId] || WAVE_DEFENSE_MAPS[0];
   const diff = WAVE_DEFENSE_DIFFICULTY_BY_ID[difficulty] || WAVE_DEFENSE_DIFFICULTY_BY_ID.knight;
   const maxHp = Math.round(diff.castle);
@@ -230,7 +268,9 @@ export function createWaveDefense({ mapId = 'ashen_keep', difficulty = 'knight',
     time: 0,
     speed: 1,
     wave: 0,
-    totalWaves: WAVE_DEFENSE_TOTAL_WAVES,
+    endless: !!endless,
+    totalWaves: endless ? WAVE_DEFENSE_ENDLESS_WAVES : WAVE_DEFENSE_TOTAL_WAVES,
+    auraTimer: 0,
     phase: 'prep',
     prepTimer: 12,
     waveTime: 0,
@@ -284,6 +324,9 @@ function spawnEnemy(match, typeId, traveled = 0) {
     bounty: def.bounty + Math.floor(match.wave / 6),
     damage: def.damage + Math.floor(match.wave / 5),
     armor: def.armor || 0,
+    armorAura: def.armorAura || 0,
+    armorBonus: 0,
+    markTimer: 0,
     healAura: def.healAura || 0,
     healTimer: 1.4,
     slowTimer: 0,
@@ -338,7 +381,8 @@ export function waveDefenseNextWave(match) {
   match.spawnCursor = 0;
   match.spawnQueue = buildWaveQueue(match);
   match.prepTimer = 0;
-  pushText(match, `GELOMBANG ${match.wave} — ${WAVE_DEFENSE_WAVES[match.wave - 1].label}`, '#ffd78d');
+  const def = waveDefFor(match);
+  pushText(match, `${match.endless ? 'TANPA AKHIR' : 'GELOMBANG'} ${match.wave} — ${def?.label || '?'}`, '#ffd78d');
   return true;
 }
 
@@ -436,11 +480,45 @@ function towerStats(tower) {
   const level = tower.level - 1;
   return {
     ...def,
-    damage: def.damage * Math.pow(1.48, level),
-    rate: def.rate * Math.pow(1.1, level),
+    damage: def.damage * Math.pow(1.48, level) * (1 + (tower.buffDamage || 0)),
+    rate: def.rate * Math.pow(1.1, level) * (1 + (tower.buffRate || 0)),
     range: def.range * (1 + level * 0.055),
     splash: def.splash ? def.splash * (1 + level * 0.08) : 0,
   };
+}
+
+// Banners do not shoot; they buff every damage tower inside their radius.
+// Recomputed each tick so selling or losing a banner never leaves stale buffs.
+export function waveDefenseRefreshAuras(match) {
+  if (!match) return match;
+  for (const tower of match.towers) {
+    tower.buffDamage = 0;
+    tower.buffRate = 0;
+  }
+  for (const banner of match.towers) {
+    const aura = WAVE_DEFENSE_TOWER_BY_ID[banner.towerId]?.aura;
+    if (!aura) continue;
+    const radius2 = aura.radius * aura.radius;
+    for (const tower of match.towers) {
+      if (tower === banner || !WAVE_DEFENSE_TOWER_BY_ID[tower.towerId]?.damage) continue;
+      const dx = tower.x - banner.x;
+      const dy = tower.y - banner.y;
+      if (dx * dx + dy * dy > radius2) continue;
+      tower.buffDamage += aura.damage * banner.level;
+      tower.buffRate += aura.rate * banner.level;
+    }
+  }
+  return match;
+}
+
+// The whole damage pipeline in one pure step: lantern mark bonus, then armour
+// (magic ignores three quarters of it) plus any herald armour aura.
+export function waveDefenseIncomingDamage(amount, enemy, { magic = false } = {}) {
+  if (!enemy) return 0;
+  const raw = Math.max(1, Number(amount) || 1) * (enemy.markTimer > 0 ? 1.2 : 1);
+  const base = magic ? (enemy.armor || 0) * 0.25 : (enemy.armor || 0);
+  const armor = Math.min(0.85, base + (enemy.armorBonus || 0) * (magic ? 0.5 : 1));
+  return Math.max(1, raw * (1 - armor));
 }
 
 export function waveDefenseTowerStats(tower) {
@@ -472,9 +550,7 @@ function addEffect(match, x, y, radius, color, life = 0.32) {
 
 function damageEnemy(match, enemy, amount, { magic = false, source = null } = {}) {
   if (!enemy || enemy.dead) return 0;
-  const raw = Math.max(1, Number(amount) || 1);
-  const armor = magic ? enemy.armor * 0.25 : enemy.armor;
-  const dealt = Math.max(1, raw * (1 - armor));
+  const dealt = waveDefenseIncomingDamage(amount, enemy, { magic });
   enemy.hp -= dealt;
   match.stats.damage += dealt;
   if (enemy.hp <= 0) {
@@ -503,7 +579,7 @@ function fireTower(match, tower, target, stats) {
   if (stats.shape === 'sniper' && tower.shots % 4 === 0) damage *= 2.25;
   if (stats.healCastle) healCastle(match, stats.healCastle);
   if (match.projectiles.length >= WAVE_DEFENSE_MAX_PROJECTILES) {
-    impactProjectile(match, { target, damage, splash: stats.splash || 0, magic: stats.magic, slow: stats.slow, slowTime: stats.slowTime, poison: stats.poison, poisonTime: stats.poisonTime, chain: stats.chain || 0, x: target.x, y: target.y, color: stats.color });
+    impactProjectile(match, { target, damage, splash: stats.splash || 0, magic: stats.magic, slow: stats.slow, slowTime: stats.slowTime, poison: stats.poison, poisonTime: stats.poisonTime, mark: stats.mark || 0, chain: stats.chain || 0, x: target.x, y: target.y, color: stats.color });
     return;
   }
   match.projectiles.push({
@@ -520,6 +596,7 @@ function fireTower(match, tower, target, stats) {
     slowTime: stats.slowTime || 0,
     poison: stats.poison || 0,
     poisonTime: stats.poisonTime || 0,
+    mark: stats.mark || 0,
     chain: stats.chain || 0,
     color: stats.color,
     shape: stats.shape,
@@ -573,12 +650,17 @@ function applyStatus(match, enemy, projectile) {
     enemy.poisonTimer = Math.max(enemy.poisonTimer, projectile.poisonTime || 3);
     enemy.poisonDps = Math.max(enemy.poisonDps, projectile.poison);
   }
+  if (projectile.mark > 0) {
+    enemy.markTimer = Math.max(enemy.markTimer || 0, projectile.mark);
+  }
 }
 
 function updateTowers(match, dt) {
   for (const tower of match.towers) {
     tower.cooldown -= dt;
     if (tower.cooldown > 0) continue;
+    const def = WAVE_DEFENSE_TOWER_BY_ID[tower.towerId];
+    if (def?.support) { tower.cooldown = 0.5; continue; }
     const stats = towerStats(tower);
     const target = nearestTarget(match, tower, stats.range);
     if (!target) { tower.cooldown = 0; continue; }
@@ -627,7 +709,7 @@ function completeWave(match) {
   match.gold += reward;
   match.stats.goldEarned += reward;
   match.waveTime = 0;
-  if (match.wave >= match.totalWaves) {
+  if (!match.endless && match.wave >= match.totalWaves) {
     match.castle.hp = Math.min(match.castle.maxHp, match.castle.hp + 8);
     endWaveDefense(match, 'victory');
     return;
@@ -638,13 +720,42 @@ function completeWave(match) {
   updateScore(match);
 }
 
+// Herald armour is recomputed on a 0.5 s budget instead of every frame.
+export function waveDefenseRefreshArmor(match) {
+  if (!match) return match;
+  let herald = false;
+  for (const enemy of match.enemies) {
+    enemy.armorBonus = 0;
+    if (!enemy.dead && enemy.armorAura > 0) herald = true;
+  }
+  if (!herald) return match;
+  for (const source of match.enemies) {
+    if (source.dead || !(source.armorAura > 0)) continue;
+    for (const other of match.enemies) {
+      if (other === source || other.dead) continue;
+      if (Math.hypot(other.x - source.x, other.y - source.y) > 96) continue;
+      other.armorBonus = Math.max(other.armorBonus, source.armorAura);
+    }
+  }
+  return match;
+}
+
+function refreshArmorAura(match, dt) {
+  match.auraTimer = (match.auraTimer || 0) - dt;
+  if (match.auraTimer > 0) return;
+  match.auraTimer = 0.5;
+  waveDefenseRefreshArmor(match);
+}
+
 function updateEnemies(match, dt) {
+  refreshArmorAura(match, dt);
   let write = 0;
   for (let read = 0; read < match.enemies.length; read += 1) {
     const enemy = match.enemies[read];
     if (enemy.dead) continue;
     if (enemy.slowTimer > 0) enemy.slowTimer -= dt;
     else enemy.slowFactor = 1;
+    if (enemy.markTimer > 0) enemy.markTimer = Math.max(0, enemy.markTimer - dt);
     if (enemy.poisonTimer > 0) {
       enemy.poisonTimer -= dt;
       damageEnemy(match, enemy, enemy.poisonDps * dt, { magic: true });
@@ -744,7 +855,10 @@ export function updateWaveDefense(match, dt, input = {}) {
       match.spawnCursor += 1;
     }
     updateEnemies(match, scaled);
-    if (match.phase !== 'ended') updateTowers(match, scaled);
+    if (match.phase !== 'ended') {
+      waveDefenseRefreshAuras(match);
+      updateTowers(match, scaled);
+    }
     if (match.phase !== 'ended') updateProjectiles(match, scaled);
     if (match.phase !== 'ended' && match.spawnCursor >= match.spawnQueue.length && match.enemies.length === 0) completeWave(match);
   }
@@ -772,6 +886,7 @@ export function defaultWaveDefenseProgress() {
     totalLeaks: 0,
     towersBuilt: 0,
     maps: {},
+    endless: { runs: 0, bestWave: 0, bestScore: 0, bestKills: 0, bestTime: 0 },
   };
 }
 
@@ -779,6 +894,14 @@ export function sanitizeWaveDefenseProgress(raw) {
   const base = defaultWaveDefenseProgress();
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return base;
   const safe = (value, cap = 1e9) => Math.max(0, Math.min(cap, Math.floor(asNumber(value, 0))));
+  const endlessRaw = raw.endless && typeof raw.endless === 'object' && !Array.isArray(raw.endless) ? raw.endless : {};
+  const endless = {
+    runs: safe(endlessRaw.runs),
+    bestWave: Math.min(WAVE_DEFENSE_ENDLESS_WAVES, safe(endlessRaw.bestWave)),
+    bestScore: safe(endlessRaw.bestScore),
+    bestKills: safe(endlessRaw.bestKills),
+    bestTime: Math.max(0, Math.min(86400, asNumber(endlessRaw.bestTime, 0))),
+  };
   const maps = {};
   if (raw.maps && typeof raw.maps === 'object') {
     for (const map of WAVE_DEFENSE_MAPS) {
@@ -806,12 +929,25 @@ export function sanitizeWaveDefenseProgress(raw) {
     totalLeaks: safe(raw.totalLeaks),
     towersBuilt: safe(raw.towersBuilt),
     maps,
+    endless,
   };
 }
 
 export function recordWaveDefense(progress, match) {
   const p = sanitizeWaveDefenseProgress(progress);
   if (!match) return { progress: p, isRecord: false };
+  if (match.endless) {
+    const isRecord = match.wave > p.endless.bestWave || match.score > p.endless.bestScore;
+    p.endless.runs += 1;
+    p.endless.bestWave = Math.max(p.endless.bestWave, Math.min(WAVE_DEFENSE_ENDLESS_WAVES, match.wave));
+    p.endless.bestScore = Math.max(p.endless.bestScore, match.score);
+    p.endless.bestKills = Math.max(p.endless.bestKills, match.stats.kills);
+    p.endless.bestTime = Math.max(p.endless.bestTime, Math.round(match.time * 10) / 10);
+    p.totalKills += match.stats.kills;
+    p.totalLeaks += match.stats.leaks;
+    p.towersBuilt += match.stats.towersBuilt;
+    return { progress: p, isRecord, win: false, endless: true, wave: match.wave, score: match.score };
+  }
   const win = match.result === 'victory';
   const isRecord = match.score > p.bestScore || match.wave > p.bestWave;
   p.runs += 1;
@@ -849,6 +985,7 @@ export function waveDefenseSummary(progress) {
     towers: WAVE_DEFENSE_TOWERS.length,
     enemies: WAVE_DEFENSE_ENEMY_TYPES.length,
     bosses: WAVE_DEFENSE_BOSSES.length,
+    endlessBest: { ...p.endless },
   };
 }
 
@@ -861,6 +998,7 @@ export function waveDefenseSnapshot(match) {
     difficulty: match.difficulty,
     wave: match.wave,
     totalWaves: match.totalWaves,
+    endless: !!match.endless,
     phase: match.phase,
     prepTimer: Math.max(0, match.prepTimer),
     time: match.time,
@@ -1056,6 +1194,23 @@ function drawTower(ctx, tower, def, selected) {
     ctx.quadraticCurveTo(12, -4, 0, 9);
     ctx.quadraticCurveTo(-12, -4, 0, -24);
     ctx.fill();
+  } else if (def.shape === 'banner') {
+    ctx.fillRect(-2, -30, 4, 38);
+    ctx.beginPath();
+    ctx.moveTo(2, -29);
+    ctx.lineTo(22, -22);
+    ctx.lineTo(2, -12);
+    ctx.closePath();
+    ctx.fill();
+  } else if (def.shape === 'lantern') {
+    ctx.fillRect(-1.5, -30, 3, 14);
+    ctx.beginPath();
+    ctx.arc(0, -10, 8, 0, TAU);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.55)';
+    ctx.beginPath();
+    ctx.arc(0, -10, 3.4, 0, TAU);
+    ctx.fill();
   } else {
     ctx.fillRect(-4, -24, 8, 28);
     ctx.beginPath(); ctx.arc(0, 4, 9, 0, TAU); ctx.fill();
@@ -1101,6 +1256,13 @@ function drawEnemy(ctx, enemy) {
   if (enemy.poisonTimer > 0) {
     ctx.fillStyle = 'rgba(126,210,90,0.75)';
     ctx.beginPath(); ctx.arc(enemy.x + 7, enemy.y - 9, 2.4, 0, TAU); ctx.fill();
+  }
+  if (enemy.markTimer > 0) {
+    ctx.strokeStyle = 'rgba(178,240,222,0.8)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath(); ctx.arc(enemy.x, enemy.y, enemy.radius + 5, 0, TAU); ctx.stroke();
+    ctx.setLineDash([]);
   }
   if (enemy.hp < enemy.maxHp) {
     const width = enemy.boss ? 42 : 22;
@@ -1194,7 +1356,7 @@ export function renderWaveDefense(ctx, match, { width = WAVE_DEFENSE_WORLD_W, he
     ctx.textAlign = 'center';
     ctx.fillStyle = '#f4dfb6';
     ctx.font = '700 10px sans-serif';
-    ctx.fillText(`GELOMBANG ${match.wave + 1} / ${match.totalWaves}`, width / 2, 83);
+    ctx.fillText(match.endless ? `TANPA AKHIR · GELOMBANG ${match.wave + 1}` : `GELOMBANG ${match.wave + 1} / ${match.totalWaves}`, width / 2, 83);
     ctx.fillStyle = '#9fc5a3';
     ctx.font = '700 8px sans-serif';
     ctx.fillText(`MULAI DALAM ${Math.max(0, match.prepTimer).toFixed(1)} DETIK`, width / 2, 99);

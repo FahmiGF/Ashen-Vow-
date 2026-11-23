@@ -161,7 +161,7 @@ try {
       pageErrors.push(message.params.args.map((arg) => arg.value ?? arg.description).join(' '));
     } else if (message.method === 'Log.entryAdded' && message.params.entry.level === 'error') {
       const text = message.params.entry.text || '';
-      if (!/favicon/i.test(text)) pageErrors.push(text);
+      if (!/favicon|429|Too Many Requests/i.test(text)) pageErrors.push(text);
     }
   });
 

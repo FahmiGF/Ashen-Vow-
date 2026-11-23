@@ -76,7 +76,7 @@ async function main() {
       }
       if (message.method === 'Runtime.exceptionThrown') pageErrors.push(message.params.exceptionDetails?.exception?.description || 'exception');
       else if (message.method === 'Runtime.consoleAPICalled' && message.params.type === 'error') pageErrors.push(message.params.args.map((arg) => arg.value ?? arg.description).join(' '));
-      else if (message.method === 'Log.entryAdded' && message.params.entry.level === 'error' && !/favicon/i.test(message.params.entry.text || '')) pageErrors.push(message.params.entry.text);
+      else if (message.method === 'Log.entryAdded' && message.params.entry.level === 'error' && !/favicon|429|Too Many Requests/i.test(message.params.entry.text || '')) pageErrors.push(message.params.entry.text);
     });
     const send = (method, params = {}) => new Promise((resolve, reject) => {
       const id = ++nextId;
@@ -117,16 +117,20 @@ async function main() {
         save: !!A.progress.wavedefense,
         totalTowers: A.waveDefense.summary.towers,
         totalBosses: A.waveDefense.summary.bosses,
+        totalEnemies: A.waveDefense.summary.enemies,
+        modes: document.querySelectorAll('[data-wd-mode]').length,
       };
     })()`);
     check('Wave Defense hub opens from the menu', hub.view, 'wavedefense');
-    check('hub renders three castle maps', hub.maps, 3);
-    check('hub renders twelve tower cards', hub.towers, 12);
+    check('hub renders four castle maps', hub.maps, 4);
+    check('hub renders fourteen tower cards', hub.towers, 14);
+    check('hub renders both battle modes', hub.modes, 2);
     check('hub renders three difficulties', hub.difficulties, 3);
     check('hub renders six summary cells', hub.statCells, 6);
     check('save carries wave-defense progress', hub.save, true);
-    check('tower summary counts all twelve types', hub.totalTowers, 12);
+    check('tower summary counts all fourteen types', hub.totalTowers, 14);
     check('boss summary counts all six bosses', hub.totalBosses, 6);
+    check('enemy summary counts all twenty types', hub.totalEnemies, 20);
 
     const selected = await evaluate(`(() => {
       const A = window.__ashen;
@@ -171,7 +175,7 @@ async function main() {
     check('match starts with spendable gold', battle.gold > 0, true);
     check('match exposes twenty-four waves', battle.waves, 24);
     check('castle map exposes build sites', battle.slots >= 20, true);
-    check('battle palette renders all towers', battle.palette, 12);
+    check('battle palette renders all towers', battle.palette, 14);
     check('canvas draws the battlefield', battle.rendered > 0, true);
     check('battlefield is visible', battle.canvasVisible, true);
 
@@ -289,7 +293,7 @@ async function main() {
     check('leaving the result returns to the hub', left.view, 'wavedefense');
     check('battle simulation stops on leave', left.active, false);
     check('result clears on leave', left.result, null);
-    check('tower roster still renders after leave', left.cards, 12);
+    check('tower roster still renders after leave', left.cards, 14);
 
     await send('Page.reload');
     await sleep(350);
@@ -309,7 +313,41 @@ async function main() {
     check('wave-defense wins survive reload', persisted.wins, 1);
     check('wave-defense losses survive reload', persisted.losses, 1);
     check('map record survives reload', persisted.mapRuns, 2);
-    check('tower roster survives reload', persisted.cards, 12);
+    check('tower roster survives reload', persisted.cards, 14);
+
+    // Endless: no wave cap, defeats record in their own ledger.
+    const endless = await evaluate(`(() => {
+      const A = window.__ashen;
+      A.showWaveDefense();
+      const before = { runs: A.progress.wavedefense.runs, wins: A.progress.wavedefense.wins, losses: A.progress.wavedefense.losses };
+      document.querySelector('[data-wd-mode="endless"]').click();
+      A.setWaveDefenseMap('sunken_causeway');
+      A.startWaveDefenseBattle();
+      const start = A.waveDefense.snapshot;
+      A.waveDefenseSetWave(30);
+      A.waveDefenseNextWave();
+      const deep = A.waveDefense.snapshot;
+      A.waveDefenseDamageCastle(99999);
+      return {
+        before,
+        endless: start.endless,
+        map: start.mapId,
+        totalWaves: start.totalWaves,
+        wave: deep.wave,
+        phase: deep.phase,
+        ledger: A.progress.wavedefense.endless,
+        runs: A.progress.wavedefense.runs,
+        wins: A.progress.wavedefense.wins,
+        losses: A.progress.wavedefense.losses,
+        resultEndless: !!A.waveDefense.result?.endless,
+      };
+    })()`);
+    check('the fourth castle starts an endless defense', endless.endless && endless.map === 'sunken_causeway', true);
+    check('endless mode removes the wave cap', endless.totalWaves > 900, true);
+    check(`endless waves keep spawning past the campaign (wave ${endless.wave}, ${endless.phase})`, endless.wave === 30 && endless.phase === 'wave', true);
+    check('endless defeats record in the endless ledger', endless.resultEndless && endless.ledger.runs === 1 && endless.ledger.bestWave === 30, true);
+    check('endless runs never count as campaign results', endless.runs === endless.before.runs && endless.wins === endless.before.wins && endless.losses === endless.before.losses, true);
+    await evaluate(`window.__ashen.leaveWaveDefense()`);
 
     await sleep(300);
     assert.deepEqual(pageErrors, [], `console errors: ${pageErrors.join(' | ')}`);

@@ -61,7 +61,7 @@ try {
     else if (message.method === 'Runtime.consoleAPICalled' && message.params.type === 'error') errors.push(message.params.args.map((arg) => arg.value ?? arg.description).join(' '));
     else if (message.method === 'Log.entryAdded' && message.params.entry.level === 'error') {
       const text = message.params.entry.text || '';
-      if (!/favicon/i.test(text)) errors.push(`${text} ${message.params.entry.url || ''}`);
+      if (!/favicon|429|Too Many Requests/i.test(text)) errors.push(`${text} ${message.params.entry.url || ''}`);
     }
   });
   await send('Runtime.enable');
@@ -82,7 +82,7 @@ try {
       allRooms: A.game.constructor ? true : false,
     };
   })()`);
-  check(boot.version === '0.17.0', 'version is 0.17.0');
+  check(boot.version === '0.34.0', 'version is 0.34.0');
   check(boot.realmsButton && boot.stageButton && boot.astralButton, 'new menu buttons exist');
 
   const realms = await evaluate(`(async () => {

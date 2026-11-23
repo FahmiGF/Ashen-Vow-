@@ -256,11 +256,29 @@ test('Update XV remains documented after the Unwritten Wing expansion', () => {
   }
 });
 
-test('the latest update documents the new ghosts and jumpscares', () => {
+test('the latest update documents the endless modes and the frame-profile pass', () => {
   const latest = LATEST_UPDATE;
-  assert.equal(latest.version, '0.31.0');
+  assert.equal(latest.version, '0.34.0');
   const text = [latest.title, latest.summary, ...latest.highlights, ...(latest.fixes || [])].join(' ');
-  for (const pattern of [/Mourning Choir/i, /empat roh|4 roh|delapan roh|8 roh/i, /Weeping Mother/i, /Mirror Double/i, /Lantern Eater/i, /Drowned Bell/i, /tujuh jumpscare|7 jumpscare/i, /Second Shadow/i, /Glass Twin/i, /Mourning Wake/i, /Dread/i, /17 peristiwa|tujuh belas/i, /Anti-Jumpscare/i, /ashen-vow-horror-v1/i]) {
+  for (const pattern of [/Pasang Tak Berujung/i, /pasang|surge/i, /kapten|flagship/i, /lambung|hull/i, /Sunken Causeway/i, /Panji Sumpah/i, /Lentera Roh/i, /Drowned Reaver/i, /Bone Herald/i, /999/, /progress\.pirates\.endless/i, /progress\.wavedefense\.endless/i, /key save baru|key baru/i, /frame-profile|profil frame/i, /OffscreenCanvas/i, /langkah\/detik|steps\/s/i]) {
+    assert.match(text, pattern);
+  }
+});
+
+test('the first open-world pirate release remains documented', () => {
+  const latest = UPDATE_LOG.find((entry) => entry.version === '0.32.0');
+  assert.ok(latest, 'the v0.32.0 Pirate Tide entry must stay in the log');
+  const text = [latest.title, latest.summary, ...latest.highlights, ...(latest.fixes || [])].join(' ');
+  for (const pattern of [/Pirate Tide/i, /laut terbuka|open sea/i, /3\.200/i, /7 pulau|tujuh pulau/i, /5 pelabuhan|lima pelabuhan/i, /meriam|broadside/i, /5 kapten|lima rute/i, /progress\.pirates/i, /tanpa key baru/i]) {
+    assert.match(text, pattern);
+  }
+});
+
+test('the Mourning Choir release remains documented', () => {
+  const latest = UPDATE_LOG.find((entry) => entry.version === '0.31.0');
+  assert.ok(latest);
+  const text = [latest.title, latest.summary, ...latest.highlights, ...(latest.fixes || [])].join(' ');
+  for (const pattern of [/Mourning Choir/i, /Weeping Mother/i, /Mirror Double/i, /Lantern Eater/i, /Drowned Bell/i, /17 peristiwa|tujuh belas/i, /Anti-Jumpscare/i, /ashen-vow-horror-v1/i]) {
     assert.match(text, pattern);
   }
 });

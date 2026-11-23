@@ -1,9 +1,39 @@
 # Ashen Vow — Claude Master Plan
 
-> Compressed handoff for continuing **Ashen Vow v0.31.0**.
-> Status: **playable, browser-verified; Milestones A and B plus Sigil & Ritual, Echoes of the Forgotten World, Infinite Frontiers, Overdrive, The Sundered Atlas, Infinite Labyrinth co-op, Hearthfall (The Hollow Court), Skill Points + Panggung Abadi, Taman Peri (Faewood), Speedrun, Pondok Umpan, Fivefold Trials, Puzzle Adventure, Riftwar, Wave Defense, Infinite Realms, Arc VI The Astral Dominion, Stage Access/HACK, Admin Control Center, Eclipse Arc VIII, Update IX Settings 2.0 + 3D Visual Overhaul, Arc X The Eternal Night, The Unwritten Wing, 3D Scary Mode: Blackveil Nightfall, Credit Scenes + Hidden Secrets, The Hunter's Kit + Ghost Combat, and The Mourning Choir + Second Shadows complete**.
+> Compressed handoff for continuing **Ashen Vow v0.34.0**.
+> Status: **playable, browser-verified; Milestones A and B plus Sigil & Ritual, Echoes of the Forgotten World, Infinite Frontiers, Overdrive, The Sundered Atlas, Infinite Labyrinth co-op, Hearthfall (The Hollow Court), Skill Points + Panggung Abadi, Taman Peri (Faewood), Speedrun, Pondok Umpan, Fivefold Trials, Puzzle Adventure, Riftwar, Wave Defense, Infinite Realms, Arc VI The Astral Dominion, Stage Access/HACK, Admin Control Center, Eclipse Arc VIII, Update IX Settings 2.0 + 3D Visual Overhaul, Arc X The Eternal Night, The Unwritten Wing, 3D Scary Mode: Blackveil Nightfall, Credit Scenes + Hidden Secrets, The Hunter's Kit + Ghost Combat, The Mourning Choir + Second Shadows, Pirate Tide: Open Sea, and Pirate Tide Act II: Sumpah Laut complete**.
 > Roadmap: [`MASTERPLAN.md`](MASTERPLAN.md).
 > Repo: `https://github.com/FahmiGF/Ashen-Vow-` · branch `main` · push account `isshinAshinaSeal`.
+
+## 0. v0.34.0 — Update XXIII: Pasang Tak Berujung & Benteng Karam
+
+- `src/pirates.js` — naval endless: `PIRATE_ENDLESS_STAGE` (`endless_tide`, never a route card), `PIRATE_ENDLESS_SURGE_TIME = 34`, `PIRATE_ENDLESS_START_GOLD = 70`, `PIRATE_ENDLESS_CAPTAIN_EVERY = 3`, `createPirateEndless`, `pirateEndlessSurge` (hull +12 max / +24 heal, damage ×1.06, extra hulls, captain every third surge), `updateEndlessDirector`, endless scaling in `spawnEnemy`, bounty-only captain handling in `sinkShip`, snapshot endless fields (`endless`, `surge`, `surgeTimer`, `surgeNext`, `captains`, live `bossName`), `progress.pirates.endless` + `recordPirateEndless` (never touches `voyages`/`wins`).
+- `src/wavedefense.js` — fourth map `sunken_causeway` (24 slots), towers `vow_banner` (support aura +20% damage / +12% rate per level) and `spirit_lantern` (4 s mark, +20% damage taken), enemies `drowned_reaver` (16% armour) and `bone_herald` (+12% armour aura), `waveDefenseRefreshAuras` / `waveDefenseIncomingDamage`, and endless play: `WAVE_DEFENSE_ENDLESS_WAVES = 999`, `endlessWaveDef`, `endless` in `createWaveDefense`, `progress.wavedefense.endless` records that skip campaign wins/losses.
+- `src/main.js` — `startPirateEndless` + `beginPirateMatch` refactor, endless hub card and result card, endless HUD objective, retry branch; `wdEndless` mode cards, endless HUD/result copy, `setWaveDefenseMode`, `setWaveDefenseEndless`, `pirateNextSurge`, `renderPirateFrame`, `renderWaveDefenseFrame`.
+- `index.html` / `styles-pirates.css` / `styles-wavedefense.css` — `#pirate-endless` card, `#wd-modes` switch, responsive styles; version strings now v0.34.0.
+- `tools/frame-profile.mjs` (new) — real frame profiling: LoAF entries, rAF deltas, sampled CPU stacks, direct canvas layer timing for menu/campaign/pirates/pirateEndless/wave/waveEndless. `tools/bg-probe.mjs` (new) — campaign background cost per room type.
+- Measured (headless Chrome, 1280×900, software raster): campaign canvas 13.8 ms with `drawBackground` 8.9 ms, Pirates 7–9 ms, Wave Defense 7–9 ms, p95 ≈ 7.1 ms, no frame drops. An `OffscreenCanvas` island-sprite cache regressed the naval canvas 7.04 → 21.07 ms and was reverted; only the per-canvas island gradient cache and single-stroke wakes stayed.
+- Benchmarks: `npm run bench:pirates` **10,689–18,095 steps/s**, **3,343 canvas calls/frame**, island predicate **182 ns (2.96×)**; `npm run bench:wavedefense` **0.088 ms/frame** average (24 towers, 120 enemies).
+- Tests: `tests/pirates.test.js` (22, plus endless surge/captain/record cases), `tests/wavedefense.test.js` (13, plus new content and endless cases); suite **720/720**. Browser: `npm run smoke:pirates` **49 checks**, `npm run smoke:wavedefense` **66 checks**.
+- No new save keys: endless records live inside `progress.pirates` and `progress.wavedefense`.
+
+## 0. v0.33.0 — Update XXII: Pirate Tide: Sumpah Laut
+
+- `src/pirates.js` — Act II of the naval mode: **10 islands** (adds Gosong Bara, Pulau Duka, Karang Bintang Jatuh), **7 ports**, **8 enemy hulls** (adds Pemotong Badai from route 6 and Lewiatan Baja from route 7), **10 captain flagships**, and **10 sequential routes** (adds Perburuan Kabut, Pasang Kosong, Takhta Garam, Kawal Baja, Sumpah Pertama). Targets 4–13 ships; flagship HP now 520–3,200.
+- `pirateEnemyPool(match | stage | index | id)` is now exported and gates act-two hulls by route index. `pirateVisibleIslands(match, w, h, zoom)` exposes the camera cull for tests.
+- Performance: the renderer culls islands, ships, cannonballs and effects outside the camera, caches the sea gradient per canvas/size, and draws 14 wave rows instead of 18 — measured **4,376 → 3,345 canvas calls/frame (−24%)** at a ten-hull load, and the route-one camera draws **2 of 10 islands**. Island/hull collision now rejects on one axis and compares squared distance before `Math.sqrt`; the A/B predicate benchmark improved from **465 ns to 157 ns per call (~2.9×)** with identical hits. `node tools/pirates-bench.mjs` measured roughly **10,000–11,000 steps/s** on route one (10 hulls, 87 balls) and **19,000–21,000 steps/s** on route ten.
+- Save: unchanged `progress.pirates`; the sanitizer validates the entire ten-route chain, so act two cannot be forged open. No new key.
+- Tests: `tests/pirates.test.js` now has **20** model tests (counts, act-two chain, hull gating, cull, all ten captains, ramming, pool cap, sanitizer, renderer). Browser `npm run smoke:pirates` is **42/42** with act-two unlock/spawn/clear checks. Full suite **715/715**.
+
+## 0. v0.32.0 — Update XXI: Pirate Tide: Open Sea
+
+- `src/pirates.js` — pure naval simulation and procedural renderer. One **3,200×2,200** open sea, **7 islands**, **5 ports**, **6 enemy ship types**, **5 captain flagships**, **5 sequential routes**, cannon broadsides, island collision, hull-to-hull collision with Black Sloop ramming, AI broadside positioning, gold, hull repair, score, snapshot, progress sanitizer and deterministic RNG. No DOM access in the simulation.
+- `src/main.js` — **PIRATE TIDE — OPEN SEA** menu entry, `#pirate-screen` hub and `#pirate-battle` canvas, `progress.pirates`, stage unlock UI, `WASD` steering, `Q/E` port/starboard fire, `Space` both sides, `F` docking, click-to-fire, touch D-pad, pause/result overlays, portrait full-viewport battle canvas sizing, and debug hooks.
+- `styles-pirates.css` — responsive hub, live HUD, captain bar, repair prompt, minimap/compass, touch controls and result cards through 390×844, with fixed full-viewport battle layers for portrait and short-landscape phones.
+- Save: `progress.pirates` inside the existing `ashen-vow-progress-v1`; records voyages, wins/losses, kills, gold, shots/hits, best score and per-route clears. No new save key. Route clears are sequential and sanitized; hit totals are clamped to shots so accuracy cannot exceed 100%.
+- Rules: flagships are not counted as bounty kills, regular patrols stop spawning once the captain appears, and the cannonball pool is hard-capped without consuming a reload.
+- Tests: `tests/pirates.test.js` (17 model tests, including all five captains and ramming), browser `npm run smoke:pirates` (36 checks, including portrait battle layout and touch fire). Full suite **711/711**; all 27 browser smoke scripts pass.
+- Settings fix: Eclipse graphics presets now mirror their frame cap and resolution scale into Settings 2.0, so the save sanitizer no longer snaps the preset back to its previous value.
 
 ## 0. v0.31.0 — Update XX: The Mourning Choir & Second Shadows
 

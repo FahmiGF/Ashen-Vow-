@@ -62,7 +62,7 @@ try {
       const text = message.params.entry.text || '';
       const url = message.params.entry.url || '';
       // External Google Fonts may rate-limit headless runs; JS/runtime errors still count.
-      if (!/favicon/i.test(text) && !(url.includes('fonts.googleapis.com') || /Failed to load resource.*429/.test(text))) errors.push(text);
+      if (!/favicon|429|Too Many Requests/i.test(text) && !(url.includes('fonts.googleapis.com') || /Failed to load resource.*429/.test(text))) errors.push(text);
     }
   });
   await send('Runtime.enable'); await send('Page.enable'); await send('Log.enable'); await send('Page.bringToFront');
@@ -70,7 +70,7 @@ try {
   await waitFor(() => evaluate('typeof window.__ashen === "object"'), 20000, 'game boot');
 
   const boot = await evaluate(`({ version: window.__ashen.version, difficulty: window.__ashen.difficulty, categories: window.__ashen.settings && Object.keys(window.__ashen.settings).length })`);
-  check(boot.version === '0.23.0', `version is 0.23.0 (got ${boot.version})`);
+  check(boot.version === '0.34.0', `version is 0.34.0 (got ${boot.version})`);
   check(boot.difficulty.engine === 'normal' && boot.difficulty.active === 'normal', 'normal difficulty is active in the engine');
   check(boot.categories >= 10, 'versioned settings expose all groups');
 
@@ -197,6 +197,13 @@ try {
       if (state === 'ready' || state === 'failed' || state === 'unsupported') break;
       await sleep(200);
     }
+    // The first stats snapshot can land before the GL loop has submitted a frame.
+    const statsStarted = Date.now();
+    while (Date.now() - statsStarted < 4000) {
+      const triangles = await evaluate('window.__ashen.gfx3D.stats?.triangles || 0');
+      if (triangles > 0) break;
+      await sleep(100);
+    }
     return evaluate(`(() => {
       const s = window.__ashen.gfx3D;
       return { state: s.state, available: s.available, reason: s.reason, models: s.models, props: s.props, hdr: s.hdr, msaa: s.msaa, aniso: s.anisotropic, upscaler: s.upscaler, stats: s.stats };
@@ -219,7 +226,7 @@ try {
     const caps = g.capabilities;
     return { content: g.mode3dContent, first, damage: after.modifiers.damage, relics: after.relics.length, caps };
   })()`);
-  check(content.content.areas === 10 && content.content.dungeons === 5 && content.content.relics === 20 && content.content.vaults === 10, 'ten areas, five dungeons, twenty relics and ten vaults ship');
+  check(content.content.areas === 15 && content.content.dungeons === 5 && content.content.relics === 20 && content.content.vaults === 10, 'fifteen areas, five dungeons, twenty relics and ten vaults ship');
   check(content.first.area === 'obsidian_forge' && /Tyrant/.test(content.first.boss || ''), `area switching loads its boss (${content.first.boss})`);
   check(content.damage > 1 && content.relics >= 1, `relic changes real damage (x${Number(content.damage).toFixed(2)})`);
   check(content.caps.gpuRenderer !== undefined && content.caps.rayTracing === false, `GPU probe is real and ray tracing stays unsupported (${String(content.caps.gpuRenderer).slice(0, 48)})`);

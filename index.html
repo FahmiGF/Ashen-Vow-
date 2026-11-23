@@ -4,10 +4,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#0b0807" />
-    <title>Ashen Vow — v0.31.0</title>
+    <title>Ashen Vow — v0.34.0</title>
     <meta
       name="description"
-      content="Ashen Vow adalah metroidvania medieval 2D dengan combat pedang real-time, 426 ruang, 72 boss, mode Speedrun satu nyawa, 100 level ekspansi, Wave Defense dengan 24 gelombang dan 12 menara, Riftwar MOBA 5v5 dengan 28 kelas, Thornveil Haven, peta, jam langsung, dan indeks sumpah."
+      content="Ashen Vow adalah metroidvania medieval 2D dengan combat pedang real-time, 426 ruang, 72 boss, mode Speedrun satu nyawa, 100 level ekspansi, Wave Defense dengan 24 gelombang dan 12 menara, Pirate Tide dengan laut terbuka dan meriam broadside, Riftwar MOBA 5v5 dengan 28 kelas, Thornveil Haven, peta, jam langsung, dan indeks sumpah."
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -24,6 +24,7 @@
     <link rel="stylesheet" href="./styles-crusade.css" />
     <link rel="stylesheet" href="./styles-moba.css" />
     <link rel="stylesheet" href="./styles-wavedefense.css" />
+    <link rel="stylesheet" href="./styles-pirates.css" />
     <link rel="stylesheet" href="./styles-realms.css" />
     <link rel="stylesheet" href="./styles-eclipse.css" />
     <link rel="stylesheet" href="./styles-veil.css" />
@@ -355,6 +356,10 @@
                 <span>WAVE DEFENSE — THE LAST RAMPART</span>
                 <em>3 benteng · 24 gelombang · 12 menara · 6 bos</em>
               </button>
+              <button id="btn-pirate-menu" class="btn btn-ghost menu-btn pirate-menu-btn" type="button">
+                <span>PIRATE TIDE — OPEN SEA</span>
+                <em>Laut terbuka · 10 pulau · 7 pelabuhan · meriam broadside · 10 kapten</em>
+              </button>
               <button id="btn-court-menu" class="btn btn-ghost menu-btn court-menu-btn" type="button">
                 <span>HEARTHFALL — THE HOLLOW COURT</span>
                 <em>6 zona · 60 level · 12 bos · +6 Panggung Abadi · Skill Point · v0.12.0</em>
@@ -389,7 +394,7 @@
               </button>
               <button id="btn-updates" class="btn btn-ghost menu-btn" type="button">
                 <span>CATATAN UPDATE</span>
-                <em>Riwayat rilis · v0.31.0 · Credit Scene + hidden secrets</em>
+                <em>Riwayat rilis · v0.34.0 · Pasang Tak Berujung</em>
               </button>
             </nav>
 
@@ -484,7 +489,7 @@
             </div>
 
             <div id="credits-times" class="credits-times"></div>
-            <p class="credit-version">ASHEN VOW · v0.31.0 · 13 PENJAGA · 92 BOSS · 505 RUANG</p>
+            <p class="credit-version">ASHEN VOW · v0.34.0 · 13 PENJAGA · 92 BOSS · 505 RUANG</p>
             <div class="screen-links">
               <button id="btn-credits-back" class="link-btn" type="button">← KEMBALI KE MENU</button>
             </div>
@@ -501,7 +506,7 @@
               Catatan ini ikut tersimpan di dalam game.
             </p>
             <div class="updates-meta">
-              <span id="updates-version">VERSI SAAT INI · v0.31.0</span>
+              <span id="updates-version">VERSI SAAT INI · v0.34.0</span>
               <span>DIPERBARUI 15 NOVEMBER 2026</span>
             </div>
             <div id="update-log" class="update-log"></div>
@@ -543,7 +548,7 @@
           <div class="screen-inner mode3d-inner">
             <div class="mode3d-header">
               <div>
-                <p class="eyebrow">ASHEN VOW 3D · METROIDVANIA ORANG KETIGA · UPDATE XX · v0.31.0</p>
+                <p class="eyebrow">ASHEN VOW 3D · METROIDVANIA ORANG KETIGA · UPDATE XXI · v0.34.0</p>
                 <h2 class="screen-title">THORNVEIL FOREST VERTICAL SLICE</h2>
               </div>
               <div class="mode3d-controls-bar">
@@ -864,18 +869,20 @@
         <!-- ══ WAVE DEFENSE: THE LAST RAMPART ══ -->
         <section id="wd-screen" class="screen hidden">
           <div class="screen-inner wd-inner">
-            <p class="eyebrow">WAVE DEFENSE · 3 BENTENG · 24 GELOMBANG · 12 MENARA</p>
+            <p class="eyebrow">WAVE DEFENSE · 4 BENTENG · 24 GELOMBANG · 14 MENARA · TANPA AKHIR</p>
             <h2 class="screen-title wd-title">THE LAST RAMPART</h2>
             <p class="screen-sub">
               Musuh datang dari gerbang utara. Bangun Ballista, Catapult, Trebuchet, Mage Tower,
-              Cannon Tower dan tujuh menara lain di sepanjang jalan, lalu pertahankan mahkota terakhir.
+              Cannon Tower, Panji Sumpah dan sembilan menara lain di sepanjang jalan, lalu pertahankan mahkota terakhir.
             </p>
             <div id="wd-summary" class="wd-summary"></div>
-            <div class="wd-section-head"><h3>PILIH BENTENG</h3><span id="wd-map-count">3 MEDAN</span></div>
+            <div class="wd-section-head"><h3>PILIH BENTENG</h3><span id="wd-map-count">4 MEDAN</span></div>
             <div id="wd-maps" class="wd-maps"></div>
+            <div class="wd-section-head"><h3>MODE</h3><span>KAMPANYE ATAU TANPA AKHIR</span></div>
+            <div id="wd-modes" class="wd-choice-row"></div>
             <div class="wd-section-head"><h3>KESULITAN</h3><span>GOLD &amp; HP KASTIL BERUBAH</span></div>
             <div id="wd-difficulties" class="wd-choice-row"></div>
-            <div class="wd-section-head"><h3>MENARA PERTAHANAN</h3><span id="wd-tower-count">12 JENIS</span></div>
+            <div class="wd-section-head"><h3>MENARA PERTAHANAN</h3><span id="wd-tower-count">14 JENIS</span></div>
             <div id="wd-towers" class="wd-tower-grid"></div>
             <div class="wd-start-row">
               <button id="btn-wd-start" class="btn btn-primary" type="button">
@@ -939,6 +946,101 @@
             </div>
           </div>
           <div id="wd-result" class="wd-overlay hidden"></div>
+        </section>
+
+        <!-- ══ PIRATE TIDE: OPEN SEA ══ -->
+        <section id="pirate-screen" class="screen hidden">
+          <div class="screen-inner pirate-inner">
+            <p class="eyebrow">PIRATE TIDE · LAUT TERBUKA · 10 PULAU · 7 PELABUHAN · 10 KAPTEN</p>
+            <h2 class="screen-title pirate-title">OPEN SEA</h2>
+            <p class="screen-sub">
+              Satu laut tanpa layar pemuatan. Berlayar bebas di antara sepuluh pulau, tembakkan
+              meriam port dan starboard, rampasi emas, lalu tenggelamkan kapten di setiap rute.
+            </p>
+            <div id="pirate-summary" class="pirate-summary"></div>
+            <div class="pirate-section-head"><h3>RUTE KAPTEN</h3><span>10 STAGE · BERURUTAN</span></div>
+            <div id="pirate-stages" class="pirate-stages"></div>
+            <div class="pirate-section-head"><h3>PASANG TAK BERUJUNG</h3><span>MODE TANPA AKHIR</span></div>
+            <div id="pirate-endless" class="pirate-endless"></div>
+            <div class="pirate-section-head"><h3>LAUT TERBUKA</h3><span id="pirate-count">10 PULAU · 7 PELABUHAN</span></div>
+            <div id="pirate-world" class="pirate-world"></div>
+            <div class="pirate-guide">
+              <div><b>W / S</b><span>Gas &amp; mundur</span></div>
+              <div><b>A / D</b><span>Putar lambung</span></div>
+              <div><b>Q / E</b><span>Meriam port / starboard</span></div>
+              <div><b>SPACE</b><span>Tembak kedua sisi</span></div>
+              <div><b>F</b><span>Berlabuh &amp; reparasi</span></div>
+              <div><b>KLIK LAUT</b><span>Tembak sisi terdekat</span></div>
+            </div>
+            <div class="pirate-start-row">
+              <button id="btn-pirate-start" class="btn btn-primary" type="button">
+                <span>TAK LAYAR</span>
+                <em>Laut terbuka · meriam broadside · pelabuhan reparasi</em>
+              </button>
+            </div>
+            <div class="screen-links">
+              <button id="btn-pirate-back" class="link-btn" type="button">← KEMBALI KE MENU</button>
+            </div>
+            <p class="micro">Emas, kapten, dan rute tersimpan di progres utama. Tidak ada save key baru.</p>
+          </div>
+        </section>
+
+        <section id="pirate-battle" class="pirate-battle hidden" aria-label="Pertempuran laut Pirate Tide">
+          <canvas id="pirate-canvas" width="960" height="540"></canvas>
+          <div class="pirate-hud">
+            <div class="pirate-topbar">
+              <div class="pirate-hull">
+                <span>LAMBUNG</span>
+                <strong id="pirate-hull-text">300 / 300</strong>
+                <div class="pirate-hull-bar"><i id="pirate-hull-fill"></i></div>
+              </div>
+              <div class="pirate-route">
+                <span id="pirate-stage-name">PASANG PERTAMA</span>
+                <strong id="pirate-objective">0/4 KAPAL · CARI KAPTEN</strong>
+                <em id="pirate-speed">0 KN</em>
+              </div>
+              <div class="pirate-resources">
+                <div><span>EMAS</span><b id="pirate-gold">0</b></div>
+                <div><span>KAPAL</span><b id="pirate-kills">0/4</b></div>
+                <div><span>SKOR</span><b id="pirate-score">0</b></div>
+              </div>
+              <div class="pirate-top-actions">
+                <button id="btn-pirate-pause" class="pirate-icon-btn" type="button" aria-label="Jeda">II</button>
+                <button id="btn-pirate-quit" class="pirate-icon-btn" type="button" aria-label="Keluar">✕</button>
+              </div>
+            </div>
+            <div id="pirate-boss-panel" class="pirate-boss-panel hidden">
+              <span id="pirate-boss-name">KAPTEN</span>
+              <div class="pirate-boss-bar"><i id="pirate-boss-fill"></i></div>
+            </div>
+            <div id="pirate-port" class="pirate-port hidden">
+              <span id="pirate-port-text">PELABUHAN</span>
+              <button id="btn-pirate-dock" type="button">BERLABUH · 25 EMAS</button>
+            </div>
+            <div id="pirate-feed" class="pirate-feed"></div>
+            <div id="pirate-controls" class="pirate-controls hidden">
+              <div class="pirate-dpad" role="group" aria-label="Kemudi kapal">
+                <button type="button" data-pirate-control="forward" aria-label="Maju">▲</button>
+                <button type="button" data-pirate-control="left" aria-label="Kiri">◀</button>
+                <button type="button" data-pirate-control="back" aria-label="Mundur">▼</button>
+                <button type="button" data-pirate-control="right" aria-label="Kanan">▶</button>
+              </div>
+              <div class="pirate-fire-controls">
+                <button id="btn-pirate-fire-port" type="button"><span>PORT</span><b>Q</b><em id="pirate-port-cooldown">SIAP</em></button>
+                <button id="btn-pirate-fire-starboard" type="button"><span>STARBOARD</span><b>E</b><em id="pirate-starboard-cooldown">SIAP</em></button>
+              </div>
+            </div>
+            <div class="pirate-hint"><kbd>WASD</kbd> KEMUDI · <kbd>Q/E</kbd> MERIAM · <kbd>SPACE</kbd> KEDUA SISI · <kbd>F</kbd> BERLABUH · <kbd>ESC</kbd> JEDA</div>
+          </div>
+          <div id="pirate-pause" class="pirate-overlay hidden">
+            <div class="pirate-modal">
+              <p class="eyebrow">LAUT DIBEKUKAN</p>
+              <h3>JEDA PIRATE TIDE</h3>
+              <button id="btn-pirate-resume" class="btn btn-primary" type="button">LANJUTKAN</button>
+              <button id="btn-pirate-pause-leave" class="btn btn-ghost" type="button">TINGGALKAN KAPAL</button>
+            </div>
+          </div>
+          <div id="pirate-result" class="pirate-overlay hidden"></div>
         </section>
 
         <!-- ══ HEARTHFALL: THE HOLLOW COURT ══ -->
@@ -1616,7 +1718,7 @@
           <div class="screen-inner archive-inner">
             <div class="scary-head">
               <div>
-                <p class="eyebrow">STAGE ARCHIVE 2.0 · SCARY MODE UPDATE XX · v0.31.0</p>
+                <p class="eyebrow">STAGE ARCHIVE 2.0 · SCARY MODE UPDATE XXI · v0.34.0</p>
                 <h2 class="screen-title">THE SUPERNATURAL ARCHIVE</h2>
                 <p class="screen-sub">Semua tahap Arc IX dan Arc X, Level Checker, Sneak Peek, Ghost Index 3.0, Jumpscare Index, dan persiapan peralatan investigasi.</p>
               </div>
@@ -1924,7 +2026,7 @@
       </div>
 
       <footer class="footer">
-          <span>ASHEN VOW · v0.31.0</span>
+          <span>ASHEN VOW · v0.34.0</span>
         <span class="dot">✦</span>
         <span>Metroidvania medieval 2D · 14 ruang · 6 boss · dibuat dengan Canvas</span>
       </footer>

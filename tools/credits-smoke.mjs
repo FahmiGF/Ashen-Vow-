@@ -80,7 +80,7 @@ async function attach() {
     } else if (message.method === 'Log.entryAdded' && message.params.entry.level === 'error') {
       const text = message.params.entry.text || '';
       const url = message.params.entry.url || '';
-      if (!/favicon/i.test(text) && !(url.includes('fonts.googleapis.com') || /Failed to load resource.*429/.test(text))) errors.push(text);
+      if (!/favicon|429|Too Many Requests/i.test(text) && !(url.includes('fonts.googleapis.com') || /Failed to load resource.*429/.test(text))) errors.push(text);
     }
   });
   await send('Runtime.enable');
@@ -101,7 +101,7 @@ try {
     sequence: window.__ashen.secretSequence,
     summary: window.__ashen.secrets.summary,
   })`);
-  check(/^0\.31\./.test(boot.version), `boots v0.31.0 (${boot.version})`);
+  check(/^0\.34\./.test(boot.version), `boots v0.34.0 (${boot.version})`);
   check(boot.arcs.length === 11, `eleven arc credit scenes are registered (${boot.arcs.length})`);
   check(boot.arcs.some((arc) => arc.id === 'arc1' && arc.bosses.legacy.includes('oathbreaker')), 'Arc I maps the real Oathbreaker final boss');
   check(boot.arcs.some((arc) => arc.id === 'eternal' && arc.bosses.eternal.includes('first_forgotten')), 'Arc X maps The First Forgotten');
@@ -189,7 +189,7 @@ try {
     title: document.title,
   })`);
   check(persisted.summary.levels >= 1 && persisted.summary.modes >= 1, 'rune and mode secrets survive a full page reload');
-  check(/^0\.31\./.test(persisted.version) && /0\.31\.0/.test(persisted.title), 'reload keeps the v0.31.0 build');
+  check(/^0\.34\./.test(persisted.version) && /0\.34\.0/.test(persisted.title), 'reload keeps the v0.34.0 build');
 
   check(errors.length === 0, `no runtime or console errors${errors.length ? `: ${errors.slice(0, 3).join(' | ')}` : ''}`);
   console.log(`\nCredit scene + secret smoke: ${checks}/${checks} checks passed`);

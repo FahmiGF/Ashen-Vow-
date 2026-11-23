@@ -99,7 +99,7 @@ try {
     events: window.__ashen.eternalWorldEvents.length,
     milestones: window.__ashen.eternalRankMilestones.length,
   }))()`);
-  check(/0\.31\.0/.test(String(boot.title)), `boots v0.31.0 (${String(boot.title).slice(0, 40)})`);
+  check(/0\.34\.0/.test(String(boot.title)), `boots v0.34.0 (${String(boot.title).slice(0, 40)})`);
   check(boot.chapters === 8 && boot.stages === 40 && boot.bosses === 9, `8 chapters, 40 stages, 9 bosses (${boot.chapters}/${boot.stages}/${boot.bosses})`);
   check(boot.ghosts === 80, `80 Ghost Index entries (${boot.ghosts})`);
   check(boot.hunts === 7 && boot.equipment === 12 && boot.events === 11 && boot.milestones === 10, '7 hunts, 12 equipment, 11 events, 10 rank milestones');
@@ -247,7 +247,7 @@ try {
   check(saved.veil && saved.veilSchema === 2, 'the Arc IX save remains intact at schema 2');
   check(saved.separation && saved.hasEternalSettings, 'Arc X never writes Arc IX fields and its settings persist');
 
-  const errors = consoleErrors.filter((line) => !/favicon|ERR_FILE_NOT_FOUND/i.test(String(line)));
+  const errors = consoleErrors.filter((line) => !/favicon|ERR_FILE_NOT_FOUND|429|Too Many Requests/i.test(String(line)));
   check(errors.length === 0, `no console errors (${errors.slice(0, 2).join(' | ')})`);
 
   console.log(`\n${passed} passed, ${failed} failed`);

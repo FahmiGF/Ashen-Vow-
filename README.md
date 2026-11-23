@@ -1,4 +1,54 @@
-# Ashen Vow — v0.31.0
+# Ashen Vow — v0.34.0
+
+## Update XXIII — Pasang Tak Berujung & Benteng Karam (v0.34.0)
+
+## Endless tides and a fourth castle
+
+- **Pasang Tak Berujung (naval endless)**: the whole 3,200×2,200 sea with no final captain. Every **34 seconds** the tide rises: the player gains **+12 max hull** (and 24 repaired), **+6% damage**, the enemy fleet grows, and a captain enters every **third surge**. Sinking a captain is a bounty, never a finish line, so the run only ends when the player sinks.
+- **Separate endless records**: `progress.pirates.endless` stores runs, best score, best surge, best kills, best time and total kills. Endless runs never add voyages or wins and never unlock a route card.
+- **Fourth castle — Sunken Causeway**: a 24-slot winding causeway joins the three campaign maps, taking the roster to **4 maps, 14 towers, 20 enemy types and 6 bosses**.
+- **Two support towers**: **Panji Sumpah** never fires but gives other towers in its radius **+20% damage and +12% fire rate per level**; **Lentera Roh** marks a target for four seconds, and marked targets take **20% more damage**.
+- **Two new enemies**: **Drowned Reaver** (fast, 16% armour) and **Bone Herald** (grants nearby enemies +12% armour). The campaign still keeps its 24 waves.
+- **Wave Defense Tanpa Akhir**: procedural wave definitions continue past wave 24 up to a safe **999** ceiling, with best wave/score/kills/time in `progress.wavedefense.endless` and no campaign wins or losses written.
+- **Measured profiling tools**: `tools/frame-profile.mjs` records Long Animation Frames, rAF cadence, sampled CPU time and direct canvas cost per layer; `tools/bg-probe.mjs` splits the campaign background cost by room type. In headless Chrome at 1280×900 with software rasterisation the campaign canvas measured **13.8 ms** with `drawBackground` at **8.9 ms**, Pirate Tide **7–9 ms**, Wave Defense **7–9 ms**, and p95 around **7.1 ms** with no dropped frames.
+- **One optimisation kept, one rejected**: caching islands as `OffscreenCanvas` sprites made the naval canvas slower (**7.04 → 21.07 ms**) and was reverted. The kept changes are a per-canvas island gradient cache and single-stroke wakes. Benchmarks: **10,689–18,095 steps/s** in the naval simulation, **3,343 canvas calls/frame**, and the island predicate at **182 ns/call (2.96× faster)** than the previous version.
+
+Verification: `npm test` **720/720**; `npm run smoke:pirates` **49/49** (adds endless start, surge hull growth, third-surge captain, bounty-not-finish, endless ledger and route isolation); `npm run smoke:wavedefense` **66/66** (adds the fourth map, 14 towers, 20 enemies, mode switch, wave 30 in endless, and ledger isolation). No new save keys.
+
+Honest limits: the frame figures come from headless Chrome with software rasterisation, so they describe that path rather than a GPU-capped device; the campaign backdrop is still one full-screen composite and was not rewritten. The endless tide reuses the same authored sea and ship classes, and Wave Defense endless waves are scaled from the existing wave table rather than hand-authored.
+
+## Update XXII — Pirate Tide: Sumpah Laut (v0.33.0)
+
+## Act two of the open sea
+
+- **Ten sequential captain routes**: the five original hunts are joined by **Perburuan Kabut**, **Pasang Kosong**, **Takhta Garam**, **Kawal Baja**, and **Sumpah Pertama**, with target bounties rising from 9 to 13 ships and payouts of 510–950 gold.
+- **Five new flagships**: **Kapten Heron** (Pemburu Kabut), **Pasang Kosong** (Armada Kosong), **Ratu Garam** (Takhta Karam), **Marsekal Kade** (Tangan Baja), and **Kapten Pertama** (Sumpah Laut), scaling from 1,900 to 3,200 hull with 7–8 cannons per side.
+- **Three new islands**: Gosong Bara joins as open water, while **Pulau Duka** and **Karang Bintang Jatuh** add two more repair ports — 10 islands and 7 ports in total.
+- **Two new hull classes**: the fast **Pemotong Badai** (from route 6) and the heavy **Lewiatan Baja** (from route 7). The enemy pool is gated by route index so act one never spawns act two ships.
+- **Renderer culling**: islands, ships, cannonballs, and effects outside the camera are skipped, the sea gradient is cached per canvas, and the animated wave rows were reduced. At a full ten-hull load, canvas calls per frame dropped from **4,376 to 3,345 (−24%)**, the route-one camera now draws **2 of 10 islands** instead of all of them, and the minimap still draws the whole sea.
+- **Cheaper collision**: island and hull checks reject on a single axis and compare squared distance before taking a square root. In the benchmark's A/B, the same island predicate costs **157 ns/call instead of 465 ns/call (~2.9× faster)**, with identical hit results.
+- **Save-safe**: still `progress.pirates` in the existing save key. The sanitizer validates the full ten-route chain, so a forged save cannot open act two early.
+
+Verification: `npm test` **715/715**; browser smoke `npm run smoke:pirates` **42/42** adds act-two unlock, flagship spawn and clear checks to the hub, live Canvas, broadside, ramming, persistence and 390×844 battle layout. Benchmark: `node tools/pirates-bench.mjs` measured roughly **10,000–11,000 steps/s** on route one (10 hulls, 87 balls) and **19,000–21,000 steps/s** on route ten, plus the renderer and island-predicate numbers above.
+
+Honest limits: the sea is still one authored open-world map, not an infinite ocean. The benchmark is a Node simulation/renderer measurement, not a frame-time capture on every device.
+
+## Update XXI — Pirate Tide: Open Sea (v0.32.0)
+
+## Naval open world
+
+- **One continuous 3,200×2,200 sea** with islands, repair ports, roaming patrols, shallow water, reefs, cannons and a live minimap.
+- **Five opening captain routes**: Pasang Pertama, Lonceng di Bawah, Bangun Janda, Pasang Baja, and Mahkota Tenggelam. Sink the bounty, then defeat the flagship to unlock the next route. (Act two adds five more in v0.33.0.)
+- **Real broadside combat**: `W/S` throttle, `A/D` steer, `Q/E` fire port or starboard, `Space` fires both ready sides, and clicking the sea automatically picks the nearest side. Each side reloads independently.
+- **Six enemy ship classes and five captains**, each with hull, damage, range, cannon count, reload, speed and its own AI broadside behaviour.
+- **Open-world economy**: sink ships for gold, dock at any port to repair 50% hull for 25 gold, and chase score and route records. The HUD also has touch D-pad and fire buttons.
+- **Physical hulls**: ships cannot sail through each other. Collisions separate hulls and bleed speed, and the Black Sloop's ram deals real damage on a high-speed contact.
+- **Fair captain fights**: a flagship does not count as an extra bounty kill and regular patrols stop spawning once the captain arrives.
+- **Phone-ready battle**: the canvas leaves the 16:9 frame on portrait phones, fills the viewport, and resizes its backing resolution instead of stretching a 960×540 buffer.
+
+Verification: `npm test` **711/711**; browser smoke `npm run smoke:pirates` **36/36** covers the hub, live Canvas, movement, broadside cooldowns and pool cap, captain spawn/victory, ramming, unlock chain, reload persistence, a real touch cannon shot and the 390×844 battle layout. All 27 browser smoke scripts pass.
+
+Honest limits: the sea is one authored open-world map, not an infinite procedurally generated ocean. Islands, ports and ship classes are data-driven, but boarding, crew management and trading are not included.
 
 ## Update XX — The Mourning Choir & Second Shadows (v0.31.0)
 

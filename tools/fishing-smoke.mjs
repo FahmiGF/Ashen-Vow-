@@ -100,7 +100,7 @@ async function main() {
       } else if (message.method === 'Runtime.consoleAPICalled' && message.params.type === 'error') {
         pageErrors.push(message.params.args.map((arg) => arg.value ?? arg.description).join(' '));
       } else if (message.method === 'Log.entryAdded' && message.params.entry.level === 'error') {
-        if (!/favicon|ERR_NETWORK_ACCESS_DENIED/i.test(message.params.entry.text || '')) {
+        if (!/favicon|ERR_NETWORK_ACCESS_DENIED|429|Too Many Requests/i.test(message.params.entry.text || '')) {
           pageErrors.push(message.params.entry.text);
         }
       }
@@ -154,8 +154,8 @@ async function main() {
         title: document.title,
       };
     })()`);
-    check('boot reports v0.12.0', boot.version, '0.12.0');
-    check('title screen advertises v0.12.0', boot.title.includes('v0.12.0'), true);
+    check('boot reports v0.34.0', boot.version, '0.34.0');
+    check('title screen advertises v0.34.0', boot.title.includes('v0.34.0'), true);
     check('fishing hub is reachable from the menu', boot.menuButton, true);
     check('debug hooks expose the fishing hub', boot.hasHook, true);
 
@@ -419,7 +419,7 @@ async function main() {
         chips: document.querySelectorAll('.bait-chip').length,
       };
     })()`);
-    check('reload keeps v0.12.0', reloaded.version, '0.12.0');
+    check('reload keeps v0.34.0', reloaded.version, '0.34.0');
     check('reload keeps the wallet', reloaded.coins > 25, true);
     check('reload keeps the worms', reloaded.worms, 10);
     check('reload keeps the bought glowworm stack', reloaded.glowworm, 0);
@@ -428,8 +428,8 @@ async function main() {
     check('reload keeps the catch and escape counters', reloaded.catches === 1 && reloaded.escapes === 1, true);
     check('the hub still renders after reload', reloaded.chips, 9);
 
-    check('no console errors', pageErrors.length, 0);
     if (pageErrors.length) console.error(pageErrors.join('\n'));
+    check('no console errors', pageErrors.length, 0);
 
     console.log(`\nFISHING SMOKE PASS — ${checks.length} checks`);
   } finally {

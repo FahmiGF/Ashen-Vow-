@@ -100,7 +100,7 @@ async function main() {
       } else if (message.method === 'Runtime.consoleAPICalled' && message.params.type === 'error') {
         pageErrors.push(message.params.args.map((arg) => arg.value ?? arg.description).join(' '));
       } else if (message.method === 'Log.entryAdded' && message.params.entry.level === 'error') {
-        if (!/favicon|ERR_NETWORK_ACCESS_DENIED/i.test(message.params.entry.text || '')) {
+        if (!/favicon|ERR_NETWORK_ACCESS_DENIED|429|Too Many Requests/i.test(message.params.entry.text || '')) {
           pageErrors.push(message.params.entry.text);
         }
       }
@@ -355,7 +355,7 @@ async function main() {
       };
     })()`);
     check('game boots again at the phone size', reloaded.booted, true);
-    check('reload reports v0.12.0', reloaded.version, '0.12.0');
+    check('reload reports v0.34.0', reloaded.version, '0.34.0');
     check('reload lands on the phone speedrun hub', reloaded.view, 'speedrun');
     check('history survives the reload', reloaded.rows, 1);
     check('reloaded history row fits the phone', reloaded.row.fitsWidth, true);

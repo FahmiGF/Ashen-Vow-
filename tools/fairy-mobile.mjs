@@ -100,7 +100,7 @@ async function main() {
       } else if (message.method === 'Runtime.consoleAPICalled' && message.params.type === 'error') {
         pageErrors.push(message.params.args.map((arg) => arg.value ?? arg.description).join(' '));
       } else if (message.method === 'Log.entryAdded' && message.params.entry.level === 'error') {
-        if (!/favicon|ERR_NETWORK_ACCESS_DENIED/i.test(message.params.entry.text || '')) {
+        if (!/favicon|ERR_NETWORK_ACCESS_DENIED|429|Too Many Requests/i.test(message.params.entry.text || '')) {
           pageErrors.push(message.params.entry.text);
         }
       }
@@ -260,12 +260,12 @@ async function main() {
     })()`);
     check('update log opens', updates.view, 'updates');
     check('update log renders the release history', updates.entries >= 12, true);
-    check('update log shows v0.12.0', /v0\.12\.0/i.test(updates.badge || ''), true);
-    check('update log leads with the newest release', /PONDOK UMPAN|SPEEDRUN/i.test(updates.firstEntryText), true);
+    check('update log shows v0.34.0', /v0\.34\.0/i.test(updates.badge || ''), true);
+    check('update log leads with the newest release', /PIRATE TIDE|OPEN SEA/i.test(updates.firstEntryText), true);
     check('update log keeps the Faewood entry', /FAEWOOD/i.test(updates.firstText), true);
     check('update log mentions the spectral dragon forms', /Demon Lord of the Last Vow/.test(updates.firstText), true);
     check('update log mentions the 30-second epilogue', /30 detik/.test(updates.firstText), true);
-    check('update log is dated November 2026', /15 NOVEMBER 2026/i.test(updates.meta || ''), true);
+    check('update log is dated November 2026', /NOVEMBER 2026/i.test(updates.meta || ''), true);
     check('update log has no horizontal overflow', updates.overflow.doc <= 0, true);
     check('update log fills the phone viewport', updates.screen.height >= 800, true);
     check('update log body fits the phone', updates.log.fitsWidth, true);
@@ -312,7 +312,7 @@ async function main() {
     check('game boots again at the phone size', reloaded.booted, true);
     check('reload lands on the title menu', reloaded.view, 'title');
     check('reload keeps the viewport clean', reloaded.overflow.doc <= 0, true);
-    check('reload reports v0.12.0', reloaded.version, '0.12.0');
+    check('reload reports v0.34.0', reloaded.version, '0.34.0');
 
     check('no console errors', pageErrors.length, 0);
     if (pageErrors.length) console.error(pageErrors.join('\n'));

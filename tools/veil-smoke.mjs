@@ -99,7 +99,7 @@ try {
     facilities: window.__ashen.veilFacilities.length,
     achievements: window.__ashen.veilAchievements.length,
   }))()`);
-  check(/0\.31\.0/.test(String(boot.title)), `boots v0.31.0 (${String(boot.title).slice(0, 40)})`);
+  check(/0\.34\.0/.test(String(boot.title)), `boots v0.34.0 (${String(boot.title).slice(0, 40)})`);
   check(boot.chapters === 6 && boot.stages === 30 && boot.bosses === 7, '6 chapters, 30 stages, 7 bosses');
   check(boot.ghosts === 80, `80 Ghost Index entries (${boot.ghosts})`);
   check(boot.tabs === 8 && boot.facilities === 10 && boot.achievements === 14, '8 tabs, 10 facilities, 14 achievements');
@@ -252,7 +252,7 @@ try {
   check(saved.exists && saved.schema === 2, 'the veil profile persists under its own v2 save key');
   check(saved.stages >= 1 && saved.documented >= 1, 'stage and Ghost Index progress survive the save');
 
-  const errors = consoleErrors.filter((line) => !/favicon|ERR_FILE_NOT_FOUND/i.test(String(line)));
+  const errors = consoleErrors.filter((line) => !/favicon|ERR_FILE_NOT_FOUND|429|Too Many Requests/i.test(String(line)));
   check(errors.length === 0, `no console errors (${errors.slice(0, 2).join(' | ')})`);
 
   console.log(`\n${passed} passed, ${failed} failed`);

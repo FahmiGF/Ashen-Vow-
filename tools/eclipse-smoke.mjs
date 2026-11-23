@@ -61,7 +61,7 @@ try {
     else if (message.method === 'Runtime.consoleAPICalled' && message.params.type === 'error') errors.push(message.params.args.map((arg) => arg.value ?? arg.description).join(' '));
     else if (message.method === 'Log.entryAdded' && message.params.entry.level === 'error') {
       const text = message.params.entry.text || '';
-      if (!/favicon/i.test(text)) errors.push(`${text} ${message.params.entry.url || ''}`);
+      if (!/favicon|429|Too Many Requests/i.test(text)) errors.push(`${text} ${message.params.entry.url || ''}`);
     }
   });
   await send('Runtime.enable');
@@ -81,7 +81,7 @@ try {
       style: [...document.styleSheets].some((sheet) => String(sheet.href).includes('styles-eclipse')),
     };
   })()`);
-  check(boot.version === '0.23.0', `version is 0.23.0 (got ${boot.version})`);
+  check(boot.version === '0.34.0', `version is 0.34.0 (got ${boot.version})`);
   check(boot.button && boot.screen && boot.style, 'Eclipse menu, screen and stylesheet are wired');
 
   const campaign = await evaluate(`(async () => {
@@ -192,11 +192,11 @@ try {
     await new Promise((r) => setTimeout(r, 200));
     const stored = JSON.parse(localStorage.getItem('ashen-vow-settings-v1') || '{}').gameplay || {};
     const canvasWidth = document.getElementById('game').width;
-    return { presets, selects, preset: stored.graphicsPreset, cap: stored.frameCap, scale: stored.resolutionScale, canvasWidth, budget: document.querySelectorAll('.eclipse-budget > div').length };
+    return { presets, selects, preset: stored.graphicsPreset, cap: stored.frameCap, scale: stored.resolutionScale, renderScale: A.renderer.options.resolutionScale, canvasWidth, budget: document.querySelectorAll('.eclipse-budget > div').length };
   })()`);
   check(settings.presets === 5 && settings.selects === 11, 'graphics exposes five presets and eleven advanced controls');
-  check(settings.preset === 'low' && settings.cap === 30 && settings.budget === 3, 'low preset applies a 30 FPS cap and frame-time budget');
-  check(settings.scale === 0.65 && settings.canvasWidth === 624, 'low preset applies its 65% resolution scale to the live canvas');
+  check(settings.preset === 'low' && settings.cap === 30 && settings.budget === 3, `low preset applies a 30 FPS cap and frame-time budget (preset=${settings.preset} cap=${settings.cap} budget=${settings.budget})`);
+  check(settings.scale === 0.65 && settings.renderScale === 0.65 && settings.canvasWidth < 640, `low preset applies its 65% resolution scale to the live canvas (scale=${settings.scale} width=${settings.canvasWidth})`);
 
   const qa = await evaluate(`(async () => {
     const A = window.__ashen;

@@ -68,6 +68,15 @@
   color: #f4e4c3;
   background: rgba(72, 55, 31, 0.55);
 }
+.wd-choice-row button em {
+  display: block;
+  margin-top: 3px;
+  color: #7f7360;
+  font-size: 6px;
+  font-style: normal;
+  letter-spacing: 0.04em;
+}
+.wd-choice-row button.active em { color: #c9b28a; }
 
 .wd-tower-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; }
 .wd-tower-card {

@@ -99,7 +99,7 @@ async function main() {
       } else if (message.method === 'Runtime.consoleAPICalled' && message.params.type === 'error') {
         pageErrors.push(message.params.args.map((arg) => arg.value ?? arg.description).join(' '));
       } else if (message.method === 'Log.entryAdded' && message.params.entry.level === 'error') {
-        if (!/favicon|ERR_NETWORK_ACCESS_DENIED/i.test(message.params.entry.text || '')) {
+        if (!/favicon|ERR_NETWORK_ACCESS_DENIED|429|Too Many Requests/i.test(message.params.entry.text || '')) {
           pageErrors.push(message.params.entry.text);
         }
       }
@@ -148,8 +148,8 @@ async function main() {
       A.clearProgress();
       return { version: A.version, title: document.title, fallen: !!A.progress.fallen };
     })()`);
-    check('boot reports v0.16.0', boot.version, '0.16.0');
-    assert.match(boot.title, /0.16.0/);
+    check('boot reports v0.34.0', boot.version, '0.34.0');
+    assert.match(boot.title, /0.34.0/);
     check('fresh saves carry a fallen progress block', boot.fallen, true);
 
     const ascended = await evaluate(`(() => {
@@ -294,6 +294,7 @@ async function main() {
     check('fallen progress persists in the shared save key', persist.bosses, true);
     check('shards persist across reloads', persist.shards, true);
 
+    if (pageErrors.length) console.error(pageErrors.join('\n'));
     check('no page exceptions', pageErrors.length, 0);
     console.log(`✔ fallen smoke: ${checks.length} checks passed`);
   } finally {

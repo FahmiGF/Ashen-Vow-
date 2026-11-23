@@ -1,0 +1,381 @@
+/* Ashen Vow — Pirate Tide: Open Sea */
+.pirate-menu-btn { border-color: rgba(113, 190, 181, 0.32); }
+.pirate-inner { width: min(1120px, 96%); }
+.pirate-title {
+  letter-spacing: 0.17em;
+  background: linear-gradient(180deg, #f5f1d1, #8bd0be 54%, #2c746f);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.pirate-summary {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 7px;
+  margin: 16px 0 20px;
+}
+.pirate-stat {
+  padding: 9px 8px;
+  border: 1px solid rgba(114, 191, 179, 0.18);
+  background: linear-gradient(155deg, rgba(27, 55, 53, 0.74), rgba(8, 15, 15, 0.9));
+}
+.pirate-stat span { display: block; color: #719994; font-size: 7px; letter-spacing: 0.16em; }
+.pirate-stat strong { display: block; margin-top: 3px; color: #e8f0db; font-size: 16px; line-height: 1; }
+.pirate-stat em { display: block; margin-top: 3px; color: #64807a; font-size: 6px; font-style: normal; }
+
+.pirate-section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 16px 0 7px;
+}
+.pirate-section-head h3 { margin: 0; color: #d4e4d7; font-size: 11px; letter-spacing: 0.18em; }
+.pirate-section-head span { color: #698782; font-size: 7px; letter-spacing: 0.12em; }
+
+.pirate-stages { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 7px; }
+.pirate-stage-card {
+  position: relative;
+  min-height: 132px;
+  padding: 10px 9px;
+  border: 1px solid rgba(114, 191, 179, 0.16);
+  background:
+    radial-gradient(circle at 82% 12%, rgba(105, 205, 182, 0.12), transparent 46%),
+    linear-gradient(155deg, rgba(28, 48, 45, 0.82), rgba(7, 14, 14, 0.94));
+  color: #a9bdb4;
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+}
+.pirate-stage-card:hover, .pirate-stage-card.active { border-color: rgba(130, 225, 202, 0.66); transform: translateY(-1px); }
+.pirate-stage-card.active { box-shadow: inset 0 0 0 1px rgba(132, 220, 199, 0.16); }
+.pirate-stage-card.locked { opacity: 0.42; cursor: not-allowed; filter: saturate(0.5); }
+.pirate-stage-card .ps-index {
+  position: absolute;
+  right: 8px;
+  top: 6px;
+  color: rgba(132, 210, 190, 0.2);
+  font: 700 27px var(--font-display);
+}
+.pirate-stage-card strong { display: block; padding-right: 24px; color: #edf1da; font: 700 11px var(--font-display); letter-spacing: 0.04em; }
+.pirate-stage-card em { display: block; margin: 3px 0 6px; color: #c49b61; font-size: 7px; font-style: normal; letter-spacing: 0.1em; }
+.pirate-stage-card > span:not(.ps-index) { display: block; color: #7d938d; font-size: 7px; line-height: 1.45; }
+.pirate-stage-card b { display: block; margin-top: 7px; color: #77ba9f; font-size: 7px; font-weight: 600; }
+.pirate-stage-card.locked b { color: #a07468; }
+
+.pirate-endless { display: grid; }
+.pirate-endless-card {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid rgba(214, 150, 96, 0.32);
+  background:
+    radial-gradient(circle at 12% 20%, rgba(224, 130, 78, 0.16), transparent 52%),
+    linear-gradient(155deg, rgba(44, 32, 24, 0.84), rgba(12, 13, 12, 0.94));
+}
+.pirate-endless-card .pe-copy { flex: 1 1 320px; min-width: 0; }
+.pirate-endless-card strong { display: block; color: #f3d9ac; font: 700 12px var(--font-display); letter-spacing: 0.1em; }
+.pirate-endless-card span { display: block; margin: 4px 0 6px; color: #a79380; font-size: 7px; line-height: 1.5; }
+.pirate-endless-card em { display: block; color: #cd9a62; font-size: 7px; font-style: normal; letter-spacing: 0.08em; }
+.pirate-endless-card .btn { flex: 0 0 auto; }
+
+.pirate-world { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 5px; }
+.pirate-island {
+  padding: 7px 6px;
+  border: 1px solid rgba(117, 162, 146, 0.13);
+  background: linear-gradient(155deg, rgba(27, 40, 36, 0.76), rgba(8, 12, 12, 0.86));
+}
+.pirate-island strong { display: block; color: #d7d8c0; font-size: 7px; line-height: 1.25; }
+.pirate-island span { display: block; margin-top: 3px; color: #657b72; font-size: 6px; }
+.pirate-island.port { border-color: rgba(202, 170, 104, 0.25); }
+.pirate-island.port span { color: #b6955e; }
+
+.pirate-guide { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 16px; }
+.pirate-guide div {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 7px;
+  border: 1px solid rgba(114, 191, 179, 0.12);
+  background: rgba(10, 19, 18, 0.72);
+}
+.pirate-guide b { color: #d7e8cd; font-size: 7px; letter-spacing: 0.06em; }
+.pirate-guide span { color: #728d84; font-size: 6px; }
+.pirate-start-row { margin: 18px 0 8px; }
+.pirate-start-row .btn { width: min(470px, 100%); }
+
+/* Open-sea battlefield */
+.pirate-battle {
+  position: absolute;
+  inset: 0;
+  z-index: 24;
+  overflow: hidden;
+  background: #08171b;
+}
+.pirate-battle canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: crosshair; }
+.pirate-hud {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  color: #eef3df;
+  font-family: var(--font-display);
+  text-shadow: 0 1px 3px #000;
+}
+.pirate-topbar {
+  position: absolute;
+  top: 8px;
+  left: 10px;
+  right: 10px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+.pirate-hull {
+  width: 174px;
+  padding: 6px 8px;
+  border: 1px solid rgba(119, 198, 183, 0.22);
+  background: rgba(5, 17, 18, 0.82);
+}
+.pirate-hull span { display: block; color: #79a59c; font-size: 7px; letter-spacing: 0.14em; }
+.pirate-hull strong { display: block; color: #eef0d9; font-size: 14px; line-height: 1.05; }
+.pirate-hull-bar { height: 8px; margin-top: 4px; background: rgba(0, 0, 0, 0.68); border: 1px solid rgba(255, 255, 255, 0.08); }
+.pirate-hull-bar i { display: block; height: 100%; width: 100%; background: linear-gradient(90deg, #3e9681, #a8d77a); transition: width 0.15s linear; }
+.pirate-route { min-width: 250px; text-align: center; padding-top: 2px; }
+.pirate-route span { display: block; color: #7ba79c; font-size: 7px; letter-spacing: 0.18em; }
+.pirate-route strong { display: block; color: #fff0c9; font-size: 16px; line-height: 1.1; }
+.pirate-route em { display: block; margin-top: 2px; color: #cba96e; font-size: 7px; font-style: normal; }
+.pirate-resources { display: flex; gap: 5px; padding: 6px 8px; border: 1px solid rgba(119, 198, 183, 0.18); background: rgba(5, 17, 18, 0.82); }
+.pirate-resources div { min-width: 48px; }
+.pirate-resources span { display: block; color: #748f88; font-size: 6px; letter-spacing: 0.1em; }
+.pirate-resources b { display: block; color: #f1d69a; font-size: 12px; }
+.pirate-resources b:first-letter { color: inherit; }
+.pirate-top-actions { display: flex; gap: 4px; pointer-events: auto; }
+.pirate-icon-btn {
+  width: 27px; height: 27px;
+  border: 1px solid rgba(119, 198, 183, 0.26);
+  background: rgba(5, 17, 18, 0.86);
+  color: #e4edda;
+  font: 700 11px var(--font-display);
+  cursor: pointer;
+}
+.pirate-icon-btn:hover { border-color: rgba(156, 228, 209, 0.72); }
+
+.pirate-boss-panel {
+  position: absolute;
+  top: 64px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(360px, 56%);
+  padding: 5px 9px;
+  border: 1px solid rgba(255, 177, 112, 0.34);
+  background: rgba(25, 12, 7, 0.84);
+  text-align: center;
+}
+.pirate-boss-panel span { display: block; color: #ffc293; font-size: 7px; letter-spacing: 0.14em; }
+.pirate-boss-bar { height: 6px; margin-top: 3px; background: #160a06; border: 1px solid rgba(255, 255, 255, 0.08); }
+.pirate-boss-bar i { display: block; height: 100%; background: linear-gradient(90deg, #9c3b26, #ffb260); transition: width 0.15s linear; }
+
+.pirate-port {
+  position: absolute;
+  left: 12px;
+  bottom: 92px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 9px;
+  border: 1px solid rgba(213, 181, 111, 0.3);
+  background: rgba(9, 20, 19, 0.9);
+  pointer-events: auto;
+}
+.pirate-port span { color: #d7c291; font-size: 7px; letter-spacing: 0.08em; }
+.pirate-port button {
+  padding: 5px 8px;
+  border: 1px solid rgba(213, 181, 111, 0.3);
+  background: rgba(71, 54, 28, 0.8);
+  color: #f2dfb1;
+  font: 700 7px var(--font-display);
+  cursor: pointer;
+}
+.pirate-port button.ready { border-color: rgba(137, 220, 162, 0.6); color: #b8ebbd; }
+.pirate-port button:disabled { opacity: 0.42; cursor: default; }
+
+.pirate-feed {
+  position: absolute;
+  right: 12px;
+  top: 74px;
+  width: 230px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: flex-end;
+  font-size: 7px;
+}
+.pirate-feed span { max-width: 100%; padding: 3px 6px; background: rgba(5, 15, 15, 0.64); text-align: right; }
+.pirate-feed .gold { color: #e8c77e; }
+.pirate-feed .heal { color: #93d7a4; }
+.pirate-feed .danger { color: #ff9b83; }
+.pirate-feed .victory { color: #ffe6a1; }
+
+.pirate-controls {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  pointer-events: none;
+}
+.pirate-dpad {
+  display: grid;
+  grid-template-columns: repeat(3, 40px);
+  grid-template-rows: repeat(2, 34px);
+  gap: 4px;
+  pointer-events: auto;
+}
+.pirate-dpad button {
+  border: 1px solid rgba(119, 198, 183, 0.24);
+  background: rgba(7, 23, 23, 0.8);
+  color: #d6e8da;
+  font: 700 13px var(--font-display);
+  cursor: pointer;
+  touch-action: none;
+}
+.pirate-dpad button:nth-child(1) { grid-column: 2; grid-row: 1; }
+.pirate-dpad button:nth-child(2) { grid-column: 1; grid-row: 2; }
+.pirate-dpad button:nth-child(3) { grid-column: 2; grid-row: 2; }
+.pirate-dpad button:nth-child(4) { grid-column: 3; grid-row: 2; }
+.pirate-dpad button:active { background: rgba(102, 169, 150, 0.4); }
+.pirate-fire-controls { display: flex; gap: 6px; pointer-events: auto; }
+.pirate-fire-controls button {
+  min-width: 106px;
+  padding: 7px 9px;
+  border: 1px solid rgba(228, 178, 95, 0.36);
+  background: linear-gradient(155deg, rgba(92, 63, 29, 0.9), rgba(16, 20, 16, 0.94));
+  color: #f4e3bd;
+  text-align: left;
+  cursor: pointer;
+}
+.pirate-fire-controls span { display: block; color: #f7e6bd; font: 700 9px var(--font-display); letter-spacing: 0.1em; }
+.pirate-fire-controls b { float: right; margin-top: -11px; color: #ad9364; font: 700 7px var(--font-display); }
+.pirate-fire-controls em { display: block; margin-top: 3px; color: #85b99a; font-size: 6px; font-style: normal; }
+.pirate-fire-controls button.cooling { opacity: 0.52; }
+.pirate-fire-controls button.cooling em { color: #c8866f; }
+
+.pirate-hint {
+  position: absolute;
+  left: 50%;
+  bottom: 12px;
+  transform: translateX(-50%);
+  color: #6e8a81;
+  font-size: 6px;
+  white-space: nowrap;
+}
+.pirate-hint kbd { border: 1px solid #3f5c54; padding: 0 2px; color: #c4d6c7; }
+
+.pirate-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  background: rgba(2, 10, 11, 0.78);
+  backdrop-filter: blur(3px);
+}
+.pirate-modal {
+  width: min(420px, 88%);
+  padding: 24px;
+  border: 1px solid rgba(119, 198, 183, 0.34);
+  background: linear-gradient(160deg, rgba(24, 45, 42, 0.98), rgba(5, 12, 12, 0.99));
+  text-align: center;
+}
+.pirate-modal h3 { margin: 4px 0 8px; color: #e7f0d7; font-size: 24px; }
+.pirate-modal p { color: #8da79e; font-size: 9px; line-height: 1.5; }
+.pirate-modal .btn { display: block; width: 100%; margin-top: 7px; }
+.pirate-result-card { width: min(560px, 92%); }
+.pirate-result-card.defeat { border-color: rgba(220, 91, 73, 0.5); }
+.pirate-result-card h3 { font-size: 29px; color: #ffe7a5; }
+.pirate-result-card.defeat h3 { color: #ff9a8b; }
+.pirate-result-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 14px 0 16px; }
+.pirate-result-stats div { padding: 7px; border: 1px solid rgba(255, 255, 255, 0.1); }
+.pirate-result-stats span { display: block; color: #8da39a; font-size: 7px; }
+.pirate-result-stats b { display: block; margin-top: 3px; color: #f4e4c3; font-size: 16px; }
+.pirate-result-actions { display: flex; gap: 6px; }
+.pirate-result-actions .btn { flex: 1; }
+
+@media (max-width: 900px) {
+  .pirate-summary { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .pirate-stages { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .pirate-world { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .pirate-route { min-width: 180px; }
+}
+
+@media (max-width: 700px) {
+  .pirate-stages { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pirate-endless-card .btn { width: 100%; }
+  .pirate-world { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .pirate-topbar { gap: 4px; }
+  .pirate-hull { width: 120px; padding: 5px; }
+  .pirate-hull strong { font-size: 11px; }
+  .pirate-route { min-width: 0; flex: 1; }
+  .pirate-route strong { font-size: 11px; }
+  .pirate-resources { padding: 4px; gap: 2px; }
+  .pirate-resources div { min-width: 33px; }
+  .pirate-resources b { font-size: 9px; }
+  .pirate-resources span { font-size: 5px; }
+  .pirate-icon-btn { width: 23px; height: 23px; font-size: 9px; }
+  .pirate-feed { width: 150px; top: 64px; font-size: 6px; }
+  .pirate-dpad { grid-template-columns: repeat(3, 34px); grid-template-rows: repeat(2, 31px); }
+  .pirate-fire-controls button { min-width: 82px; padding: 5px 6px; }
+  .pirate-fire-controls span { font-size: 7px; }
+  .pirate-hint { display: none; }
+  .pirate-boss-panel { top: 55px; width: 62%; }
+  .pirate-port { bottom: 78px; left: 8px; padding: 5px; }
+  .pirate-result-stats { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 760px) and (orientation: portrait) {
+  .pirate-battle {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100dvh;
+    z-index: 80;
+  }
+  .pirate-controls { bottom: max(7px, env(safe-area-inset-bottom)); }
+  .pirate-port { bottom: max(68px, calc(env(safe-area-inset-bottom) + 60px)); }
+}
+
+@media (max-height: 540px) and (orientation: landscape) {
+  .pirate-battle {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100dvh;
+    z-index: 80;
+  }
+  .pirate-controls { bottom: max(7px, env(safe-area-inset-bottom)); }
+}
+
+@media (max-width: 460px) {
+  .pirate-stages { grid-template-columns: 1fr; }
+  .pirate-endless-card { padding: 10px; }
+  .pirate-world { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pirate-guide { display: grid; grid-template-columns: repeat(2, 1fr); }
+  .pirate-guide div { justify-content: space-between; }
+  .pirate-topbar { flex-wrap: wrap; }
+  .pirate-route { order: 4; width: 100%; flex-basis: 100%; }
+  .pirate-feed { display: none; }
+  .pirate-controls { bottom: 7px; left: 7px; right: 7px; }
+  .pirate-dpad { grid-template-columns: repeat(3, 30px); grid-template-rows: repeat(2, 28px); }
+  .pirate-fire-controls button { min-width: 68px; }
+  .pirate-fire-controls span { font-size: 6px; }
+  .pirate-fire-controls b { display: none; }
+  .pirate-port { left: 7px; bottom: 68px; }
+  .pirate-modal { padding: 17px; }
+}

@@ -79,7 +79,7 @@ async function main() {
       }
       if (message.method === 'Runtime.exceptionThrown') pageErrors.push(message.params.exceptionDetails?.exception?.description || 'exception');
       else if (message.method === 'Runtime.consoleAPICalled' && message.params.type === 'error') pageErrors.push(message.params.args.map((arg) => arg.value ?? arg.description).join(' '));
-      else if (message.method === 'Log.entryAdded' && message.params.entry.level === 'error' && !/favicon/i.test(message.params.entry.text || '')) pageErrors.push(message.params.entry.text);
+      else if (message.method === 'Log.entryAdded' && message.params.entry.level === 'error' && !/favicon|429|Too Many Requests/i.test(message.params.entry.text || '')) pageErrors.push(message.params.entry.text);
     });
     const send = (method, params = {}) => new Promise((resolve, reject) => {
       const id = ++nextId;
@@ -110,7 +110,7 @@ async function main() {
       const A = window.__ashen; A.clearProgress();
       return { version: A.version, trials: !!A.progress.trials, puzzle: !!A.progress.puzzle };
     })()`);
-    check('boot reports v0.16.0', initial.version, '0.16.0');
+    check('boot reports v0.34.0', initial.version, '0.34.0');
     check('save carries trial progress', initial.trials, true);
     check('save carries puzzle progress', initial.puzzle, true);
 

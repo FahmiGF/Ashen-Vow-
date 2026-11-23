@@ -76,7 +76,7 @@ async function main() {
       }
       if (message.method === 'Runtime.exceptionThrown') pageErrors.push(message.params.exceptionDetails?.exception?.description || 'exception');
       else if (message.method === 'Runtime.consoleAPICalled' && message.params.type === 'error') pageErrors.push(message.params.args.map((arg) => arg.value ?? arg.description).join(' '));
-      else if (message.method === 'Log.entryAdded' && message.params.entry.level === 'error' && !/favicon/i.test(message.params.entry.text || '')) pageErrors.push(message.params.entry.text);
+      else if (message.method === 'Log.entryAdded' && message.params.entry.level === 'error' && !/favicon|429|Too Many Requests/i.test(message.params.entry.text || '')) pageErrors.push(message.params.entry.text);
     });
     const send = (method, params = {}) => new Promise((resolve, reject) => {
       const id = ++nextId;
@@ -120,13 +120,13 @@ async function main() {
       };
     })()`);
     check('Riftwar hub opens from the menu', hub.view, 'moba');
-    check('all twenty-eight classes are selectable', hub.heroes, 28);
+    check('all thirty-three classes are selectable', hub.heroes, 33);
     check('hub exposes all three battlefields', hub.maps, 3);
     check('hub exposes all five lanes', hub.lanes, 5);
     check('hub exposes four difficulties', hub.difficulties, 4);
     check('hub codex has units, jungle bosses and map lore', hub.codex, 3);
     check('save carries moba progress', hub.save, true);
-    check('hero summary counts every class', hub.total, 28);
+    check('hero summary counts every class', hub.total, 33);
 
     const selected = await evaluate(`(() => {
       const A = window.__ashen;
@@ -257,7 +257,7 @@ async function main() {
     check('leaving the result returns to the hub', left.view, 'moba');
     check('battle simulation stops on leave', left.active, false);
     check('result is cleared on leave', left.result, null);
-    check('hero roster still renders after leave', left.heroes, 28);
+    check('hero roster still renders after leave', left.heroes, 33);
 
     await send('Page.reload');
     await sleep(350);
@@ -279,7 +279,7 @@ async function main() {
     check('moba losses survive reload', persisted.losses, 1);
     check('hero play count survives reload', persisted.heroPlays, 2);
     check('map win survives reload', persisted.mapWins, 1);
-    check('roster survives reload', persisted.cards, 28);
+    check('roster survives reload', persisted.cards, 33);
 
     await sleep(300);
     assert.deepEqual(pageErrors, [], `console errors: ${pageErrors.join(' | ')}`);

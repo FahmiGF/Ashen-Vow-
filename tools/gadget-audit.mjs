@@ -66,7 +66,9 @@ async function main() {
     `--user-data-dir=${profile}`,
     '--no-first-run',
     '--no-default-browser-check',
-    '--disable-gpu',
+    // Frame pacing must be measured on the same GPU path players use. Software
+    // rasterization caps the 1440px menu near 12 fps on Windows even though the
+    // game is healthy, so it would report an environment limit as a regression.
     '--mute-audio',
     '--disable-background-timer-throttling',
     '--disable-backgrounding-occluded-windows',
@@ -118,7 +120,7 @@ async function main() {
       } else if (message.method === 'Runtime.consoleAPICalled' && message.params.type === 'error') {
         pageErrors.push(message.params.args.map((arg) => arg.value ?? arg.description).join(' '));
       } else if (message.method === 'Log.entryAdded' && message.params.entry.level === 'error') {
-        if (!/favicon|ERR_NETWORK_ACCESS_DENIED/i.test(message.params.entry.text || '')) {
+        if (!/favicon|ERR_NETWORK_ACCESS_DENIED|429|Too Many Requests/i.test(message.params.entry.text || '')) {
           pageErrors.push(message.params.entry.text);
         }
       }

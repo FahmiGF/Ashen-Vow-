@@ -9,7 +9,11 @@ import {
   WAVE_DEFENSE_BOSSES,
   WAVE_DEFENSE_WAVES,
   WAVE_DEFENSE_TOTAL_WAVES,
+  WAVE_DEFENSE_ENDLESS_WAVES,
   WAVE_DEFENSE_MAX_TOWER_LEVEL,
+  waveDefenseRefreshAuras,
+  waveDefenseIncomingDamage,
+  waveDefenseRefreshArmor,
   createWaveDefense,
   updateWaveDefense,
   waveDefenseBuild,
@@ -21,6 +25,7 @@ import {
   waveDefenseSelectTower,
   waveDefenseNextWave,
   waveDefenseSetSpeed,
+  waveDefenseTowerStats,
   waveDefenseSnapshot,
   defaultWaveDefenseProgress,
   sanitizeWaveDefenseProgress,
@@ -30,15 +35,15 @@ import {
   renderWaveDefense,
 } from '../src/wavedefense.js';
 
-test('wave defense ships 3 maps, 12 towers, 18 enemies, 6 bosses and 24 waves', () => {
-  assert.equal(WAVE_DEFENSE_MAPS.length, 3);
+test('wave defense ships 4 maps, 14 towers, 20 enemies, 6 bosses and 24 waves', () => {
+  assert.equal(WAVE_DEFENSE_MAPS.length, 4);
   for (const map of WAVE_DEFENSE_MAPS) {
     assert.ok(map.slots.length >= 20, `${map.id} needs plenty of build sites`);
     assert.ok(map.path.length >= 8);
     assert.ok(map.pathLength > 1000);
   }
-  assert.equal(WAVE_DEFENSE_TOWERS.length, 12);
-  assert.equal(WAVE_DEFENSE_ENEMY_TYPES.length, 18);
+  assert.equal(WAVE_DEFENSE_TOWERS.length, 14);
+  assert.equal(WAVE_DEFENSE_ENEMY_TYPES.length, 20);
   assert.equal(WAVE_DEFENSE_BOSSES.length, 6);
   assert.equal(WAVE_DEFENSE_WAVES.length, WAVE_DEFENSE_TOTAL_WAVES);
   assert.equal(WAVE_DEFENSE_TOTAL_WAVES, 24);
@@ -213,7 +218,7 @@ test('match records, summaries and snapshots expose the real battlefield', () =>
   const summary = waveDefenseSummary(saved.progress);
   assert.equal(summary.winRate, 100);
   assert.equal(summary.mapsPlayed, 1);
-  assert.equal(summary.towers, 12);
+  assert.equal(summary.towers, 14);
   const snap = waveDefenseSnapshot(m);
   assert.equal(snap.mapName, 'ASHEN KEEP');
   assert.equal(snap.towers.length, 1);
@@ -221,6 +226,86 @@ test('match records, summaries and snapshots expose the real battlefield', () =>
   assert.equal(snap.selectedTower.level, 2);
   assert.equal(snap.castle.maxHp, 120);
   assert.equal(snap.totalWaves, 24);
+});
+
+test('banner auras buff nearby towers and drop when the banner is sold', () => {
+  const m = createWaveDefense({ mapId: 'ashen_keep' });
+  m.gold = 2000;
+  const banner = waveDefenseBuild(m, 0, 'vow_banner');
+  assert.ok(banner);
+  const neighbour = m.slots.find((slot) => slot.index > 0 && Math.hypot(slot.x - banner.x, slot.y - banner.y) < 136);
+  assert.ok(neighbour, 'a build site sits inside the banner radius');
+  const ballista = waveDefenseBuild(m, neighbour.index, 'ballista');
+  waveDefenseRefreshAuras(m);
+  assert.equal(ballista.buffDamage, 0.2);
+  assert.equal(ballista.buffRate, 0.12);
+  assert.ok(waveDefenseTowerStats(ballista).damage > 34, 'the banner raises real tower damage');
+  assert.ok(waveDefenseTowerStats(ballista).rate > 1.05, 'the banner raises real tower rate');
+  waveDefenseSelect(m, banner.slot);
+  waveDefenseSell(m);
+  waveDefenseRefreshAuras(m);
+  assert.equal(ballista.buffDamage, 0, 'selling the banner clears the buff');
+  assert.equal(waveDefenseTowerStats(ballista).damage, 34);
+  assert.equal(WAVE_DEFENSE_TOWER_BY_ID.vow_banner.damage, 0, 'the banner never shoots');
+});
+
+test('lantern marks and herald armour flow through the damage pipeline', () => {
+  assert.equal(waveDefenseIncomingDamage(100, { armor: 0 }), 100);
+  assert.equal(waveDefenseIncomingDamage(100, { armor: 0, markTimer: 2 }), 120);
+  assert.equal(waveDefenseIncomingDamage(100, { armor: 0, markTimer: 0 }), 100);
+  assert.equal(waveDefenseIncomingDamage(100, { armor: 0.2, armorBonus: 0.12 }), 68);
+  assert.equal(waveDefenseIncomingDamage(100, { armor: 0.2, armorBonus: 0.12 }, { magic: true }), 89);
+  assert.ok(Math.abs(waveDefenseIncomingDamage(100, { armor: 0.9, armorBonus: 0.4 }) - 15) < 1e-6, 'armour is capped at 85%');
+  assert.ok(WAVE_DEFENSE_TOWER_BY_ID.spirit_lantern.mark >= 3);
+
+  const m = createWaveDefense();
+  const herald = { x: 200, y: 200, armorAura: 0.12, armorBonus: 0, dead: false };
+  const ghoul = { x: 230, y: 200, armor: 0, armorBonus: 0, dead: false };
+  const far = { x: 600, y: 200, armor: 0, armorBonus: 0, dead: false };
+  m.enemies = [herald, ghoul, far];
+  waveDefenseRefreshArmor(m);
+  assert.equal(ghoul.armorBonus, 0.12);
+  assert.equal(far.armorBonus, 0);
+  herald.dead = true;
+  waveDefenseRefreshArmor(m);
+  assert.equal(ghoul.armorBonus, 0, 'the aura dies with the herald');
+});
+
+test('endless mode keeps sending procedural waves past wave 24 and records its own best', () => {
+  const m = createWaveDefense({ mapId: 'sunken_causeway', endless: true, seed: 404 });
+  assert.equal(m.endless, true);
+  assert.equal(m.totalWaves, WAVE_DEFENSE_ENDLESS_WAVES);
+  m.gold = 999999;
+  for (const slot of m.slots) {
+    waveDefenseBuild(m, slot.index, slot.index % 3 ? 'sniper_nest' : 'trebuchet');
+    waveDefenseSelect(m, slot.index);
+    waveDefenseUpgrade(m);
+  }
+  m.wave = 24;
+  m.phase = 'prep';
+  m.prepTimer = 0;
+  assert.ok(waveDefenseNextWave(m));
+  assert.equal(m.wave, 25, 'endless continues past the campaign');
+  assert.ok(m.spawnQueue.length > 10, 'the procedural wave has a real roster');
+  assert.ok(m.spawnQueue.some((entry) => entry.type && WAVE_DEFENSE_ENEMY_TYPES.some((enemy) => enemy.id === entry.type)));
+  for (let i = 0; i < 60 * 240 && m.phase !== 'ended'; i += 1) updateWaveDefense(m, 1 / 60);
+  assert.ok(m.wave >= 25, 'waves keep coming');
+  assert.ok(m.stats.kills > 20);
+
+  const saved = recordWaveDefense(defaultWaveDefenseProgress(), m);
+  assert.equal(saved.endless, true);
+  assert.equal(saved.win, false, 'endless never claims a campaign victory');
+  assert.equal(saved.isRecord, true);
+  assert.equal(saved.progress.endless.runs, 1);
+  assert.equal(saved.progress.endless.bestWave, m.wave);
+  assert.ok(saved.progress.endless.bestScore > 0);
+  assert.equal(saved.progress.endless.bestTime, Math.round(m.time * 10) / 10);
+  assert.equal(saved.progress.wins, 0, 'endless runs never inflate the campaign win rate');
+  assert.equal(sanitizeWaveDefenseProgress(saved.progress).endless.bestWave, m.wave);
+  const junk = sanitizeWaveDefenseProgress({ endless: { runs: -2, bestWave: 99999, bestScore: 'x' } });
+  assert.equal(junk.endless.runs, 0);
+  assert.equal(junk.endless.bestWave, WAVE_DEFENSE_ENDLESS_WAVES);
+  assert.equal(junk.endless.bestScore, 0);
 });
 
 test('endWaveDefense is idempotent and the renderer tolerates a minimal context', () => {

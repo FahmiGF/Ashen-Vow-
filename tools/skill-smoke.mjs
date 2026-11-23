@@ -95,7 +95,7 @@ async function main() {
       } else if (message.method === 'Runtime.consoleAPICalled' && message.params.type === 'error') {
         pageErrors.push(message.params.args.map((arg) => arg.value ?? arg.description).join(' '));
       } else if (message.method === 'Log.entryAdded' && message.params.entry.level === 'error') {
-        if (!/favicon|ERR_NETWORK_ACCESS_DENIED/i.test(message.params.entry.text || '')) {
+        if (!/favicon|ERR_NETWORK_ACCESS_DENIED|429|Too Many Requests/i.test(message.params.entry.text || '')) {
           pageErrors.push(message.params.entry.text);
         }
       }
@@ -144,8 +144,8 @@ async function main() {
       A.clearProgress();
       return { version: A.version, title: document.title };
     })()`);
-    check('boot reports v0.9.0', boot.version, '0.9.0');
-    assert.match(boot.title, /0\.9\.0/);
+    check('boot reports v0.34.0', boot.version, '0.34.0');
+    assert.match(boot.title, /0\.34\.0/);
 
     // Skill panel renders and spends a point.
     const panel = await evaluate(`(() => {

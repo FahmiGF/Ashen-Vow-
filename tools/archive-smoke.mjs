@@ -82,7 +82,7 @@ try {
     tools: window.__ashen.archiveData.tools.length,
     ghosts: window.__ashen.veilGhosts.length,
   }))()`);
-  check(/0\.31\.0/.test(String(boot.title)), `boots v0.31.0 (${String(boot.title).slice(0, 40)})`);
+  check(/0\.34\.0/.test(String(boot.title)), `boots v0.34.0 (${String(boot.title).slice(0, 40)})`);
   check(boot.stages === 70 && boot.chapters === 14 && boot.bosses === 16, `70 stages, 14 chapters, 16 bosses (${boot.stages}/${boot.chapters}/${boot.bosses})`);
   check(boot.ghosts === 80 && boot.jumpscares === 38 && boot.tools === 30, `80 ghosts, 38 jumpscares, 30 tools (${boot.ghosts}/${boot.jumpscares}/${boot.tools})`);
 
@@ -222,7 +222,7 @@ try {
   check(mobile.width === 390 && mobile.overflow <= 1, `the archive has no horizontal overflow at 390px (${mobile.width}px wide, ${mobile.overflow}px overflow: ${mobile.offenders.join(' ')})`);
   check(mobile.tabs === 6 && mobile.preview && mobile.previewOverflow <= 1, 'the six tabs and preview remain usable at 390×844');
 
-  const errors = consoleErrors.filter((line) => !/favicon|ERR_FILE_NOT_FOUND/i.test(String(line)));
+  const errors = consoleErrors.filter((line) => !/favicon|ERR_FILE_NOT_FOUND|429|Too Many Requests/i.test(String(line)));
   check(errors.length === 0, `no console errors (${errors.slice(0, 2).join(' | ')})`);
 
   console.log(`\n${passed} passed, ${failed} failed`);
