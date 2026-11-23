@@ -154,8 +154,8 @@ async function main() {
         title: document.title,
       };
     })()`);
-    check('boot reports v0.34.0', boot.version, '0.34.0');
-    check('title screen advertises v0.34.0', boot.title.includes('v0.34.0'), true);
+    check('boot reports v0.35.0', boot.version, '0.35.0');
+    check('title screen advertises v0.35.0', boot.title.includes('v0.35.0'), true);
     check('fishing hub is reachable from the menu', boot.menuButton, true);
     check('debug hooks expose the fishing hub', boot.hasHook, true);
 
@@ -419,7 +419,7 @@ async function main() {
         chips: document.querySelectorAll('.bait-chip').length,
       };
     })()`);
-    check('reload keeps v0.34.0', reloaded.version, '0.34.0');
+    check('reload keeps v0.35.0', reloaded.version, '0.35.0');
     check('reload keeps the wallet', reloaded.coins > 25, true);
     check('reload keeps the worms', reloaded.worms, 10);
     check('reload keeps the bought glowworm stack', reloaded.glowworm, 0);

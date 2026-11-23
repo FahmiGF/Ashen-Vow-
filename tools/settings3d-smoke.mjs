@@ -70,7 +70,7 @@ try {
   await waitFor(() => evaluate('typeof window.__ashen === "object"'), 20000, 'game boot');
 
   const boot = await evaluate(`({ version: window.__ashen.version, difficulty: window.__ashen.difficulty, categories: window.__ashen.settings && Object.keys(window.__ashen.settings).length })`);
-  check(boot.version === '0.34.0', `version is 0.34.0 (got ${boot.version})`);
+  check(boot.version === '0.35.0', `version is 0.35.0 (got ${boot.version})`);
   check(boot.difficulty.engine === 'normal' && boot.difficulty.active === 'normal', 'normal difficulty is active in the engine');
   check(boot.categories >= 10, 'versioned settings expose all groups');
 

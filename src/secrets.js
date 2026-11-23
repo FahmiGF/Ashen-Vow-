@@ -80,6 +80,8 @@ export const SECRET_LEVEL_RUNES = [
   { id: 'level:summit_whisper', kind: 'level', mode: 'legacy', room: 7, x: 1014, y: 448, glyph: 'ᛟ', whisper: 'Di puncak sumpah, angin mengulang janji yang tidak pernah dibuat.' },
   { id: 'level:alcove_whisper', kind: 'level', mode: 'legacy', room: 12, x: 354, y: 448, glyph: 'ᛞ', whisper: 'Relung tersembunyi menyimpan nama sebelum relung itu ada.' },
   { id: 'level:spore_altar_whisper', kind: 'level', mode: 'legacy', room: 13, x: 1284, y: 448, glyph: 'ᚱ', whisper: 'Altar spora bernapas sekali setiap kali ada yang mengingat.' },
+  { id: 'level:sunken_alcove_whisper', kind: 'level', mode: 'cistern', room: 667, x: 356, y: 448, glyph: 'ᛇ', whisper: 'Relung karam mencatat setiap nama yang tenggelam sebelum sempat diucapkan.' },
+  { id: 'level:low_cave_whisper', kind: 'level', mode: 'cistern', room: 668, x: 1210, y: 448, glyph: 'ᛜ', whisper: 'Dasar sistem berdenyut seperti jantung yang lupa cara berhenti.' },
 ];
 
 export const SECRET_EGGS = [...SECRET_MODE_MARKS, ...SECRET_LEVEL_RUNES];

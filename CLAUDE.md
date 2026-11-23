@@ -1,9 +1,23 @@
 # Ashen Vow — Claude Master Plan
 
-> Compressed handoff for continuing **Ashen Vow v0.34.0**.
-> Status: **playable, browser-verified; Milestones A and B plus Sigil & Ritual, Echoes of the Forgotten World, Infinite Frontiers, Overdrive, The Sundered Atlas, Infinite Labyrinth co-op, Hearthfall (The Hollow Court), Skill Points + Panggung Abadi, Taman Peri (Faewood), Speedrun, Pondok Umpan, Fivefold Trials, Puzzle Adventure, Riftwar, Wave Defense, Infinite Realms, Arc VI The Astral Dominion, Stage Access/HACK, Admin Control Center, Eclipse Arc VIII, Update IX Settings 2.0 + 3D Visual Overhaul, Arc X The Eternal Night, The Unwritten Wing, 3D Scary Mode: Blackveil Nightfall, Credit Scenes + Hidden Secrets, The Hunter's Kit + Ghost Combat, The Mourning Choir + Second Shadows, Pirate Tide: Open Sea, and Pirate Tide Act II: Sumpah Laut complete**.
+> Compressed handoff for continuing **Ashen Vow v0.35.0**.
+> Status: **playable, browser-verified; Milestones A and B plus Sigil & Ritual, Echoes of the Forgotten World, Infinite Frontiers, Overdrive, The Sundered Atlas, Infinite Labyrinth co-op, Hearthfall (The Hollow Court), Skill Points + Panggung Abadi, Taman Peri (Faewood), Speedrun, Pondok Umpan, Fivefold Trials, Puzzle Adventure, Riftwar, Wave Defense, Infinite Realms, Arc VI The Astral Dominion, Stage Access/HACK, Admin Control Center, Eclipse Arc VIII, Update IX Settings 2.0 + 3D Visual Overhaul, Arc X The Eternal Night, The Unwritten Wing, 3D Scary Mode: Blackveil Nightfall, Credit Scenes + Hidden Secrets, The Hunter's Kit + Ghost Combat, The Mourning Choir + Second Shadows, Pirate Tide: Open Sea, Pirate Tide Act II: Sumpah Laut, and BAB IX Tidewrought Cistern complete**.
 > Roadmap: [`MASTERPLAN.md`](MASTERPLAN.md).
 > Repo: `https://github.com/FahmiGF/Ashen-Vow-` · branch `main` · push account `isshinAshinaSeal`.
+
+## 0. v0.35.0 — Update XXIV: Sistem Air Pasang & Dua Relung Rahasia
+
+- `src/cistern.js` — pure chapter module (no DOM): **7 rooms at ids 662–668**, `CISTERN_ROOM_START = 662`, `CISTERN_STAGE_COUNT = 5`, `CISTERN_HALL_COUNT = 4`, `CISTERN_SECRET_IDS = ['alcove', 'lowcave']`, stage metadata, `CISTERN_ENEMY_INFO` (4), `CISTERN_BOSS_INFO.tidebound` (3 phases, thresholds `[0.66, 0.33]`, four dialogue keys), `CISTERN_PALETTE`, and `validateCisternRooms()`.
+- Progression in the same module: `defaultCisternProgress`, `sanitizeCisternProgress` (sequential halls, boss requires all halls, secrets never leak through `discovered`), `cisternUnlocked` (needs base `cleared[7]`), `cisternStageUnlocked`/`cisternStageCleared`, `recordCisternStage` (halls only), `recordCisternSecret`, `recordCisternBoss`, `recordCisternRun`, `cisternSummary`, plus `cisternStageForRoom` / `cisternRoomForStage`.
+- `src/core.js` — appends `...CISTERN_ROOMS` to `ALL_ROOMS` (**669**) and merges the enemy/boss tables; new `updateTidebound` state machine (trident sweep, harpoon fan, surge, summons), `spawnTideBolt` (reuses the existing `waterbolt` projectile renderer), `spawnTideFan`, `spawnTideAdds`, and a `tidebound` branch in `onBossPhase`.
+- `src/render.js` — `drawCisternBackground` (parallax arches, pillars, light shafts, waterline caustics, drips) selected by `room.cistern || room.zone === 'cistern'`; `drawTidebound` boss art; a `bubbles` particle mood; the weather layer now also runs for rooms that carry `particle` (not only `biome`). Optimisation: the glow layer is blitted at native 840×840 (scaled blit measured 7.04–8.13 ms vs 0.17–0.20 ms), `cisternGradient` caches every gradient (11 → 0 per frame), and bubbles draw rings only.
+- `src/main.js` — `progress.cistern` in defaults and `loadProgress` (`cistern: _cistern` in the known-key destructure), `startCisternStage` (`activeRunKind = 'cistern'`, `activeCisternStage`), `handleCisternBoss`, `buildCisternCards` inside `buildLevelCards`, `discoverCisternRoom`, gate/boss/roomEnter routing, retry branch, stage-time key regex now accepts `cistern:`, and hooks `cistern`, `startCisternStage`, `unlockCistern`, `cisternClear`, `cisternDiscover`, `cisternBossDown`.
+- `index.html` / `styles.css` — `.cistern-section` under `#level-cards` with `#cistern-heading`, `#cistern-progress`, `#cistern-lock-note` and `#cistern-cards`; cistern card accents and a 640 px stacking rule.
+- `src/secrets.js` — two hidden level runes (`level:sunken_alcove_whisper` room 667, `level:low_cave_whisper` room 668) for `mode: 'cistern'`.
+- `src/music.js` — new `cisternBoss` track and `BOSS_TRACKS.tidebound`.
+- `tools/render-probe.mjs` (new, `npm run probe:render`) — per-layer browser timing for the cistern; `tools/frame-profile.mjs` gained a `cistern` scenario (unlock + clear hall 0 before starting room 663); `tools/cistern-smoke.mjs` (new, `npm run smoke:cistern`).
+- Tests: `tests/cistern.test.js` (15: structure, gate graph, secret-wall ingress, archetypes, boss data, unlock chain, sanitizer, secrets, run records, live boss to victory, live hall spawns). Suite **736/736**. Browser: `npm run smoke:cistern` **40 checks**, zero console errors, 390×844 clean.
+- Honest limits: canvas micro-timings are noisy on software raster; tiled-sprite caching was measured as a regression (10.7 → 19.5 ms) and reverted. New enemies reuse the seven engine archetypes; the chapter adds no new animation system.
 
 ## 0. v0.34.0 — Update XXIII: Pasang Tak Berujung & Benteng Karam
 
@@ -363,6 +377,8 @@ Do **not** add a framework, bundler, or asset pipeline unless the product scope 
 | `src/zones.js` | Legacy `ZONES` + 10 biome zones + 5 court zones, `ROOM_ZONES` (14 legacy entries), and `zoneForRoom` / `zoneMusicForRoom` |
 | `src/court.js` | Hearthfall: 6 zones / 60 court rooms, 24 enemies, 12 bosses (3–4 phases), 8 weapons + profiles, 12 tools, 6 house rooms, 24 furnishings, 8 NPC residents, `progress.court` save logic |
 | `src/fairy.js` | Faewood finale: 10 sequential stages + 2 boss arenas at rooms 414–425, 10 enemies, 4 tiny NPCs, 2 four-phase bosses, dragon heaven/hell forms, `progress.fairy` |
+| `src/cistern.js` | BAB IX Tidewrought Cistern: 7 rooms (662–668), 4 enemies, 3-phase `tidebound` boss, palettes, `progress.cistern` model + sanitizer + `validateCisternRooms` |
+| `tools/cistern-smoke.mjs` | 40-check CDP smoke: locked/unlocked level select, live gate chain, secret wall, boss victory, reload, 390×844 |
 | `src/cutscene.js` | 20-second final-boss portrait and 30-second post-credit epilogue timelines plus procedural `drawCutscene` art |
 | `src/speedrun.js` | Speedrun rules, 2×+ multiplier ladder, record/history sanitizer, deeper stats/ladder and substep budget for the one-life challenge mode |
 | `src/fishing.js` | Fishing data and rules: 9 baits, 25 fish, exact catch odds, reel windows, bait-shack economy, save sanitizer, index rows and procedural fish art |
@@ -382,6 +398,8 @@ Do **not** add a framework, bundler, or asset pipeline unless the product scope 
 | `tests/speedrun.test.js` | 11 tests for speedrun multipliers, records, run history, deep stats/ladder, sanitizer, substep budget and core one-life behaviour |
 | `tests/fishing.test.js` | 14 tests for bait tiers and prices, odds normalization, catch rolls, reel windows, starter grant, shop economy, catch records and the index |
 | `tests/court.test.js` | 22 tests for Hearthfall content, rooms, bosses/phases, zone gates, weapons, house, tools, classes, NPC quests, save, pacing, loadout and simulation |
+| `tests/cistern.test.js` | 15 tests: room/gate/secret structure, archetypes, boss data, progression/sanitizer, live boss and wall runs |
+| `tools/render-probe.mjs` | Per-layer renderer timing in a real browser (`npm run probe:render`) |
 | `tools/court-bench.mjs` | Measured room/resident lookup and house-bonus cache benchmark |
 | `server.js` | Static server on port 4300 |
 | `docs/` | Committed screenshots |

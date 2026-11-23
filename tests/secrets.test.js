@@ -39,10 +39,11 @@ test('every game mode has a quiet mark and none of them advertise themselves', (
 });
 
 test('campaign runes exist in a handful of real rooms and are not signposted', () => {
-  assert.equal(SECRET_LEVEL_RUNES.length, 5);
+  assert.equal(SECRET_LEVEL_RUNES.length, 7);
   const rooms = new Set();
   for (const rune of SECRET_LEVEL_RUNES) {
-    assert.ok(Number.isInteger(rune.room) && rune.room >= 0 && rune.room < 14);
+    // Legacy campaign rooms plus the Tidewrought Cistern secrets (662+).
+    assert.ok(Number.isInteger(rune.room) && ((rune.room >= 0 && rune.room < 14) || rune.room >= 662));
     assert.ok(Number.isFinite(rune.x) && Number.isFinite(rune.y));
     assert.ok(rune.glyph.length >= 1);
     assert.ok(!rooms.has(rune.room), 'only one rune per room');

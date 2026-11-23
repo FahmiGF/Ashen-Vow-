@@ -517,6 +517,25 @@ import {
   fairyProgressSummary,
 } from './fairy.js';
 import {
+  CISTERN_NAME,
+  CISTERN_LOCAL_NAME,
+  CISTERN_ROOMS,
+  CISTERN_ROOM_BY_ID,
+  CISTERN_STAGE_META,
+  CISTERN_STAGE_COUNT,
+  defaultCisternProgress,
+  sanitizeCisternProgress,
+  cisternUnlocked,
+  cisternStageUnlocked,
+  cisternStageCleared,
+  cisternStageForRoom,
+  recordCisternStage,
+  recordCisternSecret,
+  recordCisternBoss,
+  recordCisternRun,
+  cisternSummary,
+} from './cistern.js';
+import {
   FALLEN_NAME,
   FALLEN_LOCAL_NAME,
   FALLEN_SUBTITLE,
@@ -1166,6 +1185,7 @@ function defaultProgress() {
     skills: defaultSkillState(),
     pack: defaultPackProgress(),
     fairy: defaultFairyProgress(),
+    cistern: defaultCisternProgress(),
     speedrun: defaultSpeedrunProgress(),
     fishing: defaultFishingProgress(),
     fallen: defaultFallenProgress(),
@@ -1189,7 +1209,7 @@ function sanitizeStageTimes(raw) {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
   const result = {};
   for (const [key, value] of Object.entries(raw)) {
-    if (!/^(legacy|court|expansion|atlas):\d+$/.test(key) || !value || typeof value !== 'object') continue;
+    if (!/^(legacy|court|expansion|atlas|cistern):\d+$/.test(key) || !value || typeof value !== 'object') continue;
     result[key] = {
       label: typeof value.label === 'string' ? value.label.slice(0, 80) : key,
       best: Math.max(0, Math.round((Number(value.best) || 0) * 10) / 10),
@@ -1239,7 +1259,7 @@ function loadProgress() {
         };
     // Keep every unknown top-level field. v0.3.0 adds `expansion` without
     // changing the storage key or discarding future/legacy save data.
-    const { version, schemaVersion: _schemaVersion, unlocked: _unlocked, cleared: _cleared, map: _map, expansion: _expansion, atlas: _atlas, labyrinth: _labyrinth, court: _court, skills: _skills, pack: _pack, fairy: _fairy, speedrun: _speedrun, fishing: _fishing, fallen: _fallen, crusade: _crusade, trials: _trials, puzzle: _puzzle, moba: _moba, wavedefense: _wavedefense, pirates: _pirates, astral: _astral, realms: _realms, eclipse: _eclipse, godfall: _godfall, guild: _guild, awakening: _awakening, stageTimes: _stageTimes, ...extras } = parsed;
+    const { version, schemaVersion: _schemaVersion, unlocked: _unlocked, cleared: _cleared, map: _map, expansion: _expansion, atlas: _atlas, labyrinth: _labyrinth, court: _court, skills: _skills, pack: _pack, fairy: _fairy, speedrun: _speedrun, fishing: _fishing, fallen: _fallen, crusade: _crusade, trials: _trials, puzzle: _puzzle, moba: _moba, wavedefense: _wavedefense, pirates: _pirates, astral: _astral, realms: _realms, eclipse: _eclipse, godfall: _godfall, guild: _guild, awakening: _awakening, cistern: _cistern, stageTimes: _stageTimes, ...extras } = parsed;
     return {
       ...extras,
       version: 1,
@@ -1254,6 +1274,7 @@ function loadProgress() {
       skills: sanitizeSkillState(parsed.skills),
       pack: sanitizePackProgress(parsed.pack),
       fairy: sanitizeFairyProgress(parsed.fairy),
+      cistern: sanitizeCisternProgress(parsed.cistern),
       speedrun: sanitizeSpeedrunProgress(parsed.speedrun),
       fishing: sanitizeFishingProgress(parsed.fishing),
       fallen: sanitizeFallenProgress(parsed.fallen),
@@ -5340,6 +5361,159 @@ function closeFairy() {
   showMenu();
 }
 
+// ── Tidewrought Cistern: four halls, the tide altar and two wall secrets ───
+let activeCisternStage = -1;
+
+function cisternState() {
+  if (!progress.cistern) progress.cistern = defaultCisternProgress();
+  return progress.cistern;
+}
+
+function discoverCisternRoom(local) {
+  const p = cisternState();
+  const index = Math.trunc(Number(local));
+  if (!Number.isInteger(index) || index < 0 || index >= CISTERN_ROOMS.length) return;
+  if (p.discovered[index]) return;
+  p.discovered[index] = true;
+  const room = CISTERN_ROOMS[index];
+  if (room.secret) recordCisternSecret(p, room.cisternKey);
+  saveProgress();
+}
+
+function buildCisternCards() {
+  const wrap = $('cistern-cards');
+  if (!wrap) return;
+  const p = cisternState();
+  const chapterOpen = cisternUnlocked(progress);
+  const summary = cisternSummary(p);
+  const label = $('cistern-progress');
+  if (label) {
+    label.textContent = chapterOpen
+      ? `${summary.stagesCleared}/${summary.stageTotal} TAHAP · ${summary.secretsFound}/${summary.secretTotal} RAHASIA · ${summary.percent}%`
+      : 'TERKUNCI';
+  }
+  const note = $('cistern-lock-note');
+  if (note) note.classList.toggle('hidden', chapterOpen);
+  wrap.innerHTML = '';
+  CISTERN_ROOMS.forEach((room, local) => {
+    const meta = CISTERN_STAGE_META[local];
+    const hidden = meta.secret && !p.discovered[local];
+    const locked = !chapterOpen || hidden || !cisternStageUnlocked(p, local);
+    const cleared = cisternStageCleared(p, local);
+    const card = document.createElement('article');
+    card.className = `level-card cistern-card${locked ? ' locked' : ''}${cleared ? ' cleared' : ''}`;
+    card.style.setProperty('--accent', room.accent);
+    const badge = cleared
+      ? '<span class="level-badge done">TUNTAS</span>'
+      : hidden
+        ? '<span class="level-badge lock">TERSEMBUNYI</span>'
+        : locked
+          ? '<span class="level-badge lock">TERKUNCI</span>'
+          : '<span class="level-badge">TERBUKA</span>';
+    const tags = hidden
+      ? '<span>???</span>'
+      : meta.tags.map((tag) => `<span>${esc(tag)}</span>`).join('');
+    card.innerHTML = `
+      <div class="level-art">
+        <span class="level-chapter">${hidden ? 'BAB IX · ???' : esc(meta.chapter)}</span>
+        ${badge}
+        <span class="level-glyph" aria-hidden="true">${hidden ? '?' : esc(meta.glyph)}</span>
+      </div>
+      <div class="level-body">
+        <h3>${hidden ? '???' : esc(room.name)}</h3>
+        <span class="level-sub">${hidden ? 'Relung tersembunyi' : esc(room.subtitle)}</span>
+        <p class="level-desc">${hidden ? 'Dua dinding berlumut di sistem ini menyembunyikan ruang yang tidak ada di peta.' : esc(meta.desc)}</p>
+        <div class="level-tags">${tags}</div>
+        <div class="level-actions">
+          ${locked ? '' : '<button class="btn btn-primary btn-small play-btn" type="button">MAINKAN</button>'}
+        </div>
+      </div>`;
+    const playBtn = card.querySelector('.play-btn');
+    if (playBtn) playBtn.addEventListener('click', () => startCisternStage(local));
+    wrap.appendChild(card);
+  });
+}
+
+function startCisternStage(local) {
+  const p = cisternState();
+  const index = Math.trunc(Number(local));
+  const room = CISTERN_ROOMS[index];
+  if (!room) return;
+  if (!cisternUnlocked(progress)) {
+    showToast('Sistem Air Pasang terkunci sampai The Oathbreaker gugur.', 2400);
+    return;
+  }
+  if (!cisternStageUnlocked(p, index)) {
+    showToast('Ruang itu masih terkunci. Selesaikan ruang sebelumnya dulu.', 2200);
+    return;
+  }
+  audio.init();
+  attempts = 1;
+  coopGuestMode = false;
+  coopGuestRoom = -1;
+  activeRunKind = 'cistern';
+  activeCisternStage = index;
+  activeFairyStage = -1;
+  activeFairyBoss = null;
+  activeCourtRoom = null;
+  activeCourtTrial = null;
+  activePackIndex = -1;
+  activeExpansionIndex = null;
+  activeModeId = null;
+  activeTrialId = null;
+  modeRunRewarded = false;
+  packRunActive = false;
+  labRun = null;
+  labDirector = null;
+  speedrunRun = null;
+  game.labyrinth = false;
+  game.reset();
+  applyCharacterToGame();
+  applySkinToGame();
+  game.enterRoom(room.id);
+  game.player.relic = true;
+  game.ash = Math.max(game.ash, 45 + index * 14);
+  discoverCisternRoom(index);
+  cutsceneSeen = new Set();
+  postCreditTimer = -1;
+  saveProgress();
+  game.events.length = 0;
+  started = true;
+  paused = false;
+  hunterShopOpen = false;
+  shopOpen = false;
+  mapOpen = false;
+  codexOpen = false;
+  inventoryOpen = false;
+  settingsOpen = false;
+  closeDialogue(true);
+  spectating = false;
+  spectateGame = null;
+  menuView = 'none';
+  lastGameState = 'playing';
+  accumulator = 0;
+  lastTime = performance.now();
+  clearHeldKeys();
+  beginStage(game.roomIndex, room.name);
+  showBanner(room.name, room.subtitle);
+  syncScreens();
+  updateHud();
+  const label = room.boss ? ' · BOSS' : room.secret ? ' · RAHASIA' : '';
+  showToast(`${CISTERN_LOCAL_NAME} · ${room.name}${label}`, 2400);
+}
+
+function handleCisternBoss(ev) {
+  const p = cisternState();
+  const result = recordCisternBoss(p);
+  recordCisternRun(p, game.time);
+  saveProgress();
+  if (result.firstClear) {
+    showToast(`VASSKA GUGUR — ${CISTERN_NAME} surut. Pasang terakhir berakhir.`, 3000);
+  }
+  updateMenuProgress();
+}
+
+
 // ── Speedrun: one life, escalating game speed ─────────────────────────────
 function speedrunState() {
   if (!progress.speedrun) progress.speedrun = defaultSpeedrunProgress();
@@ -7446,6 +7620,10 @@ function retryRun() {
   if (activeRunKind === 'fairy') {
     if (activeFairyBoss) startFairyBoss(activeFairyBoss);
     else startFairyStage(Math.max(0, activeFairyStage));
+    return;
+  }
+  if (activeRunKind === 'cistern') {
+    startCisternStage(activeCisternStage >= 0 ? activeCisternStage : 0);
     return;
   }
   if (activeRunKind === 'eclipse') {
@@ -11826,6 +12004,7 @@ function buildLevelCards() {
     if (peekBtn) peekBtn.addEventListener('click', () => startSpectate(i));
     wrap.appendChild(card);
   });
+  buildCisternCards();
 }
 
 // ── pause, mute, helpers ─────────────────────────────────────────────────
@@ -15088,6 +15267,29 @@ function drainEvents() {
             if (room.fairyBoss === 'dragon') playFinalBossCutscene();
           }
         }
+      } else if (activeRunKind === 'cistern') {
+        if (ev.type === 'gatePass') {
+          const from = cisternStageForRoom(ev.from);
+          if (from) {
+            if (from.secret) recordCisternSecret(cisternState(), from.room.cisternKey);
+            else recordCisternStage(cisternState(), from.local);
+          }
+          const to = cisternStageForRoom(ev.to);
+          if (to) {
+            activeCisternStage = to.local;
+            discoverCisternRoom(to.local);
+          }
+          saveProgress();
+          buildCisternCards();
+        } else if (ev.type === 'bossDown') {
+          if (ev.kind === 'tidebound') handleCisternBoss(ev);
+        } else if (ev.type === 'roomEnter') {
+          const stage = cisternStageForRoom(ev.room);
+          if (stage) {
+            activeCisternStage = stage.local;
+            discoverCisternRoom(stage.local);
+          }
+        }
       } else if (activeRunKind === 'trials') {
         if (ev.type === 'labyrinthBossDown') handleTrialBoss(ev);
       } else if (activeRunKind === 'labyrinth') {
@@ -15260,7 +15462,7 @@ function drainEvents() {
       showToast(`FASE ${roman} — ${ev.name} bangkit`, 2200);
     }
     else if (ev.type === 'respawn') showToast('Kau terlempar dari jurang');
-    else if (ev.type === 'wallBroken') showToast('Dinding Miselium hancur — relung rahasia terbuka.', 2400);
+    else if (ev.type === 'wallBroken') showToast(game.room?.cistern ? 'Dinding lumut hancur — relung karam terbuka.' : 'Dinding Miselium hancur — relung rahasia terbuka.', 2400);
     else if (ev.type === 'wallHit') showToast(`Dinding retak — ${ev.hp}/${ev.maxHp}`, 900);
     else if (ev.type === 'ultimate' && ev.crit) showToast(`ULTIMATE KRITIS — ${ev.name} ×${ev.scale}`, 1600);
     else if (ev.type === 'flaskReward') showToast(`Tegukan Akar — +1 flask (${ev.charges} total)`, 2600);
@@ -16872,6 +17074,41 @@ window.__ashen = {
     return openCreditScene(arcId);
   },
   closeCreditScene,
+  get cistern() {
+    const p = cisternState();
+    return {
+      state: JSON.parse(JSON.stringify(p)),
+      summary: cisternSummary(p),
+      unlocked: cisternUnlocked(progress),
+      stage: activeCisternStage,
+      stageCount: CISTERN_STAGE_COUNT,
+      rooms: CISTERN_ROOMS.map((room) => ({ id: room.id, name: room.name, secret: !!room.secret })),
+      stages: CISTERN_STAGE_META.map((stage) => ({ ...stage })),
+    };
+  },
+  startCisternStage(local = 0) {
+    startCisternStage(local);
+  },
+  unlockCistern() {
+    progress.cleared[7] = true;
+    progress.unlocked = Math.max(progress.unlocked, 8);
+    saveProgress();
+    buildLevelCards();
+    return cisternUnlocked(progress);
+  },
+  cisternClear(local) {
+    const result = recordCisternStage(cisternState(), local);
+    saveProgress();
+    return result;
+  },
+  cisternDiscover(local) {
+    discoverCisternRoom(local);
+    return cisternState().discovered.slice();
+  },
+  cisternBossDown() {
+    handleCisternBoss({ kind: 'tidebound' });
+    return cisternSummary(cisternState());
+  },
   get veil() {
     return veilDebugState();
   },

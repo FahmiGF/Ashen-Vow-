@@ -256,11 +256,20 @@ test('Update XV remains documented after the Unwritten Wing expansion', () => {
   }
 });
 
-test('the latest update documents the endless modes and the frame-profile pass', () => {
+test('the latest update documents the Tidewrought Cistern chapter', () => {
   const latest = LATEST_UPDATE;
-  assert.equal(latest.version, '0.34.0');
+  assert.equal(latest.version, '0.35.0');
   const text = [latest.title, latest.summary, ...latest.highlights, ...(latest.fixes || [])].join(' ');
-  for (const pattern of [/Pasang Tak Berujung/i, /pasang|surge/i, /kapten|flagship/i, /lambung|hull/i, /Sunken Causeway/i, /Panji Sumpah/i, /Lentera Roh/i, /Drowned Reaver/i, /Bone Herald/i, /999/, /progress\.pirates\.endless/i, /progress\.wavedefense\.endless/i, /key save baru|key baru/i, /frame-profile|profil frame/i, /OffscreenCanvas/i, /langkah\/detik|steps\/s/i]) {
+  for (const pattern of [/Sistem Air Pasang/i, /Tidewrought Cistern/i, /662-668/, /ALL_ROOMS kini 669/i, /Drowned Thrall/i, /Silt Lurker/i, /Tide Ember/i, /Valve Sentinel/i, /Vasska/i, /tiga fase|3 fase/i, /Dinding Pasang/i, /Dinding Lumut/i, /\?\?\?/, /progress\.cistern/i, /ashen-vow-progress-v1/, /glow/i, /gelembung|bubbles/i, /render-probe|per lapisan/i, /raster software/i]) {
+    assert.match(text, pattern);
+  }
+});
+
+test('the endless-mode release remains documented after the cistern chapter', () => {
+  const entry = UPDATE_LOG.find((item) => item.version === '0.34.0');
+  assert.ok(entry);
+  const text = [entry.title, entry.summary, ...entry.highlights, ...(entry.fixes || [])].join(' ');
+  for (const pattern of [/Pasang Tak Berujung/i, /Sunken Causeway/i, /999/, /progress\.pirates\.endless/i, /frame-profile/i]) {
     assert.match(text, pattern);
   }
 });

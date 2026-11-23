@@ -1,4 +1,22 @@
-# Ashen Vow — v0.34.0
+# Ashen Vow — v0.35.0
+
+## Update XXIV — Sistem Air Pasang & Dua Relung Rahasia (v0.35.0)
+
+## A ninth campaign chapter, and it has secrets
+
+- **BAB IX — Tidewrought Cistern**: the `cistern` zone that had existed as configuration since v0.0.7 is now a playable chapter of **7 rooms** at ids **662–668**: four flooded halls (Ambang Pasang, Galeri Bocor, Ruang Katup, Ambang Karam), the **Altar Air Pasang** boss room, and two hidden rooms. `ALL_ROOMS` is now **669** and `ALL_BOSS_INFO` **115**; rooms 0–661 keep their exact indices, so every old save and arc still points at the same room.
+- **Opens in Level Select**: after The Oathbreaker falls, the chapter appears under the fourteen legacy cards with its own progress line. It stays **TERKUNCI** before that, and no stage can be started early.
+- **Four new enemies on real engine archetypes**: **Drowned Thrall** (chase), **Silt Lurker** (burrow-and-emerge under your feet), **Tide Ember** (hovering ranged fire from the valve slits), and **Valve Sentinel** (telegraphed lunge). Ambang Karam fields five of them.
+- **Vasska, the Tidebound Regent**: a **three-phase** boss with a close trident sweep, a harpoon fan that widens per phase, a floor-clearing surge, and Drowned Thrall summons at phases II–III. Full intro / phase II / phase III / defeat dialogue and a new `cisternBoss` track.
+- **Two genuinely hidden rooms**: **Dinding Pasang** in the floodgate hides **Gua Surut (668)**, and **Dinding Lumut** in the gallery hides **Relung Karam (667)**. Both need 130–150 damage, both read `???` in Level Select until found, and both hold a relic or collectibles plus a new hidden rune for the cistern run kind.
+- **Save model**: `progress.cistern` inside the existing `ashen-vow-progress-v1` — sequential halls, boss, secrets, discovered, runs, boss clears and best time. The sanitizer rejects skipped halls, drops a boss clear without four halls, and never reveals a secret room's name from a hand-edited save.
+- **Measured renderer work**: the cistern's ambient glow was baked into an 840×840 layer and blitted at native size — an A/B of the exact primitive measured **7.04–8.13 ms** when that layer was blitted scaled from 210 px versus **0.17–0.20 ms** at native size. Water bubbles now draw rings only, dropping the weather layer from **~0.95 ms to 0.49–0.69 ms**, and all cistern background gradients are cached (**11 → 0 gradient allocations per frame**).
+- **One rejected experiment, again documented**: caching the arches and pillars as tiled sprites made the cistern background **worse** (10.7 → 19.5 ms) on this software rasteriser, so it was reverted.
+- **New tooling**: `tools/render-probe.mjs` (`npm run probe:render`) times the background, weather, platform and full-render layers of the cistern in a real browser, and `tools/frame-profile.mjs` gained a `cistern` scenario.
+
+Verification: `npm test` **736/736** (15 new cistern tests plus updated room/enemy/boss totals across the arc suites); `npm run smoke:cistern` **40/40** drives the real level select (locked → unlocked), the live gate chain, the breakable wall into the secret room, the three-phase boss to victory, reload persistence, and a 390×844 portrait check with no horizontal overflow. `tools/browser-smoke.mjs` still passes.
+
+Honest limits: canvas micro-timings on a software rasteriser vary run to run, so the numbers above come from controlled A/B measurements of the same primitive rather than whole-frame deltas; the chapter reuses the engine's seven enemy archetypes and the existing boss phase loop rather than new animation systems. The two secret rooms are wall-gated, not a hidden-map layer.
 
 ## Update XXIII — Pasang Tak Berujung & Benteng Karam (v0.34.0)
 

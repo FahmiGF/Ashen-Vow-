@@ -1,9 +1,9 @@
 {
   "name": "ashen-vow",
-  "version": "0.34.0",
+  "version": "0.35.0",
   "private": true,
   "type": "module",
-  "description": "Ashen Vow v0.34.0 — Pirate Tide: open-world naval combat with ten islands, seven ports, eight hull classes, and ten captain routes across two acts",
+  "description": "Ashen Vow v0.35.0 — a ninth campaign chapter, the Tidewrought Cistern, with four flooded halls, two wall-hidden secret rooms and a three-phase tide regent",
   "scripts": {
     "start": "node server.js",
     "test": "node --test tests/*.test.js",
@@ -42,6 +42,8 @@
     "smoke:archive": "node tools/archive-smoke.mjs",
     "smoke:horror3d": "node tools/horror3d-smoke.mjs",
     "smoke:credits": "node tools/credits-smoke.mjs",
-    "smoke:hunter": "node tools/hunter-smoke.mjs"
+    "smoke:hunter": "node tools/hunter-smoke.mjs",
+    "smoke:cistern": "node tools/cistern-smoke.mjs",
+    "probe:render": "node tools/render-probe.mjs"
   }
 }

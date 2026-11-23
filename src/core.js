@@ -60,6 +60,11 @@ import {
   FAIRY_BOSS_INFO,
 } from './fairy.js';
 import {
+  CISTERN_ROOMS,
+  CISTERN_ENEMY_INFO,
+  CISTERN_BOSS_INFO,
+} from './cistern.js';
+import {
   FALLEN_ROOMS,
   FALLEN_ENEMY_INFO,
   FALLEN_BOSS_INFO,
@@ -1145,8 +1150,8 @@ SHOP_ITEMS.push(...ECLIPSE_SHOP_ITEMS);
 
 // Legacy rooms stay exactly as they were so old saves, map layout and tests keep
 // their meaning. The campaign is a second set of rooms appended at indices 14+.
-export const ALL_ROOMS = [...ROOMS, ...EXPANSION_ROOMS, ...ATLAS_ROOMS, ...COURT_ROOMS, ...FAIRY_ROOMS, ...FALLEN_ROOMS, ...CRUSADE_ROOMS, ...ASTRAL_ROOMS, ...ECLIPSE_ROOMS, ...GODFALL_ROOMS];
-export const ALL_ENEMY_INFO = { ...ENEMY_INFO, ...EXPANSION_ENEMY_INFO, ...ATLAS_ENEMY_INFO, ...COURT_ENEMY_INFO, ...FAIRY_ENEMY_INFO, ...FALLEN_ENEMY_INFO, ...CRUSADE_ENEMY_INFO, ...ASTRAL_ENEMY_INFO, ...ECLIPSE_ENEMY_INFO };
+export const ALL_ROOMS = [...ROOMS, ...EXPANSION_ROOMS, ...ATLAS_ROOMS, ...COURT_ROOMS, ...FAIRY_ROOMS, ...FALLEN_ROOMS, ...CRUSADE_ROOMS, ...ASTRAL_ROOMS, ...ECLIPSE_ROOMS, ...GODFALL_ROOMS, ...CISTERN_ROOMS];
+export const ALL_ENEMY_INFO = { ...ENEMY_INFO, ...EXPANSION_ENEMY_INFO, ...ATLAS_ENEMY_INFO, ...COURT_ENEMY_INFO, ...FAIRY_ENEMY_INFO, ...FALLEN_ENEMY_INFO, ...CRUSADE_ENEMY_INFO, ...ASTRAL_ENEMY_INFO, ...ECLIPSE_ENEMY_INFO, ...CISTERN_ENEMY_INFO };
 
 const BOSS_INFO = {
   warden: {
@@ -1318,7 +1323,7 @@ const BOSS_INFO = {
   },
 };
 
-export const ALL_BOSS_INFO = { ...BOSS_INFO, ...EXPANSION_BOSS_INFO, ...ATLAS_BOSS_INFO, ...COURT_BOSS_INFO, ...PACK_BOSS_INFO, ...FAIRY_BOSS_INFO, ...FALLEN_BOSS_INFO, ...CRUSADE_BOSS_INFO, ...ASTRAL_BOSS_INFO, ...ECLIPSE_BOSS_INFO, ...GODFALL_BOSS_INFO };
+export const ALL_BOSS_INFO = { ...BOSS_INFO, ...EXPANSION_BOSS_INFO, ...ATLAS_BOSS_INFO, ...COURT_BOSS_INFO, ...PACK_BOSS_INFO, ...FAIRY_BOSS_INFO, ...FALLEN_BOSS_INFO, ...CRUSADE_BOSS_INFO, ...ASTRAL_BOSS_INFO, ...ECLIPSE_BOSS_INFO, ...GODFALL_BOSS_INFO, ...CISTERN_BOSS_INFO };
 export const EXPANSION_BOSS_IDS = Object.keys(EXPANSION_BOSS_INFO);
 
 export const CODEX = {
@@ -5713,6 +5718,7 @@ export class AshenGame {
     else if (b.kind === 'oathbreaker') this.updateOathbreaker(b, dt);
     else if (b.kind === 'sporebound') this.updateSporebound(b, dt);
     else if (b.kind === 'root') this.updateRoot(b, dt);
+    else if (b.kind === 'tidebound') this.updateTidebound(b, dt);
     else if (b.patternType) this.updateEchoBoss(b, dt);
   }
 
@@ -5743,6 +5749,11 @@ export class AshenGame {
     } else if (b.kind === 'root') {
       this.spawnShockwaves(b);
       this.spawnSporeRing(b, 6, 200);
+    } else if (b.kind === 'tidebound') {
+      this.spawnShockwaves(b);
+      this.spawnTideFan(b, 4 + b.phase, 210 + b.phase * 30);
+      if (b.phase >= 2) this.spawnTideAdds(b, 1);
+      if (b.phase >= 3) this.spawnTideAdds(b, 2);
     } else if (b.patternType) {
       this.spawnShockwaves(b);
       this.spawnEchoRing(b, b.phase >= 4 ? 20 : b.phase >= 3 ? 16 : b.phase >= 2 ? 12 : 9, 210 + b.phase * 18);
@@ -6459,6 +6470,152 @@ export class AshenGame {
       default:
         b.state = 'chase';
     }
+  }
+
+  /**
+   * Vasska, the Tidebound Regent. A three-phase duel on one flooded floor:
+   * the trident sweep punishes standing close, the harpoon fan punishes
+   * standing still, and the surge sweeps the ground. Phase III calls thralls.
+   */
+  updateTidebound(b, dt) {
+    const p = this.player;
+    const pcx = p.x + p.w / 2;
+    const bcx = b.x + b.w / 2;
+    const dist = Math.abs(pcx - bcx);
+    const dir = sign(pcx - bcx) || b.facing;
+    if (b.timer > 0) b.timer -= dt;
+    if (b.cooldown > 0) b.cooldown -= dt;
+    b.y = FLOOR_Y - b.h;
+    b.facing = dir;
+
+    switch (b.state) {
+      case 'idle':
+      case 'chase': {
+        const speed = b.phase >= 3 ? 112 : b.phase >= 2 ? 92 : 74;
+        if (dist > 150) b.x = clamp(b.x + dir * speed * dt, 40, WORLD_W - b.w - 40);
+        if (b.cooldown <= 0) {
+          if (dist < 170) {
+            b.state = 'tridentWind';
+            b.timer = Math.max(0.28, 0.52 - b.phase * 0.07);
+            b.attackLanded = false;
+            this.emit({ type: 'bossTelegraph', kind: 'trident' });
+          } else if (b.phase >= 2 && b.pattern % 3 === 2) {
+            b.state = 'surgeWind';
+            b.timer = 0.7;
+            this.emit({ type: 'bossTelegraph', kind: 'slam' });
+          } else {
+            b.state = 'harpoonWind';
+            b.timer = Math.max(0.34, 0.6 - b.phase * 0.06);
+            this.emit({ type: 'bossTelegraph', kind: 'volley' });
+          }
+          b.pattern += 1;
+        }
+        break;
+      }
+      case 'tridentWind': {
+        if (b.timer <= 0) {
+          b.state = 'trident';
+          b.timer = 0.26;
+          b.attackLanded = false;
+          this.emit({ type: 'bossSlash' });
+          this.shake = Math.max(this.shake, 0.26);
+        }
+        break;
+      }
+      case 'trident': {
+        if (!b.attackLanded) {
+          const hb = { x: dir > 0 ? b.x : b.x - 190, y: b.y + 10, w: b.w + 190, h: b.h - 10 };
+          if (rectHitsRect(hb, p)) {
+            b.attackLanded = true;
+            this.damagePlayer(b.phase >= 2 ? 22 : 16, bcx);
+          }
+        }
+        if (b.timer <= 0) {
+          b.state = 'recover';
+          b.timer = 0.6;
+          b.cooldown = b.phase >= 3 ? 0.75 : b.phase >= 2 ? 1.05 : 1.5;
+        }
+        break;
+      }
+      case 'harpoonWind': {
+        if (b.timer <= 0) {
+          const shots = b.phase >= 3 ? 5 : b.phase >= 2 ? 3 : 1;
+          const base = Math.atan2(p.y + p.h / 2 - (b.y + b.h * 0.45), pcx - bcx);
+          for (let i = 0; i < shots; i += 1) {
+            this.spawnTideBolt(b, base + (i - (shots - 1) / 2) * 0.16, b.phase >= 2 ? 320 : 280);
+          }
+          this.emit({ type: 'bossVolley', kind: 'tide' });
+          b.state = 'recover';
+          b.timer = 0.55;
+          b.cooldown = b.phase >= 2 ? 1.1 : 1.6;
+        }
+        break;
+      }
+      case 'surgeWind': {
+        if (b.timer <= 0) {
+          this.spawnShockwaves(b);
+          this.spawnTideFan(b, b.phase >= 3 ? 6 : 4, 330);
+          this.emit({ type: 'bossVolley', kind: 'tide' });
+          b.state = 'recover';
+          b.timer = 0.7;
+          b.cooldown = 1.4;
+        }
+        break;
+      }
+      case 'recover': {
+        if (b.timer <= 0) b.state = 'chase';
+        break;
+      }
+      default:
+        b.state = 'chase';
+    }
+  }
+
+  spawnTideBolt(b, angle, speed = 300) {
+    this.projectiles.push({
+      id: `tide_${this.time}_${Math.random().toString(36).slice(2, 6)}`,
+      owner: 'boss',
+      type: 'waterbolt',
+      color: '#5fd3c2',
+      x: b.x + b.w / 2,
+      y: b.y + b.h * 0.45,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      w: 18,
+      h: 18,
+      r: 9,
+      dmg: b.phase >= 2 ? 15 : 12,
+      life: 2.4,
+      warmup: 0,
+    });
+  }
+
+  spawnTideFan(b, count, speed = 300) {
+    const n = Math.max(1, Math.round(count));
+    const base = (b.facing || 1) > 0 ? 0 : Math.PI;
+    for (let i = 0; i < n; i += 1) {
+      this.spawnTideBolt(b, base + (i - (n - 1) / 2) * 0.16, speed);
+    }
+    this.shake = Math.max(this.shake, 0.2);
+  }
+
+  spawnTideAdds(b, count = 1) {
+    let spawned = 0;
+    for (let i = 0; i < count; i += 1) {
+      const dir = i % 2 === 0 ? -1 : 1;
+      const x = clamp(b.x + b.w / 2 + dir * (110 + i * 46), 60, WORLD_W - 100);
+      const child = this.spawnEnemy({
+        type: 'drowned_thrall',
+        x,
+        minX: Math.max(40, x - 150),
+        maxX: Math.min(WORLD_W - 60, x + 150),
+      });
+      if (!child) continue;
+      child.y = FLOOR_Y - child.h;
+      this.burst(child.x + child.w / 2, FLOOR_Y - 8, 10, '#5fd3c2', 150);
+      spawned += 1;
+    }
+    if (spawned) this.emit({ type: 'bossSummon', kind: 'drowned_thrall', count: spawned });
   }
 
   updateEchoBoss(b, dt) {

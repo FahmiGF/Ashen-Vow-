@@ -99,7 +99,7 @@ try {
     facilities: window.__ashen.veilFacilities.length,
     achievements: window.__ashen.veilAchievements.length,
   }))()`);
-  check(/0\.34\.0/.test(String(boot.title)), `boots v0.34.0 (${String(boot.title).slice(0, 40)})`);
+  check(/0\.35\.0/.test(String(boot.title)), `boots v0.35.0 (${String(boot.title).slice(0, 40)})`);
   check(boot.chapters === 6 && boot.stages === 30 && boot.bosses === 7, '6 chapters, 30 stages, 7 bosses');
   check(boot.ghosts === 80, `80 Ghost Index entries (${boot.ghosts})`);
   check(boot.tabs === 8 && boot.facilities === 10 && boot.achievements === 14, '8 tabs, 10 facilities, 14 achievements');

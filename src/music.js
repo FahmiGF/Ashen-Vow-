@@ -273,6 +273,21 @@ export const TRACKS = {
     filter: 760,
     color: '#b07be8',
   },
+  cisternBoss: {
+    id: 'cisternBoss',
+    label: 'Vasska — Drowning, ceremonial',
+    bpm: 96,
+    root: 77.78,
+    chord: [0, 3, 7, 10],
+    arp: [0, 7, 3, 12, 10, 7, 3, 0],
+    wave: 'sine',
+    pad: 0.05,
+    melody: 0.028,
+    bass: true,
+    drums: true,
+    filter: 640,
+    color: '#5fd3c2',
+  },
   hearthfall: {
     id: 'hearthfall',
     label: 'Hearthfall — Warm, wounded',
@@ -611,6 +626,7 @@ export const BOSS_TRACKS = {
   pack_oatheater: 'bossJudge',
   fairy_magma_slime: 'magmaBoss',
   fairy_spectral_dragon: 'fairyBoss',
+  tidebound: 'cisternBoss',
 };
 
 export function bossTrackFor(kind, fallback = 'boss') {

@@ -1,9 +1,32 @@
 // Ashen Vow — release history shown in the in-game Update Log.
 // Keep the newest entry first. `GAME_VERSION` is the single source of truth
 // for the version shown by the Update Log screen and the debug hooks.
-export const GAME_VERSION = '0.34.0';
+export const GAME_VERSION = '0.35.0';
 
 export const UPDATE_LOG = [
+  {
+    version: '0.35.0',
+    date: '23 November 2026',
+    title: 'UPDATE XXIV — SISTEM AIR PASANG & DUA RELUNG RAHASIA',
+    tag: 'BAB IX · 7 RUANG · 4 MUSUH BARU · BOS 3 FASE · 2 RELUNG RAHASIA · RELIK PASANG · PROFIL LAPISAN · v0.35.0',
+    summary:
+      'Zona Tidewrought Cistern yang sejak v0.0.7 hanya berupa konfigurasi akhirnya bisa dimainkan sebagai bab kampanye kesembilan: empat aula banjir, satu altar pasang, dan dua relung rahasia di balik dinding berlumut. Bab ini membuka setelah The Oathbreaker gugur dan muncul di layar Pilih Level tepat di bawah empat belas kartu lama, tanpa memindahkan satu pun ruang yang sudah ada. Rilis ini juga menutup putaran optimasi dengan pengukuran lapisan render: blit glow yang diperbesar empat kali ternyata 40 kali lebih mahal daripada blit ukuran asli, dan gelembung air kini hanya digambar sebagai cincin.',
+    highlights: [
+      'Bab IX — Sistem Air Pasang: tujuh ruang di id 662-668, terdiri dari empat aula (Ambang Pasang, Galeri Bocor, Ruang Katup, Ambang Karam), Altar Air Pasang sebagai ruang bos, dan dua relung rahasia. ALL_ROOMS kini 669 ruang dan ALL_BOSS_INFO 115 bos; ruang 0-661 tidak berubah satu indeks pun.',
+      'Empat musuh baru memakai tujuh arketipe mesin yang nyata, bukan reskin: Drowned Thrall (kejar), Silt Lurker (gali lalu muncul di bawah kaki), Tide Ember (melayang dan menembak dari celah katup), dan Valve Sentinel (tandai lalu terjang). Setiap aula menempatkan komposisinya sendiri, dengan Ambang Karam sebagai aula tersulit.',
+      'Vasska, Bupati Karam: bos tiga fase dengan trisula jarak dekat, kipas harpun yang membesar tiap fase, gelombang pasang yang menyapu lantai, dan panggilan Drowned Thrall di fase II-III. Dialog intro, fase II, fase III, dan gugur semuanya ditulis, dengan track musik cisternBoss baru.',
+      'Dua relung rahasia benar-benar tersembunyi: Dinding Pasang di Ambang Pasang membuka Gua Surut (668), dan Dinding Lumut di Galeri Bocor membuka Relung Karam (667). Keduanya butuh 130-150 damage untuk hancur, muncul sebagai ??? di Pilih Level sampai ditemukan, dan menyimpan Relik Pasang, dua kolektibel, serta rune rahasia baru untuk mode cistern.',
+      'Progress baru progress.cistern di dalam key ashen-vow-progress-v1 yang sama: halls berurutan, boss, secrets, discovered, runs, bossClears, bestTime. Sanitizer menolak aula yang dilompati, membuang clear bos tanpa empat aula, dan tidak pernah membocorkan nama relung rahasia dari save yang diedit tangan.',
+      'Optimasi render terukur: glow latar cistern yang digambar sebagai blit diperbesar dari layer 210px ke 840px mencatat 7,04-8,13 ms per frame, sedangkan blit ukuran asli mencatat 0,17-0,20 ms pada primitif yang sama (A/B dalam satu sesi). Gelembung air turun dari ~0,95 ms menjadi 0,49-0,69 ms setelah digambar sebagai cincin saja. Semua gradien latar cistern kini di-cache: 11 alokasi gradien per frame menjadi 0.',
+      'Percobaan cache tile sprite untuk lengkungan dan pilar dibatalkan setelah terukur memperburuk latar dari 10,7 ms menjadi 19,5 ms; raster software di mesin uji jauh lebih cepat menggambar goresan dan gradient daripada menyalin canvas besar. Angka ini dicatat supaya percobaan yang sama tidak diulang.',
+      'Alat baru tools/render-probe.mjs mengukur per lapisan (background, weather, platforms, render penuh) untuk ruang cistern, dan tools/frame-profile.mjs mendapat skenario cistern. Micro-timing canvas tetap berisik antar-run; perbandingan A/B satu primitif lebih dapat dipercaya daripada selisih frame penuh.',
+    ],
+    fixes: [
+      'Ruang di luar 14 ruang lama tidak lagi mewarisi palet abu: ruang cistern sekarang membawa palette dan particle sendiri, sehingga warna dan gelembungnya benar-benar tampil.',
+      'Gelembung air sebelumnya tidak pernah muncul karena cuaca hanya digambar untuk ruang biome; sekarang ruang yang membawa mood partikel juga menjalankannya.',
+      'Toast dinding hancur memakai kalimat cistern saat berada di sistem air, bukan lagi teks Miselium.',
+    ],
+  },
   {
     version: '0.34.0',
     date: '23 November 2026',

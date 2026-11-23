@@ -1236,6 +1236,61 @@ kbd {
   margin: 18px 0 6px;
 }
 
+/* Bab IX — Tidewrought Cistern sits under the legacy cards on the same screen. */
+.cistern-section {
+  margin-top: 30px;
+  padding-top: 22px;
+  border-top: 1px solid rgba(95, 211, 194, 0.18);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cistern-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.cistern-title {
+  margin: 0;
+  font-size: clamp(16px, 2vw, 22px);
+  letter-spacing: 0.16em;
+  color: #9ff0e2;
+  text-shadow: 0 0 22px rgba(95, 211, 194, 0.3);
+}
+
+.cistern-progress {
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  color: #5fd3c2;
+  white-space: nowrap;
+}
+
+.cistern-cards .level-card {
+  border-color: rgba(95, 211, 194, 0.28);
+}
+
+.cistern-cards .level-card.cleared {
+  border-color: rgba(159, 240, 226, 0.45);
+}
+
+.cistern-cards .level-art {
+  background:
+    radial-gradient(ellipse at 50% 40%, color-mix(in srgb, var(--accent) 26%, transparent), transparent 68%),
+    linear-gradient(180deg, #06211f, #04110f);
+  border-bottom-color: rgba(95, 211, 194, 0.2);
+}
+
+@media (max-width: 640px) {
+  .cistern-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
 .level-card {
   --accent: var(--gold);
   position: relative;
