@@ -148,8 +148,8 @@ async function main() {
       A.clearProgress();
       return { version: A.version, title: document.title, progress: A.progress.speedrun };
     })()`);
-    check('boot reports v0.35.0', boot.version, '0.35.0');
-    assert.match(boot.title, /0\.35\.0/);
+    check('boot reports v0.36.0', boot.version, '0.36.0');
+    assert.match(boot.title, /0\.36\.0/);
     check('speedrun save starts empty', boot.progress.bestMultiplier, 0);
 
     const hub = await evaluate(`(() => {

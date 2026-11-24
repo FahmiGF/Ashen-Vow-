@@ -102,7 +102,7 @@ try {
       tabs: window.__ashen.dreadTabs.length,
     },
   }))()`);
-  check(/0\.35\.0/.test(String(boot.version)), `boots v0.35.0 (${String(boot.version).slice(0, 44)})`);
+  check(/0\.36\.0/.test(String(boot.version)), `boots v0.36.0 (${String(boot.version).slice(0, 44)})`);
   check(boot.dread && boot.dread.settings.enabled === true, 'The Dread Beyond is enabled by default');
   check(boot.dread.settings.awarenessEnabled === false, 'Awareness is opt-in');
   check(boot.counts.environments === 5 && boot.counts.enemies === 7 && boot.counts.bosses === 3, '5 environments, 7 Unnatural, 3 bosses');

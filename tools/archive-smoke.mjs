@@ -82,7 +82,7 @@ try {
     tools: window.__ashen.archiveData.tools.length,
     ghosts: window.__ashen.veilGhosts.length,
   }))()`);
-  check(/0\.35\.0/.test(String(boot.title)), `boots v0.35.0 (${String(boot.title).slice(0, 40)})`);
+  check(/0\.36\.0/.test(String(boot.title)), `boots v0.36.0 (${String(boot.title).slice(0, 40)})`);
   check(boot.stages === 70 && boot.chapters === 14 && boot.bosses === 16, `70 stages, 14 chapters, 16 bosses (${boot.stages}/${boot.chapters}/${boot.bosses})`);
   check(boot.ghosts === 80 && boot.jumpscares === 38 && boot.tools === 30, `80 ghosts, 38 jumpscares, 30 tools (${boot.ghosts}/${boot.jumpscares}/${boot.tools})`);
 

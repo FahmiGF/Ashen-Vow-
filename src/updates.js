@@ -1,9 +1,34 @@
 // Ashen Vow — release history shown in the in-game Update Log.
 // Keep the newest entry first. `GAME_VERSION` is the single source of truth
 // for the version shown by the Update Log screen and the debug hooks.
-export const GAME_VERSION = '0.35.0';
+export const GAME_VERSION = '0.36.0';
 
 export const UPDATE_LOG = [
+  {
+    version: '0.36.0',
+    date: '24 November 2026',
+    title: 'UPDATE XXV–XXVI — API SEMBILAN SUMBU, POHON VIGIL & SUARA ELEVENLABS',
+    tag: 'BAB X · 5 RUANG · BOS 4 FASE · POHON VIGIL 21 RANK · SUARA ELEVENLABS · TRAILER 80 DETIK · 8 MODEL HANTU · PENJAGA BOOT · v0.36.0',
+    summary:
+      'Dua pembaruan yang sebelumnya hanya ada di working tree kini resmi dirilis sebagai v0.36.0. Bab kampanye kesepuluh, The Lanternwake, melanjutkan cerita setelah Vasska gugur dengan empat aula berisi dua puluh musuh dan bos empat fase Orsella. Scary Mode mendapat Pohon Vigil, pohon skill khusus horor. Dialog kini bisa disuarakan lewat ElevenLabs, ada trailer sinematik 80 detik di dalam mesin, delapan hantu mendapat model 3D sendiri, dan layar boot tidak lagi bisa macet hitam tanpa pesan.',
+    highlights: [
+      'BAB X — The Lanternwake (Api Sembilan Sumbu): lima ruang di id 669-673, empat aula dan Altar Sumbu. Setiap aula memunculkan tepat 20 musuh (19 biasa + 1 elite) dari empat arketipe: wick_moth, lantern_wisp, taper_hound, ash_bearer, dan elite wickbearer_acolyte. ALL_ROOMS kini 674 ruang dan bos menjadi 116.',
+      'Orsella, The Wickbearer: bos empat fase dengan ambang 75/50/25 persen, 1180 HP, dialog intro, tiga fase, dan gugur. Panggilannya memakai tubuh wick_moth milik bab ini sendiri lewat summonType, bukan reskin Drowned Thrall.',
+      'Progress baru progress.lanternwake di key ashen-vow-progress-v1 yang sama. Bab ini terbuka setelah ruang 7 dan bos Cistern dikalahkan; sanitizer membuang aula yang dilompati dan clear bos tanpa empat aula.',
+      'Pohon Vigil di Scary Mode: 3 cabang, 9 node, 21 rank. Poin datang dari jurnal horor (event yang ditemukan, achievement, dan clear per kesulitan), dan bonusnya diterapkan sekali di awal run tanpa mengubah kesulitan kampanye.',
+      'Suara ElevenLabs: prolog, dialog bos, dan trailer memakai satu jalur suara. Server meneruskan /api/voice ke ElevenLabs dengan ELEVENLABS_API_KEY yang tidak pernah sampai ke browser, lalu jatuh ke speechSynthesis browser, lalu subtitle saja. Pengaturan suara disimpan di key ashen-vow-voice-v1.',
+      'Trailer Sinematik: 16 shot, 80 detik, dirender langsung di mesin dengan narasi, tombol putar, lompat 5 detik, dan jam progres, dibuka dari menu TRAILER SINEMATIK.',
+      'Delapan hantu Scary Mode kini punya model GLB sendiri (20 sendi, 3 LOD, proxy tabrakan, klip Idle/Walk/Attack), ditambah sembilan prop mode. Kit 3D menjadi 16 file dan 58.802 segitiga; entitas Blackveil memakai tubuh hantunya sendiri.',
+      'Penjaga boot: layar boot menampilkan tahap muat sungguhan, dan kegagalan muncul sebagai kartu dengan kode BOOT-01 sampai BOOT-04 serta tombol COBA LAGI dan TETAP BUKA, sehingga kegagalan impor tidak lagi meninggalkan layar hitam.',
+      'Inventaris aset: npm run assets:inventory membaca setiap .glb dan menulis docs/asset-inventory.md lengkap dengan daftar celah yang jujur (12 paket lingkungan belum dibuat, tidak ada sumber .blend).',
+      'Dokumen diperbarui: MASTERPLAN.md ditulis ulang sebagai Master Plan 3.0 (fase 0-7 menuju v1.0) dan rencana lama diarsipkan di docs/archive/MASTERPLAN-2.0.md.',
+    ],
+    fixes: [
+      'scary2.js sebelumnya merujuk sanitizeHorrorSkills tanpa mengimpornya; kini skill horor diperbaiki saat save dimuat.',
+      'Ringkasan suara dan trailer di window.__ashen dipasang dengan Object.defineProperties sehingga tidak lagi membeku pada nilai saat boot.',
+      'CLAUDE.md tidak lagi menyebut Tidewrought Cistern sebagai konfigurasi saja.',
+    ],
+  },
   {
     version: '0.35.0',
     date: '23 November 2026',

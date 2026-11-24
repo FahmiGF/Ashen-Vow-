@@ -141,8 +141,8 @@ async function main() {
       A.clearProgress();
       return { version: A.version, title: document.title, levelCards: document.querySelectorAll('#level-cards .level-card').length };
     })()`);
-    assert.equal(boot.version, '0.35.0');
-    assert.match(boot.title, /0.35.0/);
+    assert.equal(boot.version, '0.36.0');
+    assert.match(boot.title, /0.36.0/);
 
     // Hub render.
     const hub = await evaluate(`(() => {

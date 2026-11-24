@@ -355,7 +355,7 @@ async function main() {
       };
     })()`);
     check('game boots again at the phone size', reloaded.booted, true);
-    check('reload reports v0.35.0', reloaded.version, '0.35.0');
+    check('reload reports v0.36.0', reloaded.version, '0.36.0');
     check('reload lands on the phone speedrun hub', reloaded.view, 'speedrun');
     check('history survives the reload', reloaded.rows, 1);
     check('reloaded history row fits the phone', reloaded.row.fitsWidth, true);

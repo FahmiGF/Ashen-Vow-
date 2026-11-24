@@ -1,9 +1,45 @@
 # Ashen Vow — Claude Master Plan
 
-> Compressed handoff for continuing **Ashen Vow v0.35.0**.
-> Status: **playable, browser-verified; Milestones A and B plus Sigil & Ritual, Echoes of the Forgotten World, Infinite Frontiers, Overdrive, The Sundered Atlas, Infinite Labyrinth co-op, Hearthfall (The Hollow Court), Skill Points + Panggung Abadi, Taman Peri (Faewood), Speedrun, Pondok Umpan, Fivefold Trials, Puzzle Adventure, Riftwar, Wave Defense, Infinite Realms, Arc VI The Astral Dominion, Stage Access/HACK, Admin Control Center, Eclipse Arc VIII, Update IX Settings 2.0 + 3D Visual Overhaul, Arc X The Eternal Night, The Unwritten Wing, 3D Scary Mode: Blackveil Nightfall, Credit Scenes + Hidden Secrets, The Hunter's Kit + Ghost Combat, The Mourning Choir + Second Shadows, Pirate Tide: Open Sea, Pirate Tide Act II: Sumpah Laut, and BAB IX Tidewrought Cistern complete**.
-> Roadmap: [`MASTERPLAN.md`](MASTERPLAN.md).
+> Compressed handoff for continuing **Ashen Vow v0.36.0**.
+> Status: **playable, browser-verified; Milestones A and B plus Sigil & Ritual, Echoes of the Forgotten World, Infinite Frontiers, Overdrive, The Sundered Atlas, Infinite Labyrinth co-op, Hearthfall (The Hollow Court), Skill Points + Panggung Abadi, Taman Peri (Faewood), Speedrun, Pondok Umpan, Fivefold Trials, Puzzle Adventure, Riftwar, Wave Defense, Infinite Realms, Arc VI The Astral Dominion, Stage Access/HACK, Admin Control Center, Eclipse Arc VIII, Update IX Settings 2.0 + 3D Visual Overhaul, Arc X The Eternal Night, The Unwritten Wing, 3D Scary Mode: Blackveil Nightfall, Credit Scenes + Hidden Secrets, The Hunter's Kit + Ghost Combat, The Mourning Choir + Second Shadows, Pirate Tide: Open Sea, Pirate Tide Act II: Sumpah Laut, and BAB IX Tidewrought Cistern complete**. v0.36.0 ships Update XXV (ElevenLabs voice, in-engine trailer, ghost GLBs, Vigil Tree, startup guard) and Update XXVI (BAB X The Lanternwake, asset inventory), which are now in the in-game Update Log.
+> Live totals: **674 rooms** in `ALL_ROOMS`, **116 bosses**, **262 enemy types**, **18 classes** (+15 Frontier 3D classes), `npm test` **776/776**.
+> Roadmap: [`MASTERPLAN.md`](MASTERPLAN.md) (Master Plan 3.0, phases 0–7 to v1.0). The previous plan is archived at [`docs/archive/MASTERPLAN-2.0.md`](docs/archive/MASTERPLAN-2.0.md).
 > Repo: `https://github.com/FahmiGF/Ashen-Vow-` · branch `main` · push account `isshinAshinaSeal`.
+
+## 0. v0.36.0 — Update XXVI: Arc XI The Lanternwake + Asset Inventory (save-compatible)
+
+- `src/lanternwake.js` — **BAB X / Arc XI**, a tenth campaign chapter at rooms **669–673** (four halls + the boss altar). Every hall spawns exactly **20 enemies: 19 normal + 1 guaranteed elite** across four engine archetypes (chaser, ranged, lunge, slam); the five bodies are `wick_moth`, `lantern_wisp`, `taper_hound`, `ash_bearer` and the elite `wickbearer_acolyte`. Halls are generated deterministically per index, so no two halls share a layout.
+- **Orsella, The Wickbearer** — `LANTERN_BOSS_INFO.wickbearer`, **4 phases** with thresholds `[0.75, 0.5, 0.25]`, intro/phase2/phase3/phase4/defeat dialogue, 1180 HP, `behaviorKind: 'tidebound'` and `summonType: 'wick_moth'`. Core dispatches the kind to the existing tide-regent machine and now reads `b.summonType` in `spawnTideAdds`, so the summons are the chapter's own body rather than a reskin of drowned thralls. Victory, no gate.
+- **Progression** — `progress.lanternwake` inside the existing save key: sequential `halls`, `boss`, `discovered`, `runs`, `bossClears`, best/last time. `lanternwakeUnlocked` requires base `cleared[7]` **and** `progress.cistern.boss`, making it a true continuation. The sanitizer drops skipped halls and any boss clear without four halls.
+- `src/core.js` — appends `LANTERN_ROOMS` to `ALL_ROOMS` (**674** rooms) and merges the enemy/boss tables; boss dispatch and phase handlers recognise `wickbearer`; summons honour `summonType`.
+- `src/main.js` / `index.html` / `styles.css` — level-select section **BAB X · API SEMBILAN SUMBU** with five cards, `startLanternwakeStage`, boss recording, retry, gate/room routing and debug hooks `lanternwake`, `lanternwakeStart`, `lanternwakeClear`, `lanternwakeBossClear`. `src/zones.js` gains the `lanternwake` zone; `src/music.js` maps the boss to the existing `bossDawn` track.
+- `tools/asset-inventory.mjs` (`npm run assets:inventory`) — reads every committed `.glb` through `src/glb.js` and writes **`docs/asset-inventory.md`**: 8 files, 23,184 triangles, 7 rigged characters, a 12-mesh prop kit, LOD/collision coverage, and an explicit gap list (8 Scary ghosts without unique models, 12 unbuilt environment packs). It states plainly that the repository has no `.blend` sources.
+- Tests: `tests/lanternwake.test.js` (12) covers the 20-enemy contract, gate chain, four-phase dialogue, unlock chain, sanitizer and live hall/boss runs; all older `ALL_ROOMS` count assertions were updated from 669 to 674. Browser: `npm run smoke:lanternwake`.
+- Honest limits: the boss reuses the tide-regent attack machine (data reuse, not a new animation rig); the chapter adds no new audio composition, only a track mapping; no Blender `.blend` sources exist, so the inventory can only describe exported geometry.
+- Verification: `npm test` **758/758** (12 new chapter tests, 7 older room-count assertions updated to 674); `npm run smoke:lanternwake` **14 checks** in real Chrome (locked hub, unlock chain, live 20-body hall, four-phase boss victory, saved progress after reload), zero console errors; `npm run assets:inventory` regenerates `docs/asset-inventory.md` from the committed GLBs.
+
+## 0. v0.36.0 — Update XXV: The Vigil Tree & Startup Guard (save-compatible)
+
+- `src/horror_tree.js` — pure Scary Mode skill tree (no DOM, no storage): **3 branches / 9 nodes / 21 ranks**. Points are earned from the horror journal (`HORROR_TREE_BASE_POINTS = 3`, +1 per discovered event, +2 per achievement, +1/+1/+2 per easy/normal/hard clear). Every node maps to a field the simulation already reads: `hpPct`, `flasks`, `crit`, `speed`, `ash`, `wardSeconds`/`wardReduction`, `eventDelay`, and hunter items. `sanitizeHorrorSkills` drops unknown ids, clamps ranks and refuses a rank whose prerequisite is missing.
+- `src/scary2.js` — imports `sanitizeHorrorSkills`, so `sanitizeHorrorProgress` repairs `skills` on load; `HorrorJournal` keeps `skills` in memory and in `toJSON()`. This fixes the working tree that referenced an unimported symbol.
+- `src/main.js` — new **Pohon Skill** tab in `#scary-screen` (`scaryTreePanel`, `rankHorrorTree`, `resetHorrorTree`), delegated `data-horror-rank` / `data-horror-tree-reset` buttons, `startScaryRun` applies `applyHorrorTree(game, horrorTreeBonuses(...))` once at run start, and debug hooks `horrorTree`, `rankHorrorTree`, `resetHorrorTree`, `applyHorrorTreeBonuses`.
+- `index.html` / `styles.css` — `.tree-*` styles and a **startup guard**: `#boot-screen` shows real load stages, and `window.__ashenBootFail` renders a recoverable error card with a diagnostic code (`BOOT-01` timeout, `BOOT-02` module load, `BOOT-03` runtime, `BOOT-04` unhandled rejection) plus **COBA LAGI** and **TETAP BUKA**. `main.js` reports readiness via `window.__ashenBootReady()` after the first frame is scheduled, so an import failure can never leave a silent black screen.
+- Tests: `tests/horror_tree.test.js` (10) covers the economy, prerequisites, sanitizer, journal round-trip and live player application; `tests/scary2.test.js` now expects six horror tabs and exempts the tree tab from the settings-row contract.
+- Honest limits: the tree is Scary-Mode only and never modifies campaign difficulty, and rank points are derived from local journal progress rather than a server.
+- Verification: `npm test` **746/746** (10 new tree tests); `npm run smoke:scary2` **52 checks**, zero console errors, including a real rank purchase/unlock/reset and the startup guard's failure and recovery paths.
+
+## 0. v0.36.0 — Update XXV: Suara ElevenLabs, Trailer & Aset Mode
+
+- `src/voice.js` — pure voice layer: 8 cast members (`narrator`, `warden`, `wyrm`, `oathbreaker`, `tidebound`, `wickbearer`, `ghost`, `trailer`), `VOICE_MODEL = 'eleven_multilingual_v2'`, `VOICE_MAX_CHARS = 600`, `voiceRequestFor`, `resolveVoiceProvider`, `sanitizeVoiceSave`, `voiceSummary`, `voiceBadge`. Save key **`ashen-vow-voice-v1`** (own key, like hunter/secrets), never inside the settings payload.
+- `server.js` — `GET /api/voice` returns `{configured, model, cast, maxChars}`; `POST /api/voice` proxies `https://api.elevenlabs.io/v1/text-to-speech/{voiceId}?output_format=mp3_44100_128` with `ELEVENLABS_API_KEY` (per-cast overrides via `ELEVENLABS_VOICE_<CAST>`), validates text length and voice-id shape, and caches MP3 by `sha256(voice|model|text)` (64 entries). The key never reaches the client.
+- `src/main.js` — `speakVoiceLine()` is the single entry point for prologue, boss dialogue (`speakDialogueLine`, cast from `VOICE_BOSS_CAST[kind]`) and the trailer; ElevenLabs → browser `speechSynthesis` → silence, with the chosen provider recorded in `voiceSave.providerUsed`. Debug hooks `voice`, `trailer`, `openTrailer`, `closeTrailer`, `toggleTrailerPause`, `seekTrailer`, `setTrailerTime`, `refreshVoiceStatus`, `narrate`, `stopVoice`, `setVoice`. State views are installed with `Object.defineProperties` (Object.assign would snapshot them at boot).
+- `src/trailer.js` — pure 16-shot / 80 s in-engine trailer (`TRAILER_SHOTS`, `trailerShotAt`, `trailerNarrationAt`, `trailerSummary`) plus deterministic `drawTrailerFrame(ctx, w, h, time)`. Screens: `#trailer-screen` / `#trailer-canvas` with play, ±5 s, voice toggle, progress, clock and engine badge; opened from **TRAILER SINEMATIK** and `menuView = 'trailer'`.
+- `tools/export-glb.mjs` — 8 authored ghost characters (`ghost_<id>.glb`, 20 joints, 3 LODs, `_COL` proxy, Idle/Walk/Attack, 2.0–2.4k LOD0 triangles) and 9 mode props (`cistern_arch`, `cistern_pillar`, `lantern_pyre`, `lantern_brazier`, `pirate_wreck`, `pirate_dock`, `veil_shrine`, `dread_altar`, `wd_bastion`). Kit is now **16 files / 4,819.8 KB / 58,802 triangles**.
+- `src/webgl3d.js` — `CHAR_ASSETS` exported and extended; enemy draws honour `enemy.model` when it is loaded (fallback to the archetype map), so horror entities use their own bodies. `propNameFor`/`propScaleFor` cover the nine new props.
+- `src/mode3d_horror.js` — the five site entities now name `ghost_weeping_mother`, `ghost_hollow_wraith`, `ghost_drowned_bell`, `ghost_forgotten_one`, `ghost_lantern_eater`.
+- `tools/asset-inventory.mjs` — ghost coverage is computed from files that exist (`ghost_<id>.glb`), plus a mode-prop coverage table; the document no longer claims ghosts lack models.
+- Tests: `tests/voice.test.js` (7), `tests/trailer.test.js` (7), extended `tests/gltf.test.js` (ghost kit, horror model mapping, 21 props). Browser: `npm run smoke:trailer`.
+- Honest limits: ElevenLabs needs an API key and network; without both the game speaks with the browser voice or shows subtitles only. The trailer is an in-engine cut, not a re-render of `trailer/ashen-vow-trailer.mp4`. Ghosts share the humanoid skeleton and clip set; only geometry and materials are bespoke.
 
 ## 0. v0.35.0 — Update XXIV: Sistem Air Pasang & Dua Relung Rahasia
 
@@ -332,7 +368,7 @@ Non-negotiable v0.1.0 requirements (v0.0.7/v0.0.8 scope preserved):
 10. Combat must be real and testable, not a mock.
 11. Every boss room keeps a **Warung Abu checkpoint** at its entrance.
 12. Weapons, ammunition, and consumables are bought with run-scoped **ash**; keep `SHOP_ITEMS`, `WEAPONS`, `BOSS_INFO`, `ENEMY_INFO`, and `CODEX` data-driven.
-13. **Ten selectable characters/classes** at the menu: Knight (Sera), Elf Archer (Lyna), Assassin (Kael), Brawler (Karn), Mage (Ignis), Gladiator (Varek), Netfighter (Neris), Stormcaller (Astra), Sentinel (Bram), and Warden (Maera), each with a unique active ability.
+13. **Eighteen selectable characters/classes** at the menu, each with a unique active ability. The original ten: Knight (Sera), Elf Archer (Lyna), Assassin (Kael), Brawler (Karn), Mage (Ignis), Gladiator (Varek), Netfighter (Neris), Stormcaller (Astra), Sentinel (Bram) and Warden (Maera). Hearthfall adds Nara Ashwright, Elowen Hearthkeeper and Ione Glassblade; Eclipse adds Dawn Paladin, Rift Assassin, Worldroot Druid, Chrono Weaver and Void Herald.
 14. **Character customization** before starting: race (human, elf, goblin, orc, devil), 5 armor styles, skin color, and outfit color, with a live Canvas preview featuring runic altar, sparkling glitter stars, and transition pulse VFX.
 15. A **60-second narrative prologue** plays before the first stage on a new journey, with voice-over and always-visible subtitles; it is skippable and never replays from Level Select.
 16. **Procedural zone music** with a shared engine, per-zone tracks, boss theme, victory theme, crossfade, and a combat layer; no audio files.
@@ -357,10 +393,10 @@ Non-negotiable v0.1.0 requirements (v0.0.7/v0.0.8 scope preserved):
 | Simulation | Deterministic fixed timestep, `1 / 120 s`, no DOM |
 | Tests | `node --test`, pure Node against `src/core.js` + foundation modules; CDP smoke for browser flows |
 | Audio | Procedural WebAudio SFX (`src/audio.js`) and music (`src/music.js`), no audio files |
-| Visuals | Procedural Canvas drawing, no image assets |
-| Persistence | Progress `ashen-vow-progress-v1`; settings `ashen-vow-settings-v1`; character `ashen-vow-character-v1` |
+| Visuals | Procedural Canvas 2D for the main game; the 3D modes use WebGL2 with script-generated GLB assets (`tools/export-glb.mjs`, 16 files) and a Canvas fallback. There are no `.blend` sources |
+| Persistence | Progress `ashen-vow-progress-v1`; settings `ashen-vow-settings-v1`; character `ashen-vow-character-v1`; plus mode keys `-horror-v1`, `-dread-v1`, `-veil-v1`, `-eternal-v1`, `-archive-v1`, `-3dhorror-v1`, `-hunter-v1`, `-secrets-v1`, `-voice-v1` |
 
-Do **not** add a framework, bundler, or asset pipeline unless the product scope changes.
+Do **not** add a framework or bundler unless the product scope changes. The only asset pipeline is the zero-dependency GLB exporter in `tools/export-glb.mjs`.
 
 ## 3. File map
 
@@ -377,6 +413,11 @@ Do **not** add a framework, bundler, or asset pipeline unless the product scope 
 | `src/zones.js` | Legacy `ZONES` + 10 biome zones + 5 court zones, `ROOM_ZONES` (14 legacy entries), and `zoneForRoom` / `zoneMusicForRoom` |
 | `src/court.js` | Hearthfall: 6 zones / 60 court rooms, 24 enemies, 12 bosses (3–4 phases), 8 weapons + profiles, 12 tools, 6 house rooms, 24 furnishings, 8 NPC residents, `progress.court` save logic |
 | `src/fairy.js` | Faewood finale: 10 sequential stages + 2 boss arenas at rooms 414–425, 10 enemies, 4 tiny NPCs, 2 four-phase bosses, dragon heaven/hell forms, `progress.fairy` |
+| `src/lanternwake.js` | BAB X / Arc XI: 5 rooms at 669–673, 5 enemies, 4-phase `wickbearer` boss, `progress.lanternwake` |
+| `tests/lanternwake.test.js` | 12 tests for the 20-enemy contract, gates, boss phases, save sanitizer and live runs |
+| `tools/asset-inventory.mjs` | Reads `assets/3d/*.glb` and writes `docs/asset-inventory.md` with a real coverage gap list |
+| `src/horror_tree.js` | Scary Mode Vigil Tree: 3 branches / 9 nodes / 21 ranks, point economy, sanitizer, run-start bonuses |
+| `tests/horror_tree.test.js` | 10 tests for the tree model, journal persistence and live `applyHorrorTree` application |
 | `src/cistern.js` | BAB IX Tidewrought Cistern: 7 rooms (662–668), 4 enemies, 3-phase `tidebound` boss, palettes, `progress.cistern` model + sanitizer + `validateCisternRooms` |
 | `tools/cistern-smoke.mjs` | 40-check CDP smoke: locked/unlocked level select, live gate chain, secret wall, boss victory, reload, 390×844 |
 | `src/cutscene.js` | 20-second final-boss portrait and 30-second post-credit epilogue timelines plus procedural `drawCutscene` art |
@@ -835,10 +876,11 @@ Verified through Chrome DevTools Protocol (v0.0.7):
 - Per-action gamepad rebinding is not available (gamepad buttons are fixed to the standard layout); difficulty, modifiers, NG+, repeatable modes, and endgame trials exist in the expansion hub.
 - Expansion enemies reuse seven AI archetypes rather than 100 bespoke scripts; boss patterns reuse six configurable families. Content is data-driven and real, but not every enemy/boss is hand-animated.
 - Seasonal events use the local clock and are intentionally offline/local; there is no server-authoritative event verification.
-- Audio is procedural only; no recorded music or voice files. Tracks are short patterns, so long sessions may notice looping. Prologue narration depends on browser speech-synthesis voices, but subtitles always carry the story.
-- Art is procedural; no sprite/tileset pipeline.
-- Only four of the five configured zones have playable rooms; Tidewrought Cistern exists only as configuration until Milestone C.
-- No fast travel, trailer, branching story, or multiple endings yet (Milestones D–E).
+- Music and SFX are procedural only; there are no recorded music files. Tracks are short patterns, so long sessions may notice looping. Voice lines (prologue, boss dialogue, trailer) use ElevenLabs through `/api/voice` when `ELEVENLABS_API_KEY` is set, then the browser's speech synthesis, then subtitles only; subtitles always carry the story.
+- 2D art is procedural; there is no sprite/tileset pipeline. 3D uses script-generated GLBs; 12 environment packs are still unbuilt (see `docs/asset-inventory.md`).
+- All five configured zones now have playable rooms: Tidewrought Cistern became playable in v0.35.0 (BAB IX, rooms 662–668), and BAB X The Lanternwake follows at rooms 669–673.
+- Infinite Frontiers levels 101–200 and Overdrive levels 201–300 are data only (not in `ALL_ROOMS`); Arc IV The Rift and Arc VI's Unwritten Expanse are locked teasers. Master Plan 3.0 Phases 2 and 4 schedule them.
+- No fast travel or save slots yet (Master Plan 3.0 Phases 6 and 1). Several arcs already have multiple endings (Atlas, Fallen), and an in-engine 80-second trailer exists (`src/trailer.js`).
 - Boss tuning lives in constants inside `src/core.js`; the data tables (`BOSS_INFO`, `ENEMY_INFO`, `CODEX`) are the extension point.
 - Enemy AI is platform-aware but not a full navmesh; complex multi-level layouts may still need hand-tuned jumps.
 - Codex screens are informational; no unlock tracking or per-entry discovery gating yet.

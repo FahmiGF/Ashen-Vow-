@@ -74,6 +74,153 @@ async function loadAsset(target, ext) {
   return asset;
 }
 
+// ── ElevenLabs voice proxy (Update XXV) ───────────────────────────────────
+// The key never reaches the browser. The client posts text + a cast id, the
+// server maps that to a catalogue voice, calls ElevenLabs once and caches the
+// MP3 by text+voice hash so replaying a boss line costs nothing.
+const VOICE_ENDPOINT = 'https://api.elevenlabs.io/v1/text-to-speech';
+const VOICE_MODEL = process.env.ELEVENLABS_MODEL || 'eleven_multilingual_v2';
+const VOICE_MAX_CHARS = 600;
+const VOICE_CACHE_LIMIT = 64;
+const VOICE_CAST_IDS = {
+  narrator: process.env.ELEVENLABS_VOICE_NARRATOR || '21m00Tcm4TlvDq8ikWAM',
+  warden: process.env.ELEVENLABS_VOICE_WARDEN || 'pNInz6obpgDQGcFmaJgB',
+  wyrm: process.env.ELEVENLABS_VOICE_WYRM || 'VR6AewLTigWG4xSOukaG',
+  oathbreaker: process.env.ELEVENLABS_VOICE_OATHBREAKER || 'ErXwobaYiN019PkySvjV',
+  tidebound: process.env.ELEVENLABS_VOICE_TIDEBOUND || 'yoZ06aMxZJJ28mfd3POQ',
+  wickbearer: process.env.ELEVENLABS_VOICE_WICKBEARER || 'EXAVITQu4vr4xnSDxMaL',
+  ghost: process.env.ELEVENLABS_VOICE_GHOST || 'TX3LPaxmHKxFdv7VOQHJ',
+  trailer: process.env.ELEVENLABS_VOICE_TRAILER || 'onwK4e9ZLuTAKqWW03F9',
+};
+const voiceCache = new Map();
+
+function voiceConfigured() {
+  return typeof process.env.ELEVENLABS_API_KEY === 'string' && process.env.ELEVENLABS_API_KEY.trim().length > 10;
+}
+
+function readJsonBody(req, limit = 8192) {
+  return new Promise((resolve, reject) => {
+    let size = 0;
+    const parts = [];
+    req.on('data', (chunk) => {
+      size += chunk.length;
+      if (size > limit) {
+        reject(new Error('payload-too-large'));
+        req.destroy();
+        return;
+      }
+      parts.push(chunk);
+    });
+    req.on('end', () => {
+      try {
+        resolve(JSON.parse(Buffer.concat(parts).toString('utf8') || '{}'));
+      } catch {
+        reject(new Error('bad-json'));
+      }
+    });
+    req.on('error', reject);
+  });
+}
+
+function jsonResponse(res, status, value) {
+  const body = Buffer.from(JSON.stringify(value), 'utf8');
+  res.writeHead(status, {
+    'Content-Type': 'application/json; charset=utf-8',
+    'Content-Length': body.length,
+    'Cache-Control': 'no-store',
+  });
+  res.end(body);
+}
+
+async function handleVoice(req, res, url) {
+  if (url.pathname !== '/api/voice') return false;
+  if (req.method === 'GET') {
+    jsonResponse(res, 200, {
+      configured: voiceConfigured(),
+      provider: 'elevenlabs',
+      model: VOICE_MODEL,
+      maxChars: VOICE_MAX_CHARS,
+      cast: Object.keys(VOICE_CAST_IDS),
+      cached: voiceCache.size,
+    });
+    return true;
+  }
+  if (req.method !== 'POST') {
+    jsonResponse(res, 405, { error: 'method-not-allowed' });
+    return true;
+  }
+  if (!voiceConfigured()) {
+    jsonResponse(res, 503, { error: 'not-configured', provider: 'elevenlabs' });
+    return true;
+  }
+  let body;
+  try {
+    body = await readJsonBody(req);
+  } catch (error) {
+    jsonResponse(res, 400, { error: String(error.message || 'bad-request') });
+    return true;
+  }
+  const text = String(body.text || '').replace(/\s+/g, ' ').trim();
+  if (!text) {
+    jsonResponse(res, 400, { error: 'empty-text' });
+    return true;
+  }
+  if (text.length > VOICE_MAX_CHARS) {
+    jsonResponse(res, 413, { error: 'text-too-long', maxChars: VOICE_MAX_CHARS });
+    return true;
+  }
+  const cast = typeof body.cast === 'string' && VOICE_CAST_IDS[body.cast] ? body.cast : 'narrator';
+  const requested = typeof body.voiceId === 'string' ? body.voiceId.trim() : '';
+  // Only accept a catalogue voice or a well-formed id; never a path segment.
+  const voiceId = /^[A-Za-z0-9]{8,64}$/.test(requested) ? requested : VOICE_CAST_IDS[cast];
+  const modelId = typeof body.modelId === 'string' && /^[a-z0-9_]{4,40}$/.test(body.modelId) ? body.modelId : VOICE_MODEL;
+  const cacheKey = createHash('sha256').update(`${voiceId}|${modelId}|${text}`).digest('hex');
+  const cached = voiceCache.get(cacheKey);
+  if (cached) {
+    res.writeHead(200, {
+      'Content-Type': 'audio/mpeg',
+      'Content-Length': cached.length,
+      'Cache-Control': 'private, max-age=86400',
+      'X-Voice-Cache': 'hit',
+    });
+    res.end(cached);
+    return true;
+  }
+  try {
+    const upstream = await fetch(`${VOICE_ENDPOINT}/${encodeURIComponent(voiceId)}?output_format=mp3_44100_128`, {
+      method: 'POST',
+      headers: {
+        'xi-api-key': process.env.ELEVENLABS_API_KEY,
+        'Content-Type': 'application/json',
+        Accept: 'audio/mpeg',
+      },
+      body: JSON.stringify({
+        text,
+        model_id: modelId,
+        voice_settings: body.delivery && typeof body.delivery === 'object' ? body.delivery : undefined,
+      }),
+    });
+    if (!upstream.ok) {
+      const detail = await upstream.text().catch(() => '');
+      jsonResponse(res, 502, { error: 'upstream-error', status: upstream.status, detail: detail.slice(0, 200) });
+      return true;
+    }
+    const audio = Buffer.from(await upstream.arrayBuffer());
+    if (voiceCache.size >= VOICE_CACHE_LIMIT) voiceCache.delete(voiceCache.keys().next().value);
+    voiceCache.set(cacheKey, audio);
+    res.writeHead(200, {
+      'Content-Type': 'audio/mpeg',
+      'Content-Length': audio.length,
+      'Cache-Control': 'private, max-age=86400',
+      'X-Voice-Cache': 'miss',
+    });
+    res.end(audio);
+  } catch (error) {
+    jsonResponse(res, 502, { error: 'voice-unreachable', detail: String(error.message || error).slice(0, 200) });
+  }
+  return true;
+}
+
 const server = createServer(async (req, res) => {
   const started = performance.now();
   requestCount += 1;
@@ -88,6 +235,7 @@ const server = createServer(async (req, res) => {
       return;
     }
     const ip = String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
+    if (await handleVoice(req, res, url)) return;
     if (await admin.handle(req, res, url, ip)) return;
     const target = normalize(join(ROOT, pathname));
     if (!target.startsWith(normalize(ROOT + sep))) {

@@ -119,15 +119,15 @@ test('every chapter follows the 7 + special + elite + boss structure', () => {
 
 test('expansion rooms connect from the legacy campaign and end with a boss victory', () => {
   assert.equal(ROOMS.length, 14, 'legacy campaign must stay untouched');
-  assert.equal(ALL_ROOMS.length, 669);
+  assert.equal(ALL_ROOMS.length, 674);
   assert.equal(CODEX.enemies.length, 7);
   assert.equal(CODEX.bosses.length, 6);
   assert.equal(Object.keys(ENEMY_INFO).length, 7);
   assert.equal(Object.keys(BOSS_INFO).length, 6);
-  assert.equal(Object.keys(ALL_ENEMY_INFO).length, 7 + 100 + Object.keys(ATLAS_ENEMY_INFO).length + Object.keys(COURT_ENEMY_INFO).length + 10 + 32 + 21 + 5 + 30 + 4);
+  assert.equal(Object.keys(ALL_ENEMY_INFO).length, 7 + 100 + Object.keys(ATLAS_ENEMY_INFO).length + Object.keys(COURT_ENEMY_INFO).length + 10 + 32 + 21 + 5 + 30 + 4 + 5);
   assert.equal(
     Object.keys(ALL_BOSS_INFO).length,
-    6 + 30 + Object.keys(ATLAS_BOSS_INFO).length + Object.keys(COURT_BOSS_INFO).length + Object.keys(PACK_BOSS_INFO).length + 2 + 15 + 5 + 5 + 17 + 1,
+    6 + 30 + Object.keys(ATLAS_BOSS_INFO).length + Object.keys(COURT_BOSS_INFO).length + Object.keys(PACK_BOSS_INFO).length + 2 + 15 + 5 + 5 + 17 + 1 + 1,
   );
 
   EXPANSION_LEVELS.forEach((level, i) => {

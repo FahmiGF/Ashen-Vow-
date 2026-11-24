@@ -607,7 +607,7 @@ class PropModel {
   }
 }
 
-const CHAR_ASSETS = [
+export const CHAR_ASSETS = [
   { key: 'sera', file: 'sera.glb' },
   { key: 'villager', file: 'villager.glb' },
   { key: 'prowler', file: 'prowler.glb' },
@@ -615,6 +615,15 @@ const CHAR_ASSETS = [
   { key: 'stalker', file: 'stalker.glb' },
   { key: 'alpha', file: 'alpha.glb' },
   { key: 'yggvar', file: 'yggvar.glb' },
+  // Update XXV — authored Scary Mode ghosts.
+  { key: 'ghost_hollow_wraith', file: 'ghost_hollow_wraith.glb' },
+  { key: 'ghost_night_stalker', file: 'ghost_night_stalker.glb' },
+  { key: 'ghost_silent_knight', file: 'ghost_silent_knight.glb' },
+  { key: 'ghost_forgotten_one', file: 'ghost_forgotten_one.glb' },
+  { key: 'ghost_weeping_mother', file: 'ghost_weeping_mother.glb' },
+  { key: 'ghost_mirror_double', file: 'ghost_mirror_double.glb' },
+  { key: 'ghost_lantern_eater', file: 'ghost_lantern_eater.glb' },
+  { key: 'ghost_drowned_bell', file: 'ghost_drowned_bell.glb' },
 ];
 
 // ── renderer ──────────────────────────────────────────────────────────────
@@ -1153,7 +1162,11 @@ export class WebGL3D {
 
     for (const enemy of game.enemies || []) {
       if (enemy.hp <= 0) continue;
-      const model = enemy.type === 'spore_beetle' ? 'beetle' : enemy.type === 'bramble_stalker' ? 'stalker' : 'prowler';
+      // Horror entities and named 3D enemies declare their own authored model;
+      // fall back to the archetype mapping when it is absent or unloaded.
+      const requested = enemy.model
+        || (enemy.type === 'spore_beetle' ? 'beetle' : enemy.type === 'bramble_stalker' ? 'stalker' : 'prowler');
+      const model = this.models[requested] ? requested : 'prowler';
       push(model, { ...enemy, facing: yawTo(enemy, player) }, {
         scale: model === 'beetle' ? 24 : model === 'stalker' ? 26 : 26,
         tint: enemy.tint || [1, 1, 1],
@@ -1350,6 +1363,16 @@ export function propNameFor(type) {
     case 'lighthouse': return 'horror_lighthouse';
     case 'echo_rune': return 'crystal';
     case 'exitgate': return 'ruin';
+    // Update XXV — architecture and landmarks for the other modes.
+    case 'cistern_arch': return 'cistern_arch';
+    case 'cistern_pillar': return 'cistern_pillar';
+    case 'lantern_pyre': return 'lantern_pyre';
+    case 'lantern_brazier': return 'lantern_brazier';
+    case 'pirate_wreck': return 'pirate_wreck';
+    case 'pirate_dock': return 'pirate_dock';
+    case 'veil_shrine': return 'veil_shrine';
+    case 'dread_altar': return 'dread_altar';
+    case 'wd_bastion': return 'wd_bastion';
     default: return null;
   }
 }
@@ -1370,6 +1393,15 @@ export function propScaleFor(type, item) {
     case 'lighthouse': return Math.max(8, item.scale || 24);
     case 'echo_rune': return Math.max(1.4, item.scale || 2.2);
     case 'exitgate': return Math.max(8, (item.scale || 1.6) * 9);
+    case 'cistern_arch': return Math.max(6, item.scale || 9);
+    case 'cistern_pillar': return Math.max(4, item.scale || 7);
+    case 'lantern_pyre': return Math.max(4, item.scale || 6);
+    case 'lantern_brazier': return Math.max(3, item.scale || 4.5);
+    case 'pirate_wreck': return Math.max(4, item.scale || 6);
+    case 'pirate_dock': return Math.max(4, item.scale || 7);
+    case 'veil_shrine': return Math.max(3, item.scale || 5);
+    case 'dread_altar': return Math.max(3, item.scale || 4.5);
+    case 'wd_bastion': return Math.max(5, item.scale || 7);
     default: return 6;
   }
 }

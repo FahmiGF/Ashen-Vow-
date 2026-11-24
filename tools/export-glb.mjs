@@ -77,6 +77,15 @@ const MATERIALS = {
   wood: { base: [0.34, 0.24, 0.14, 1], metallic: 0, roughness: 0.92 },
   thatch: { base: [0.48, 0.37, 0.2, 1], metallic: 0, roughness: 0.98 },
   crystal: { base: [0.55, 0.78, 0.95, 1], metallic: 0.1, roughness: 0.12, emissive: [0.18, 0.36, 0.55] },
+  // Update XXV — ghost and mode kits.
+  shroud: { base: [0.14, 0.14, 0.17, 1], metallic: 0.02, roughness: 0.94 },
+  shroudPale: { base: [0.56, 0.58, 0.6, 1], metallic: 0.04, roughness: 0.86 },
+  ectoplasm: { base: [0.52, 0.86, 0.92, 1], metallic: 0, roughness: 0.35, emissive: [0.3, 0.72, 0.85] },
+  porcelain: { base: [0.86, 0.84, 0.8, 1], metallic: 0.08, roughness: 0.18 },
+  wax: { base: [0.9, 0.8, 0.55, 1], metallic: 0, roughness: 0.62, emissive: [0.3, 0.22, 0.08] },
+  rust: { base: [0.42, 0.24, 0.16, 1], metallic: 0.7, roughness: 0.55 },
+  seawater: { base: [0.13, 0.26, 0.3, 1], metallic: 0.15, roughness: 0.42 },
+  iron: { base: [0.24, 0.26, 0.28, 1], metallic: 0.9, roughness: 0.5 },
 };
 
 // ── mesh builder ──────────────────────────────────────────────────────────
@@ -531,6 +540,220 @@ function titanParts(m) {
   m.sphere([0, 2.6, 0.55], 0.35, 'trunk', 'glow', [1, 1.2, 0.5]);
 }
 
+// ── ghost kit (Update XXV) ────────────────────────────────────────────────
+// Eight Scary Mode ghosts, each authored as a real skinned body on the shared
+// humanoid rig. They are deliberately not recolours of one another: the
+// silhouette, hood shape, limb length and the accessory set differ per ghost.
+function ghostFigure(m, opts = {}) {
+  const d = m.detail;
+  const robe = opts.robe || 'shroud';
+  const trim = opts.trim || 'shroudPale';
+  const glow = opts.glow || 'ectoplasm';
+  const tall = opts.tall || 1;
+
+  // Ragged hem split across both leg joints, so Walk still deforms it.
+  for (const side of [-1, 1]) {
+    const label = side < 0 ? 'L' : 'R';
+    m.taper(
+      [side * 0.12, 0.01, 0], [0.19, 0, 0.17],
+      [side * 0.11, 0.9 * tall, 0], [0.15, 0, 0.14],
+      `thigh${label}`, robe,
+    );
+    m.taper(
+      [side * 0.2, 0.01, 0.02], [0.05, 0, 0.03],
+      [side * 0.17, 0.62 * tall, 0.01], [0.03, 0, 0.02],
+      `shin${label}`, trim,
+    );
+    if (d < 2) {
+      for (let i = 0; i < 3; i += 1) {
+        const x = side * (0.17 + i * 0.05);
+        m.taper(
+          [x, 0.02, -0.1 - i * 0.03], [0.02, 0, 0.015],
+          [x * 1.15, 0.36 + i * 0.09, -0.15], [0.008, 0, 0.008],
+          `thigh${label}`, trim,
+        );
+      }
+    }
+  }
+
+  // Torso and exposed ribs.
+  m.box([0, 1.18 * tall, 0], [0.3, 0.34, 0.2], 'chest', robe);
+  if (d < 2) {
+    for (let i = 0; i < 4; i += 1) {
+      m.box([0, (1.03 + i * 0.085) * tall, 0.102], [0.22 - i * 0.02, 0.018, 0.02], 'chest', 'bone');
+    }
+  }
+
+  // Neck, hood and face void.
+  m.cylinder([0, 1.42 * tall, 0], [0, 1.56 * tall, 0], 0.055, 0.05, 'neck', trim);
+  m.sphere([0, 1.68 * tall, 0], 0.155, 'head', robe, [1.02, 1.1, 1.04]);
+  m.sphere([0, 1.655 * tall, 0.085], 0.095, 'head', 'dark', [1, 1.05, 0.55]);
+  for (const side of [-1, 1]) {
+    m.sphere([side * 0.05, 1.685 * tall, 0.11], 0.022, 'head', glow);
+  }
+  if (opts.hood) {
+    m.sphere([0, 1.76 * tall, -0.02], 0.19, 'head', robe, [1.05, 1.18, 1.1]);
+    m.taper([0, 1.88 * tall, -0.03], [0.12, 0, 0.1], [0, 2.02 * tall, -0.09], [0.03, 0, 0.02], 'head', trim);
+  }
+
+  // Arms with long fingers.
+  for (const side of [-1, 1]) {
+    const label = side < 0 ? 'L' : 'R';
+    const reach = opts.arms || 1;
+    m.cylinder([side * 0.19, 1.36 * tall, 0], [side * 0.23, 1.13 * tall, 0.02], 0.05, 0.04, `arm${label}`, robe);
+    m.cylinder([side * 0.23, 1.12 * tall, 0.02], [side * (0.26 + 0.05 * reach), 0.87 * tall, 0.05], 0.04, 0.028, `forearm${label}`, trim);
+    m.box([side * (0.27 + 0.05 * reach), 0.84 * tall, 0.05], [0.07, 0.09, 0.06], `hand${label}`, trim);
+    if (d < 2) {
+      for (let i = 0; i < 3; i += 1) {
+        m.cylinder(
+          [side * (0.27 + 0.05 * reach), 0.82 * tall, 0.05 + i * 0.02],
+          [side * (0.3 + 0.05 * reach), 0.72 * tall, 0.06 + i * 0.03],
+          0.012, 0.004, `hand${label}`, 'bone',
+        );
+      }
+    }
+  }
+
+  // Tattered cape strips.
+  for (let i = 0; i < (d < 2 ? 5 : 2); i += 1) {
+    const x = (i - 2) * 0.075;
+    m.taper(
+      [x, 1.36 * tall, -0.13], [0.05, 0, 0.01],
+      [x * 1.4, 0.6 * tall - i * 0.03, -0.22], [0.035, 0, 0.012],
+      'cape', i % 2 ? trim : robe,
+    );
+  }
+
+  // Chest glow marks something that is still burning in there.
+  if (opts.core !== false) m.sphere([0, 1.2 * tall, 0.11], 0.055, 'chest', glow, [1, 1.5, 0.6]);
+}
+
+function hollowWraithParts(m) {
+  ghostFigure(m, { hood: true });
+  const d = m.detail;
+  if (d < 2) {
+    // Frayed trailing shroud behind the body.
+    for (let i = 0; i < 6; i += 1) {
+      const a = (i / 6) * Math.PI * 2;
+      m.cylinder(
+        [Math.cos(a) * 0.2, 0.95, Math.sin(a) * 0.16],
+        [Math.cos(a) * 0.42, 0.3 + i * 0.05, Math.sin(a) * 0.3],
+        0.03, 0.006, 'cape', 'shroudPale', 5,
+      );
+    }
+  }
+}
+
+function nightStalkerParts(m) {
+  ghostFigure(m, { robe: 'hideDark', trim: 'iron', glow: 'ember', tall: 1.1, arms: 1.5 });
+  for (const side of [-1, 1]) {
+    m.cylinder([side * 0.08, 1.86, 0.02], [side * 0.22, 2.08, -0.04], 0.02, 0.006, 'head', 'bone');
+    m.cylinder([side * 0.08, 1.86, 0.02], [side * 0.1, 2.12, 0.12], 0.014, 0.004, 'head', 'bone');
+  }
+}
+
+function silentKnightParts(m) {
+  ghostFigure(m, { robe: 'iron', trim: 'steelDark', glow: 'ectoplasm', hood: false });
+  // Helm, gorget and a greatsword held point-down.
+  m.sphere([0, 1.7, 0], 0.17, 'head', 'steel', [1, 1.05, 1.05]);
+  m.box([0, 1.62, 0.13], [0.2, 0.05, 0.04], 'head', 'dark');
+  m.box([0, 1.5, 0], [0.26, 0.1, 0.22], 'neck', 'steelDark');
+  m.cylinder([0.28, 1.0, 0.06], [0.28, 0.55, 0.06], 0.02, 0.02, 'handR', 'leather');
+  m.box([0.28, 1.02, 0.06], [0.15, 0.03, 0.05], 'handR', 'gold');
+  m.taper([0.28, 1.03, 0.06], [0.045, 0, 0.01], [0.28, 0.16, 0.06], [0.008, 0, 0.004], 'handR', 'steelLight');
+  m.cylinder([-0.26, 1.1, 0.04], [-0.26, 1.1, 0.1], 0.2, 0.18, 'handL', 'steelDark', 8);
+}
+
+function forgottenOneParts(m) {
+  ghostFigure(m, { robe: 'barkDark', trim: 'bone', glow: 'ember', tall: 1.16, arms: 1.1, core: false });
+  const d = m.detail;
+  for (const side of [-1, 1]) {
+    m.sphere([side * 0.2, 1.42, 0], 0.13, `shoulder${side < 0 ? 'L' : 'R'}`, 'bone', [1.2, 1, 1.1]);
+  }
+  if (d < 2) {
+    // Cracked bone plate over the chest.
+    m.box([0, 1.24, 0.11], [0.24, 0.24, 0.04], 'chest', 'bone');
+    m.box([0.02, 1.24, 0.135], [0.03, 0.22, 0.02], 'chest', 'dark', [0, 0, 0.3]);
+  }
+  // Two embers where the face used to be.
+  m.sphere([0, 1.66, 0.13], 0.06, 'head', 'ember', [1, 0.7, 0.6]);
+}
+
+function weepingMotherParts(m) {
+  ghostFigure(m, { robe: 'shroudPale', trim: 'porcelain', glow: 'ectoplasm', tall: 1.02, hood: true });
+  const d = m.detail;
+  // Long hair strands and a swaddled bundle at the chest.
+  for (let i = 0; i < (d < 2 ? 7 : 3); i += 1) {
+    const x = (i - 3) * 0.045;
+    m.cylinder([x, 1.78, -0.08], [x * 1.5, 1.2 - i * 0.02, -0.14], 0.018, 0.006, 'head', 'shroud', 5, false);
+  }
+  m.sphere([0, 1.16, 0.16], 0.13, 'chest', 'bone', [1.15, 0.9, 0.8]);
+  m.taper([0, 1.26, 0.16], [0.1, 0, 0.02], [0, 1.05, 0.2], [0.12, 0, 0.03], 'chest', 'shroudPale');
+  // Tear streaks.
+  for (const side of [-1, 1]) {
+    m.cylinder([side * 0.05, 1.66, 0.14], [side * 0.05, 1.5, 0.14], 0.012, 0.004, 'head', 'ectoplasm', 4, false);
+  }
+}
+
+function mirrorDoubleParts(m) {
+  ghostFigure(m, { robe: 'porcelain', trim: 'steelLight', glow: 'crystal', hood: false, core: false });
+  const d = m.detail;
+  // A second, offset face that does not line up with the first.
+  m.sphere([0.035, 1.7, 0.1], 0.1, 'head', 'dark', [1, 1.08, 0.5]);
+  for (const side of [-1, 1]) m.sphere([side * 0.05, 1.72, 0.14], 0.017, 'head', 'crystal');
+  if (d < 2) {
+    // Mirror shards orbiting the shoulders.
+    for (let i = 0; i < 6; i += 1) {
+      const a = (i / 6) * Math.PI * 2;
+      m.box(
+        [Math.cos(a) * 0.36, 1.34 + Math.sin(a) * 0.22, -0.04],
+        [0.1, 0.14, 0.01], 'chest', 'crystal', [0, a, 0.2],
+      );
+    }
+  }
+}
+
+function lanternEaterParts(m) {
+  ghostFigure(m, { robe: 'shroud', trim: 'rust', glow: 'wax', hood: true, core: false });
+  const d = m.detail;
+  // An iron lantern cage fused into the chest.
+  m.cylinder([0, 1.12, 0.12], [0, 1.3, 0.12], 0.11, 0.09, 'chest', 'iron', 8);
+  m.sphere([0, 1.2, 0.13], 0.06, 'chest', 'wax');
+  for (let i = 0; i < 4; i += 1) {
+    const a = (i / 4) * Math.PI * 2;
+    m.cylinder(
+      [Math.cos(a) * 0.1, 1.1, 0.12 + Math.sin(a) * 0.1],
+      [Math.cos(a) * 0.1, 1.32, 0.12 + Math.sin(a) * 0.1],
+      0.008, 0.008, 'chest', 'iron', 4, false,
+    );
+  }
+  if (d < 2) {
+    // Swallowed wicks stuck along the jaw.
+    for (let i = 0; i < 5; i += 1) {
+      m.cylinder([(i - 2) * 0.035, 1.58, 0.12], [(i - 2) * 0.04, 1.52, 0.15], 0.008, 0.003, 'head', 'wax', 4, false);
+    }
+  }
+}
+
+function drownedBellParts(m) {
+  ghostFigure(m, { robe: 'seawater', trim: 'shroudPale', glow: 'crystal', tall: 1.04, hood: true, core: false });
+  const d = m.detail;
+  // A drowned bell hanging from the neck.
+  m.cylinder([0, 1.5, 0.14], [0, 1.5, 0.14], 0.02, 0.02, 'neck', 'iron', 6);
+  m.cylinder([0, 1.48, 0.14], [0, 1.26, 0.14], 0.13, 0.02, 'chest', 'iron', 10);
+  m.sphere([0, 1.26, 0.14], 0.035, 'chest', 'crystal');
+  if (d < 2) {
+    // Water still draining out of the robe.
+    for (let i = 0; i < 5; i += 1) {
+      const x = (i - 2) * 0.07;
+      m.cylinder([x, 0.52, 0.02], [x, 0.3 - i * 0.02, 0.03], 0.012, 0.004, 'thighL', 'crystal', 4, false);
+    }
+    for (let i = 0; i < 3; i += 1) {
+      m.cylinder([(i - 1) * 0.09, 1.72, 0.1], [(i - 1) * 0.1, 1.6, 0.11], 0.01, 0.003, 'head', 'seawater', 4, false);
+    }
+  }
+}
+
 // ── animation clips ───────────────────────────────────────────────────────
 function clipsFor(skeleton, groups) {
   const ids = new Map(skeleton.map((joint, index) => [joint.name, index]));
@@ -941,6 +1164,88 @@ const PROPS = [
     m.box([0, 1.4, 2.5], [1.4, 2.8, 0.18], 'root', 'wood');
     for (const y of [3, 5.2, 7.4]) m.box([0, y, 2.65], [0.7, 0.8, 0.12], 'root', 'ember');
   }, ['stone', 'dark', 'wood', 'crystal', 'ember']),
+  // Update XXV — architecture and landmarks for the other modes. These are
+  // static meshes with the same PBR/shadow contract as every prop above.
+  propMesh('cistern_arch', (m) => {
+    m.box([-1.9, 2.1, 0], [1.1, 4.2, 1.1], 'root', 'stone');
+    m.box([1.9, 2.1, 0], [1.1, 4.2, 1.1], 'root', 'stone');
+    m.cylinder([-1.9, 4.2, 0], [1.9, 4.2, 0], 1.0, 1.0, 'root', 'stone', 8);
+    m.box([0, 4.6, 0], [4.9, 0.5, 1.3], 'root', 'stone');
+    for (const x of [-1.9, 1.9]) m.box([x, 0.3, 0], [1.4, 0.6, 1.5], 'root', 'stone');
+    m.box([-1.9, 2.5, 0.58], [0.35, 0.9, 0.05], 'root', 'crystal');
+  }, ['stone', 'crystal']),
+  propMesh('cistern_pillar', (m) => {
+    m.cylinder([0, 0, 0], [0, 5.2, 0], 0.62, 0.46, 'root', 'stone', 10);
+    m.box([0, 0.2, 0], [1.7, 0.5, 1.7], 'root', 'stone');
+    m.box([0, 5.3, 0], [1.5, 0.5, 1.5], 'root', 'stone');
+    m.cylinder([0, 5.6, 0], [0, 6.2, 0], 0.34, 0.05, 'root', 'stone', 6);
+    m.sphere([0, 4.4, 0.44], 0.16, 'root', 'crystal', [1, 1.6, 0.5]);
+  }, ['stone', 'crystal']),
+  propMesh('lantern_pyre', (m) => {
+    m.cylinder([0, 0, 0], [0, 3.0, 0], 0.34, 0.2, 'root', 'wood', 8);
+    m.box([0, 0.3, 0], [1.2, 0.6, 1.2], 'root', 'stone');
+    m.box([0, 3.2, 0], [0.9, 0.9, 0.9], 'root', 'iron');
+    for (const [x, z] of [[-0.45, 0], [0.45, 0], [0, -0.45], [0, 0.45]]) {
+      m.cylinder([x, 3.0, z], [x, 3.4, z], 0.05, 0.05, 'root', 'iron', 4, false);
+    }
+    m.sphere([0, 3.2, 0], 0.26, 'root', 'wax', [1, 1.35, 1]);
+    m.box([0, 3.75, 0], [1.0, 0.12, 1.0], 'root', 'iron');
+  }, ['wood', 'stone', 'iron', 'wax']),
+  propMesh('lantern_brazier', (m) => {
+    m.cylinder([0, 0, 0], [0, 1.1, 0], 0.42, 0.3, 'root', 'iron', 8);
+    m.cylinder([0, 1.1, 0], [0, 1.35, 0], 0.55, 0.62, 'root', 'iron', 10);
+    m.sphere([0, 1.42, 0], 0.38, 'root', 'wax', [1, 0.75, 1]);
+    for (let i = 0; i < 3; i += 1) {
+      const a = (i / 3) * Math.PI * 2;
+      m.cylinder([Math.cos(a) * 0.45, 1.2, Math.sin(a) * 0.45], [Math.cos(a) * 0.72, 0.1, Math.sin(a) * 0.72], 0.07, 0.05, 'root', 'iron', 5);
+    }
+  }, ['iron', 'wax']),
+  propMesh('pirate_wreck', (m) => {
+    m.box([0, 1.0, 0], [7.4, 1.5, 3.0], 'root', 'wood', [0.12, 0, 0]);
+    m.box([0, 1.9, 0], [6.2, 0.3, 2.4], 'root', 'wood');
+    m.cylinder([0, 2.0, 0], [0, 7.0, 0], 0.16, 0.12, 'root', 'wood', 6);
+    m.taper([0, 5.2, 0], [1.6, 0, 0.02], [0, 6.6, 0], [1.9, 0, 0.02], 'root', 'shroudPale');
+    m.taper([0, 2.6, 0], [1.2, 0, 0.02], [0, 4.2, 0], [1.5, 0, 0.02], 'root', 'shroud');
+    for (const x of [-2.4, 2.4]) m.cylinder([x, 0.2, 1.1], [x, 2.2, 1.1], 0.1, 0.08, 'root', 'wood', 5);
+    m.sphere([0, 0.2, 2.2], 0.5, 'root', 'seawater', [1.6, 0.25, 1]);
+  }, ['wood', 'shroud', 'shroudPale', 'seawater']),
+  propMesh('pirate_dock', (m) => {
+    for (let i = 0; i < 10; i += 1) m.box([0, 0.1, i * 0.8 - 3.6], [3.2, 0.16, 0.6], 'root', 'wood');
+    for (const z of [-3.6, 0, 3.6]) {
+      for (const x of [-1.5, 1.5]) m.cylinder([x, 0.1, z], [x, -2.6, z], 0.16, 0.14, 'root', 'wood', 6);
+    }
+    m.cylinder([1.5, 0.1, 3.4], [1.5, 2.4, 3.4], 0.12, 0.1, 'root', 'rust', 6);
+    m.sphere([1.5, 2.5, 3.4], 0.2, 'root', 'ember');
+  }, ['wood', 'rust', 'ember']),
+  propMesh('veil_shrine', (m) => {
+    m.cylinder([0, 0, 0], [0, 0.5, 0], 1.0, 0.85, 'root', 'stone', 10);
+    m.cylinder([0, 0.5, 0], [0, 3.1, 0], 0.55, 0.4, 'root', 'stone', 8);
+    m.box([0, 3.4, 0], [1.5, 0.45, 1.5], 'root', 'stone');
+    m.sphere([0, 3.7, 0], 0.24, 'root', 'ectoplasm', [1, 1.3, 1]);
+    for (let i = 0; i < 4; i += 1) {
+      const a = (i / 4) * Math.PI * 2;
+      m.cylinder([Math.cos(a) * 1.1, 0.2, Math.sin(a) * 1.1], [Math.cos(a) * 1.1, 1.4, Math.sin(a) * 1.1], 0.05, 0.02, 'root', 'bone', 5);
+    }
+  }, ['stone', 'ectoplasm', 'bone']),
+  propMesh('dread_altar', (m) => {
+    m.box([0, 0.6, 0], [3.4, 1.2, 2.2], 'root', 'stone');
+    m.box([0, 1.25, 0], [3.8, 0.2, 2.6], 'root', 'stone');
+    m.box([0, 1.5, 0], [0.9, 0.4, 0.9], 'root', 'dark');
+    m.sphere([0, 1.72, 0], 0.16, 'root', 'ember');
+    for (const x of [-1.5, 1.5]) m.cylinder([x, 1.2, 0], [x, 3.0, 0], 0.09, 0.05, 'root', 'bone', 5);
+    for (const x of [-1.5, 1.5]) m.sphere([x, 3.05, 0], 0.12, 'root', 'ember', [1, 1.4, 1]);
+  }, ['stone', 'dark', 'ember', 'bone']),
+  propMesh('wd_bastion', (m) => {
+    m.cylinder([0, 0, 0], [0, 3.6, 0], 2.0, 1.75, 'root', 'stone', 10);
+    m.cylinder([0, 3.6, 0], [0, 4.3, 0], 2.2, 2.1, 'root', 'stone', 10);
+    for (let i = 0; i < 6; i += 1) {
+      const a = (i / 6) * Math.PI * 2;
+      m.box([Math.cos(a) * 1.9, 4.6, Math.sin(a) * 1.9], [0.6, 0.7, 0.6], 'root', 'stone');
+    }
+    m.box([0, 2.0, 1.95], [0.9, 1.6, 0.14], 'root', 'wood');
+    m.box([0, 5.4, 0], [0.16, 2.0, 0.16], 'root', 'wood');
+    m.taper([0.1, 5.2, 0], [0.7, 0, 0.02], [0.1, 4.2, 0], [0.7, 0, 0.02], 'root', 'cloth');
+  }, ['stone', 'wood', 'cloth']),
 ];
 
 function buildPropsFile() {
@@ -1022,6 +1327,28 @@ const CHARACTERS = [
     parts: titanParts,
     extras: { role: 'boss', class: 'Yggvar', archetype: 'titan', height: 6.4 },
   },
+  // Update XXV — the eight Scary Mode ghosts get their own authored models
+  // instead of borrowing the stalker rig. Keys match mode3d_horror entities.
+  ...[
+    ['hollow_wraith', 'Hollow Wraith', hollowWraithParts],
+    // (display names stay human-readable; node names are derived from the key)
+    ['night_stalker', 'Night Stalker', nightStalkerParts],
+    ['silent_knight', 'Silent Knight', silentKnightParts],
+    ['forgotten_one', 'Forgotten One', forgottenOneParts],
+    ['weeping_mother', 'Weeping Mother', weepingMotherParts],
+    ['mirror_double', 'Mirror Double', mirrorDoubleParts],
+    ['lantern_eater', 'Lantern Eater', lanternEaterParts],
+    ['drowned_bell', 'Drowned Bell', drownedBellParts],
+  ].map(([key, display, parts]) => ({
+    file: `ghost_${key}.glb`,
+    // Node names must stay single-token so the `Name_COL` collision convention
+    // holds for every character in the kit.
+    name: key.split('_').map((part) => part[0].toUpperCase() + part.slice(1)).join(''),
+    skeleton: HUMANOID, animGroups: HUMAN_ANIM,
+    materialNames: [...new Set([...HUMANOID_MATERIALS, 'shroud', 'shroudPale', 'ectoplasm', 'porcelain', 'wax', 'rust', 'seawater', 'iron', 'crystal'])],
+    parts: (m) => parts(m),
+    extras: { role: 'ghost', class: display, archetype: 'spectral', ghost: key },
+  })),
 ];
 
 mkdirSync(OUT_DIR, { recursive: true });

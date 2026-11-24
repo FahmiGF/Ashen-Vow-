@@ -65,6 +65,11 @@ import {
   CISTERN_BOSS_INFO,
 } from './cistern.js';
 import {
+  LANTERN_ROOMS,
+  LANTERN_ENEMY_INFO,
+  LANTERN_BOSS_INFO,
+} from './lanternwake.js';
+import {
   FALLEN_ROOMS,
   FALLEN_ENEMY_INFO,
   FALLEN_BOSS_INFO,
@@ -1150,8 +1155,8 @@ SHOP_ITEMS.push(...ECLIPSE_SHOP_ITEMS);
 
 // Legacy rooms stay exactly as they were so old saves, map layout and tests keep
 // their meaning. The campaign is a second set of rooms appended at indices 14+.
-export const ALL_ROOMS = [...ROOMS, ...EXPANSION_ROOMS, ...ATLAS_ROOMS, ...COURT_ROOMS, ...FAIRY_ROOMS, ...FALLEN_ROOMS, ...CRUSADE_ROOMS, ...ASTRAL_ROOMS, ...ECLIPSE_ROOMS, ...GODFALL_ROOMS, ...CISTERN_ROOMS];
-export const ALL_ENEMY_INFO = { ...ENEMY_INFO, ...EXPANSION_ENEMY_INFO, ...ATLAS_ENEMY_INFO, ...COURT_ENEMY_INFO, ...FAIRY_ENEMY_INFO, ...FALLEN_ENEMY_INFO, ...CRUSADE_ENEMY_INFO, ...ASTRAL_ENEMY_INFO, ...ECLIPSE_ENEMY_INFO, ...CISTERN_ENEMY_INFO };
+export const ALL_ROOMS = [...ROOMS, ...EXPANSION_ROOMS, ...ATLAS_ROOMS, ...COURT_ROOMS, ...FAIRY_ROOMS, ...FALLEN_ROOMS, ...CRUSADE_ROOMS, ...ASTRAL_ROOMS, ...ECLIPSE_ROOMS, ...GODFALL_ROOMS, ...CISTERN_ROOMS, ...LANTERN_ROOMS];
+export const ALL_ENEMY_INFO = { ...ENEMY_INFO, ...EXPANSION_ENEMY_INFO, ...ATLAS_ENEMY_INFO, ...COURT_ENEMY_INFO, ...FAIRY_ENEMY_INFO, ...FALLEN_ENEMY_INFO, ...CRUSADE_ENEMY_INFO, ...ASTRAL_ENEMY_INFO, ...ECLIPSE_ENEMY_INFO, ...CISTERN_ENEMY_INFO, ...LANTERN_ENEMY_INFO };
 
 const BOSS_INFO = {
   warden: {
@@ -1323,7 +1328,7 @@ const BOSS_INFO = {
   },
 };
 
-export const ALL_BOSS_INFO = { ...BOSS_INFO, ...EXPANSION_BOSS_INFO, ...ATLAS_BOSS_INFO, ...COURT_BOSS_INFO, ...PACK_BOSS_INFO, ...FAIRY_BOSS_INFO, ...FALLEN_BOSS_INFO, ...CRUSADE_BOSS_INFO, ...ASTRAL_BOSS_INFO, ...ECLIPSE_BOSS_INFO, ...GODFALL_BOSS_INFO, ...CISTERN_BOSS_INFO };
+export const ALL_BOSS_INFO = { ...BOSS_INFO, ...EXPANSION_BOSS_INFO, ...ATLAS_BOSS_INFO, ...COURT_BOSS_INFO, ...PACK_BOSS_INFO, ...FAIRY_BOSS_INFO, ...FALLEN_BOSS_INFO, ...CRUSADE_BOSS_INFO, ...ASTRAL_BOSS_INFO, ...ECLIPSE_BOSS_INFO, ...GODFALL_BOSS_INFO, ...CISTERN_BOSS_INFO, ...LANTERN_BOSS_INFO };
 export const EXPANSION_BOSS_IDS = Object.keys(EXPANSION_BOSS_INFO);
 
 export const CODEX = {
@@ -5718,7 +5723,7 @@ export class AshenGame {
     else if (b.kind === 'oathbreaker') this.updateOathbreaker(b, dt);
     else if (b.kind === 'sporebound') this.updateSporebound(b, dt);
     else if (b.kind === 'root') this.updateRoot(b, dt);
-    else if (b.kind === 'tidebound') this.updateTidebound(b, dt);
+    else if (b.kind === 'tidebound' || b.kind === 'wickbearer') this.updateTidebound(b, dt);
     else if (b.patternType) this.updateEchoBoss(b, dt);
   }
 
@@ -5749,7 +5754,7 @@ export class AshenGame {
     } else if (b.kind === 'root') {
       this.spawnShockwaves(b);
       this.spawnSporeRing(b, 6, 200);
-    } else if (b.kind === 'tidebound') {
+    } else if (b.kind === 'tidebound' || b.kind === 'wickbearer') {
       this.spawnShockwaves(b);
       this.spawnTideFan(b, 4 + b.phase, 210 + b.phase * 30);
       if (b.phase >= 2) this.spawnTideAdds(b, 1);
@@ -6604,18 +6609,19 @@ export class AshenGame {
     for (let i = 0; i < count; i += 1) {
       const dir = i % 2 === 0 ? -1 : 1;
       const x = clamp(b.x + b.w / 2 + dir * (110 + i * 46), 60, WORLD_W - 100);
+      const summon = b.summonType || 'drowned_thrall';
       const child = this.spawnEnemy({
-        type: 'drowned_thrall',
+        type: summon,
         x,
         minX: Math.max(40, x - 150),
         maxX: Math.min(WORLD_W - 60, x + 150),
       });
       if (!child) continue;
       child.y = FLOOR_Y - child.h;
-      this.burst(child.x + child.w / 2, FLOOR_Y - 8, 10, '#5fd3c2', 150);
+      this.burst(child.x + child.w / 2, FLOOR_Y - 8, 10, b.color || '#5fd3c2', 150);
       spawned += 1;
     }
-    if (spawned) this.emit({ type: 'bossSummon', kind: 'drowned_thrall', count: spawned });
+    if (spawned) this.emit({ type: 'bossSummon', kind: b.summonType || 'drowned_thrall', count: spawned });
   }
 
   updateEchoBoss(b, dt) {

@@ -112,7 +112,7 @@ async function main() {
       hasBattle: !!document.getElementById('pirate-battle'),
     }))()`);
     check(bootState.hasPirate && bootState.hasScreen && bootState.hasBattle, 'Pirate Tide screens exist');
-    check(/0\.35\./.test(`${bootState.version} ${bootState.title}`), `boots v0.35.0 (${bootState.title})`);
+    check(/0\.35\./.test(`${bootState.version} ${bootState.title}`), `boots v0.36.0 (${bootState.title})`);
 
     const hub = await evaluate(`(() => {
       const A = window.__ashen;

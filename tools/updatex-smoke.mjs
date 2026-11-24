@@ -108,7 +108,7 @@ try {
     scary: window.__ashen.scary,
     menu: window.__ashen.menuView,
   }))()`);
-  check(String(boot.version).includes('0.35.0'), `boots v0.35.0 (${String(boot.version).slice(0, 48)})`);
+  check(String(boot.version).includes('0.36.0'), `boots v0.36.0 (${String(boot.version).slice(0, 48)})`);
   check(boot.scary && boot.scary.enabled === false, 'Scary Mode is disabled by default');
 
   // ── AI navigation in the live engine ──

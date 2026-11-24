@@ -627,6 +627,7 @@ export const BOSS_TRACKS = {
   fairy_magma_slime: 'magmaBoss',
   fairy_spectral_dragon: 'fairyBoss',
   tidebound: 'cisternBoss',
+  wickbearer: 'bossDawn',
 };
 
 export function bossTrackFor(kind, fallback = 'boss') {

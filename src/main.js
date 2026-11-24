@@ -80,6 +80,24 @@ import {
   cutsceneBeatAt,
 } from './cutscene.js';
 import {
+  VOICE_SAVE_KEY,
+  VOICE_MODEL,
+  castFor,
+  sanitizeVoiceSave,
+  voiceRequestFor,
+  resolveVoiceProvider,
+  voiceSummary,
+  voiceBadge,
+} from './voice.js';
+import {
+  TRAILER_IDENTITY,
+  TRAILER_SHOTS,
+  trailerDuration,
+  trailerShotAt,
+  trailerSummary,
+  drawTrailerFrame,
+} from './trailer.js';
+import {
   SECRETS_SAVE_KEY,
   SECRET_MODE_KEYS,
   SECRET_LEVEL_RUNES,
@@ -257,6 +275,13 @@ import {
   resolveHorrorPresentation,
   sanitizeHorrorSettings,
 } from './scary2.js';
+import {
+  applyHorrorTree,
+  horrorRankUp,
+  horrorResetSkills,
+  horrorTreeBonuses,
+  horrorTreeSnapshot,
+} from './horror_tree.js';
 import {
   HUNTER_ITEMS,
   HUNTER_SAVE_KEY,
@@ -535,6 +560,24 @@ import {
   recordCisternRun,
   cisternSummary,
 } from './cistern.js';
+import {
+  LANTERN_NAME,
+  LANTERN_LOCAL_NAME,
+  LANTERN_ROOMS,
+  LANTERN_ROOM_BY_ID,
+  LANTERN_STAGE_META,
+  LANTERN_STAGE_COUNT,
+  defaultLanternProgress,
+  sanitizeLanternProgress,
+  lanternwakeUnlocked,
+  lanternStageUnlocked,
+  lanternStageCleared,
+  lanternStageForRoom,
+  lanternSummary,
+  recordLanternStage,
+  recordLanternBoss,
+  recordLanternRun,
+} from './lanternwake.js';
 import {
   FALLEN_NAME,
   FALLEN_LOCAL_NAME,
@@ -1186,6 +1229,7 @@ function defaultProgress() {
     pack: defaultPackProgress(),
     fairy: defaultFairyProgress(),
     cistern: defaultCisternProgress(),
+    lanternwake: defaultLanternProgress(),
     speedrun: defaultSpeedrunProgress(),
     fishing: defaultFishingProgress(),
     fallen: defaultFallenProgress(),
@@ -1209,7 +1253,7 @@ function sanitizeStageTimes(raw) {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
   const result = {};
   for (const [key, value] of Object.entries(raw)) {
-    if (!/^(legacy|court|expansion|atlas|cistern):\d+$/.test(key) || !value || typeof value !== 'object') continue;
+    if (!/^(legacy|court|expansion|atlas|cistern|lanternwake):\d+$/.test(key) || !value || typeof value !== 'object') continue;
     result[key] = {
       label: typeof value.label === 'string' ? value.label.slice(0, 80) : key,
       best: Math.max(0, Math.round((Number(value.best) || 0) * 10) / 10),
@@ -1259,7 +1303,7 @@ function loadProgress() {
         };
     // Keep every unknown top-level field. v0.3.0 adds `expansion` without
     // changing the storage key or discarding future/legacy save data.
-    const { version, schemaVersion: _schemaVersion, unlocked: _unlocked, cleared: _cleared, map: _map, expansion: _expansion, atlas: _atlas, labyrinth: _labyrinth, court: _court, skills: _skills, pack: _pack, fairy: _fairy, speedrun: _speedrun, fishing: _fishing, fallen: _fallen, crusade: _crusade, trials: _trials, puzzle: _puzzle, moba: _moba, wavedefense: _wavedefense, pirates: _pirates, astral: _astral, realms: _realms, eclipse: _eclipse, godfall: _godfall, guild: _guild, awakening: _awakening, cistern: _cistern, stageTimes: _stageTimes, ...extras } = parsed;
+    const { version, schemaVersion: _schemaVersion, unlocked: _unlocked, cleared: _cleared, map: _map, expansion: _expansion, atlas: _atlas, labyrinth: _labyrinth, court: _court, skills: _skills, pack: _pack, fairy: _fairy, speedrun: _speedrun, fishing: _fishing, fallen: _fallen, crusade: _crusade, trials: _trials, puzzle: _puzzle, moba: _moba, wavedefense: _wavedefense, pirates: _pirates, astral: _astral, realms: _realms, eclipse: _eclipse, godfall: _godfall, guild: _guild, awakening: _awakening, cistern: _cistern, lanternwake: _lanternwake, stageTimes: _stageTimes, ...extras } = parsed;
     return {
       ...extras,
       version: 1,
@@ -1275,6 +1319,7 @@ function loadProgress() {
       pack: sanitizePackProgress(parsed.pack),
       fairy: sanitizeFairyProgress(parsed.fairy),
       cistern: sanitizeCisternProgress(parsed.cistern),
+      lanternwake: sanitizeLanternProgress(parsed.lanternwake),
       speedrun: sanitizeSpeedrunProgress(parsed.speedrun),
       fishing: sanitizeFishingProgress(parsed.fishing),
       fallen: sanitizeFallenProgress(parsed.fallen),
@@ -1684,6 +1729,63 @@ function buyHunterItem(id) {
   return result;
 }
 
+// ── Update XXV: The Vigil Tree (Scary Mode skill tree) ───────────────────
+function horrorTreeState() {
+  return horrorTreeSnapshot(horrorJournal.skills, horrorJournal.snapshot());
+}
+
+function scaryTreePanel() {
+  const state = horrorTreeState();
+  const branches = state.branches.map((branch) => {
+    const owned = branch.nodes.reduce((sum, node) => sum + node.rank, 0);
+    const total = branch.nodes.reduce((sum, node) => sum + node.maxRank, 0);
+    const nodes = branch.nodes.map((node) => {
+      const pips = Array.from({ length: node.maxRank }, (_, index) => (index < node.rank ? '●' : '○')).join('');
+      const label = node.rank >= node.maxRank ? 'MAKSIMUM' : `NAIK · ${node.cost} POIN`;
+      return `
+        <div class="tree-node${node.rank >= node.maxRank ? ' maxed' : ''}${node.canRank ? '' : ' locked'}">
+          <div class="tree-node-top"><span aria-hidden="true">${node.icon}</span><b>${esc(node.label)}</b><span class="rank" aria-label="${node.rank} dari ${node.maxRank} rank">${pips}</span></div>
+          <small>${esc(node.description)}${node.next ? `<br><em>Berikutnya: ${esc(node.next)}</em>` : ''}</small>
+          <button class="btn btn-ghost btn-small" type="button" data-horror-rank="${node.id}" ${node.canRank ? '' : 'disabled'}>${label}</button>
+        </div>`;
+    }).join('');
+    return `<section class="tree-branch"><header><b>${branch.icon} ${esc(branch.label)}</b><span>${owned}/${total}</span></header><p>${esc(branch.desc)}</p>${nodes}</section>`;
+  }).join('');
+  return `
+    <div class="tree-head">
+      <h3>POHON KEWASPADAAN</h3>
+      <div class="tree-points"><span>POIN <b>${state.available}</b></span><span>DIPAKAI <b>${state.spent}</b></span><span>RANK <b>${state.ranksOwned}/${state.maxRanks}</b></span></div>
+      <button class="btn btn-ghost btn-small" type="button" data-horror-tree-reset ${state.spent ? '' : 'disabled'}>RESET GRATIS</button>
+    </div>
+    <div class="tree-branches">${branches}</div>
+    <p class="micro">Poin terkumpul dari jurnal horor: ${state.earned}. Efek diterapkan sekali saat run Scary Mode dimulai; kampanye dan kesulitan horor tidak berubah.</p>`;
+}
+
+function rankHorrorTree(id) {
+  const state = horrorTreeState();
+  const result = horrorRankUp(horrorJournal.skills, id, state.available);
+  if (!result.ok) {
+    const reason = result.reason === 'points' ? 'Poin tidak cukup.'
+      : result.reason === 'maxed' ? 'Rank sudah maksimum.'
+        : 'Butuh prasyarat di tier sebelumnya.';
+    showToast(reason, 1600);
+    return result;
+  }
+  horrorJournal.skills = result.ranks;
+  saveHorrorState();
+  if (menuView === 'scary') buildScaryScreen();
+  showToast(`Rank naik · ${horrorTreeState().available} poin tersisa`, 1400);
+  return result;
+}
+
+function resetHorrorTree() {
+  horrorJournal.skills = horrorResetSkills();
+  saveHorrorState();
+  if (menuView === 'scary') buildScaryScreen();
+  showToast('Pohon Kewaspadaan direset · semua poin kembali', 1600);
+  return horrorTreeState();
+}
+
 function buildScaryScreen() {
   const summary = $('scary-summary');
   const tabs = $('scary-tabs');
@@ -1706,8 +1808,9 @@ function buildScaryScreen() {
   const list = horrorSettingsForTab(scaryTab).map(horrorRowHTML).join('');
   const tabLabel = HORROR_TABS.find((tab) => tab.id === scaryTab)?.label || '';
   body.innerHTML = `
+    ${scaryTab === 'tree' ? scaryTreePanel() : ''}
     ${scaryTab === 'jumpscare' ? scaryDifficultyCards() : ''}
-    <section class="scary-group"><h3>${tabLabel}</h3>${list}</section>
+    ${scaryTab === 'tree' ? '' : `<section class="scary-group"><h3>${tabLabel}</h3>${list}</section>`}
     ${scaryTab === 'jumpscare' ? scaryJournalPanel() : ''}
     <p class="micro">Kontrol horor disimpan di ashen-vow-settings-v1 · jurnal di ${HORROR_SAVE_KEY} · kesulitan horor terpisah dari kampanye.</p>`;
   return presentation;
@@ -1732,6 +1835,7 @@ function startScaryRun() {
   menuView = 'none';
   startRun(0);
   syncHorror();
+  applyHorrorTree(game, horrorTreeBonuses(horrorJournal.skills));
   showToast(`SCARY MODE · ${SCARY_DIFFICULTY[horrorSettings().difficulty].label}`, 2400);
   return true;
 }
@@ -1878,6 +1982,9 @@ document.addEventListener('click', (event) => {
   if (node.closest('#btn-scary-menu')) { openScary(); return; }
   if (node.closest('#btn-scary-close')) { closeScary(); return; }
   if (node.closest('#btn-pause-anti')) { toggleAntiJumpscare(); return; }
+  const rankBtn = node.closest('[data-horror-rank]');
+  if (rankBtn) { rankHorrorTree(rankBtn.dataset.horrorRank); return; }
+  if (node.closest('[data-horror-tree-reset]')) { resetHorrorTree(); return; }
   const tab = node.closest('[data-scary-tab]');
   if (tab) { scaryTab = tab.dataset.scaryTab; buildScaryScreen(); return; }
   const difficulty = node.closest('[data-scary-difficulty]');
@@ -5514,6 +5621,152 @@ function handleCisternBoss(ev) {
 }
 
 
+// ── The Lanternwake: four halls of twenty enemies and the four-phase Wickbearer
+let activeLanternStage = -1;
+
+function lanternState() {
+  if (!progress.lanternwake) progress.lanternwake = defaultLanternProgress();
+  return progress.lanternwake;
+}
+
+function discoverLanternRoom(local) {
+  const p = lanternState();
+  const index = Math.trunc(Number(local));
+  if (!Number.isInteger(index) || index < 0 || index >= LANTERN_ROOMS.length) return;
+  if (p.discovered[index]) return;
+  p.discovered[index] = true;
+  saveProgress();
+}
+
+function buildLanternwakeCards() {
+  const wrap = $('lanternwake-cards');
+  if (!wrap) return;
+  const p = lanternState();
+  const chapterOpen = lanternwakeUnlocked(progress);
+  const summary = lanternSummary(p);
+  const label = $('lanternwake-progress');
+  if (label) {
+    label.textContent = chapterOpen
+      ? `${summary.stagesCleared}/${summary.stageTotal} TAHAP · ${summary.percent}%`
+      : 'TERKUNCI';
+  }
+  const note = $('lanternwake-lock-note');
+  if (note) note.classList.toggle('hidden', chapterOpen);
+  wrap.innerHTML = '';
+  LANTERN_ROOMS.forEach((room, local) => {
+    const meta = LANTERN_STAGE_META[local];
+    const locked = !chapterOpen || !lanternStageUnlocked(p, local);
+    const cleared = lanternStageCleared(p, local);
+    const card = document.createElement('article');
+    card.className = `level-card cistern-card lanternwake-card${locked ? ' locked' : ''}${cleared ? ' cleared' : ''}`;
+    card.style.setProperty('--accent', room.accent);
+    const badge = cleared
+      ? '<span class="level-badge done">TUNTAS</span>'
+      : locked
+        ? '<span class="level-badge lock">TERKUNCI</span>'
+        : '<span class="level-badge">TERBUKA</span>';
+    const tags = meta.tags.map((tag) => `<span>${esc(tag)}</span>`).join('');
+    card.innerHTML = `
+      <div class="level-art">
+        <span class="level-chapter">${esc(meta.chapter)}</span>
+        ${badge}
+        <span class="level-glyph" aria-hidden="true">${esc(meta.glyph)}</span>
+      </div>
+      <div class="level-body">
+        <h3>${esc(room.name)}</h3>
+        <span class="level-sub">${esc(room.subtitle)}</span>
+        <p class="level-desc">${esc(meta.desc)}</p>
+        <div class="level-tags">${tags}<span>${meta.enemies} MUSUH</span><span>${meta.elites} ELITE</span></div>
+        <div class="level-actions">
+          ${locked ? '' : '<button class="btn btn-primary btn-small play-btn" type="button">MAINKAN</button>'}
+        </div>
+      </div>`;
+    const playBtn = card.querySelector('.play-btn');
+    if (playBtn) playBtn.addEventListener('click', () => startLanternwakeStage(local));
+    wrap.appendChild(card);
+  });
+}
+
+function startLanternwakeStage(local) {
+  const p = lanternState();
+  const index = Math.trunc(Number(local));
+  const room = LANTERN_ROOMS[index];
+  if (!room) return;
+  if (!lanternwakeUnlocked(progress)) {
+    showToast('The Lanternwake terbuka setelah Vasska gugur di Sistem Air Pasang.', 2600);
+    return;
+  }
+  if (!lanternStageUnlocked(p, index)) {
+    showToast('Aula itu masih tertutup. Selesaikan aula sebelumnya dulu.', 2200);
+    return;
+  }
+  audio.init();
+  attempts = 1;
+  coopGuestMode = false;
+  coopGuestRoom = -1;
+  activeRunKind = 'lanternwake';
+  activeLanternStage = index;
+  activeCisternStage = -1;
+  activeFairyStage = -1;
+  activeFairyBoss = null;
+  activeCourtRoom = null;
+  activeCourtTrial = null;
+  activePackIndex = -1;
+  activeExpansionIndex = null;
+  activeModeId = null;
+  activeTrialId = null;
+  modeRunRewarded = false;
+  packRunActive = false;
+  labRun = null;
+  labDirector = null;
+  speedrunRun = null;
+  game.labyrinth = false;
+  game.reset();
+  applyCharacterToGame();
+  applySkinToGame();
+  game.enterRoom(room.id);
+  game.player.relic = true;
+  game.ash = Math.max(game.ash, 50 + index * 18);
+  discoverLanternRoom(index);
+  cutsceneSeen = new Set();
+  postCreditTimer = -1;
+  saveProgress();
+  game.events.length = 0;
+  started = true;
+  paused = false;
+  hunterShopOpen = false;
+  shopOpen = false;
+  mapOpen = false;
+  codexOpen = false;
+  inventoryOpen = false;
+  settingsOpen = false;
+  closeDialogue(true);
+  spectating = false;
+  spectateGame = null;
+  menuView = 'none';
+  lastGameState = 'playing';
+  accumulator = 0;
+  lastTime = performance.now();
+  clearHeldKeys();
+  beginStage(game.roomIndex, room.name);
+  showBanner(room.name, room.subtitle);
+  syncScreens();
+  updateHud();
+  const label = room.boss ? ' · BOSS' : '';
+  showToast(`${LANTERN_LOCAL_NAME} · ${room.name}${label}`, 2400);
+}
+
+function handleLanternwakeBoss() {
+  const p = lanternState();
+  const result = recordLanternBoss(p);
+  recordLanternRun(p, game.time);
+  saveProgress();
+  if (result.firstClear) {
+    showToast(`ORSELLA PADAM — ${LANTERN_NAME} selesai. Sembilan sumbu kembali menyala.`, 3200);
+  }
+  updateMenuProgress();
+}
+
 // ── Speedrun: one life, escalating game speed ─────────────────────────────
 function speedrunState() {
   if (!progress.speedrun) progress.speedrun = defaultSpeedrunProgress();
@@ -7624,6 +7877,10 @@ function retryRun() {
   }
   if (activeRunKind === 'cistern') {
     startCisternStage(activeCisternStage >= 0 ? activeCisternStage : 0);
+    return;
+  }
+  if (activeRunKind === 'lanternwake') {
+    startLanternwakeStage(activeLanternStage >= 0 ? activeLanternStage : 0);
     return;
   }
   if (activeRunKind === 'eclipse') {
@@ -10644,32 +10901,12 @@ let prologueDone = null;
 
 function prologueSpeak(text) {
   if (!prologueVoice) return;
-  const synth = window.speechSynthesis;
-  if (!synth || typeof window.SpeechSynthesisUtterance !== 'function') return;
-  try {
-    synth.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'id-ID';
-    utterance.rate = 0.92;
-    utterance.pitch = 0.85;
-    utterance.volume = 1;
-    const voices = synth.getVoices ? synth.getVoices() : [];
-    const indo = voices.find((v) => /^id([-_]|$)/i.test(v.lang)) || voices.find((v) => /indones/i.test(v.name));
-    if (indo) utterance.voice = indo;
-    synth.speak(utterance);
-  } catch {
-    /* speech unavailable - subtitles carry the story */
-  }
+  // ElevenLabs when the server has a key, browser speech otherwise.
+  void speakVoiceLine(text, 'narrator');
 }
 
 function stopPrologueVoice() {
-  const synth = window.speechSynthesis;
-  if (!synth) return;
-  try {
-    synth.cancel();
-  } catch {
-    /* ignore */
-  }
+  stopVoice();
 }
 
 function paintPrologue() {
@@ -11906,7 +12143,18 @@ function queueDialogue(ev) {
   dialogueOpen = true;
   clearHeldKeys();
   renderDialogue();
+  speakDialogueLine();
   syncScreens();
+}
+
+// Boss lines are voiced through the shared voice layer: ElevenLabs when the
+// server holds a key, browser speech otherwise, silence if neither exists.
+function speakDialogueLine() {
+  if (!dialogueOpen || !voiceSave.autoplayInDialogue || !voiceSave.enabled) return;
+  const line = dialogueLines[dialogueIndex];
+  if (!line?.text) return;
+  const castId = VOICE_BOSS_CAST[dialogueMeta?.kind] || 'narrator';
+  void speakVoiceLine(line.text, castId);
 }
 
 function renderDialogue() {
@@ -11931,7 +12179,10 @@ function advanceDialogue() {
   if (!dialogueOpen) return;
   dialogueIndex += 1;
   if (dialogueIndex >= dialogueLines.length) closeDialogue();
-  else renderDialogue();
+  else {
+    renderDialogue();
+    speakDialogueLine();
+  }
 }
 
 function closeDialogue(silent = false) {
@@ -11948,6 +12199,7 @@ function closeDialogue(silent = false) {
     syncScreens();
     updateHud();
   }
+  if (wasOpen) stopVoice();
 }
 
 // ── level select cards ───────────────────────────────────────────────────
@@ -12005,6 +12257,7 @@ function buildLevelCards() {
     wrap.appendChild(card);
   });
   buildCisternCards();
+  buildLanternwakeCards();
 }
 
 // ── pause, mute, helpers ─────────────────────────────────────────────────
@@ -14922,6 +15175,7 @@ function syncScreens() {
   $('prologue-screen').classList.toggle('hidden', !prologueActive);
   $('cutscene-screen')?.classList.toggle('hidden', !cutsceneActive);
   $('credit-scene-screen')?.classList.toggle('hidden', !creditSceneOpen);
+  $('trailer-screen')?.classList.toggle('hidden', menuView !== 'trailer' || covered);
   $('spectate-ui').classList.toggle('hidden', !spectating);
   $('map-screen').classList.toggle('hidden', !mapOpen);
   $('codex-screen').classList.toggle('hidden', !codexOpen);
@@ -15288,6 +15542,26 @@ function drainEvents() {
           if (stage) {
             activeCisternStage = stage.local;
             discoverCisternRoom(stage.local);
+          }
+        }
+      } else if (activeRunKind === 'lanternwake') {
+        if (ev.type === 'gatePass') {
+          const from = lanternStageForRoom(ev.from);
+          if (from && !from.room.boss) recordLanternStage(lanternState(), from.local);
+          const to = lanternStageForRoom(ev.to);
+          if (to) {
+            activeLanternStage = to.local;
+            discoverLanternRoom(to.local);
+          }
+          saveProgress();
+          buildLanternwakeCards();
+        } else if (ev.type === 'bossDown') {
+          if (ev.kind === 'wickbearer') handleLanternwakeBoss();
+        } else if (ev.type === 'roomEnter') {
+          const stage = lanternStageForRoom(ev.room);
+          if (stage) {
+            activeLanternStage = stage.local;
+            discoverLanternRoom(stage.local);
           }
         }
       } else if (activeRunKind === 'trials') {
@@ -17105,6 +17379,31 @@ window.__ashen = {
     discoverCisternRoom(local);
     return cisternState().discovered.slice();
   },
+  get lanternwake() {
+    const p = lanternState();
+    return {
+      summary: lanternSummary(p),
+      unlocked: lanternwakeUnlocked(progress),
+      state: { ...p, halls: [...p.halls], discovered: p.discovered.map(Boolean) },
+      stageCount: LANTERN_STAGE_COUNT,
+      rooms: LANTERN_ROOMS.map((room) => ({ id: room.id, name: room.name, enemies: room.enemies.length })),
+      stages: LANTERN_STAGE_META.map((stage) => ({ ...stage })),
+    };
+  },
+  lanternwakeStart(local) {
+    startLanternwakeStage(local);
+    return { runKind: activeRunKind, stage: activeLanternStage, room: game.roomIndex };
+  },
+  lanternwakeClear(local) {
+    const result = recordLanternStage(lanternState(), local);
+    saveProgress();
+    buildLanternwakeCards();
+    return result;
+  },
+  lanternwakeBossClear() {
+    handleLanternwakeBoss();
+    return lanternSummary(lanternState());
+  },
   cisternBossDown() {
     handleCisternBoss({ kind: 'tidebound' });
     return cisternSummary(cisternState());
@@ -17570,6 +17869,14 @@ window.__ashen = {
   closeScary,
   startScaryRun,
   buildScaryScreen,
+  get horrorTree() {
+    return horrorTreeState();
+  },
+  rankHorrorTree,
+  resetHorrorTree,
+  applyHorrorTreeBonuses() {
+    return applyHorrorTree(game, horrorTreeBonuses(horrorJournal.skills));
+  },
   setHorror(partial = {}) {
     settings.scary = { ...settings.scary, ...(partial || {}) };
     applySettings();
@@ -18558,4 +18865,363 @@ setInterval(updateLiveClock, 250);
 updateLiveClock();
 syncScreens();
 updateHud();
+window.__ashenBootProgress?.('Menyiapkan sistem permainan', 72);
 requestAnimationFrame(frame);
+// ══ Update XXV — voice acting and the cinematic trailer ══════════════════
+// Boss kinds map to authored cast members. Anything unknown falls back to the
+// narrator so a new chapter never goes silent.
+const VOICE_BOSS_CAST = {
+  warden: 'warden',
+  wyrm: 'wyrm',
+  oathbreaker: 'oathbreaker',
+  tidebound: 'tidebound',
+  wickbearer: 'wickbearer',
+  choir: 'ghost',
+  sporebound: 'narrator',
+  root: 'narrator',
+};
+
+function readVoiceSave() {
+  try {
+    const raw = localStorage.getItem(VOICE_SAVE_KEY);
+    return sanitizeVoiceSave(raw ? JSON.parse(raw) : null);
+  } catch {
+    return sanitizeVoiceSave(null);
+  }
+}
+
+let voiceSave = readVoiceSave();
+let voiceStatus = { configured: false, model: VOICE_MODEL, online: true, checked: false, error: '' };
+let voiceAudio = null;
+let voiceObjectUrl = null;
+let voiceSpeaking = false;
+
+function hasBrowserVoice() {
+  return typeof window !== 'undefined'
+    && !!window.speechSynthesis
+    && typeof window.SpeechSynthesisUtterance === 'function';
+}
+
+function updateVoiceBadge() {
+  const summary = voiceSummary(voiceSave, { ...voiceStatus, browserAvailable: hasBrowserVoice() });
+  const label = voiceBadge(summary);
+  const engine = $('trailer-engine');
+  if (engine) engine.textContent = `${label} · ${summary.model}`;
+  const btn = $('btn-trailer-voice');
+  if (btn) {
+    btn.textContent = label;
+    btn.setAttribute('aria-pressed', String(voiceSave.enabled));
+  }
+  return summary;
+}
+
+function saveVoiceSave() {
+  voiceSave.updatedAt = Date.now();
+  try {
+    localStorage.setItem(VOICE_SAVE_KEY, JSON.stringify(voiceSave));
+  } catch {
+    /* storage unavailable - the session still keeps the setting */
+  }
+  updateVoiceBadge();
+}
+
+async function refreshVoiceStatus() {
+  try {
+    const response = await fetch('/api/voice', { headers: { Accept: 'application/json' } });
+    const status = await response.json();
+    voiceStatus = {
+      configured: !!status.configured,
+      model: status.model || VOICE_MODEL,
+      online: true,
+      checked: true,
+      error: '',
+    };
+  } catch {
+    voiceStatus = { configured: false, model: VOICE_MODEL, online: false, checked: true, error: 'server-unreachable' };
+  }
+  return updateVoiceBadge();
+}
+
+function stopVoice() {
+  voiceSpeaking = false;
+  if (voiceAudio) {
+    try { voiceAudio.pause(); } catch { /* already stopped */ }
+    voiceAudio = null;
+  }
+  if (voiceObjectUrl) {
+    try { URL.revokeObjectURL(voiceObjectUrl); } catch { /* ignore */ }
+    voiceObjectUrl = null;
+  }
+  if (hasBrowserVoice()) {
+    try { window.speechSynthesis.cancel(); } catch { /* ignore */ }
+  }
+}
+
+function speakBrowser(text, castId) {
+  if (!hasBrowserVoice()) return false;
+  const member = castFor(castId);
+  try {
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = member.fallback.lang;
+    utterance.rate = member.fallback.rate;
+    utterance.pitch = member.fallback.pitch;
+    utterance.volume = voiceSave.volume / 100;
+    const voices = window.speechSynthesis.getVoices ? window.speechSynthesis.getVoices() : [];
+    const indo = voices.find((v) => /^id([-_]|$)/i.test(v.lang)) || voices.find((v) => /indones/i.test(v.name));
+    if (indo) utterance.voice = indo;
+    window.speechSynthesis.speak(utterance);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// One entry point for every spoken line: boss dialogue, prologue and trailer.
+// Returns the provider that actually ran, which the smoke tests assert on.
+async function speakVoiceLine(text, castId = 'narrator') {
+  const request = voiceRequestFor({ text, cast: castId, save: voiceSave });
+  if (!request.ok) return 'none';
+  const provider = resolveVoiceProvider({
+    save: voiceSave,
+    configured: voiceStatus.configured,
+    online: voiceStatus.online,
+    browserAvailable: hasBrowserVoice(),
+  });
+  if (provider === 'none') return 'none';
+  stopVoice();
+  if (provider === 'browser') {
+    const played = speakBrowser(request.body.text, castId);
+    voiceSave.linesPlayed += played ? 1 : 0;
+    voiceSave.providerUsed = played ? 'browser' : 'none';
+    saveVoiceSave();
+    return voiceSave.providerUsed;
+  }
+  try {
+    const response = await fetch('/api/voice', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request.body),
+    });
+    if (!response.ok) throw new Error(`voice HTTP ${response.status}`);
+    const blob = await response.blob();
+    if (!blob.size) throw new Error('empty audio');
+    voiceObjectUrl = URL.createObjectURL(blob);
+    voiceAudio = new Audio(voiceObjectUrl);
+    voiceAudio.volume = voiceSave.volume / 100;
+    voiceAudio.addEventListener('ended', () => { voiceSpeaking = false; }, { once: true });
+    await voiceAudio.play();
+    voiceSpeaking = true;
+    voiceSave.linesPlayed += 1;
+    voiceSave.providerUsed = 'elevenlabs';
+    saveVoiceSave();
+    return 'elevenlabs';
+  } catch (error) {
+    // A missing key, a quota error or a blocked request all degrade to the
+    // browser voice instead of failing the scene.
+    voiceStatus = { ...voiceStatus, configured: false, error: String(error.message || error) };
+    const played = speakBrowser(request.body.text, castId);
+    voiceSave.providerUsed = played ? 'browser' : 'none';
+    voiceSave.linesPlayed += played ? 1 : 0;
+    saveVoiceSave();
+    return voiceSave.providerUsed;
+  }
+}
+
+// ── trailer playback ─────────────────────────────────────────────────────
+let trailerActive = false;
+let trailerPaused = false;
+let trailerTime = 0;
+let trailerStamp = 0;
+let trailerHandle = 0;
+let trailerIndex = -1;
+
+const trailerClock = (seconds) => `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`;
+
+function paintTrailer() {
+  const canvas = $('trailer-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const info = drawTrailerFrame(ctx, canvas.width, canvas.height, trailerTime);
+  const total = trailerDuration();
+  const shotEl = $('trailer-shot');
+  if (shotEl) shotEl.textContent = `${info.index + 1} / ${info.count}`;
+  const progress = $('trailer-progress');
+  if (progress) progress.style.width = `${(trailerTime / total) * 100}%`;
+  const timeEl = $('trailer-time');
+  if (timeEl) timeEl.textContent = `${trailerClock(trailerTime)} / ${trailerClock(total)}`;
+  if (info.index !== trailerIndex) {
+    trailerIndex = info.index;
+    const eyebrow = $('trailer-eyebrow');
+    const line = $('trailer-line');
+    if (eyebrow) eyebrow.textContent = info.shot.eyebrow;
+    if (line) line.textContent = info.shot.narration;
+    if (voiceSave.autoplayInTrailer && voiceSave.enabled) {
+      void speakVoiceLine(info.shot.narration, info.shot.cast);
+    }
+  }
+}
+
+function trailerLoop(now) {
+  if (!trailerActive) return;
+  const delta = trailerStamp ? Math.min(0.12, (now - trailerStamp) / 1000) : 0;
+  trailerStamp = now;
+  if (!trailerPaused) {
+    trailerTime += delta;
+    if (trailerTime >= trailerDuration()) {
+      trailerTime = trailerDuration();
+      trailerPaused = true;
+      const play = $('btn-trailer-play');
+      if (play) play.textContent = 'ULANG';
+      stopVoice();
+    }
+  }
+  paintTrailer();
+  trailerHandle = requestAnimationFrame(trailerLoop);
+}
+
+function startTrailerPlayback() {
+  trailerTime = 0;
+  trailerIndex = -1;
+  trailerPaused = false;
+  trailerStamp = 0;
+  const play = $('btn-trailer-play');
+  if (play) play.textContent = 'JEDA';
+  cancelAnimationFrame(trailerHandle);
+  trailerHandle = requestAnimationFrame(trailerLoop);
+}
+
+function openTrailer() {
+  menuView = 'trailer';
+  audio.init();
+  audioUnlocked = true;
+  music.stop(0.6);
+  stopVoice();
+  trailerActive = true;
+  syncScreens();
+  paintTrailer();
+  void refreshVoiceStatus();
+  startTrailerPlayback();
+}
+
+function closeTrailer() {
+  trailerActive = false;
+  if (trailerHandle) cancelAnimationFrame(trailerHandle);
+  trailerHandle = 0;
+  stopVoice();
+  if (menuView === 'trailer') menuView = 'title';
+  syncScreens();
+}
+
+function toggleTrailerPause() {
+  if (!trailerActive) return;
+  if (trailerTime >= trailerDuration()) {
+    trailerTime = 0;
+    trailerIndex = -1;
+    trailerPaused = false;
+  } else {
+    trailerPaused = !trailerPaused;
+  }
+  const play = $('btn-trailer-play');
+  if (play) play.textContent = trailerPaused ? 'LANJUT' : 'JEDA';
+}
+
+function seekTrailer(seconds) {
+  trailerTime = Math.max(0, Math.min(trailerDuration(), trailerTime + seconds));
+  trailerPaused = true;
+  trailerIndex = -1;
+  const play = $('btn-trailer-play');
+  if (play) play.textContent = 'LANJUT';
+  paintTrailer();
+}
+
+function setTrailerTime(seconds) {
+  trailerTime = Math.max(0, Math.min(trailerDuration(), Number(seconds) || 0));
+  trailerIndex = -1;
+  paintTrailer();
+}
+
+$('btn-trailer-menu')?.addEventListener('click', openTrailer);
+$('btn-trailer-close')?.addEventListener('click', closeTrailer);
+$('btn-trailer-play')?.addEventListener('click', toggleTrailerPause);
+$('btn-trailer-back')?.addEventListener('click', () => seekTrailer(-5));
+$('btn-trailer-fwd')?.addEventListener('click', () => seekTrailer(5));
+$('btn-trailer-voice')?.addEventListener('click', () => {
+  voiceSave.enabled = !voiceSave.enabled;
+  saveVoiceSave();
+  if (!voiceSave.enabled) stopVoice();
+  else if (trailerActive) void speakVoiceLine(trailerShotAt(trailerTime).shot.narration, trailerShotAt(trailerTime).shot.cast);
+});
+
+window.addEventListener('keydown', (event) => {
+  if (!trailerActive) return;
+  if (event.code === 'Escape') {
+    event.preventDefault();
+    closeTrailer();
+  } else if (event.code === 'Space' || event.code === 'Enter') {
+    event.preventDefault();
+    toggleTrailerPause();
+  } else if (event.code === 'ArrowLeft') {
+    event.preventDefault();
+    seekTrailer(-5);
+  } else if (event.code === 'ArrowRight') {
+    event.preventDefault();
+    seekTrailer(5);
+  }
+}, true);
+
+// Functions are copied by value; the two state views must be real getters, so
+// they are defined below instead of inside Object.assign (which would snapshot
+// them once at boot and freeze the trailer/voice reports).
+Object.assign(window.__ashen, {
+  openTrailer,
+  closeTrailer,
+  toggleTrailerPause,
+  seekTrailer,
+  setTrailerTime,
+  refreshVoiceStatus,
+  voiceStatus: () => ({ ...voiceStatus }),
+  narrate: (text, cast = 'narrator') => speakVoiceLine(text, cast),
+  stopVoice,
+  setVoice: (patch = {}) => {
+    voiceSave = sanitizeVoiceSave({ ...voiceSave, ...patch });
+    saveVoiceSave();
+    return JSON.parse(JSON.stringify(voiceSave));
+  },
+});
+
+Object.defineProperties(window.__ashen, {
+  voice: {
+    configurable: true,
+    get() {
+      return {
+        save: JSON.parse(JSON.stringify(voiceSave)),
+        status: { ...voiceStatus },
+        summary: voiceSummary(voiceSave, { ...voiceStatus, browserAvailable: hasBrowserVoice() }),
+        badge: voiceBadge(voiceSummary(voiceSave, { ...voiceStatus, browserAvailable: hasBrowserVoice() })),
+        speaking: voiceSpeaking,
+        cast: Object.keys(VOICE_BOSS_CAST).length,
+      };
+    },
+  },
+  trailer: {
+    configurable: true,
+    get() {
+      return {
+        active: trailerActive,
+        paused: trailerPaused,
+        time: trailerTime,
+        duration: trailerDuration(),
+        shots: TRAILER_SHOTS.length,
+        shot: trailerShotAt(trailerTime),
+        summary: trailerSummary(),
+        identity: TRAILER_IDENTITY,
+      };
+    },
+  },
+});
+
+updateVoiceBadge();
+void refreshVoiceStatus();
+
+window.__ashenBootReady?.();

@@ -81,7 +81,7 @@ try {
       style: [...document.styleSheets].some((sheet) => String(sheet.href).includes('styles-eclipse')),
     };
   })()`);
-  check(boot.version === '0.35.0', `version is 0.35.0 (got ${boot.version})`);
+  check(boot.version === '0.36.0', `version is 0.36.0 (got ${boot.version})`);
   check(boot.button && boot.screen && boot.style, 'Eclipse menu, screen and stylesheet are wired');
 
   const campaign = await evaluate(`(async () => {

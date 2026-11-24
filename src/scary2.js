@@ -10,6 +10,7 @@
 // simulation (src/core.js) consumes only the difficulty numbers.
 
 import { SCARE_DEFAULTS, sanitizeScarySettings } from './scary.js';
+import { sanitizeHorrorSkills } from './horror_tree.js';
 
 export const SCARY_DIFFICULTY_IDS = ['easy', 'normal', 'hard'];
 
@@ -134,6 +135,7 @@ export function scaryDifficultyOf(settings = {}) {
 
 export const HORROR_TABS = [
   { id: 'jumpscare', label: 'Jumpscare', icon: '☠' },
+  { id: 'tree', label: 'Pohon Skill', icon: '🌿' },
   { id: 'audio', label: 'Audio Horor', icon: '♪' },
   { id: 'visual', label: 'Visual Horor', icon: '◈' },
   { id: 'enemy', label: 'Musuh Horor', icon: '☾' },
@@ -1222,6 +1224,7 @@ export class HorrorJournal {
     this.counters = clean.counters;
     this.rewards = clean.rewards;
     this.flags = clean.flags;
+    this.skills = clean.skills;
   }
 
   record(kind, id, amount = 1) {
@@ -1302,6 +1305,7 @@ export class HorrorJournal {
       events: { ...this.events },
       rewards: [...this.rewards],
       flags: { ...this.flags },
+      skills: { ...this.skills },
       achievements: this.achievements(),
     };
   }
@@ -1319,6 +1323,7 @@ export class HorrorJournal {
       counters: this.counters,
       rewards: this.rewards,
       flags: this.flags,
+      skills: { ...this.skills },
     };
   }
 }
@@ -1358,6 +1363,7 @@ export function sanitizeHorrorProgress(raw = {}) {
     },
     rewards: list(source.rewards, HORROR_REWARD_IDS),
     flags,
+    skills: sanitizeHorrorSkills(source.skills),
   };
 }
 

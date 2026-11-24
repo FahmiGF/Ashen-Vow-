@@ -110,7 +110,7 @@ async function main() {
       const A = window.__ashen; A.clearProgress();
       return { version: A.version, trials: !!A.progress.trials, puzzle: !!A.progress.puzzle };
     })()`);
-    check('boot reports v0.35.0', initial.version, '0.35.0');
+    check('boot reports v0.36.0', initial.version, '0.36.0');
     check('save carries trial progress', initial.trials, true);
     check('save carries puzzle progress', initial.puzzle, true);
 

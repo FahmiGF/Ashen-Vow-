@@ -158,7 +158,7 @@ try {
       titleVisible: !document.getElementById('labyrinth-screen').classList.contains('hidden'),
     };
   })()`);
-  check('boot reports v0.35.0', boot.version === '0.35.0', boot.version);
+  check('boot reports v0.36.0', boot.version === '0.36.0', boot.version);
   check('lab hub shows 10 modes and 5 tabs', boot.modes === 10 && boot.tabs === 5, JSON.stringify(boot));
   check('lab hub renders', boot.menu === 'labyrinth' && boot.titleVisible);
 

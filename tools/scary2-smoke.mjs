@@ -94,9 +94,27 @@ try {
     scary: window.__ashen.settings.scary,
     campaign: window.__ashen.settings.gameplay.difficulty,
   }))()`);
-  check(/0\.35\.0/.test(String(boot.version)), `boots v0.35.0 (${String(boot.version).slice(0, 42)})`);
+  check(/0\.36\.0/.test(String(boot.version)), `boots v0.36.0 (${String(boot.version).slice(0, 42)})`);
   check(boot.scary.enabled === false && boot.scary.antiJumpscare === false, 'Scary Mode and anti-jumpscare are off by default');
   check(boot.scary.difficulty === 'normal', 'default horror difficulty is Normal');
+
+  // ── startup guard: happy path, diagnostic card and recovery ──
+  const guard = await evaluate(`(() => {
+    const screen = document.getElementById('boot-screen');
+    const boot = window.__ashenBoot || {};
+    const happy = boot.ready === true && screen.classList.contains('hidden');
+    window.__ashenBoot.ready = false;
+    window.__ashenBootFail('BOOT-03', 'uji pemulihan startup');
+    const failed = !screen.classList.contains('hidden')
+      && document.getElementById('boot-code').textContent === 'BOOT-03'
+      && /uji pemulihan/.test(document.getElementById('boot-message').textContent)
+      && !!document.getElementById('boot-retry');
+    window.__ashenBootReady();
+    return { happy, failed, recovered: screen.classList.contains('hidden') };
+  })()`);
+  check(guard.happy, 'the startup guard clears its loading card once the menu is ready');
+  check(guard.failed, 'a startup failure shows a diagnostic code and a retry control');
+  check(guard.recovered, 'the guard can recover without reloading the page');
 
   // ── dedicated screen ──
   const screen = await evaluate(`(async () => {
@@ -111,7 +129,7 @@ try {
     return { menu: a.menuView, visible, tabs, rows, cards, summary, presentation: a.scary2 };
   })()`);
   check(screen.menu === 'scary' && screen.visible, 'the Scary Mode screen opens from the menu');
-  check(screen.tabs === 5, `five horror settings tabs render (${screen.tabs})`);
+  check(screen.tabs === 6, `six horror tabs render (${screen.tabs})`);
   check(screen.rows >= 20, `the first tab renders real controls (${screen.rows} rows)`);
   const comfort = await evaluate(`(async () => {
     document.querySelector('[data-scary-tab="comfort"]').click();
@@ -126,6 +144,32 @@ try {
   check(screen.cards === 3, `three horror difficulties render (${screen.cards})`);
   check(typeof screen.summary === 'string' && screen.summary.length > 20, 'the summary shows difficulty, anti-jumpscare and progress');
   check(screen.presentation && screen.presentation.gameplay.detection === 1, 'the resolved layer is exposed to the shell');
+
+  // ── Update XXV: the Vigil Tree spends, unlocks and resets for real ──
+  const tree = await evaluate(`(async () => {
+    document.querySelector('[data-scary-tab="tree"]').click();
+    await new Promise((r) => setTimeout(r, 140));
+    const points = document.querySelector('.tree-points')?.textContent || '';
+    const nodes = document.querySelectorAll('[data-horror-rank]').length;
+    const first = document.querySelector('[data-horror-rank="vow_iron"]');
+    if (first) first.click();
+    await new Promise((r) => setTimeout(r, 140));
+    const afterSpend = window.__ashen.horrorTree.available;
+    const rank = window.__ashen.horrorTree.ranks.vow_iron || 0;
+    const tierTwoLocked = document.querySelector('[data-horror-rank="dusk_flask"]')?.disabled;
+    document.querySelector('[data-horror-tree-reset]')?.click();
+    await new Promise((r) => setTimeout(r, 140));
+    const afterReset = window.__ashen.horrorTree.available;
+    const saved = JSON.parse(localStorage.getItem('ashen-vow-horror-v1') || '{}').skills || {};
+    document.querySelector('[data-scary-tab="jumpscare"]').click();
+    await new Promise((r) => setTimeout(r, 120));
+    return { nodes, points, afterSpend, rank, tierTwoLocked, afterReset, savedVow: saved.vow_iron || 0 };
+  })()`);
+  check(tree.nodes === 9, `the Vigil Tree renders nine nodes (${tree.nodes})`);
+  check(/POIN/.test(tree.points), 'the tree shows its point totals');
+  check(tree.rank === 1 && tree.afterSpend === 2, `a rank spends exactly one point (rank ${tree.rank}, ${tree.afterSpend} left)`);
+  check(tree.tierTwoLocked === false, 'a tier-2 node unlocks once its prerequisite is owned');
+  check(tree.afterReset === 3 && tree.savedVow === 0, 'free reset returns every point and clears the save');
 
   // ── difficulty selection is independent from the campaign ──
   const difficulty = await evaluate(`(async () => {

@@ -148,8 +148,8 @@ async function main() {
       A.clearProgress();
       return { version: A.version, title: document.title, crusade: !!A.progress.crusade };
     })()`);
-    check('boot reports v0.35.0', boot.version, '0.35.0');
-    assert.match(boot.title, /0.35.0/);
+    check('boot reports v0.36.0', boot.version, '0.36.0');
+    assert.match(boot.title, /0.36.0/);
     check('fresh saves carry a crusade progress block', boot.crusade, true);
 
     const arc2 = await evaluate(`(() => {
