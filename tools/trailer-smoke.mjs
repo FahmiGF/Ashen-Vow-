@@ -100,7 +100,7 @@ try {
   check(entry.button, 'the title menu exposes TRAILER SINEMATIK');
   check(entry.hasScreen && entry.canvas, 'the trailer screen and canvas exist');
   check(entry.shots === 16, `sixteen shots are registered (${entry.shots})`);
-  check(Math.abs(entry.duration - 80) < 0.001, `the cut runs 80 seconds (${entry.duration})`);
+  check(Math.abs(entry.duration - 85.5) < 0.001, `the cut runs 85.5 seconds (${entry.duration})`);
 
   const opened = await evaluate(`(async () => {
     document.getElementById('btn-trailer-menu').click();
@@ -127,11 +127,11 @@ try {
   check(opened.active && opened.shot.startsWith('1 /'), `the first shot is live (${opened.shot})`);
   check(opened.eyebrow.includes('SEALIUSHQ'), `the ident eyebrow is shown (${opened.eyebrow})`);
   check(opened.line.length > 10, 'the narration subtitle is populated');
-  check(/^00:0\d \/ 01:20$/.test(opened.clock), `the clock tracks the cut (${opened.clock})`);
+  check(/^00:0\d \/ 01:25$/.test(opened.clock), `the clock tracks the cut (${opened.clock})`);
 
   const advanced = await evaluate(`(async () => {
     const a = window.__ashen;
-    a.setTrailerTime(31.5);
+    a.setTrailerTime(27);
     await new Promise((r) => setTimeout(r, 60));
     return {
       time: a.trailer.time,
@@ -142,11 +142,11 @@ try {
       clock: document.getElementById('trailer-time').textContent,
     };
   })()`);
-  check(advanced.shot === 6, `seeking lands on the Faewood shot (${advanced.shot})`);
-  check(advanced.eyebrow.includes('FAEWOOD'), `the shot title swaps with the cut (${advanced.eyebrow})`);
-  check(advanced.line.includes('Langit retak'), 'the narration swaps with the shot');
-  check(parseFloat(advanced.progress) > 30, `progress follows the playhead (${advanced.progress})`);
-  check(advanced.clock.startsWith('00:31'), `the clock follows the playhead (${advanced.clock})`);
+  check(advanced.shot === 5, `seeking lands on the Warden shot (${advanced.shot})`);
+  check(advanced.eyebrow.includes('MORDRAKE'), `the shot title swaps with the cut (${advanced.eyebrow})`);
+  check(advanced.line.includes('singgasana'), 'the narration swaps with the shot');
+  check(parseFloat(advanced.progress) > 28, `progress follows the playhead (${advanced.progress})`);
+  check(advanced.clock.startsWith('00:27'), `the clock follows the playhead (${advanced.clock})`);
 
   const paused = await evaluate(`(async () => {
     const a = window.__ashen;

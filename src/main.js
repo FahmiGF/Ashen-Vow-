@@ -97,6 +97,7 @@ import {
   trailerSummary,
   drawTrailerFrame,
 } from './trailer.js';
+import { TrailerDirector, makeGrainTile } from './trailer_director.js';
 import {
   SECRETS_SAVE_KEY,
   SECRET_MODE_KEYS,
@@ -15767,6 +15768,8 @@ function drainEvents() {
 
 function desiredTrack() {
   if (prologueActive) return null;
+  // The trailer cues its own score shot by shot.
+  if (menuView === 'trailer') return null;
   if (cutsceneActive) return cutsceneScene?.music || 'faewood';
   if (menuView === 'court') return 'hearth';
   if (menuView === 'fairy') return 'faewood';
@@ -19038,11 +19041,66 @@ let trailerIndex = -1;
 
 const trailerClock = (seconds) => `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`;
 
+// Live engine footage for scene shots. Created on first open, so the title
+// menu and gameplay never pay for it.
+let trailerDirector = null;
+let trailerGrain = null;
+let trailerSfxShot = -1;
+
+function trailerReducedMotion() {
+  return !!settings.gameplay?.reduceMotion
+    || (typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+}
+
+// Procedural trailer sound design: no audio files, same SoundKit buses.
+function trailerSfx(cue) {
+  if (!cue || !audio?.ctx) return;
+  try {
+    if (cue === 'boom' || cue === 'titleHit') {
+      audio.tone({ freq: 82, to: 28, type: 'sine', dur: 1.6, gain: 0.32 });
+      audio.tone({ freq: 164, to: 55, type: 'triangle', dur: 0.9, gain: 0.12 });
+      audio.noise({ dur: 1.2, gain: 0.16, freq: 420, type: 'lowpass', sweepTo: 80 });
+      if (cue === 'titleHit') audio.tone({ freq: 880, to: 1320, type: 'sine', dur: 2.4, gain: 0.05, delay: 0.05 });
+    } else if (cue === 'hit') {
+      audio.tone({ freq: 110, to: 40, type: 'sine', dur: 0.7, gain: 0.24 });
+      audio.noise({ dur: 0.35, gain: 0.12, freq: 1400, type: 'bandpass', sweepTo: 200 });
+    } else if (cue === 'whoosh') {
+      audio.noise({ dur: 0.9, gain: 0.08, freq: 300, type: 'bandpass', q: 0.7, sweepTo: 2600 });
+    } else if (cue === 'cut') {
+      audio.noise({ dur: 0.18, gain: 0.07, freq: 2400, type: 'highpass' });
+    } else if (cue === 'drone') {
+      audio.tone({ freq: 55, to: 52, type: 'sawtooth', dur: 4.8, gain: 0.05, filter: 380 });
+      audio.tone({ freq: 82.4, to: 80, type: 'sine', dur: 4.8, gain: 0.06 });
+    } else if (cue === 'heartbeat') {
+      for (const delay of [0, 0.28, 1.2, 1.48]) audio.tone({ freq: 62, to: 38, type: 'sine', dur: 0.22, gain: 0.3, delay });
+    }
+  } catch {
+    /* audio is decorative */
+  }
+}
+
+function trailerMusicCue(shot) {
+  try {
+    if (!shot.music) music.stop(0.5);
+    else if (music.trackId !== shot.music) music.crossfadeTo(shot.music, 0.9);
+  } catch {
+    /* music engine unavailable */
+  }
+}
+
 function paintTrailer() {
   const canvas = $('trailer-canvas');
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
-  const info = drawTrailerFrame(ctx, canvas.width, canvas.height, trailerTime);
+  if (!trailerDirector) {
+    trailerDirector = new TrailerDirector({ Renderer, AshenGame, viewW: VIEW_W, viewH: VIEW_W * 9 / 16, worldW: WORLD_W });
+    trailerGrain = makeGrainTile(96);
+  }
+  const reducedMotion = trailerReducedMotion();
+  const info = drawTrailerFrame(ctx, canvas.width, canvas.height, trailerTime, {
+    scene: (c, w, h, shotInfo) => trailerDirector.paint(c, w, h, shotInfo, { reducedMotion }),
+    grain: reducedMotion ? null : trailerGrain,
+  });
   const total = trailerDuration();
   const shotEl = $('trailer-shot');
   if (shotEl) shotEl.textContent = `${info.index + 1} / ${info.count}`;
@@ -19054,9 +19112,14 @@ function paintTrailer() {
     trailerIndex = info.index;
     const eyebrow = $('trailer-eyebrow');
     const line = $('trailer-line');
-    if (eyebrow) eyebrow.textContent = info.shot.eyebrow;
+    if (eyebrow) eyebrow.textContent = info.shot.eyebrow || 'ASHEN VOW';
     if (line) line.textContent = info.shot.narration;
-    if (voiceSave.autoplayInTrailer && voiceSave.enabled) {
+    if (!trailerPaused) {
+      trailerMusicCue(info.shot);
+      if (trailerSfxShot !== info.index && info.local < 0.4) trailerSfx(info.shot.sfx);
+      trailerSfxShot = info.index;
+    }
+    if (voiceSave.autoplayInTrailer && voiceSave.enabled && !trailerPaused) {
       void speakVoiceLine(info.shot.narration, info.shot.cast);
     }
   }
@@ -19097,6 +19160,8 @@ function openTrailer() {
   audioUnlocked = true;
   music.stop(0.6);
   stopVoice();
+  trailerDirector?.reset();
+  trailerSfxShot = -1;
   trailerActive = true;
   syncScreens();
   paintTrailer();
@@ -19109,6 +19174,8 @@ function closeTrailer() {
   if (trailerHandle) cancelAnimationFrame(trailerHandle);
   trailerHandle = 0;
   stopVoice();
+  // Drop the footage game so a closed trailer holds no simulation in memory.
+  trailerDirector?.reset();
   if (menuView === 'trailer') menuView = 'title';
   syncScreens();
 }
@@ -19216,6 +19283,9 @@ Object.defineProperties(window.__ashen, {
         shot: trailerShotAt(trailerTime),
         summary: trailerSummary(),
         identity: TRAILER_IDENTITY,
+        director: trailerDirector
+          ? { ...trailerDirector.stats, key: trailerDirector.key, simTime: trailerDirector.simTime, room: trailerDirector.game?.roomIndex ?? null, boss: trailerDirector.game?.boss?.kind || null }
+          : null,
       };
     },
   },
