@@ -259,6 +259,21 @@ async function main() {
       const overflowChar = await evaluate('document.documentElement.scrollWidth - window.innerWidth');
       check(`${vp.name}: class screen has no horizontal overflow`, overflowChar <= 0, true);
       await shot(`${vp.name}-classes`);
+
+      // ── Level Select thumbnails ────────────────────────────────────────
+      await evaluate('window.__ashen.showLevels()');
+      const thumbs = await waitFor(`document.querySelectorAll('#level-cards img.level-thumb[src^="data:image"]').length >= 3`, 8000);
+      const levelInfo = await evaluate(`(() => ({
+        cards: document.querySelectorAll('#level-cards .level-card').length,
+        thumbs: document.querySelectorAll('#level-cards img.level-thumb').length,
+        overflow: document.documentElement.scrollWidth - window.innerWidth,
+        liveCanvas: !!document.querySelector('canvas#game'),
+      }))()`);
+      check(`${vp.name}: level select keeps its cards`, levelInfo.cards >= 14, true);
+      check(`${vp.name}: every visible legacy room card has a thumbnail slot`, levelInfo.thumbs >= 13, true);
+      check(`${vp.name}: room thumbnails paint`, thumbs, true);
+      check(`${vp.name}: level select has no horizontal overflow`, levelInfo.overflow <= 0, true);
+      await shot(`${vp.name}-levels`);
       await evaluate('window.__ashen.showMenu()');
     }
 

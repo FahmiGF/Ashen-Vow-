@@ -626,3 +626,85 @@
     z-index: 44;
   }
 }
+
+/* ======================================================================
+   Level Select: real room thumbnails (rendered once, like Sneak Peek)
+   ====================================================================== */
+.level-card .level-art.has-thumb {
+  height: clamp(104px, 11vw, 140px);
+}
+
+.level-thumb {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 0.3s ease, transform 0.4s ease, filter 0.3s ease;
+}
+
+.level-thumb[src] {
+  opacity: 1;
+}
+
+.level-card:hover .level-thumb {
+  transform: scale(1.04);
+}
+
+.level-card.locked .level-thumb {
+  filter: grayscale(0.75) brightness(0.5) blur(1px);
+}
+
+.level-art.has-thumb::before {
+  z-index: 1;
+  height: 55%;
+  background: linear-gradient(180deg, transparent, rgba(8, 6, 4, 0.85));
+}
+
+.level-art.has-thumb .level-chapter,
+.level-art.has-thumb .level-badge {
+  z-index: 2;
+}
+
+.level-art.has-thumb .level-glyph {
+  position: absolute;
+  z-index: 2;
+  left: 10px;
+  bottom: 6px;
+  font-size: 20px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .level-thumb {
+    transition: none;
+  }
+
+  .level-card:hover .level-thumb {
+    transform: none;
+  }
+}
+
+/* Readable level-card text (was 6–7 px). */
+.level-chapter,
+.level-badge {
+  font-size: 9px;
+  padding: 2px 6px;
+  background: rgba(8, 6, 4, 0.72);
+}
+
+.level-chapter {
+  color: #cdb68c;
+}
+
+.level-sub {
+  font-size: 9.5px;
+}
+
+.level-tags span {
+  font-size: 9px;
+}
+
+.btn-small {
+  font-size: 9.5px;
+}

@@ -108,6 +108,56 @@ export class PortraitStudio {
     return url;
   }
 
+  /**
+   * Thumbnail of a room as Sneak Peek would show it (no player, no HUD).
+   * Rendered with a private low-resolution Renderer so the live canvas is
+   * never touched.
+   */
+  roomThumb(index, { viewW = 960, viewH = 540, width = 360, cameraX } = {}) {
+    const key = `room:${index}:${width}`;
+    if (this.cache.has(key)) return this.cache.get(key);
+    if (!this.ensure()) return '';
+    let url = '';
+    try {
+      if (!this.roomRenderer) {
+        const roomCanvas = document.createElement('canvas');
+        this.roomRenderer = new this.Renderer(roomCanvas);
+      }
+      const r = this.roomRenderer;
+      const scale = width / viewW;
+      r.dpr = scale;
+      r.canvas.width = Math.round(viewW * scale);
+      r.canvas.height = Math.round(viewH * scale);
+      const peek = new this.AshenGame();
+      peek.enterRoom(index);
+      if (peek.boss) {
+        peek.boss.intro = 0;
+        peek.boss.hp = peek.boss.maxHp;
+      }
+      const focus = peek.boss ? peek.boss.x + peek.boss.w / 2 : (peek.enemies[0]?.x ?? viewW / 2);
+      r.render(peek, { spectate: true, cameraX: cameraX ?? focus - viewW / 2 });
+      const out = this.canvas;
+      out.width = r.canvas.width;
+      out.height = r.canvas.height;
+      const ctx = out.getContext('2d');
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      // The renderer paints its sky as a CSS gradient on the canvas element,
+      // so rebuild that gradient here before compositing the world on top.
+      const stops = String(r.canvas.style.background || '').match(/#[0-9a-f]{3,8}|rgba?\([^)]*\)/gi) || ['#1a120c', '#0c0907'];
+      const sky = ctx.createLinearGradient(0, 0, 0, out.height);
+      stops.forEach((color, i) => sky.addColorStop(stops.length === 1 ? 0 : i / (stops.length - 1), color));
+      ctx.fillStyle = sky;
+      ctx.fillRect(0, 0, out.width, out.height);
+      ctx.drawImage(r.canvas, 0, 0);
+      url = out.toDataURL('image/webp', 0.8);
+      if (!url.startsWith('data:image/webp')) url = out.toDataURL('image/jpeg', 0.82);
+    } catch {
+      url = '';
+    }
+    this.cache.set(key, url);
+    return url;
+  }
+
   /** Emblem portrait for weapons and items. */
   emblem(kind, glyph, accent, size = 176) {
     const key = `emblem:${kind}:${glyph}:${size}`;

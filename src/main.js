@@ -11432,6 +11432,7 @@ function portraitFor(spec, size = 176) {
   const { kind, id, accent, glyph } = spec;
   if (kind === 'enemies' || kind === 'bosses') return studio.creature(kind, id, accent, size);
   if (kind === 'hero') return studio.hero(id, null, accent, size);
+  if (kind === 'room') return studio.roomThumb(Number(id));
   return studio.emblem(id, glyph, accent, size);
 }
 
@@ -12404,7 +12405,8 @@ function buildLevelCards() {
           ? '<span class="level-badge lock">TERKUNCI</span>'
           : '<span class="level-badge">TERBUKA</span>';
     card.innerHTML = `
-      <div class="level-art">
+      <div class="level-art${hidden ? '' : ' has-thumb'}">
+        ${hidden ? '' : `<img class="level-thumb" alt="" decoding="async" data-portrait="room" data-id="${i}" width="360" height="203" />`}
         <span class="level-chapter">${hidden ? 'MYCELIAL ?' : meta.chapter}</span>
         ${badge}
         <span class="level-glyph" aria-hidden="true">${hidden ? '?' : meta.glyph}</span>
@@ -12430,6 +12432,7 @@ function buildLevelCards() {
     if (peekBtn) peekBtn.addEventListener('click', () => startSpectate(i));
     wrap.appendChild(card);
   });
+  hydratePortraits(wrap);
   buildCisternCards();
   buildLanternwakeCards();
 }
