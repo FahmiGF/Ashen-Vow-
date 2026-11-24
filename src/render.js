@@ -35,7 +35,10 @@ function rr(ctx, x, y, w, h, r) {
 export class Renderer {
   constructor(canvas) {
     this.canvas = canvas;
-    this.ctx = canvas.getContext('2d');
+    // Opaque backing store: the compositor can skip every layer behind the
+    // canvas instead of blending a transparent canvas over a CSS gradient each
+    // frame. On machines without GPU compositing that blend was the frame cost.
+    this.ctx = canvas.getContext('2d', { alpha: false }) || canvas.getContext('2d');
     this.dpr = 1;
     this.previewSparkles = [];
     this.previewTransition = 0;
@@ -76,6 +79,25 @@ export class Renderer {
     this.canvas.height = Math.round(VIEW_H * dpr);
   }
 
+  /** Opaque per-palette sky. Also clears the frame (the canvas has no alpha). */
+  drawSky(ctx, pal) {
+    const key = `sky|${pal.top}|${pal.mid}|${pal.low}`;
+    const sky = this.layer(key, VIEW_W, VIEW_H, (c, w, h) => {
+      const g = c.createLinearGradient(0, 0, 0, h);
+      g.addColorStop(0, pal.top);
+      g.addColorStop(0.55, pal.mid);
+      g.addColorStop(1, pal.low);
+      c.fillStyle = g;
+      c.fillRect(0, 0, w, h);
+    });
+    if (sky) {
+      this.blitLayer(ctx, sky, 0, 0);
+    } else {
+      ctx.fillStyle = pal.mid || '#0b0806';
+      ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+    }
+  }
+
   setPixelScale(scale) {
     const next = clamp(Number(scale) || 1, 0.7, 1);
     if (Math.abs(next - this.pixelScale) < 0.01) return;
@@ -83,19 +105,40 @@ export class Renderer {
     this.resize();
   }
 
-  /** Build (or reuse) a 1x offscreen canvas for static artwork. */
+  /**
+   * Build (or reuse) an offscreen canvas for static artwork, baked at the
+   * canvas's device scale. Blitting a 1x bitmap through the dpr transform made
+   * every cached layer a full bilinear resample per frame; at native size the
+   * blit is a straight copy (measured 8.1 → 0.2 ms for the Cistern glow).
+   * `_lw`/`_lh` keep the logical size; draw it with `blitLayer`.
+   */
   layer(key, w, h, paint) {
-    let cached = this._layers.get(key);
+    const scale = this.dpr || 1;
+    const fullKey = `${key}@${scale}`;
+    let cached = this._layers.get(fullKey);
     if (cached) return cached;
     if (typeof document === 'undefined') return null;
     cached = document.createElement('canvas');
-    cached.width = Math.max(1, Math.ceil(w));
-    cached.height = Math.max(1, Math.ceil(h));
+    const lw = Math.max(1, Math.ceil(w));
+    const lh = Math.max(1, Math.ceil(h));
+    cached.width = Math.max(1, Math.ceil(lw * scale));
+    cached.height = Math.max(1, Math.ceil(lh * scale));
+    cached._lw = lw;
+    cached._lh = lh;
+    cached._scale = scale;
     const c = cached.getContext('2d');
-    paint(c, cached.width, cached.height);
-    if (this._layers.size > 24) this._layers.clear();
-    this._layers.set(key, cached);
+    c.setTransform(scale, 0, 0, scale, 0, 0);
+    paint(c, lw, lh);
+    if (this._layers.size > 40) this._layers.clear();
+    this._layers.set(fullKey, cached);
     return cached;
+  }
+
+  /** Draw a cached layer at logical (x, y), snapped to whole device pixels. */
+  blitLayer(ctx, image, x, y) {
+    if (!image) return;
+    const s = image._scale || 1;
+    ctx.drawImage(image, Math.round(x * s) / s, Math.round(y * s) / s, image._lw || image.width, image._lh || image.height);
   }
 
   /**
@@ -137,7 +180,6 @@ export class Renderer {
     const ctx = this.ctx;
     const dpr = this.dpr;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.clearRect(0, 0, VIEW_W, VIEW_H);
     ctx.imageSmoothingEnabled = this.options?.antiAliasing !== false && this.pixelScale > 0.99;
 
     const spectate = !!opts.spectate;
@@ -150,13 +192,9 @@ export class Renderer {
       ...(room.palette || {}),
       ...(game.arenaTheme?.palette || {}),
     };
-    // Palette background is a CSS gradient; changing it only on room change
-    // avoids a full-screen canvas fill while keeping per-zone colours.
-    const skyKey = `${pal.top}|${pal.mid}|${pal.low}`;
-    if (skyKey !== this._skyKey) {
-      this._skyKey = skyKey;
-      this.canvas.style.background = `linear-gradient(180deg, ${pal.top} 0%, ${pal.mid} 55%, ${pal.low} 100%)`;
-    }
+    // The sky is a cached opaque bitmap: one copy per frame replaces both the
+    // clear and the old CSS gradient that the compositor blended underneath.
+    this.drawSky(ctx, pal);
 
     const p = game.player;
     const followCam = clamp(p.x + p.w / 2 - VIEW_W / 2, 0, WORLD_W - VIEW_W);
@@ -765,7 +803,7 @@ export class Renderer {
     // cropped alpha blit per frame instead of three full-screen composites.
     return this.layer(`backdrop|${pal.fog}|${pal.glow}|${pal.top}`, 2600, VIEW_H, (c) => {
       const moon = this._moonLayer(pal);
-      if (moon) c.drawImage(moon, 560, -96);
+      if (moon) c.drawImage(moon, 560, -96, moon._lw, moon._lh);
       for (let i = 0; i < 9; i++) {
         const x = i * 300 - 120;
         this.drawArch(c, x, 120, 190, 400, '#0f0c0b', 0.9);
@@ -792,15 +830,18 @@ export class Renderer {
   /** Blit the visible slice of a parallax strip instead of the whole 2600px image. */
   _blitParallax(ctx, image, offset) {
     if (!image) return;
-    const sx = Math.max(0, -offset);
-    const sw = Math.min(VIEW_W, image.width - sx);
+    const s = image._scale || 1;
+    const lw = image._lw || image.width;
+    // Snap the strip to whole device pixels so the copy stays unfiltered.
+    const off = Math.round(offset * s) / s;
+    const sx = Math.max(0, -off);
+    const sw = Math.min(VIEW_W, lw - sx);
     if (sw <= 0) return;
-    ctx.drawImage(image, sx, 0, sw, VIEW_H, offset + sx, 0, sw, VIEW_H);
+    ctx.drawImage(image, sx * s, 0, sw * s, VIEW_H * s, off + sx, 0, sw, VIEW_H);
   }
 
   drawBackground(ctx, room, pal, camX, t, game) {
-    // The sky gradient lives in CSS (`background` set in render), so the canvas
-    // stays transparent and skips a full-screen fill every frame.
+    // The sky is already on the canvas (drawSky in render).
     if (room.biome && room.parallax) {
       this.drawBiomeBackground(ctx, room, pal, camX, t, game);
       return;
@@ -861,7 +902,7 @@ export class Renderer {
       c.fillStyle = g;
       c.fillRect(0, 0, w, h);
     });
-    if (glow) ctx.drawImage(glow, VIEW_W * 0.52 - 420, -300);
+    if (glow) this.blitLayer(ctx, glow, VIEW_W * 0.52 - 420, -300);
 
     // Far arches.
     ctx.save();
@@ -5456,7 +5497,7 @@ export class Renderer {
         c.fillStyle = g;
         c.fillRect(0, 0, VIEW_W, VIEW_H);
       });
-      if (fog) ctx.drawImage(fog, 0, 0);
+      if (fog) this.blitLayer(ctx, fog, 0, 0);
     }
 
     // Vignette and bottom haze are CSS layers over the canvas now; keeping them

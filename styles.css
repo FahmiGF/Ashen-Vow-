@@ -57,6 +57,9 @@ body::before {
 }
 
 #app {
+  /* Its own stacking context above body::before, so the page grain/vignette
+     overlay sits behind the game frame instead of over the live canvas. */
+  position: relative;
   width: 100%;
   display: flex;
   flex-direction: column;

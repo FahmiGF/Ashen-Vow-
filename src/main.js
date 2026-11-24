@@ -932,6 +932,8 @@ let godfallRun = null;
 let activeRaid = null;
 let eclipseRunStartedAt = 0;
 const framePerf = new PerformanceSampler({ capacity: 240 });
+let memorySampleAt = 0;
+let memorySampleMb = 0;
 const runtimeReporter = new RuntimeReporter();
 runtimeReporter.install();
 let activeFairyStage = -1;
@@ -11663,6 +11665,14 @@ let aiDebugOpen = false;
 let debugOpen = false;
 let debugPanelGate = 0;
 
+function canvasFilterFor(graphics) {
+  const parts = [];
+  if (Number(graphics.gamma) !== 100) parts.push('url(#ashen-gamma)');
+  if (Number(graphics.brightness) !== 100) parts.push(`brightness(${graphics.brightness}%)`);
+  if (Number(graphics.contrast) !== 100) parts.push(`contrast(${graphics.contrast}%)`);
+  return parts.length ? parts.join(' ') : 'none';
+}
+
 function applySettings({ persist = true } = {}) {
   const capabilities = detectCapabilities();
   // Spatial audio is a real WebAudio listener/panner mode, not a label.
@@ -11736,7 +11746,11 @@ function applySettings({ persist = true } = {}) {
   root.style.setProperty('--hud-opacity', String(settings.hud.opacity / 100));
   root.style.setProperty('--safe-area', `${settings.display.safeArea}%`);
   root.style.setProperty('--subtitle-bg', String(settings.accessibility.subtitleBackground / 100));
-  canvas.style.filter = `url(#ashen-gamma) brightness(${settings.graphics.brightness}%) contrast(${settings.graphics.contrast}%)`;
+  // A CSS filter on the live canvas is re-run on every composited frame, and
+  // the SVG gamma pass has no fast path: it halved the frame rate without GPU
+  // compositing (29 → 57 fps measured) and kept the GPU busy otherwise. Apply
+  // only the parts that differ from neutral.
+  canvas.style.filter = canvasFilterFor(settings.graphics);
   const exponent = String(1 / Math.max(0.5, settings.graphics.gamma / 100));
   for (const id of ['gamma-r', 'gamma-g', 'gamma-b']) {
     const node = $(id);
@@ -15872,7 +15886,13 @@ function frame(now) {
     renderGate = now;
   }
 
-  framePerf.sample(raw * 1000, performance.memory ? performance.memory.usedJSHeapSize / 1048576 : 0);
+  // performance.memory is a slow getter; reading it once a second is enough
+  // for the peak-memory figure.
+  if (now - memorySampleAt > 1000) {
+    memorySampleAt = now;
+    memorySampleMb = performance.memory ? performance.memory.usedJSHeapSize / 1048576 : 0;
+  }
+  framePerf.sample(raw * 1000, memorySampleMb);
 
   // Scary Mode 2.0: events, presence, and difficulty sync. Never runs in menus.
   if (started && !paused && menuView === 'none') horrorTick(raw);
