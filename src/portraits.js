@@ -8,6 +8,9 @@
 
 const POSE_TIME = 1.3;
 
+/** Which drawn weapon reads best for each class in a still portrait. */
+export const CLASS_WEAPON = { lyna: 'bow', retiarius: 'pike', warden: 'pike', worldroot_druid: 'pike' };
+
 function hashString(text) {
   let h = 2166136261;
   for (let i = 0; i < text.length; i++) {
@@ -91,14 +94,14 @@ export class PortraitStudio {
         deathTimer: 0,
         player: {
           x: 0, y: -46, w: 30, h: 46, vx: 0, vy: 0, facing: 1, onGround: true,
-          attack: null, weapon: 'sword', invuln: 0, dashTimer: 0,
+          attack: null, weapon: CLASS_WEAPON[characterId] || 'sword', invuln: 0, dashTimer: 0,
           characterId, build, appearance: look,
         },
       };
-      const scale = Math.min(box.h * 0.62 / (46 * build), 3.4) * build;
+      const scale = Math.min((box.h * 0.5) / (46 * build), 3.2) * build;
       ctx.translate(box.cx, box.floor);
       ctx.scale(scale, scale);
-      ctx.translate(-15, 0);
+      ctx.translate(-15 - 6, 0);
       this.renderer.drawPlayer(ctx, fake, POSE_TIME);
     });
     this.cache.set(key, url);
@@ -233,8 +236,9 @@ export class PortraitStudio {
       ent.facing = 1;
     }
     // Art overhangs the hitbox (horns, wings, weapons), so fit with headroom.
-    const artW = ent.w * 1.5;
-    const artH = ent.h * 1.4;
+    const boss = category === 'bosses';
+    const artW = ent.w * (boss ? 1.8 : 1.5);
+    const artH = ent.h * (boss ? 1.6 : 1.4);
     const scale = Math.min((box.w * 0.82) / artW, (box.h * 0.74) / artH, 3.4);
     const lift = ent.flying ? box.h * 0.1 : 0;
     ctx.translate(box.cx, box.floor - lift);

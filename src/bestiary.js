@@ -80,7 +80,7 @@ function bossEntry(kind, info, source) {
     title: String(info.title || ''),
     glyph: info.glyph || DEFAULT_GLYPH.bosses,
     danger: `${phases} FASE`,
-    desc: String(info.desc || quote || ''),
+    desc: String(info.desc || ''),
     quote,
     where: String(info.where || source.label),
     mini: !!info.mini,

@@ -16,7 +16,9 @@ import {
   OUTFIT_COLORS,
   DEFAULT_APPEARANCE,
 } from './core.js';
-import { Renderer } from './render.js';
+import { Renderer, classAccent } from './render.js';
+import { bestiaryIndex, bestiaryEntries, bestiarySources, BESTIARY_SOURCE_BY_ID } from './bestiary.js';
+import { PortraitStudio, createPortraitQueue } from './portraits.js';
 import { SoundKit } from './audio.js';
 import { MusicManager, bossTrackFor } from './music.js';
 import {
@@ -10684,6 +10686,8 @@ function showCharacter() {
   clearHeldKeys();
   buildCharacterScreen();
   syncScreens();
+  // Size the preview canvas again once the screen has real layout.
+  requestAnimationFrame(() => { if (menuView === 'character') buildCharacterScreen(); });
 }
 
 function closeCharacter() {
@@ -10705,13 +10709,15 @@ function buildCharacterScreen() {
   roster.innerHTML = Object.values(CHARACTERS)
     .map(
       (c) => `
-      <button class="char-card${c.id === character.characterId ? ' active' : ''}" type="button" data-char="${c.id}" aria-pressed="${c.id === character.characterId}">
-        <span class="char-glyph" aria-hidden="true">${c.glyph}</span>
+      <button class="char-card${c.id === character.characterId ? ' active' : ''}" type="button" data-char="${c.id}" aria-pressed="${c.id === character.characterId}" style="--accent:${classAccent(c.id)}">
+        <span class="char-portrait"><img alt="" decoding="async" data-portrait="hero" data-id="${c.id}" data-accent="${classAccent(c.id)}" data-size="176" width="176" height="176" /><span class="char-glyph" aria-hidden="true">${c.glyph}</span></span>
         <strong>${c.name}</strong>
         <em>${c.title}</em>
+        <span class="char-class">${escapeHtml(c.className || '')}</span>
       </button>`,
     )
     .join('');
+  hydratePortraits(roster);
 
   $('char-races').innerHTML = Object.values(RACES)
     .map(
@@ -10800,8 +10806,11 @@ function buildCharacterScreen() {
     const dpr = Math.min(2, window.devicePixelRatio || 1);
     const cssW = canvas.clientWidth || 260;
     const cssH = canvas.clientHeight || 330;
-    if (previewDpr !== dpr) {
-      previewDpr = dpr;
+    // Re-size whenever the laid-out size changes too, not only the DPR: the
+    // screen is often built while hidden, when clientWidth is still 0.
+    const sizeKey = `${dpr}:${cssW}x${cssH}`;
+    if (previewDpr !== sizeKey) {
+      previewDpr = sizeKey;
       canvas.width = Math.round(cssW * dpr);
       canvas.height = Math.round(cssH * dpr);
     }
@@ -11389,44 +11398,209 @@ function wireMapControls() {
 // ── codex ────────────────────────────────────────────────────────────────
 const CODEX_TABS = [
   { id: 'enemies', label: 'MUSUH', glyph: '◈' },
-  { id: 'weapons', label: 'SENJATA', glyph: '†' },
   { id: 'bosses', label: 'BOSS', glyph: '♜' },
+  { id: 'weapons', label: 'SENJATA', glyph: '†' },
   { id: 'items', label: 'BARANG', glyph: '✦' },
 ];
+const CODEX_ACCENT = { enemies: '#c9a25c', bosses: '#d98b58', weapons: '#e4c27f', items: '#9fc7d8' };
+let codexQuery = '';
+let codexSource = 'all';
+const codexSelected = { enemies: null, bosses: null, weapons: null, items: null };
+let portraitStudio = null;
+let portraitQueue = null;
+let portraitObserver = null;
+
+function ensurePortraits() {
+  if (!portraitStudio) {
+    portraitStudio = new PortraitStudio({ Renderer, AshenGame, characters: CHARACTERS });
+    portraitQueue = createPortraitQueue(8);
+  }
+  if (!portraitObserver && typeof IntersectionObserver === 'function') {
+    portraitObserver = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue;
+        portraitObserver.unobserve(entry.target);
+        queuePortrait(entry.target);
+      }
+    }, { rootMargin: '160px' });
+  }
+  return portraitStudio;
+}
+
+function portraitFor(spec, size = 176) {
+  const studio = ensurePortraits();
+  const { kind, id, accent, glyph } = spec;
+  if (kind === 'enemies' || kind === 'bosses') return studio.creature(kind, id, accent, size);
+  if (kind === 'hero') return studio.hero(id, null, accent, size);
+  return studio.emblem(id, glyph, accent, size);
+}
+
+function queuePortrait(img) {
+  if (img.getAttribute('src')) return;
+  const spec = { kind: img.dataset.portrait, id: img.dataset.id, accent: img.dataset.accent, glyph: img.dataset.glyph };
+  portraitQueue.push(img, () => portraitFor(spec, Number(img.dataset.size) || 176));
+}
+
+/** Observe every portrait <img> inside `root`; paints happen in idle time. */
+function hydratePortraits(root) {
+  ensurePortraits();
+  root.querySelectorAll('img[data-portrait]').forEach((img) => {
+    if (img.getAttribute('src')) return;
+    if (portraitObserver) portraitObserver.observe(img);
+    else queuePortrait(img);
+  });
+}
+
+function escapeAttr(value) {
+  return String(value ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+}
+
+function escapeHtml(value) {
+  return String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function codexList() {
+  if (codexTab === 'enemies' || codexTab === 'bosses') {
+    return bestiaryEntries(codexTab, { source: codexSource, query: codexQuery });
+  }
+  const accent = CODEX_ACCENT[codexTab];
+  const q = codexQuery.trim().toLowerCase();
+  return (CODEX[codexTab] || [])
+    .map((entry) => ({
+      id: entry.id,
+      category: codexTab,
+      source: 'ashen',
+      sourceLabel: entry.where,
+      accent,
+      name: entry.name,
+      title: entry.subtitle,
+      glyph: entry.glyph,
+      danger: entry.danger,
+      desc: entry.desc,
+      where: entry.where,
+      stats: entry.meta,
+    }))
+    .filter((entry) => !q || `${entry.name} ${entry.title} ${entry.where}`.toLowerCase().includes(q));
+}
+
+function codexPortraitTag(entry, size, cls = 'ix-portrait') {
+  return `<img class="${cls}" alt="" decoding="async" data-portrait="${entry.category}" data-id="${escapeAttr(entry.id)}" data-accent="${escapeAttr(entry.accent)}" data-glyph="${escapeAttr(entry.glyph || '')}" data-size="${size}" width="${size}" height="${size}" />`;
+}
+
+function buildCodexDetail(entry) {
+  const panel = $('codex-detail');
+  if (!panel) return;
+  if (!entry) {
+    panel.innerHTML = '<p class="ix-empty">Tidak ada entri yang cocok.</p>';
+    return;
+  }
+  panel.style.setProperty('--accent', entry.accent);
+  panel.innerHTML = `
+    <div class="ix-detail-art">${codexPortraitTag(entry, 320, 'ix-detail-img')}</div>
+    <div class="ix-detail-text">
+      <span class="ix-badge">${escapeHtml(entry.danger)}</span>
+      <h3>${escapeHtml(entry.name)}</h3>
+      <span class="ix-detail-title">${escapeHtml(entry.title)}</span>
+      <div class="ix-stats">
+        ${(entry.stats || []).map(([k, v]) => `<span><b>${escapeHtml(k)}</b>${escapeHtml(v)}</span>`).join('')}
+      </div>
+      ${entry.desc ? `<p>${escapeHtml(entry.desc)}</p>` : ''}
+      ${entry.quote && entry.quote !== entry.desc ? `<blockquote>“${escapeHtml(entry.quote)}”</blockquote>` : ''}
+      <span class="ix-where">${escapeHtml(entry.where)}</span>
+    </div>`;
+  // The detail portrait is always on screen, so paint it now.
+  const img = panel.querySelector('img[data-portrait]');
+  if (img) img.src = portraitFor({ kind: img.dataset.portrait, id: img.dataset.id, accent: img.dataset.accent, glyph: img.dataset.glyph }, 320);
+}
+
+function selectCodexEntry(id) {
+  const wrap = $('codex-entries');
+  const entries = codexList();
+  const entry = entries.find((e) => e.id === id);
+  if (!entry || !wrap) return null;
+  codexSelected[codexTab] = id;
+  wrap.querySelectorAll('.ix-card.active').forEach((n) => n.classList.remove('active'));
+  wrap.querySelector(`[data-codex-entry="${CSS.escape(id)}"]`)?.classList.add('active');
+  buildCodexDetail(entry);
+  return entry;
+}
 
 function buildCodex() {
   const tabs = $('codex-tabs');
   const wrap = $('codex-entries');
   if (!tabs || !wrap) return;
+  const index = bestiaryIndex();
+  const tabCount = (id) => (id === 'enemies' || id === 'bosses' ? index[id].length : (CODEX[id] || []).length);
   tabs.innerHTML = CODEX_TABS.map((tab) => `
-    <button class="codex-tab${codexTab === tab.id ? ' active' : ''}" type="button" data-codex-tab="${tab.id}">
-      <span aria-hidden="true">${tab.glyph}</span>${tab.label}
+    <button class="codex-tab${codexTab === tab.id ? ' active' : ''}" type="button" role="tab" aria-selected="${codexTab === tab.id}" data-codex-tab="${tab.id}">
+      <span aria-hidden="true">${tab.glyph}</span>${tab.label}<em>${tabCount(tab.id)}</em>
     </button>
   `).join('');
   tabs.querySelectorAll('[data-codex-tab]').forEach((btn) => {
     btn.addEventListener('click', () => {
+      if (codexTab === btn.dataset.codexTab) return;
       codexTab = btn.dataset.codexTab;
+      codexSource = 'all';
       buildCodex();
     });
   });
-  const entries = CODEX[codexTab] || [];
-  wrap.innerHTML = entries.map((entry) => `
-    <article class="codex-card" style="--accent:${codexTab === 'bosses' ? '#d98b58' : '#c9a25c'}">
-      <div class="codex-card-top">
-        <span class="codex-glyph" aria-hidden="true">${entry.glyph}</span>
-        <span class="codex-danger">${entry.danger}</span>
-      </div>
-      <h3>${entry.name}</h3>
-      <span class="codex-sub">${entry.subtitle}</span>
-      <p>${entry.desc}</p>
-      <div class="codex-meta">
-        ${entry.meta.map(([k, v]) => `<span><b>${k}</b>${v}</span>`).join('')}
-      </div>
-      <span class="codex-where">${entry.where}</span>
-    </article>
-  `).join('');
-  $('codex-count').textContent = `${entries.length} ENTRI · INDEKS ${CODEX_TABS.find((t) => t.id === codexTab).label}`;
+
+  const sources = $('codex-sources');
+  if (sources) {
+    const list = codexTab === 'enemies' || codexTab === 'bosses' ? bestiarySources(codexTab) : [];
+    if (codexSource !== 'all' && !list.some((s) => s.id === codexSource)) codexSource = 'all';
+    sources.innerHTML = list.length
+      ? [{ id: 'all', label: 'Semua', accent: '#c9a25c', count: index[codexTab].length }, ...list].map((s) => `
+        <button class="ix-chip${codexSource === s.id ? ' active' : ''}" type="button" data-codex-source="${s.id}" style="--accent:${s.accent}" aria-pressed="${codexSource === s.id}">
+          ${escapeHtml(s.label)}<em>${s.count}</em>
+        </button>`).join('')
+      : '';
+    sources.querySelectorAll('[data-codex-source]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        codexSource = btn.dataset.codexSource;
+        buildCodex();
+      });
+    });
+  }
+  const search = $('codex-search');
+  if (search && search.value !== codexQuery) search.value = codexQuery;
+
+  const entries = codexList();
+  if (portraitQueue) portraitQueue.clear();
+  if (portraitObserver) portraitObserver.disconnect();
+  wrap.innerHTML = entries.length
+    ? entries.map((entry) => `
+    <button class="codex-card ix-card" type="button" data-codex-entry="${escapeAttr(entry.id)}" style="--accent:${entry.accent}">
+      <span class="ix-frame">${codexPortraitTag(entry, 176)}<span class="codex-danger">${escapeHtml(entry.danger)}</span></span>
+      <h3>${escapeHtml(entry.name)}</h3>
+      <span class="codex-sub">${escapeHtml(entry.title)}</span>
+    </button>
+  `).join('')
+    : '<p class="ix-empty">Tidak ada entri yang cocok dengan pencarian ini.</p>';
+  wrap.querySelectorAll('[data-codex-entry]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      selectCodexEntry(btn.dataset.codexEntry);
+      if (window.matchMedia?.('(max-width: 900px)').matches) $('codex-detail')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    });
+  });
+  hydratePortraits(wrap);
+  const selected = entries.find((e) => e.id === codexSelected[codexTab]) || entries[0] || null;
+  if (selected) selectCodexEntry(selected.id);
+  else buildCodexDetail(null);
+  const label = CODEX_TABS.find((t) => t.id === codexTab).label;
+  const sourceLabel = codexSource === 'all' ? 'SEMUA ARC' : (BESTIARY_SOURCE_BY_ID[codexSource]?.label || '').toUpperCase();
+  $('codex-count').textContent = `${entries.length} ENTRI · ${label} · ${sourceLabel}`;
 }
+
+let codexSearchTimer = 0;
+$('codex-search')?.addEventListener('input', (event) => {
+  clearTimeout(codexSearchTimer);
+  const value = event.target.value;
+  codexSearchTimer = setTimeout(() => {
+    codexQuery = value;
+    buildCodex();
+  }, 140);
+});
 
 function openCodex(tab) {
   if (dialogueOpen || spectating) return;
@@ -12319,6 +12493,17 @@ function pollGamepad() {
 // ── input ────────────────────────────────────────────────────────────────
 window.addEventListener('keydown', (e) => {
   unlockAudio();
+  if (codexOpen && e.target instanceof HTMLInputElement && e.target.id === 'codex-search') {
+    // Typing in the Index search must never trigger game hotkeys.
+    if (e.code === 'Escape') {
+      if (e.target.value) {
+        e.target.value = '';
+        codexQuery = '';
+        buildCodex();
+      } else closeCodex();
+    }
+    return;
+  }
   if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
     e.preventDefault();
   }
@@ -18124,6 +18309,21 @@ window.__ashen = {
   get codexOpen() {
     return codexOpen;
   },
+  get codex() {
+    const index = bestiaryIndex();
+    return {
+      tab: codexTab,
+      source: codexSource,
+      query: codexQuery,
+      selected: codexSelected[codexTab],
+      enemies: index.enemies.length,
+      bosses: index.bosses.length,
+      shown: document.querySelectorAll('#codex-entries [data-codex-entry]').length,
+      painted: document.querySelectorAll('#codex-entries img[data-portrait][src]').length,
+      portraitsCached: portraitStudio?.size || 0,
+      pending: portraitQueue?.pending || 0,
+    };
+  },
   get inventoryOpen() {
     return inventoryOpen;
   },
@@ -18216,6 +18416,19 @@ window.__ashen = {
   toggleMap,
   openCodex,
   closeCodex,
+  buildCodex,
+  setCodexQuery(value) {
+    codexQuery = String(value || '');
+    buildCodex();
+    return codexList().length;
+  },
+  setCodexSource(value) {
+    codexSource = String(value || 'all');
+    buildCodex();
+    return codexList().length;
+  },
+  selectCodexEntry,
+  portraitFor,
   showUpdates,
   buildUpdateLog,
   openInventory,
