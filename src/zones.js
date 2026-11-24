@@ -59,6 +59,23 @@ export const ZONES = {
       fog: '#1d4b47',
     },
   },
+  lanternwake: {
+    id: 'lanternwake',
+    name: 'The Lanternwake',
+    subtitle: 'Api Sembilan Sumbu',
+    color: '#d99a4e',
+    mapColor: '#d99a4e',
+    music: 'cinder',
+    bossMusic: 'bossDawn',
+    particle: 'embers',
+    palette: {
+      top: '#0c0804',
+      mid: '#241708',
+      low: '#3a2610',
+      glow: '#ffb85c',
+      fog: '#4a3216',
+    },
+  },
   frostglass: {
     id: 'frostglass',
     name: 'Frostglass Cathedral',

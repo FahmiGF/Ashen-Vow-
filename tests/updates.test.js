@@ -256,11 +256,29 @@ test('Update XV remains documented after the Unwritten Wing expansion', () => {
   }
 });
 
-test('the latest update documents the endless modes and the frame-profile pass', () => {
+test('the latest update documents the Lanternwake, Vigil Tree and voice release', () => {
   const latest = LATEST_UPDATE;
-  assert.equal(latest.version, '0.34.0');
+  assert.equal(latest.version, '0.36.0');
   const text = [latest.title, latest.summary, ...latest.highlights, ...(latest.fixes || [])].join(' ');
-  for (const pattern of [/Pasang Tak Berujung/i, /pasang|surge/i, /kapten|flagship/i, /lambung|hull/i, /Sunken Causeway/i, /Panji Sumpah/i, /Lentera Roh/i, /Drowned Reaver/i, /Bone Herald/i, /999/, /progress\.pirates\.endless/i, /progress\.wavedefense\.endless/i, /key save baru|key baru/i, /frame-profile|profil frame/i, /OffscreenCanvas/i, /langkah\/detik|steps\/s/i]) {
+  for (const pattern of [/Lanternwake/i, /669-673/, /ALL_ROOMS kini 674/i, /Orsella/i, /empat fase/i, /progress\.lanternwake/, /Pohon Vigil/i, /21 rank/i, /ElevenLabs/i, /ashen-vow-voice-v1/, /Trailer/i, /80 detik/i, /BOOT-01/, /asset-inventory/i, /Master Plan 3\.0/]) {
+    assert.match(text, pattern);
+  }
+});
+
+test('the Tidewrought Cistern chapter remains documented after the Lanternwake release', () => {
+  const latest = UPDATE_LOG.find((entry) => entry.version === '0.35.0');
+  assert.ok(latest);
+  const text = [latest.title, latest.summary, ...latest.highlights, ...(latest.fixes || [])].join(' ');
+  for (const pattern of [/Sistem Air Pasang/i, /Tidewrought Cistern/i, /662-668/, /ALL_ROOMS kini 669/i, /Drowned Thrall/i, /Silt Lurker/i, /Tide Ember/i, /Valve Sentinel/i, /Vasska/i, /tiga fase|3 fase/i, /Dinding Pasang/i, /Dinding Lumut/i, /\?\?\?/, /progress\.cistern/i, /ashen-vow-progress-v1/, /glow/i, /gelembung|bubbles/i, /render-probe|per lapisan/i, /raster software/i]) {
+    assert.match(text, pattern);
+  }
+});
+
+test('the endless-mode release remains documented after the cistern chapter', () => {
+  const entry = UPDATE_LOG.find((item) => item.version === '0.34.0');
+  assert.ok(entry);
+  const text = [entry.title, entry.summary, ...entry.highlights, ...(entry.fixes || [])].join(' ');
+  for (const pattern of [/Pasang Tak Berujung/i, /Sunken Causeway/i, /999/, /progress\.pirates\.endless/i, /frame-profile/i]) {
     assert.match(text, pattern);
   }
 });

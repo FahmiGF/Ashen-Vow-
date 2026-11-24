@@ -99,7 +99,7 @@ try {
     shopExists: !!document.getElementById('hunter-shop-screen'),
     pauseEntry: !!document.getElementById('btn-pause-hunter-shop'),
   })`);
-  check(/^0\.34\./.test(boot.version), `boots v0.34.0 (${boot.version})`);
+  check(/^0\.36\./.test(boot.version), `boots v0.36.0 (${boot.version})`);
   check(boot.hunter.marks >= 180, 'a fresh hunter starts with marks');
   check(boot.shopExists && boot.pauseEntry, 'the shop screen and pause entry exist');
 
@@ -248,7 +248,7 @@ try {
     title: document.title,
   })`);
   check(persisted.save.items.grave_bell === 1 && persisted.save.marks >= 22, 'stock and marks survive a full reload');
-  check(/^0\.34\./.test(persisted.version) && /0\.34\.0/.test(persisted.title), 'reload keeps the v0.34.0 build');
+  check(/^0\.36\./.test(persisted.version) && /0\.36\.0/.test(persisted.title), 'reload keeps the v0.36.0 build');
 
   check(errors.length === 0, `no runtime or console errors${errors.length ? `: ${errors.slice(0, 3).join(' | ')}` : ''}`);
   console.log(`\nHunter kit smoke: ${checks}/${checks} checks passed`);

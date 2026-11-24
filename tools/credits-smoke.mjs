@@ -101,11 +101,16 @@ try {
     sequence: window.__ashen.secretSequence,
     summary: window.__ashen.secrets.summary,
   })`);
-  check(/^0\.34\./.test(boot.version), `boots v0.34.0 (${boot.version})`);
+  check(/^0\.36\./.test(boot.version), `boots v0.36.0 (${boot.version})`);
   check(boot.arcs.length === 11, `eleven arc credit scenes are registered (${boot.arcs.length})`);
   check(boot.arcs.some((arc) => arc.id === 'arc1' && arc.bosses.legacy.includes('oathbreaker')), 'Arc I maps the real Oathbreaker final boss');
   check(boot.arcs.some((arc) => arc.id === 'eternal' && arc.bosses.eternal.includes('first_forgotten')), 'Arc X maps The First Forgotten');
-  check(boot.spots.length === 5 && boot.sequence.length === 10, 'five hidden runes and one ten-key sequence are loaded');
+  const legacyRunes = boot.spots.filter((spot) => spot.mode === 'legacy').length;
+  const cisternRunes = boot.spots.filter((spot) => spot.mode === 'cistern').length;
+  check(
+    legacyRunes === 5 && cisternRunes === 2 && boot.sequence.length === 10,
+    `seven hidden runes (5 campaign + 2 cistern) and one ten-key sequence are loaded (${legacyRunes}/${cisternRunes}/${boot.sequence.length})`,
+  );
 
   const overlay = await evaluate(`(() => {
     window.__ashen.openCreditScene('arc1');
@@ -189,7 +194,7 @@ try {
     title: document.title,
   })`);
   check(persisted.summary.levels >= 1 && persisted.summary.modes >= 1, 'rune and mode secrets survive a full page reload');
-  check(/^0\.34\./.test(persisted.version) && /0\.34\.0/.test(persisted.title), 'reload keeps the v0.34.0 build');
+  check(/^0\.36\./.test(persisted.version) && /0\.36\.0/.test(persisted.title), 'reload keeps the v0.36.0 build');
 
   check(errors.length === 0, `no runtime or console errors${errors.length ? `: ${errors.slice(0, 3).join(' | ')}` : ''}`);
   console.log(`\nCredit scene + secret smoke: ${checks}/${checks} checks passed`);

@@ -1,9 +1,9 @@
 {
   "name": "ashen-vow",
-  "version": "0.34.0",
+  "version": "0.36.0",
   "private": true,
   "type": "module",
-  "description": "Ashen Vow v0.34.0 — Pirate Tide: open-world naval combat with ten islands, seven ports, eight hull classes, and ten captain routes across two acts",
+  "description": "Ashen Vow v0.36.0 — BAB X The Lanternwake with a four-phase Wickbearer, the Scary Mode Vigil Tree, ElevenLabs voice, an in-engine cinematic trailer and a startup guard",
   "scripts": {
     "start": "node server.js",
     "test": "node --test tests/*.test.js",
@@ -35,6 +35,7 @@
     "smoke:updatex": "node tools/updatex-smoke.mjs",
     "bench:3d": "node tools/bench3d.mjs",
     "assets:3d": "node tools/export-glb.mjs",
+    "assets:inventory": "node tools/asset-inventory.mjs",
     "smoke:scary2": "node tools/scary2-smoke.mjs",
     "smoke:dread": "node tools/dread-smoke.mjs",
     "smoke:veil": "node tools/veil-smoke.mjs",
@@ -42,6 +43,10 @@
     "smoke:archive": "node tools/archive-smoke.mjs",
     "smoke:horror3d": "node tools/horror3d-smoke.mjs",
     "smoke:credits": "node tools/credits-smoke.mjs",
-    "smoke:hunter": "node tools/hunter-smoke.mjs"
+    "smoke:hunter": "node tools/hunter-smoke.mjs",
+    "smoke:cistern": "node tools/cistern-smoke.mjs",
+    "smoke:lanternwake": "node tools/lanternwake-smoke.mjs",
+    "smoke:trailer": "node tools/trailer-smoke.mjs",
+    "probe:render": "node tools/render-probe.mjs"
   }
 }

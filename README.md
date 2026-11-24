@@ -1,4 +1,26 @@
-# Ashen Vow — v0.34.0
+# Ashen Vow — v0.36.0
+
+## v0.36.0 — Updates XXV & XXVI released
+
+v0.36.0 makes the two previously unversioned updates official: BAB X The Lanternwake (rooms 669–673, Orsella the four-phase Wickbearer), the Scary Mode Vigil Tree, ElevenLabs voice with browser-speech and subtitle fallbacks, the 80-second in-engine trailer, eight ghost GLB models, the startup guard (BOOT-01…04) and the asset inventory. Both now appear in the in-game Update Log. `MASTERPLAN.md` is rewritten as Master Plan 3.0 (phases 0–7 to v1.0); the previous plan lives in `docs/archive/MASTERPLAN-2.0.md`. Verification: `npm test` **776/776**.
+
+## Update XXIV — Sistem Air Pasang & Dua Relung Rahasia (v0.35.0)
+
+## A ninth campaign chapter, and it has secrets
+
+- **BAB IX — Tidewrought Cistern**: the `cistern` zone that had existed as configuration since v0.0.7 is now a playable chapter of **7 rooms** at ids **662–668**: four flooded halls (Ambang Pasang, Galeri Bocor, Ruang Katup, Ambang Karam), the **Altar Air Pasang** boss room, and two hidden rooms. `ALL_ROOMS` is now **669** and `ALL_BOSS_INFO` **115**; rooms 0–661 keep their exact indices, so every old save and arc still points at the same room.
+- **Opens in Level Select**: after The Oathbreaker falls, the chapter appears under the fourteen legacy cards with its own progress line. It stays **TERKUNCI** before that, and no stage can be started early.
+- **Four new enemies on real engine archetypes**: **Drowned Thrall** (chase), **Silt Lurker** (burrow-and-emerge under your feet), **Tide Ember** (hovering ranged fire from the valve slits), and **Valve Sentinel** (telegraphed lunge). Ambang Karam fields five of them.
+- **Vasska, the Tidebound Regent**: a **three-phase** boss with a close trident sweep, a harpoon fan that widens per phase, a floor-clearing surge, and Drowned Thrall summons at phases II–III. Full intro / phase II / phase III / defeat dialogue and a new `cisternBoss` track.
+- **Two genuinely hidden rooms**: **Dinding Pasang** in the floodgate hides **Gua Surut (668)**, and **Dinding Lumut** in the gallery hides **Relung Karam (667)**. Both need 130–150 damage, both read `???` in Level Select until found, and both hold a relic or collectibles plus a new hidden rune for the cistern run kind.
+- **Save model**: `progress.cistern` inside the existing `ashen-vow-progress-v1` — sequential halls, boss, secrets, discovered, runs, boss clears and best time. The sanitizer rejects skipped halls, drops a boss clear without four halls, and never reveals a secret room's name from a hand-edited save.
+- **Measured renderer work**: the cistern's ambient glow was baked into an 840×840 layer and blitted at native size — an A/B of the exact primitive measured **7.04–8.13 ms** when that layer was blitted scaled from 210 px versus **0.17–0.20 ms** at native size. Water bubbles now draw rings only, dropping the weather layer from **~0.95 ms to 0.49–0.69 ms**, and all cistern background gradients are cached (**11 → 0 gradient allocations per frame**).
+- **One rejected experiment, again documented**: caching the arches and pillars as tiled sprites made the cistern background **worse** (10.7 → 19.5 ms) on this software rasteriser, so it was reverted.
+- **New tooling**: `tools/render-probe.mjs` (`npm run probe:render`) times the background, weather, platform and full-render layers of the cistern in a real browser, and `tools/frame-profile.mjs` gained a `cistern` scenario.
+
+Verification: `npm test` **736/736** (15 new cistern tests plus updated room/enemy/boss totals across the arc suites); `npm run smoke:cistern` **40/40** drives the real level select (locked → unlocked), the live gate chain, the breakable wall into the secret room, the three-phase boss to victory, reload persistence, and a 390×844 portrait check with no horizontal overflow. `tools/browser-smoke.mjs` still passes.
+
+Honest limits: canvas micro-timings on a software rasteriser vary run to run, so the numbers above come from controlled A/B measurements of the same primitive rather than whole-frame deltas; the chapter reuses the engine's seven enemy archetypes and the existing boss phase loop rather than new animation systems. The two secret rooms are wall-gated, not a hidden-map layer.
 
 ## Update XXIII — Pasang Tak Berujung & Benteng Karam (v0.34.0)
 
@@ -184,6 +206,29 @@ Scary Mode expands into a full horror adventure while keeping its three independ
 - **Settings**: atmosphere, per-event frequency, per-enemy scare controls, boss presentation, independent 2D/3D profiles and per-mode overrides. Stored under `ashen-vow-settings-v1`; the journal lives in `ashen-vow-dread-v1`.
 
 Verification: `npm test` (unit + live-engine) and `npm run smoke:dread` (headless Chrome, real game).
+
+## Update XXVI — Arc XI: The Lanternwake + 3D Asset Inventory (unversioned, save-compatible)
+
+A tenth campaign chapter, plus a generated inventory of what the 3D kit actually ships.
+
+- **The Lanternwake (BAB X)** — five rooms at ids 669–673: Prosesi Pertama, Lorong Lilin, Aula Abu, Ruang Nyala and Ambang Sumbu. It opens only after The Oathbreaker falls **and** Vasska is defeated in the Tidewrought Cistern.
+- **20-enemy contract** — each of the four halls spawns exactly 20 bodies: 19 normal enemies across four engine archetypes (chaser, ranged, lunge, slam) plus one guaranteed Wickbearer Acolyte elite. Hall layouts are generated deterministically, so they differ from each other but never from a reload.
+- **Orsella, The Wickbearer** — a four-phase boss (thresholds 0.75 / 0.50 / 0.25) with intro, phase II–IV and defeat dialogue. She reuses the tide-regent attack machine and summons the chapter's own `wick_moth` bodies.
+- **Progression** — `progress.lanternwake` in `ashen-vow-progress-v1`: sequential halls, boss clear, discovery, runs and best time. Hand-edited saves cannot skip a hall or keep a boss clear without all four.
+- **Asset inventory** — `npm run assets:inventory` parses every committed GLB and writes `docs/asset-inventory.md`: 8 files, 23,184 triangles, 7 rigged characters with Idle/Walk/Attack, 3 LODs and a collision proxy each, 12 prop meshes, and a conservative gap list. It records that no `.blend` sources exist in the repository, so the kit is generated by `tools/export-glb.mjs`, not authored in Blender.
+
+Honest limits: no new animation rig or music composition was added for this chapter; the boss reuses an existing behaviour machine. The inventory is a description of exports, not a promise that the missing environment packs exist.
+
+## Update XXV — The Vigil Tree & Startup Guard (unversioned, save-compatible)
+
+Two reliability additions that do not change the release version.
+
+- **The Vigil Tree** (`src/horror_tree.js`) — a Scary-Mode-only skill tree with three branches (Resolve, Hunt, Vigil), nine nodes and 21 ranks. Points come from real journal progress: three starting points, plus discovered events, achievements and per-difficulty clears. Ranks buy max HP, flask charges, crit chance, movement speed, starting ash, a spirit ward, hunter stock and a longer automatic horror-event interval, and they are applied once when a Scary run starts. Respec is free.
+- **Persistence** — ranks live in `skills` inside `ashen-vow-horror-v1`; the sanitizer drops unknown nodes, clamps ranks, and refuses a rank whose prerequisite is missing, so a hand-edited save cannot buy Tier 2 for free.
+- **Startup guard** (`index.html`) — the page now shows a loading card with actual stages instead of a blank frame. A failed module import, runtime exception, unhandled rejection or a 15-second stall replaces it with a recoverable error card carrying a diagnostic code (`BOOT-01`–`BOOT-04`), a retry button and a “Tetap Buka” escape hatch.
+- **UI** — the Scary Mode screen gains a **Pohon Skill** tab that renders point totals, rank pips, costs, next-rank text and blocked reasons from the same model the run reads.
+
+Honest limits: the tree is Scary-Mode only, points are derived from the local journal (no server authority). It shipped in the v0.36.0 Update Log entry.
 
 ## Update XI — Scary Mode 2.0: The Nightmare Protocol (v0.22.0)
 
@@ -924,3 +969,29 @@ Ringkasan arsitektur, keputusan desain, status verifikasi, dan roadmap lengkap a
 ## Lisensi
 
 Proyek demo pribadi. Aset visual dan audio dibuat secara prosedural di dalam kode.
+
+## Update XXVII — Suara ElevenLabs, Trailer Sinematik & Aset Mode Lain
+
+Tiga penambahan yang semuanya berjalan di build ini (tanpa menaikkan nomor versi, agar smoke test lama tetap valid).
+
+### 1. Voice acting ElevenLabs (dengan fallback jujur)
+- `src/voice.js` — katalog 8 pengisi suara (Narator, Mordrake, Vhael, Oathbreaker, Vasska, Orsella, Arsip Hantu, Trailer), model `eleven_multilingual_v2`, kontrak permintaan, sanitizer, dan `resolveVoiceProvider()`.
+- `server.js` — `GET /api/voice` melaporkan status, `POST /api/voice` mem-proxy ke ElevenLabs memakai `ELEVENLABS_API_KEY`. Kunci tidak pernah dikirim ke browser. Balasan MP3 di-cache per hash teks+suara (maksimal 64 entri), jadi mengulang dialog boss tidak memanggil API lagi.
+- Tanpa kunci, atau saat permintaan gagal, game memakai `speechSynthesis` bawaan browser; jika itu juga tidak ada, subtitle tetap tampil dan tidak ada klaim suara palsu.
+- Prolog, dialog boss (intro/fase/defeat) dan trailer memakai satu jalur `speakVoiceLine()`. Preferensi disimpan di `ashen-vow-voice-v1`.
+
+Aktifkan dengan:
+```bash
+ELEVENLABS_API_KEY=... npm start
+```
+
+### 2. Trailer sinematik in-engine
+- `src/trailer.js` — 16 adegan / 80 detik, dari Gerbang Abu sampai Blackveil Nightfall, dengan narasi Indonesia per adegan dan renderer Canvas deterministik (`drawTrailerFrame`).
+- Menu utama → **TRAILER SINEMATIK**: putar/jeda, lompat 5 detik, ganti suara, progress bar, dan badge mesin suara yang benar-benar aktif.
+
+### 3. Aset 3D untuk mode lain
+- 8 model hantu Scary Mode yang benar-benar dibuat (`ghost_*.glb`), masing-masing 20 joint, 3 LOD, collision proxy, dan tiga klip.
+- 9 prop arsitektur baru: sistern, Lanternwake, Pirate Tide, Veil, Dread, dan Wave Defense. Total kit kini **16 file / 4.8 MB / 58.802 segitiga**.
+- Entity 3D Scary Mode sekarang memakai model hantunya sendiri, bukan rig `stalker` bersama.
+
+Verifikasi: `npm test` dan `npm run smoke:trailer` (Chrome nyata: 16 adegan, seek, jeda, negosiasi suara, toggle, persistensi, nol error konsol).

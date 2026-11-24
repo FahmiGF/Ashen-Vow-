@@ -82,7 +82,7 @@ try {
       allRooms: A.game.constructor ? true : false,
     };
   })()`);
-  check(boot.version === '0.34.0', 'version is 0.34.0');
+  check(boot.version === '0.36.0', 'version is 0.36.0');
   check(boot.realmsButton && boot.stageButton && boot.astralButton, 'new menu buttons exist');
 
   const realms = await evaluate(`(async () => {

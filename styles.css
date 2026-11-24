@@ -1236,6 +1236,61 @@ kbd {
   margin: 18px 0 6px;
 }
 
+/* Bab IX — Tidewrought Cistern sits under the legacy cards on the same screen. */
+.cistern-section {
+  margin-top: 30px;
+  padding-top: 22px;
+  border-top: 1px solid rgba(95, 211, 194, 0.18);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cistern-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.cistern-title {
+  margin: 0;
+  font-size: clamp(16px, 2vw, 22px);
+  letter-spacing: 0.16em;
+  color: #9ff0e2;
+  text-shadow: 0 0 22px rgba(95, 211, 194, 0.3);
+}
+
+.cistern-progress {
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  color: #5fd3c2;
+  white-space: nowrap;
+}
+
+.cistern-cards .level-card {
+  border-color: rgba(95, 211, 194, 0.28);
+}
+
+.cistern-cards .level-card.cleared {
+  border-color: rgba(159, 240, 226, 0.45);
+}
+
+.cistern-cards .level-art {
+  background:
+    radial-gradient(ellipse at 50% 40%, color-mix(in srgb, var(--accent) 26%, transparent), transparent 68%),
+    linear-gradient(180deg, #06211f, #04110f);
+  border-bottom-color: rgba(95, 211, 194, 0.2);
+}
+
+@media (max-width: 640px) {
+  .cistern-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
 .level-card {
   --accent: var(--gold);
   position: relative;
@@ -7064,6 +7119,36 @@ html[lang='ar'] .settings2-inner, html[lang='ar'] .screen-inner { font-family: v
 .scary-body { display: grid; gap: 12px; }
 .scary-group { border: 1px solid rgba(200, 180, 140, 0.16); border-radius: 12px; padding: 12px 14px; background: rgba(9, 8, 7, 0.5); }
 .scary-group h3 { margin: 0 0 10px; font-size: 0.78rem; letter-spacing: 0.14em; text-transform: uppercase; color: #cbb894; }
+
+/* ── Update XXV: The Vigil Tree ───────────────────────────────────────── */
+.tree-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; border: 1px solid rgba(200, 180, 140, 0.2); border-radius: 12px; padding: 12px 14px; background: rgba(9, 8, 7, 0.6); }
+.tree-head h3 { margin: 0; font-size: 0.8rem; letter-spacing: 0.16em; text-transform: uppercase; color: #e0b463; }
+.tree-points { display: flex; gap: 14px; flex-wrap: wrap; font-size: 0.78rem; color: #cbb894; }
+.tree-points b { color: #f0d9a8; font-size: 0.95rem; }
+.tree-head .btn { margin-left: auto; }
+.tree-branches { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+.tree-branch { border: 1px solid rgba(200, 180, 140, 0.16); border-radius: 12px; padding: 12px 14px; background: rgba(9, 8, 7, 0.5); }
+.tree-branch > header { display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px; }
+.tree-branch > header b { font-size: 0.8rem; letter-spacing: 0.12em; color: #e0b463; }
+.tree-branch > header span { font-size: 0.72rem; color: #9b8d76; }
+.tree-branch > p { margin: 0 0 10px; font-size: 0.74rem; color: #9b8d76; }
+.tree-node { border-top: 1px solid rgba(200, 180, 140, 0.12); padding: 10px 0; }
+.tree-node:first-of-type { border-top: none; }
+.tree-node-top { display: flex; align-items: center; gap: 8px; }
+.tree-node-top b { font-size: 0.82rem; color: #eadbc0; }
+.tree-node-top .rank { margin-left: auto; font-size: 0.74rem; letter-spacing: 0.18em; color: #e0b463; }
+.tree-node small { display: block; font-size: 0.74rem; line-height: 1.35; color: #a99b83; margin: 4px 0 8px; }
+.tree-node button { width: 100%; }
+.tree-node.maxed .rank { color: #8fd6a0; }
+.tree-node.locked { opacity: 0.6; }
+
+/* ── BAB X: The Lanternwake ───────────────────────────────────────────── */
+.lanternwake-section { margin-top: 26px; }
+.lanternwake-card { border-color: rgba(217, 154, 78, 0.34); }
+.lanternwake-card .level-glyph { color: #ffcf8e; text-shadow: 0 0 18px rgba(255, 184, 92, 0.5); }
+@media (max-width: 520px) {
+  .tree-head .btn { margin-left: 0; width: 100%; }
+}
 .scary-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(150px, 240px); gap: 14px; align-items: center; padding: 8px 0; border-top: 1px dashed rgba(200, 180, 140, 0.12); }
 .scary-row:first-of-type { border-top: 0; }
 .scary-row label { display: block; font-size: 0.92rem; color: #f0e6d4; }
@@ -7110,3 +7195,99 @@ html[lang='ar'] .settings2-inner, html[lang='ar'] .screen-inner { font-family: v
 .dread-board-row b { color: #e8dcc3; font-variant-numeric: tabular-nums; }
 .dread-board-row em { color: #9d8f78; font-style: normal; text-align: right; font-variant-numeric: tabular-nums; }
 @media (max-width: 640px) { .dread-grid { grid-template-columns: 1fr; } }
+
+/* ══ Update XXV — cinematic trailer + voice status ══════════════════════ */
+.trailer-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at 50% 35%, #14100c 0%, #050505 70%);
+  padding: max(12px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom));
+  overflow-y: auto;
+}
+.trailer-screen.hidden { display: none; }
+.trailer-frame {
+  width: min(1180px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid rgba(232, 194, 122, 0.28);
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(24, 19, 15, 0.96), rgba(9, 8, 7, 0.98));
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.65);
+}
+.trailer-frame canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  border-radius: 8px;
+  background: #000;
+}
+.trailer-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+}
+.trailer-eyebrow { color: #e8c27a; font-weight: 700; }
+.trailer-top strong { color: #f4e8d0; font-size: 0.8rem; }
+.trailer-shot { margin-left: auto; color: #b9ac93; font-variant-numeric: tabular-nums; }
+.trailer-line {
+  min-height: 2.4em;
+  margin: 0;
+  color: #efe4cf;
+  font-size: clamp(0.9rem, 2.1vw, 1.06rem);
+  line-height: 1.45;
+  text-align: center;
+  font-style: italic;
+}
+.trailer-track {
+  height: 4px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+}
+.trailer-progress {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #8a6a2a, #f0c070);
+  transition: width 0.12s linear;
+}
+.trailer-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.trailer-time {
+  color: #cbbfa8;
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+  margin-left: auto;
+}
+.trailer-controls #btn-trailer-close { margin-left: 0; }
+.trailer-foot {
+  margin: 0;
+  color: #8d8371;
+  font-size: 0.68rem;
+  letter-spacing: 0.09em;
+  text-align: center;
+}
+.trailer-foot #trailer-engine { color: #d8c08a; }
+.trailer-menu-btn em { color: #e8c27a; }
+@media (max-width: 640px) {
+  .trailer-frame { padding: 10px; gap: 8px; }
+  .trailer-controls .btn { flex: 1 1 calc(50% - 8px); }
+  .trailer-time { flex-basis: 100%; margin-left: 0; text-align: center; }
+  .trailer-top strong { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .trailer-progress { transition: none; }
+}

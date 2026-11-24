@@ -70,7 +70,7 @@ try {
   await waitFor(() => evaluate('typeof window.__ashen === "object"'), 20000, 'game boot');
 
   const boot = await evaluate(`({ version: window.__ashen.version, difficulty: window.__ashen.difficulty, categories: window.__ashen.settings && Object.keys(window.__ashen.settings).length })`);
-  check(boot.version === '0.34.0', `version is 0.34.0 (got ${boot.version})`);
+  check(boot.version === '0.36.0', `version is 0.36.0 (got ${boot.version})`);
   check(boot.difficulty.engine === 'normal' && boot.difficulty.active === 'normal', 'normal difficulty is active in the engine');
   check(boot.categories >= 10, 'versioned settings expose all groups');
 
@@ -210,7 +210,7 @@ try {
     })()`);
   })();
   check(gfx.state === 'ready' && gfx.available, `WebGL2 GLB renderer is live (state=${gfx.state} ${gfx.reason || ''})`);
-  check(gfx.models === 7 && gfx.props >= 7, `all GLB models and props loaded (${gfx.models} models, ${gfx.props} props)`);
+  check(gfx.models === 15 && gfx.props >= 7, `all GLB models and props loaded (${gfx.models} models, ${gfx.props} props)`);
   check(Boolean(gfx.stats) && gfx.stats.triangles > 1000, `skinned GLB geometry reaches the GPU (${gfx.stats && Math.round(gfx.stats.triangles)} triangles)`);
   check(Boolean(gfx.stats) && gfx.stats.drawCalls > 5 && gfx.stats.skinned > 0, `shadow + HDR passes issue real draws (${gfx.stats && gfx.stats.drawCalls} calls, ${gfx.stats && gfx.stats.skinned} skinned)`);
   check(gfx.hdr === 'rgba16f' || gfx.hdr === 'rgba8', `render target format reported honestly (${gfx.hdr})`);

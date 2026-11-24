@@ -41,7 +41,7 @@ export const HORROR3D_SITES = [
     mechanic: 'Cermin menyimpan posisi pemain sebelumnya.',
     palette: { fog: '#121016', glow: '#d8c38d', stone: '#6d675f', danger: '#b34b4b' },
     buildingScale: 26,
-    entity: { name: 'The Governess', title: 'Pengasuh Tanpa Wajah', model: 'stalker', speed: 76, damage: 18, tint: [0.72, 0.62, 0.74] },
+    entity: { name: 'The Governess', title: 'Pengasuh Tanpa Wajah', model: 'ghost_weeping_mother', speed: 76, damage: 18, tint: [0.72, 0.62, 0.74] },
     echoes: [
       { id: 'manor_echo_1', label: 'Gema Cermin', x: -120, z: 230 },
       { id: 'manor_echo_2', label: 'Gema Jam', x: 150, z: 465 },
@@ -68,7 +68,7 @@ export const HORROR3D_SITES = [
     mechanic: 'Lampu darurat mati setiap gema diambil.',
     palette: { fog: '#0e1515', glow: '#b8d7c5', stone: '#596a66', danger: '#c25a4b' },
     buildingScale: 25,
-    entity: { name: 'Nurse Orra', title: 'Perawat Ronde Terakhir', model: 'stalker', speed: 84, damage: 20, tint: [0.72, 0.84, 0.79] },
+    entity: { name: 'Nurse Orra', title: 'Perawat Ronde Terakhir', model: 'ghost_hollow_wraith', speed: 84, damage: 20, tint: [0.72, 0.84, 0.79] },
     echoes: [
       { id: 'orra_echo_1', label: 'Gema Rekam Medis', x: 130, z: 250 },
       { id: 'orra_echo_2', label: 'Gema Lonceng', x: -160, z: 500 },
@@ -95,7 +95,7 @@ export const HORROR3D_SITES = [
     mechanic: 'Air naik setiap fase; gema hanya terlihat lewat pantulan.',
     palette: { fog: '#07151b', glow: '#8bd6cf', stone: '#496d6a', danger: '#b45c5c' },
     buildingScale: 24,
-    entity: { name: 'The Drowned Cantor', title: 'Pemimpin Koor Tenggelam', model: 'stalker', speed: 88, damage: 22, tint: [0.58, 0.88, 0.9] },
+    entity: { name: 'The Drowned Cantor', title: 'Pemimpin Koor Tenggelam', model: 'ghost_drowned_bell', speed: 88, damage: 22, tint: [0.58, 0.88, 0.9] },
     echoes: [
       { id: 'chapel_echo_1', label: 'Gema Lonceng Karam', x: -150, z: 220 },
       { id: 'chapel_echo_2', label: 'Gema Mazmur', x: 150, z: 455 },
@@ -122,7 +122,7 @@ export const HORROR3D_SITES = [
     mechanic: 'Bilah kincir berputar setiap kali pemain berhenti bergerak.',
     palette: { fog: '#160b09', glow: '#f0a05a', stone: '#5e4037', danger: '#d05a38' },
     buildingScale: 27,
-    entity: { name: 'The Miller', title: 'Penggiling Tanpa Tangan', model: 'brute', speed: 72, damage: 24, tint: [1.05, 0.68, 0.48] },
+    entity: { name: 'The Miller', title: 'Penggiling Tanpa Tangan', model: 'ghost_forgotten_one', speed: 72, damage: 24, tint: [1.05, 0.68, 0.48] },
     echoes: [
       { id: 'mill_echo_1', label: 'Gema Gandum Hitam', x: 140, z: 240 },
       { id: 'mill_echo_2', label: 'Gema Roda', x: -155, z: 475 },
@@ -149,7 +149,7 @@ export const HORROR3D_SITES = [
     mechanic: 'Cahaya mercusuar membekukan pemain jika terkena sorotannya.',
     palette: { fog: '#0c0b1a', glow: '#d9c6ff', stone: '#56536c', danger: '#9b59b6' },
     buildingScale: 28,
-    entity: { name: 'The Keeper Below', title: 'Penjaga yang Menatap ke Dalam', model: 'stalker', speed: 94, damage: 24, tint: [0.86, 0.72, 1.05] },
+    entity: { name: 'The Keeper Below', title: 'Penjaga yang Menatap ke Dalam', model: 'ghost_lantern_eater', speed: 94, damage: 24, tint: [0.86, 0.72, 1.05] },
     echoes: [
       { id: 'light_echo_1', label: 'Gema Lensa', x: -140, z: 225 },
       { id: 'light_echo_2', label: 'Gema Ombak', x: 160, z: 465 },

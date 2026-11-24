@@ -1,9 +1,57 @@
 // Ashen Vow — release history shown in the in-game Update Log.
 // Keep the newest entry first. `GAME_VERSION` is the single source of truth
 // for the version shown by the Update Log screen and the debug hooks.
-export const GAME_VERSION = '0.34.0';
+export const GAME_VERSION = '0.36.0';
 
 export const UPDATE_LOG = [
+  {
+    version: '0.36.0',
+    date: '24 November 2026',
+    title: 'UPDATE XXV–XXVI — API SEMBILAN SUMBU, POHON VIGIL & SUARA ELEVENLABS',
+    tag: 'BAB X · 5 RUANG · BOS 4 FASE · POHON VIGIL 21 RANK · SUARA ELEVENLABS · TRAILER 80 DETIK · 8 MODEL HANTU · PENJAGA BOOT · v0.36.0',
+    summary:
+      'Dua pembaruan yang sebelumnya hanya ada di working tree kini resmi dirilis sebagai v0.36.0. Bab kampanye kesepuluh, The Lanternwake, melanjutkan cerita setelah Vasska gugur dengan empat aula berisi dua puluh musuh dan bos empat fase Orsella. Scary Mode mendapat Pohon Vigil, pohon skill khusus horor. Dialog kini bisa disuarakan lewat ElevenLabs, ada trailer sinematik 80 detik di dalam mesin, delapan hantu mendapat model 3D sendiri, dan layar boot tidak lagi bisa macet hitam tanpa pesan.',
+    highlights: [
+      'BAB X — The Lanternwake (Api Sembilan Sumbu): lima ruang di id 669-673, empat aula dan Altar Sumbu. Setiap aula memunculkan tepat 20 musuh (19 biasa + 1 elite) dari empat arketipe: wick_moth, lantern_wisp, taper_hound, ash_bearer, dan elite wickbearer_acolyte. ALL_ROOMS kini 674 ruang dan bos menjadi 116.',
+      'Orsella, The Wickbearer: bos empat fase dengan ambang 75/50/25 persen, 1180 HP, dialog intro, tiga fase, dan gugur. Panggilannya memakai tubuh wick_moth milik bab ini sendiri lewat summonType, bukan reskin Drowned Thrall.',
+      'Progress baru progress.lanternwake di key ashen-vow-progress-v1 yang sama. Bab ini terbuka setelah ruang 7 dan bos Cistern dikalahkan; sanitizer membuang aula yang dilompati dan clear bos tanpa empat aula.',
+      'Pohon Vigil di Scary Mode: 3 cabang, 9 node, 21 rank. Poin datang dari jurnal horor (event yang ditemukan, achievement, dan clear per kesulitan), dan bonusnya diterapkan sekali di awal run tanpa mengubah kesulitan kampanye.',
+      'Suara ElevenLabs: prolog, dialog bos, dan trailer memakai satu jalur suara. Server meneruskan /api/voice ke ElevenLabs dengan ELEVENLABS_API_KEY yang tidak pernah sampai ke browser, lalu jatuh ke speechSynthesis browser, lalu subtitle saja. Pengaturan suara disimpan di key ashen-vow-voice-v1.',
+      'Trailer Sinematik: 16 shot, 80 detik, dirender langsung di mesin dengan narasi, tombol putar, lompat 5 detik, dan jam progres, dibuka dari menu TRAILER SINEMATIK.',
+      'Delapan hantu Scary Mode kini punya model GLB sendiri (20 sendi, 3 LOD, proxy tabrakan, klip Idle/Walk/Attack), ditambah sembilan prop mode. Kit 3D menjadi 16 file dan 58.802 segitiga; entitas Blackveil memakai tubuh hantunya sendiri.',
+      'Penjaga boot: layar boot menampilkan tahap muat sungguhan, dan kegagalan muncul sebagai kartu dengan kode BOOT-01 sampai BOOT-04 serta tombol COBA LAGI dan TETAP BUKA, sehingga kegagalan impor tidak lagi meninggalkan layar hitam.',
+      'Inventaris aset: npm run assets:inventory membaca setiap .glb dan menulis docs/asset-inventory.md lengkap dengan daftar celah yang jujur (12 paket lingkungan belum dibuat, tidak ada sumber .blend).',
+      'Dokumen diperbarui: MASTERPLAN.md ditulis ulang sebagai Master Plan 3.0 (fase 0-7 menuju v1.0) dan rencana lama diarsipkan di docs/archive/MASTERPLAN-2.0.md.',
+    ],
+    fixes: [
+      'scary2.js sebelumnya merujuk sanitizeHorrorSkills tanpa mengimpornya; kini skill horor diperbaiki saat save dimuat.',
+      'Ringkasan suara dan trailer di window.__ashen dipasang dengan Object.defineProperties sehingga tidak lagi membeku pada nilai saat boot.',
+      'CLAUDE.md tidak lagi menyebut Tidewrought Cistern sebagai konfigurasi saja.',
+    ],
+  },
+  {
+    version: '0.35.0',
+    date: '23 November 2026',
+    title: 'UPDATE XXIV — SISTEM AIR PASANG & DUA RELUNG RAHASIA',
+    tag: 'BAB IX · 7 RUANG · 4 MUSUH BARU · BOS 3 FASE · 2 RELUNG RAHASIA · RELIK PASANG · PROFIL LAPISAN · v0.35.0',
+    summary:
+      'Zona Tidewrought Cistern yang sejak v0.0.7 hanya berupa konfigurasi akhirnya bisa dimainkan sebagai bab kampanye kesembilan: empat aula banjir, satu altar pasang, dan dua relung rahasia di balik dinding berlumut. Bab ini membuka setelah The Oathbreaker gugur dan muncul di layar Pilih Level tepat di bawah empat belas kartu lama, tanpa memindahkan satu pun ruang yang sudah ada. Rilis ini juga menutup putaran optimasi dengan pengukuran lapisan render: blit glow yang diperbesar empat kali ternyata 40 kali lebih mahal daripada blit ukuran asli, dan gelembung air kini hanya digambar sebagai cincin.',
+    highlights: [
+      'Bab IX — Sistem Air Pasang: tujuh ruang di id 662-668, terdiri dari empat aula (Ambang Pasang, Galeri Bocor, Ruang Katup, Ambang Karam), Altar Air Pasang sebagai ruang bos, dan dua relung rahasia. ALL_ROOMS kini 669 ruang dan ALL_BOSS_INFO 115 bos; ruang 0-661 tidak berubah satu indeks pun.',
+      'Empat musuh baru memakai tujuh arketipe mesin yang nyata, bukan reskin: Drowned Thrall (kejar), Silt Lurker (gali lalu muncul di bawah kaki), Tide Ember (melayang dan menembak dari celah katup), dan Valve Sentinel (tandai lalu terjang). Setiap aula menempatkan komposisinya sendiri, dengan Ambang Karam sebagai aula tersulit.',
+      'Vasska, Bupati Karam: bos tiga fase dengan trisula jarak dekat, kipas harpun yang membesar tiap fase, gelombang pasang yang menyapu lantai, dan panggilan Drowned Thrall di fase II-III. Dialog intro, fase II, fase III, dan gugur semuanya ditulis, dengan track musik cisternBoss baru.',
+      'Dua relung rahasia benar-benar tersembunyi: Dinding Pasang di Ambang Pasang membuka Gua Surut (668), dan Dinding Lumut di Galeri Bocor membuka Relung Karam (667). Keduanya butuh 130-150 damage untuk hancur, muncul sebagai ??? di Pilih Level sampai ditemukan, dan menyimpan Relik Pasang, dua kolektibel, serta rune rahasia baru untuk mode cistern.',
+      'Progress baru progress.cistern di dalam key ashen-vow-progress-v1 yang sama: halls berurutan, boss, secrets, discovered, runs, bossClears, bestTime. Sanitizer menolak aula yang dilompati, membuang clear bos tanpa empat aula, dan tidak pernah membocorkan nama relung rahasia dari save yang diedit tangan.',
+      'Optimasi render terukur: glow latar cistern yang digambar sebagai blit diperbesar dari layer 210px ke 840px mencatat 7,04-8,13 ms per frame, sedangkan blit ukuran asli mencatat 0,17-0,20 ms pada primitif yang sama (A/B dalam satu sesi). Gelembung air turun dari ~0,95 ms menjadi 0,49-0,69 ms setelah digambar sebagai cincin saja. Semua gradien latar cistern kini di-cache: 11 alokasi gradien per frame menjadi 0.',
+      'Percobaan cache tile sprite untuk lengkungan dan pilar dibatalkan setelah terukur memperburuk latar dari 10,7 ms menjadi 19,5 ms; raster software di mesin uji jauh lebih cepat menggambar goresan dan gradient daripada menyalin canvas besar. Angka ini dicatat supaya percobaan yang sama tidak diulang.',
+      'Alat baru tools/render-probe.mjs mengukur per lapisan (background, weather, platforms, render penuh) untuk ruang cistern, dan tools/frame-profile.mjs mendapat skenario cistern. Micro-timing canvas tetap berisik antar-run; perbandingan A/B satu primitif lebih dapat dipercaya daripada selisih frame penuh.',
+    ],
+    fixes: [
+      'Ruang di luar 14 ruang lama tidak lagi mewarisi palet abu: ruang cistern sekarang membawa palette dan particle sendiri, sehingga warna dan gelembungnya benar-benar tampil.',
+      'Gelembung air sebelumnya tidak pernah muncul karena cuaca hanya digambar untuk ruang biome; sekarang ruang yang membawa mood partikel juga menjalankannya.',
+      'Toast dinding hancur memakai kalimat cistern saat berada di sistem air, bukan lagi teks Miselium.',
+    ],
+  },
   {
     version: '0.34.0',
     date: '23 November 2026',

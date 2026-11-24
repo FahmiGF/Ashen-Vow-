@@ -162,6 +162,14 @@ try {
       A.pirateStep(0.2);
       return A.pirates.snapshot.surge;
     })()`,
+    cistern: `(() => {
+      const A = window.__ashen;
+      A.clearProgress();
+      A.unlockCistern();
+      A.cisternClear(0);
+      A.startCisternStage(1);
+      return A.snap().room;
+    })()`,
     wave: `(() => {
       const A = window.__ashen;
       A.leavePirates();
@@ -222,6 +230,15 @@ try {
       return +((performance.now() - t0) / 50).toFixed(2);
     })()`,
   };
+  directMeasure.cistern = `(() => {
+    const A = window.__ashen;
+    const ctx = A.renderer.ctx;
+    const flush = () => ctx.getImageData(0, 0, 1, 1);
+    for (let i = 0; i < 12; i += 1) { A.renderer.render(A.game); flush(); }
+    const t0 = performance.now();
+    for (let i = 0; i < 60; i += 1) { A.renderer.render(A.game); flush(); }
+    return +((performance.now() - t0) / 60).toFixed(2);
+  })()`;
   directMeasure.pirateEndless = directMeasure.pirates;
   directMeasure.waveEndless = directMeasure.wave;
 

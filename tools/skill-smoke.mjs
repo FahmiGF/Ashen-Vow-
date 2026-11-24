@@ -144,8 +144,8 @@ async function main() {
       A.clearProgress();
       return { version: A.version, title: document.title };
     })()`);
-    check('boot reports v0.34.0', boot.version, '0.34.0');
-    assert.match(boot.title, /0\.34\.0/);
+    check('boot reports v0.36.0', boot.version, '0.36.0');
+    assert.match(boot.title, /0\.36\.0/);
 
     // Skill panel renders and spends a point.
     const panel = await evaluate(`(() => {

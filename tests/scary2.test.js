@@ -442,10 +442,11 @@ test('settings sanitize clamps ranges and rejects unknown values', () => {
 });
 
 test('every horror tab has settings and every setting writes to scary.*', () => {
-  assert.equal(HORROR_TABS.length, 5);
+  assert.equal(HORROR_TABS.length, 6);
+  assert.ok(HORROR_TABS.some((tab) => tab.id === 'tree'), 'the Vigil Tree has its own tab');
   const keys = new Set();
   const paths = new Set();
-  for (const tab of HORROR_TABS) {
+  for (const tab of HORROR_TABS.filter((entry) => entry.id !== 'tree')) {
     const list = horrorSettingsForTab(tab.id);
     assert.ok(list.length >= 10, `${tab.id} has a real settings set`);
     for (const entry of list) {

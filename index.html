@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#0b0807" />
-    <title>Ashen Vow — v0.34.0</title>
+    <title>Ashen Vow — v0.36.0</title>
     <meta
       name="description"
       content="Ashen Vow adalah metroidvania medieval 2D dengan combat pedang real-time, 426 ruang, 72 boss, mode Speedrun satu nyawa, 100 level ekspansi, Wave Defense dengan 24 gelombang dan 12 menara, Pirate Tide dengan laut terbuka dan meriam broadside, Riftwar MOBA 5v5 dengan 28 kelas, Thornveil Haven, peta, jam langsung, dan indeks sumpah."
@@ -34,8 +34,95 @@
       rel="icon"
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%230b0807'/%3E%3Cpath d='M32 6l7 18 18 8-18 8-7 18-7-18-18-8 18-8z' fill='%23d08a45'/%3E%3C/svg%3E"
     />
+    <style>
+      #boot-screen { position: fixed; inset: 0; z-index: 9999; display: grid; place-items: center; padding: 24px; background: radial-gradient(circle at 50% 30%, #1a1410 0%, #0a0705 70%); color: #e9dcc2; font-family: Georgia, 'Times New Roman', serif; }
+      #boot-screen.hidden { display: none; }
+      .boot-card { width: min(460px, 100%); border: 1px solid rgba(201, 162, 92, 0.35); border-radius: 14px; padding: 26px 24px; background: rgba(12, 9, 7, 0.92); text-align: center; }
+      .boot-eyebrow { margin: 0 0 6px; font-size: 0.68rem; letter-spacing: 0.24em; color: #c9a25c; }
+      .boot-card h2 { margin: 0 0 16px; font-size: 1.25rem; letter-spacing: 0.12em; font-weight: 600; }
+      .boot-bar { height: 6px; border-radius: 999px; background: rgba(201, 162, 92, 0.18); overflow: hidden; margin-bottom: 14px; }
+      .boot-bar i { display: block; height: 100%; width: 8%; background: linear-gradient(90deg, #c9a25c, #e8c184); transition: width 0.4s ease; }
+      #boot-status { margin: 0; font-size: 0.82rem; color: #b7a486; }
+      #boot-error[hidden] { display: none; }
+      .boot-code { margin: 16px 0 6px; font-family: monospace; letter-spacing: 0.12em; color: #d07a35; }
+      .boot-card button { margin: 14px 6px 0; border: 1px solid rgba(201, 162, 92, 0.5); background: #c9a25c; color: #17110a; border-radius: 6px; padding: 9px 16px; font-size: 0.78rem; letter-spacing: 0.1em; cursor: pointer; }
+      .boot-card button.secondary { background: transparent; color: #e9dcc2; }
+    </style>
+    <script>
+      (() => {
+        const boot = { startedAt: Date.now(), ready: false, stage: 'Memuat modul permainan' };
+        window.__ashenBoot = boot;
+        const bar = (value) => { const fill = document.getElementById('boot-bar-fill'); if (fill) fill.style.width = `${Math.max(8, Math.min(100, value))}%`; };
+        window.__ashenBootProgress = (stage, value = 40) => {
+          boot.stage = stage;
+          const status = document.getElementById('boot-status');
+          if (status) status.textContent = stage;
+          bar(value);
+        };
+        window.__ashenBootFail = (code, message) => {
+          if (boot.ready) return;
+          boot.failed = code;
+          document.getElementById('boot-screen')?.classList.remove('hidden');
+          const status = document.getElementById('boot-status');
+          if (status) status.textContent = 'Startup berhenti sebelum menu siap.';
+          const box = document.getElementById('boot-error');
+          if (box) box.hidden = false;
+          const codeEl = document.getElementById('boot-code');
+          if (codeEl) codeEl.textContent = code;
+          const msg = document.getElementById('boot-message');
+          if (msg) msg.textContent = message;
+          bar(100);
+          const fill = document.getElementById('boot-bar-fill');
+          if (fill) fill.style.background = '#a83232';
+        };
+        window.__ashenBootReady = () => {
+          boot.ready = true;
+          boot.readyAt = Date.now();
+          bar(100);
+          const status = document.getElementById('boot-status');
+          if (status) status.textContent = 'Siap.';
+          document.getElementById('boot-screen')?.classList.add('hidden');
+        };
+        window.addEventListener('error', (event) => {
+          const target = event.target;
+          if (target && target.tagName === 'SCRIPT') {
+            window.__ashenBootFail('BOOT-02', `Modul tidak termuat: ${target.src || 'script tidak dikenal'}`);
+          } else if (event.message) {
+            window.__ashenBootFail('BOOT-03', event.message);
+          }
+        }, true);
+        window.addEventListener('unhandledrejection', (event) => {
+          const reason = event.reason && (event.reason.message || String(event.reason));
+          window.__ashenBootFail('BOOT-04', `Janji gagal saat memuat: ${reason || 'tanpa pesan'}`);
+        });
+        window.addEventListener('DOMContentLoaded', () => {
+          document.getElementById('boot-retry')?.addEventListener('click', () => location.reload());
+          document.getElementById('boot-ignore')?.addEventListener('click', () => {
+            document.getElementById('boot-screen')?.classList.add('hidden');
+          });
+          window.__ashenBootProgress('Memuat modul permainan', 18);
+        });
+        setTimeout(() => {
+          if (!boot.ready) window.__ashenBootFail('BOOT-01', 'Startup melewati batas 15 detik. Muat ulang halaman; jika gagal lagi, periksa konsol peramban.');
+        }, 15000);
+      })();
+    </script>
   </head>
   <body>
+    <div id="boot-screen" role="status" aria-live="polite">
+      <div class="boot-card">
+        <p class="boot-eyebrow">ASHEN VOW · STARTUP</p>
+        <h2>MENYALAKAN SUMBU</h2>
+        <div class="boot-bar"><i id="boot-bar-fill"></i></div>
+        <p id="boot-status">Memuat modul permainan</p>
+        <div id="boot-error" hidden>
+          <p class="boot-code" id="boot-code">BOOT-00</p>
+          <p id="boot-message">Startup tidak selesai.</p>
+          <button id="boot-retry" type="button">COBA LAGI</button>
+          <button id="boot-ignore" class="secondary" type="button">TETAP BUKA</button>
+        </div>
+      </div>
+    </div>
     <main id="app">
       <div id="game-frame" class="frame">
         <canvas id="game" width="960" height="540" aria-label="Arena permainan Ashen Vow"></canvas>
@@ -388,13 +475,17 @@
                 <span>ECHOES OF THE FORGOTTEN WORLD</span>
                 <em>100 level · Thornveil Haven · Chronicle · v0.3.0</em>
               </button>
+              <button id="btn-trailer-menu" class="btn btn-ghost menu-btn trailer-menu-btn" type="button">
+                <span>TRAILER SINEMATIK</span>
+                <em>16 adegan · suara ElevenLabs · 80 detik</em>
+              </button>
               <button id="btn-credits" class="btn btn-ghost menu-btn" type="button">
                 <span>CREDITS</span>
                 <em>SealiusHQ &amp; Contributors</em>
               </button>
               <button id="btn-updates" class="btn btn-ghost menu-btn" type="button">
                 <span>CATATAN UPDATE</span>
-                <em>Riwayat rilis · v0.34.0 · Pasang Tak Berujung</em>
+                <em>Riwayat rilis · v0.36.0 · Api Sembilan Sumbu</em>
               </button>
             </nav>
 
@@ -430,6 +521,34 @@
               diintip lewat <em>Sneak Peek</em> — hanya menonton, tanpa combat.
             </p>
             <div id="level-cards" class="level-cards"></div>
+
+            <section class="cistern-section" aria-labelledby="cistern-heading">
+              <header class="cistern-head">
+                <div>
+                  <p class="eyebrow">BAB IX · SISTEM AIR PASANG</p>
+                  <h3 id="cistern-heading" class="cistern-title">TIDEWROUGHT CISTERN</h3>
+                </div>
+                <span id="cistern-progress" class="cistern-progress">TERKUNCI</span>
+              </header>
+              <p id="cistern-lock-note" class="micro cistern-lock-note">
+                Terkunci sampai The Oathbreaker gugur di Puncak Sumpah. Dua relung rahasia menunggu
+                di balik dinding berlumut.
+              </p>
+              <div id="cistern-cards" class="level-cards cistern-cards"></div>
+              <div id="lanternwake-section" class="cistern-section lanternwake-section" aria-labelledby="lanternwake-heading">
+                <div class="cistern-head">
+                  <div>
+                    <p class="eyebrow">BAB X · THE LANTERNWAKE</p>
+                    <h2 id="lanternwake-heading">API SEMBILAN SUMBU</h2>
+                    <p>Empat aula dengan 20 musuh dan satu elite, lalu Orsella si Pembawa Sumbu dalam empat fase.</p>
+                  </div>
+                  <span id="lanternwake-progress" class="cistern-progress">TERKUNCI</span>
+                </div>
+                <p id="lanternwake-lock-note" class="cistern-lock-note">Selesaikan Sistem Air Pasang — kalahkan Vasska — untuk membuka prosesi ini.</p>
+                <div id="lanternwake-cards" class="level-cards cistern-cards"></div>
+              </div>
+            </section>
+
             <div class="screen-links">
               <button id="btn-levels-back" class="link-btn" type="button">← KEMBALI KE MENU</button>
             </div>
@@ -489,7 +608,7 @@
             </div>
 
             <div id="credits-times" class="credits-times"></div>
-            <p class="credit-version">ASHEN VOW · v0.34.0 · 13 PENJAGA · 92 BOSS · 505 RUANG</p>
+            <p class="credit-version">ASHEN VOW · v0.36.0 · 13 PENJAGA · 116 BOSS · 674 RUANG</p>
             <div class="screen-links">
               <button id="btn-credits-back" class="link-btn" type="button">← KEMBALI KE MENU</button>
             </div>
@@ -506,7 +625,7 @@
               Catatan ini ikut tersimpan di dalam game.
             </p>
             <div class="updates-meta">
-              <span id="updates-version">VERSI SAAT INI · v0.34.0</span>
+              <span id="updates-version">VERSI SAAT INI · v0.36.0</span>
               <span>DIPERBARUI 15 NOVEMBER 2026</span>
             </div>
             <div id="update-log" class="update-log"></div>
@@ -548,7 +667,7 @@
           <div class="screen-inner mode3d-inner">
             <div class="mode3d-header">
               <div>
-                <p class="eyebrow">ASHEN VOW 3D · METROIDVANIA ORANG KETIGA · UPDATE XXI · v0.34.0</p>
+                <p class="eyebrow">ASHEN VOW 3D · METROIDVANIA ORANG KETIGA · UPDATE XXI · v0.36.0</p>
                 <h2 class="screen-title">THORNVEIL FOREST VERTICAL SLICE</h2>
               </div>
               <div class="mode3d-controls-bar">
@@ -1718,7 +1837,7 @@
           <div class="screen-inner archive-inner">
             <div class="scary-head">
               <div>
-                <p class="eyebrow">STAGE ARCHIVE 2.0 · SCARY MODE UPDATE XXI · v0.34.0</p>
+                <p class="eyebrow">STAGE ARCHIVE 2.0 · SCARY MODE UPDATE XXI · v0.36.0</p>
                 <h2 class="screen-title">THE SUPERNATURAL ARCHIVE</h2>
                 <p class="screen-sub">Semua tahap Arc IX dan Arc X, Level Checker, Sneak Peek, Ghost Index 3.0, Jumpscare Index, dan persiapan peralatan investigasi.</p>
               </div>
@@ -1939,6 +2058,29 @@
         <!-- ══ HACK TOOLBAR ══ -->
         <div id="hack-toolbar" class="hack-toolbar hidden" role="toolbar" aria-label="HACK testing tools"></div>
 
+        <!-- ══ CINEMATIC TRAILER (Update XXV) ══ -->
+        <section id="trailer-screen" class="trailer-screen hidden" role="dialog" aria-modal="true" aria-labelledby="trailer-title">
+          <div class="trailer-frame">
+            <canvas id="trailer-canvas" width="1280" height="720" aria-hidden="true"></canvas>
+            <div class="trailer-top">
+              <span id="trailer-eyebrow" class="trailer-eyebrow">SEALIUSHQ</span>
+              <strong id="trailer-title">ASHEN VOW — TRAILER SINEMATIK</strong>
+              <span id="trailer-shot" class="trailer-shot">1 / 16</span>
+            </div>
+            <p id="trailer-line" class="trailer-line" aria-live="polite"></p>
+            <div class="trailer-track"><div id="trailer-progress" class="trailer-progress"></div></div>
+            <div class="trailer-controls">
+              <button id="btn-trailer-play" class="btn btn-primary btn-small" type="button">JEDA</button>
+              <button id="btn-trailer-back" class="btn btn-ghost btn-small" type="button">⟲ 5 DETIK</button>
+              <button id="btn-trailer-fwd" class="btn btn-ghost btn-small" type="button">5 DETIK ⟳</button>
+              <span id="trailer-time" class="trailer-time">00:00 / 01:20</span>
+              <button id="btn-trailer-voice" class="btn btn-ghost btn-small" type="button" aria-pressed="true">SUARA: ELEVENLABS</button>
+              <button id="btn-trailer-close" class="btn btn-ghost btn-small" type="button">TUTUP</button>
+            </div>
+            <p class="trailer-foot">ESC TUTUP · SPACE JEDA · ← → 5 DETIK · <span id="trailer-engine">SUARA: MENUNGGU</span></p>
+          </div>
+        </section>
+
         <!-- ══ ARC CREDIT SCENE ══ -->
         <section id="credit-scene-screen" class="credit-scene-screen hidden" role="dialog" aria-modal="true" aria-labelledby="credit-scene-title">
           <div class="credit-scene-vignette" aria-hidden="true"></div>
@@ -2026,7 +2168,7 @@
       </div>
 
       <footer class="footer">
-          <span>ASHEN VOW · v0.34.0</span>
+          <span>ASHEN VOW · v0.36.0</span>
         <span class="dot">✦</span>
         <span>Metroidvania medieval 2D · 14 ruang · 6 boss · dibuat dengan Canvas</span>
       </footer>

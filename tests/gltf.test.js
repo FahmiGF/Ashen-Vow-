@@ -30,7 +30,7 @@ import {
   contentSummary,
 } from '../src/mode3d_content.js';
 import { Ashen3DGame, MODE3D_REGIONS, gfx3DStatus, content3DSummary } from '../src/mode3d.js';
-import { propNameFor, propScaleFor } from '../src/webgl3d.js';
+import { propNameFor, propScaleFor, CHAR_ASSETS } from '../src/webgl3d.js';
 import { HORROR3D_SITES } from '../src/mode3d_horror.js';
 import { probeCapabilities } from '../src/gpu.js';
 
@@ -152,9 +152,21 @@ test('matrix helpers compose and invert correctly', () => {
 test('prop kit covers every scenery type the 3D engine can emit', () => {
   const asset = load('props.glb');
   const names = asset.getNodes().map((node) => node.name);
-  for (const name of ['worldtree', 'hut', 'ruin', 'totem', 'crystal', 'rock', 'bridge', 'horror_manor', 'horror_asylum', 'horror_chapel', 'horror_mill', 'horror_lighthouse']) {
+  const required = [
+    'worldtree', 'hut', 'ruin', 'totem', 'crystal', 'rock', 'bridge',
+    'horror_manor', 'horror_asylum', 'horror_chapel', 'horror_mill', 'horror_lighthouse',
+    // Update XXV mode kits.
+    'cistern_arch', 'cistern_pillar', 'lantern_pyre', 'lantern_brazier',
+    'pirate_wreck', 'pirate_dock', 'veil_shrine', 'dread_altar', 'wd_bastion',
+  ];
+  for (const name of required) {
     assert.ok(names.includes(name), `props.glb contains ${name}`);
   }
+  assert.ok(names.length >= required.length, `props.glb carries ${names.length} meshes`);
+  assert.equal(propNameFor('cistern_arch'), 'cistern_arch');
+  assert.equal(propNameFor('pirate_wreck'), 'pirate_wreck');
+  assert.equal(propNameFor('wd_bastion'), 'wd_bastion');
+  assert.ok(propScaleFor('lantern_pyre', { scale: 9 }) > propScaleFor('lantern_brazier', { scale: 1 }));
   assert.equal(asset.animationNames().length, 0, 'props are static');
   assert.ok(propNameFor('worldtree') === 'worldtree');
   assert.equal(propNameFor('bonfire'), 'totem');
@@ -162,6 +174,33 @@ test('prop kit covers every scenery type the 3D engine can emit', () => {
   assert.equal(propNameFor('lighthouse'), 'horror_lighthouse');
   assert.equal(propNameFor('unknown-prop'), null);
   assert.ok(propScaleFor('worldtree', { height: 260 }) > propScaleFor('worldtree', { height: 120 }));
+});
+
+test('every Scary Mode ghost ships its own authored model', () => {
+  const ghosts = CHAR_ASSETS.filter((entry) => entry.key.startsWith('ghost_'));
+  assert.equal(ghosts.length, 8, `eight ghost models are registered (${ghosts.length})`);
+  for (const ghost of ghosts) {
+    assert.ok(files.includes(ghost.file), `${ghost.file} exists on disk`);
+    const asset = load(ghost.file);
+    const stats = asset.stats();
+    assert.ok(stats.triangles > 1500, `${ghost.file} is detailed (${stats.triangles})`);
+    assert.equal(stats.collisionMeshes, 1, `${ghost.file} has a collision proxy`);
+    assert.deepEqual(asset.animationNames(), ['Idle', 'Walk', 'Attack']);
+    const extras = asset.json.nodes[0].extras || {};
+    assert.equal(extras.role, 'ghost');
+    assert.equal(extras.ghost, ghost.key.replace('ghost_', ''));
+  }
+  // No two ghosts share geometry, so they are not recolours of one body.
+  const signatures = new Set(ghosts.map((ghost) => load(ghost.file).stats().triangles));
+  assert.equal(signatures.size, ghosts.length, 'each ghost has a distinct silhouette');
+});
+
+test('every 3D horror entity points at a model that is actually loaded', () => {
+  const keys = new Set(CHAR_ASSETS.map((entry) => entry.key));
+  for (const site of HORROR3D_SITES) {
+    assert.ok(keys.has(site.entity.model), `${site.id} loads ${site.entity.model}`);
+    assert.ok(files.includes(`${site.entity.model}.glb`), `${site.entity.model}.glb exists`);
+  }
 });
 
 test('content pack ships fifteen areas including five 3D horror sites', () => {
