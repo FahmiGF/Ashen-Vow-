@@ -261,7 +261,7 @@ async function main() {
     check('update log opens', updates.view, 'updates');
     check('update log renders the release history', updates.entries >= 12, true);
     check('update log shows v0.36.0', /v0\.36\.0/i.test(updates.badge || ''), true);
-    check('update log leads with the newest release', /PIRATE TIDE|OPEN SEA/i.test(updates.firstEntryText), true);
+    check('update log leads with the newest release', Boolean(updates.badge) && updates.firstEntryText.includes(updates.badge.replace(/^.*?(v\d+\.\d+\.\d+).*$/i, '$1')), true);
     check('update log keeps the Faewood entry', /FAEWOOD/i.test(updates.firstText), true);
     check('update log mentions the spectral dragon forms', /Demon Lord of the Last Vow/.test(updates.firstText), true);
     check('update log mentions the 30-second epilogue', /30 detik/.test(updates.firstText), true);
@@ -300,7 +300,12 @@ async function main() {
 
     // Reload: the phone view must survive a fresh boot.
     await send('Page.reload');
-    await sleep(2600);
+    await sleep(600);
+    for (let i = 0; i < 80; i += 1) {
+      const ready = await evaluate('typeof window.__ashen === "object" && document.readyState === "complete"').catch(() => false);
+      if (ready) break;
+      await sleep(150);
+    }
     const reloaded = await evaluate(`(() => {
       const A = window.__ashen;
       const overflow = {

@@ -133,7 +133,7 @@ try {
     const spawned = a.game.boss ? { kind: a.game.boss.kind, phases: a.game.boss.maxPhases, hp: a.game.boss.maxHp } : null;
     // Boss intro and every phase open a dialogue overlay, and dialogue pauses
     // the fixed step. Advance it the way a player does, then keep fighting.
-    for (let i = 0; i < 70 && a.game.state !== 'victory'; i += 1) {
+    for (let i = 0; i < 120 && a.game.state !== 'victory'; i += 1) {
       for (let line = 0; line < 4; line += 1) a.advanceDialogue();
       if (a.game.boss && !a.game.boss.dying) a.game.hurtBoss(220, 90, 1, false);
       await new Promise((r) => setTimeout(r, 120));

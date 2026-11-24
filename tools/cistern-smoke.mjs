@@ -143,11 +143,11 @@ async function main() {
       A.showLevels();
       const section = document.querySelector('.cistern-section');
       return {
-        cisternCards: document.querySelectorAll('.cistern-card').length,
+        cisternCards: document.querySelectorAll('#cistern-cards .cistern-card').length,
         legacyCards: document.querySelectorAll('#level-cards .level-card').length,
         label: document.getElementById('cistern-progress').textContent,
         noteVisible: !document.getElementById('cistern-lock-note').classList.contains('hidden'),
-        playButtons: document.querySelectorAll('.cistern-card .play-btn').length,
+        playButtons: document.querySelectorAll('#cistern-cards .cistern-card .play-btn').length,
         unlocked: !!section && A.cistern.unlocked,
       };
     })()`);
@@ -161,11 +161,11 @@ async function main() {
       const A = window.__ashen;
       A.unlockCistern();
       A.showLevels();
-      const hidden = [...document.querySelectorAll('.cistern-card')].filter((card) => card.querySelector('h3')?.textContent === '???').length;
+      const hidden = [...document.querySelectorAll('#cistern-cards .cistern-card')].filter((card) => card.querySelector('h3')?.textContent === '???').length;
       return {
         label: document.getElementById('cistern-progress').textContent,
         noteVisible: !document.getElementById('cistern-lock-note').classList.contains('hidden'),
-        playButtons: document.querySelectorAll('.cistern-card .play-btn').length,
+        playButtons: document.querySelectorAll('#cistern-cards .cistern-card .play-btn').length,
         hidden,
         unlocked: A.cistern.unlocked,
       };
@@ -238,7 +238,7 @@ async function main() {
     const revealed = await evaluate(`(() => {
       const A = window.__ashen;
       A.showLevels();
-      const cards = [...document.querySelectorAll('.cistern-card')];
+      const cards = [...document.querySelectorAll('#cistern-cards .cistern-card')];
       return {
         hidden: cards.filter((card) => card.querySelector('h3')?.textContent === '???').length,
         names: cards.map((card) => card.querySelector('h3')?.textContent),
@@ -252,7 +252,7 @@ async function main() {
     await sleep(350);
     const mobile = await evaluate(`(() => ({
       overflow: document.documentElement.scrollWidth - window.innerWidth,
-      cards: document.querySelectorAll('.cistern-card').length,
+      cards: document.querySelectorAll('#cistern-cards .cistern-card').length,
       sectionWidth: document.querySelector('.cistern-section')?.getBoundingClientRect().width || 0,
       viewport: window.innerWidth,
     }))()`);
@@ -300,7 +300,7 @@ async function main() {
         boss: A.cistern.state.boss,
         secrets: A.cistern.summary.secretsFound,
         percent: A.cistern.summary.percent,
-        cards: document.querySelectorAll('.cistern-card').length,
+        cards: document.querySelectorAll('#cistern-cards .cistern-card').length,
         label: document.getElementById('cistern-progress').textContent,
         version: A.version,
       };

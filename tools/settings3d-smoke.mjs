@@ -210,7 +210,7 @@ try {
     })()`);
   })();
   check(gfx.state === 'ready' && gfx.available, `WebGL2 GLB renderer is live (state=${gfx.state} ${gfx.reason || ''})`);
-  check(gfx.models === 7 && gfx.props >= 7, `all GLB models and props loaded (${gfx.models} models, ${gfx.props} props)`);
+  check(gfx.models === 15 && gfx.props >= 7, `all GLB models and props loaded (${gfx.models} models, ${gfx.props} props)`);
   check(Boolean(gfx.stats) && gfx.stats.triangles > 1000, `skinned GLB geometry reaches the GPU (${gfx.stats && Math.round(gfx.stats.triangles)} triangles)`);
   check(Boolean(gfx.stats) && gfx.stats.drawCalls > 5 && gfx.stats.skinned > 0, `shadow + HDR passes issue real draws (${gfx.stats && gfx.stats.drawCalls} calls, ${gfx.stats && gfx.stats.skinned} skinned)`);
   check(gfx.hdr === 'rgba16f' || gfx.hdr === 'rgba8', `render target format reported honestly (${gfx.hdr})`);
