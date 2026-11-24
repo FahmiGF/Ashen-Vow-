@@ -32,6 +32,36 @@ function rr(ctx, x, y, w, h, r) {
   ctx.closePath();
 }
 
+/** Signature colour for each playable class (preview glow, roster accents). */
+export const CLASS_ACCENTS = {
+  sera: '#ffd700',
+  lyna: '#7df9ff',
+  kael: '#a855f7',
+  karn: '#f97316',
+  ignis: '#ef4444',
+  gladiator: '#e8b04a',
+  retiarius: '#63c7b8',
+  stormcaller: '#8fb8ff',
+  sentinel: '#c9d8e8',
+  warden: '#8fbf6a',
+  ashwright: '#ff8a4c',
+  hearthkeeper: '#ffc979',
+  glassblade: '#9fe3ff',
+  dawn_paladin: '#ffe08a',
+  rift_assassin: '#c084fc',
+  worldroot_druid: '#7fd17a',
+  chrono_weaver: '#7fd6d0',
+  void_herald: '#9b8cff',
+};
+
+// Matches CLASS_WEAPON in src/portraits.js: the archer holds a bow, the net
+// fighter and wardens a polearm, everyone else the oath sword.
+const PREVIEW_WEAPON = { lyna: 'bow', retiarius: 'pike', warden: 'pike', worldroot_druid: 'pike' };
+
+export function classAccent(id) {
+  return CLASS_ACCENTS[id] || '#d07a35';
+}
+
 export class Renderer {
   constructor(canvas) {
     this.canvas = canvas;
@@ -5567,20 +5597,7 @@ export class Renderer {
     const h = ctx.canvas.height / dpr;
     ctx.clearRect(0, 0, w, h);
 
-    // Character theme colors
-    const themeColors = {
-      sera: '#ffd700',
-      lyna: '#7df9ff',
-      kael: '#a855f7',
-      karn: '#f97316',
-      ignis: '#ef4444',
-      gladiator: '#e8b04a',
-      retiarius: '#63c7b8',
-      stormcaller: '#8fb8ff',
-      sentinel: '#c9d8e8',
-      warden: '#8fbf6a',
-    };
-    const activeColor = themeColors[characterId] || '#d07a35';
+    const activeColor = classAccent(characterId);
 
     // Detect switch / appearance change
     const lookKey = `${characterId}_${appearance?.race}_${appearance?.armor}_${appearance?.skin}_${appearance?.outfit}`;
@@ -5708,12 +5725,14 @@ export class Renderer {
     }
 
     // Character drawing with transition pulse
+    // The player sprite is drawn from its top-left corner down to its feet,
+    // so place the hitbox above the pedestal origin instead of below it.
     const fake = {
       state: 'playing',
       deathTimer: 0,
       player: {
-        x: 0,
-        y: 0,
+        x: -15,
+        y: -46,
         w: 30,
         h: 46,
         vx: 0,
@@ -5721,7 +5740,7 @@ export class Renderer {
         facing: 1,
         onGround: true,
         attack: null,
-        weapon: 'sword',
+        weapon: PREVIEW_WEAPON[characterId] || 'sword',
         invuln: 0,
         dashTimer: 0,
         characterId,
@@ -5733,7 +5752,9 @@ export class Renderer {
     ctx.save();
     ctx.translate(w / 2, pedY);
     const pulse = 1 + Math.sin(this.previewTransition * Math.PI) * 0.08;
-    const baseScale = Math.min(w / 120, h / 150) * (CHARACTERS[characterId]?.build || 1);
+    // Fit the figure (about 70 units tall with hair, helm and weapon) into the
+    // space above the pedestal.
+    const baseScale = Math.min(w / 70, (pedY - 18) / 78) * Math.min(1.08, CHARACTERS[characterId]?.build || 1);
     const scale = baseScale * pulse;
     ctx.scale(scale, scale);
     this.drawPlayer(ctx, fake, t);

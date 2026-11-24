@@ -20,6 +20,7 @@
     <link rel="stylesheet" href="./styles-adventure.css" />
     <link rel="stylesheet" href="./styles-court.css" />
     <link rel="stylesheet" href="./styles-fishing.css" />
+    <link rel="stylesheet" href="./styles-index.css" />
     <link rel="stylesheet" href="./styles-fallen.css" />
     <link rel="stylesheet" href="./styles-crusade.css" />
     <link rel="stylesheet" href="./styles-moba.css" />
@@ -338,7 +339,7 @@
         <!-- ══ MAIN MENU ══ -->
         <section id="title-screen" class="screen title-screen">
           <div class="screen-inner title-inner">
-            <p class="eyebrow">SEBUAH SUMPAH DI ANTARA ABU · v0.23.0</p>
+            <p class="eyebrow">SEBUAH SUMPAH DI ANTARA ABU · v0.36.0</p>
             <h1 class="game-title">ASHEN<span>VOW</span></h1>
             <div class="title-rule"><i></i><b>✦</b><i></i></div>
             <p class="lede">
@@ -353,7 +354,7 @@
               </button>
               <button id="btn-character-menu" class="btn btn-ghost menu-btn" type="button">
                 <span>PILIH PENJAGA</span>
-                <em>10 karakter · ras · warna · pakaian</em>
+                <em>18 penjaga bergambar · ras · warna · pakaian</em>
               </button>
               <button id="btn-levels" class="btn btn-ghost menu-btn" type="button">
                 <span>PILIH LEVEL</span>
@@ -377,7 +378,7 @@
               </button>
               <button id="btn-codex-menu" class="btn btn-ghost menu-btn" type="button">
                 <span>INDEKS SUMPAH</span>
-                <em>Musuh · senjata · boss · barang · I</em>
+                <em>262 musuh · 116 boss bergambar · cari &amp; saring · O</em>
               </button>
               <button id="btn-mode3d-menu" class="btn btn-ghost menu-btn mode3d-menu-btn" type="button">
                 <span>ASHEN VOW: MODE 3D</span>
@@ -608,7 +609,7 @@
             </div>
 
             <div id="credits-times" class="credits-times"></div>
-            <p class="credit-version">ASHEN VOW · v0.36.0 · 13 PENJAGA · 116 BOSS · 674 RUANG</p>
+            <p class="credit-version">ASHEN VOW · v0.36.0 · 18 PENJAGA · 116 BOSS · 674 RUANG</p>
             <div class="screen-links">
               <button id="btn-credits-back" class="link-btn" type="button">← KEMBALI KE MENU</button>
             </div>
@@ -1587,7 +1588,7 @@
             <p class="eyebrow">SEBELUM SUMPAH DIMULAI</p>
             <h2 class="screen-title">PILIH PENJAGA</h2>
             <p class="screen-sub">
-              Dua jiwa selamat dari kehancuran Opus. Pilih tubuh, ras, dan pakaian yang akan
+              Delapan belas jiwa selamat dari kehancuran Opus. Pilih tubuh, ras, dan pakaian yang akan
               membawa sumpah ini.
             </p>
 
@@ -1939,8 +1940,18 @@
             </p>
             <p class="micro">Waktu lokal dan timer stage tampil di kanan atas setiap saat.</p>
             <div id="codex-tabs" class="codex-tabs" role="tablist" aria-label="Kategori indeks"></div>
+            <div id="codex-tools" class="ix-tools">
+              <label class="ix-search">
+                <span aria-hidden="true">⌕</span>
+                <input id="codex-search" type="search" placeholder="Cari nama, gelar, atau tempat" autocomplete="off" spellcheck="false" aria-label="Cari di indeks" />
+              </label>
+              <div id="codex-sources" class="ix-sources" role="group" aria-label="Saring menurut arc"></div>
+            </div>
             <p id="codex-count" class="codex-count"></p>
-            <div id="codex-entries" class="codex-entries"></div>
+            <div class="ix-body">
+              <div id="codex-entries" class="codex-entries ix-grid"></div>
+              <aside id="codex-detail" class="ix-detail" aria-live="polite"></aside>
+            </div>
             <div class="screen-links">
               <button id="btn-codex-map" class="link-btn" type="button">BUKA PETA SUMPAH</button>
               <button id="btn-codex-close" class="btn btn-primary btn-compact" type="button">
@@ -2170,7 +2181,7 @@
       <footer class="footer">
           <span>ASHEN VOW · v0.36.0</span>
         <span class="dot">✦</span>
-        <span>Metroidvania medieval 2D · 14 ruang · 6 boss · dibuat dengan Canvas</span>
+        <span>Metroidvania medieval 2D · 674 ruang · 116 boss · dibuat dengan Canvas</span>
       </footer>
     </main>
     <script type="module" src="./src/main.js"></script>
