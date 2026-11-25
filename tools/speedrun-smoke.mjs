@@ -143,10 +143,11 @@ async function main() {
     }
     assert.equal(booted, true, `game must boot (errors: ${pageErrors.join(' | ')})`);
 
-    const boot = await evaluate(`(() => {
+    const boot = await evaluate(`(async () => {
       const A = window.__ashen;
       A.clearProgress();
-      return { version: A.version, title: document.title, progress: A.progress.speedrun };
+      await A.loadMode('speedrun'); // the speedrun block is sanitized when its mode loads
+      return { version: A.version, title: document.title, progress: A.speedrun.progress };
     })()`);
     check('boot reports v0.36.0', boot.version, '0.36.0');
     assert.match(boot.title, /0\.36\.0/);
@@ -328,6 +329,7 @@ async function main() {
     const reloaded = await evaluate(`(async () => {
       const A = window.__ashen;
       document.getElementById('btn-speedrun-menu').click();
+      await A.loadMode('speedrun');
       return {
         view: A.menuView,
         best: A.speedrun.progress.bestMultiplier,

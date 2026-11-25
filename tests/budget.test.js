@@ -11,7 +11,7 @@ const src = join(root, 'src');
 const kb = (file) => statSync(file).size / 1024;
 
 // Modules that only a lazy mode may import. Boot must never reach them.
-const LAZY_ONLY = ['moba.js', 'wavedefense.js', 'pirates.js', 'fishing.js', 'trials.js', 'puzzle.js', 'mode3d.js', 'updates.js', 'frontier.js'];
+const LAZY_ONLY = ['speedrun.js', 'moba.js', 'wavedefense.js', 'pirates.js', 'fishing.js', 'trials.js', 'puzzle.js', 'mode3d.js', 'updates.js', 'frontier.js'];
 
 function staticImports(file) {
   const text = readFileSync(file, 'utf8');
@@ -41,7 +41,7 @@ test('every lazy mode module stays under 120 KB', () => {
 });
 
 test('main.js and the boot graph do not grow past the v0.37.0 ratchet', () => {
-  assert.ok(kb(join(src, 'main.js')) <= 700, `main.js is ${kb(join(src, 'main.js')).toFixed(1)} KB (cap 700)`);
+  assert.ok(kb(join(src, 'main.js')) <= 695, `main.js is ${kb(join(src, 'main.js')).toFixed(1)} KB (cap 695)`);
   const total = [...bootGraph()].reduce((sum, rel) => sum + kb(join(src, rel)), 0);
   assert.ok(total <= 2850, `boot graph is ${total.toFixed(0)} KB (cap 2850, target 900)`);
 });

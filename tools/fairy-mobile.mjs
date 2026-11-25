@@ -188,6 +188,8 @@ async function main() {
       const A = window.__ashen;
       A.clearProgress();
       A.showMenu();
+      // The entry now sits in a menu hub (v0.39.0).
+      A.openMenuHub('arcs');
       const overflow = window.__overflow();
       return {
         view: A.menuView,

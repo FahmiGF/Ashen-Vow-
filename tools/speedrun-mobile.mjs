@@ -188,6 +188,8 @@ async function main() {
       const A = window.__ashen;
       A.clearProgress();
       A.showMenu();
+      // The entry now sits in a menu hub (v0.39.0).
+      A.openMenuHub('arena');
       return {
         view: A.menuView,
         overflow: window.__overflow(),
@@ -339,9 +341,10 @@ async function main() {
       window.__overflow = () => ({ doc: document.documentElement.scrollWidth - window.innerWidth });
       return true;
     })()`);
-    const reloaded = await evaluate(`(() => {
+    const reloaded = await evaluate(`(async () => {
       const A = window.__ashen;
       document.getElementById('btn-speedrun-menu').click();
+      await A.loadMode('speedrun');
       const row = document.querySelector('.speedrun-history-row');
       return {
         booted: typeof A === 'object',

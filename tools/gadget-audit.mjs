@@ -197,7 +197,7 @@ async function main() {
       { id: 'waveDefense', open: 'window.__ashen.showWaveDefense()' },
       {
         id: 'fallenMenu',
-        open: '(() => { const A = window.__ashen; A.progress.cleared[7] = true; A.ascendNow(); A.showFallenMenu(); })()',
+        open: '(async () => { const A = window.__ashen; A.progress.cleared[7] = true; A.ascendNow(); A.showFallenMenu(); })()',
       },
       { id: 'fallenHub', open: 'window.__ashen.showFallen("regions")' },
       {

@@ -181,6 +181,24 @@ try {
   await reload();
   const final = await evaluate(`({ active: window.__ashen.saves.active, cleared: window.__ashen.progress.cleared.filter(Boolean).length })`);
   check(final.active === 1 && final.cleared === 3, 'profile 1 survives the round trip and a reload');
+  // v0.39.0 menu hubs: seven hubs, Continue appears after a mode was entered.
+  const hubs = await evaluate(`(async () => {
+    const A = window.__ashen; A.showMenu(); A.closeMenuHub();
+    const before = A.menuHubs;
+    const bar = [...document.querySelectorAll('.menu-hub-btn')].filter((b) => !b.classList.contains('hidden')).length;
+    A.openMenuHub('arena');
+    const fishingVisible = !!document.getElementById('btn-fishing-menu')?.offsetParent;
+    document.getElementById('btn-fishing-menu').click();
+    await A.loadMode('fishing');
+    A.showMenu(); A.closeMenuHub();
+    const after = A.menuHubs.hubs.find((h) => h.id === 'continue');
+    const label = document.querySelector('[data-hub="continue"] em')?.textContent || '';
+    return { total: before.hubs.length, bar, fishingVisible, continueHidden: before.hubs.find((h) => h.id === 'continue').hidden, continueAfter: after.hidden, label, menuButtons: document.querySelectorAll('#title-screen .main-menu .menu-btn').length };
+  })()`);
+  check(hubs.total === 7, `the main menu has seven hubs (${hubs.total})`);
+  check(hubs.bar <= 7, `at most seven entries are visible on the title (${hubs.bar} of ${hubs.menuButtons} buttons)`);
+  check(hubs.fishingVisible, 'opening MODE ARENA reveals its entries');
+  check(hubs.continueAfter === false && /PONDOK|UMPAN/i.test(hubs.label), `LANJUTKAN offers the last mode played (${hubs.label})`);
   check(errors.length === 0, `no console errors (${errors.length}) ${errors.slice(0, 2).join(' | ')}`);
   console.log(`\nSaves smoke: ${passed} passed, ${failed} failed`);
   process.exitCode = failed ? 1 : 0;

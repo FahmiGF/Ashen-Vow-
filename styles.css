@@ -7318,3 +7318,14 @@ html[lang='ar'] .settings2-inner, html[lang='ar'] .screen-inner { font-family: v
 .slot-danger { color: #e08a7a; }
 .slot-confirm { display: grid; gap: 6px; font-size: 0.75rem; }
 .slot-confirm input { background: #0b0806; color: inherit; border: 1px solid rgba(224, 138, 122, 0.5); padding: 6px 8px; font: inherit; }
+
+/* Phase 1 (v0.39.0): seven main-menu hubs */
+.menu-hubs { display: flex; flex-direction: column; gap: inherit; }
+.menu-hubs.hidden, .menu-hub-panel.hidden { display: none; }
+.menu-hub-panel { display: flex; flex-direction: column; gap: 8px; }
+.menu-hub-title { margin: 0 0 4px; }
+.menu-hub-btn { position: relative; }
+.menu-hub-new { position: absolute; top: 6px; right: 8px; font-style: normal; font-size: 0.56rem; letter-spacing: 0.16em; padding: 2px 5px; color: #0b0806; background: var(--gold, #c9a25c); border-radius: 2px; }
+.menu-hub-new.hidden { display: none; }
+.menu-hub-back { align-self: center; margin-top: 4px; }
+.menu-hub-direct { display: none !important; }

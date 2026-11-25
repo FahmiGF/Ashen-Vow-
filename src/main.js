@@ -123,19 +123,8 @@ import {
   creditSceneFor,
   isArcFinalBoss,
 } from './credits.js';
-import {
-  SPEEDRUN_LIVES,
-  SPEEDRUN_RULES,
-  SPEEDRUN_START_MULTIPLIER,
-  defaultSpeedrunProgress,
-  recordSpeedrun,
-  sanitizeSpeedrunProgress,
-  speedrunMaxSubsteps,
-  speedrunMultiplier,
-  speedrunStats,
-  speedrunSummary,
-} from './speedrun.js';
 import { GAME_VERSION } from './version.js';
+import { installMenuHubs } from './ui/menu_hubs.js';
 import { createSaveStore, memoryStorage, areaForLegacyKey, SAVE_AREAS, SAVE_SLOT_COUNT } from './save.js';
 import {
   EXPANSION_ROOM_START,
@@ -701,6 +690,7 @@ import {
 // between the @ctx markers below). Moved functions are reached through the
 // lazy stubs between the @stubs markers, so every call site stays unchanged.
 const A = {};
+let menuHubs = null; // main menu hub controller, installed at the end of boot
 const MODE_LOADERS = {
   moba: { load: () => import('./modes/moba_ui.js'), css: ['./styles-moba.css'] },
   wavedefense: { load: () => import('./modes/wavedefense_ui.js'), css: ['./styles-wavedefense.css'] },
@@ -712,6 +702,7 @@ const MODE_LOADERS = {
   updates: { load: () => import('./modes/updates_ui.js'), css: [] },
   frontier: { load: () => import('./modes/frontier_ui.js'), css: [] },
   slots: { load: () => import('./modes/slots_ui.js'), css: [] },
+  speedrun: { load: () => import('./modes/speedrun_ui.js'), css: [] },
 };
 const MODES = {};
 const modePending = {};
@@ -895,30 +886,50 @@ const exportSlotFile = lazyMode('slots', 'exportSlot');
 const importSlotFile = lazyMode('slots', 'importSlot');
 const deleteSlotFile = lazyMode('slots', 'deleteSlot');
 const undoDeleteSlot = lazyMode('slots', 'undoDeleteSlot');
+const speedrunState = lazyMode('speedrun', 'speedrunState');
+const speedrunStamp = lazyMode('speedrun', 'speedrunStamp');
+const showSpeedrun = lazyMode('speedrun', 'showSpeedrun');
+const buildSpeedrunScreen = lazyMode('speedrun', 'buildSpeedrunScreen');
+const startSpeedrun = lazyMode('speedrun', 'startSpeedrun');
+const finishSpeedrun = lazyMode('speedrun', 'finishSpeedrun');
+const buildSpeedrunSummary = lazyMode('speedrun', 'buildSpeedrunSummary');
+const handleSpeedrunClear = lazyMode('speedrun', 'handleSpeedrunClear');
 /* @stubs-end */
 
 /* @ctx-begin */
 Object.defineProperties(A, {
-  saveSanitizers: { get: () => saveSanitizers },
-  saveStore: { get: () => saveStore },
   $: { get: () => $ },
   accumulator: { get: () => accumulator, set: (v) => { accumulator = v; } },
+  activeCourtRoom: { get: () => activeCourtRoom, set: (v) => { activeCourtRoom = v; } },
+  activeCourtTrial: { get: () => activeCourtTrial, set: (v) => { activeCourtTrial = v; } },
   activeExpansionIndex: { get: () => activeExpansionIndex, set: (v) => { activeExpansionIndex = v; } },
+  activeFairyBoss: { get: () => activeFairyBoss, set: (v) => { activeFairyBoss = v; } },
+  activeFairyStage: { get: () => activeFairyStage, set: (v) => { activeFairyStage = v; } },
+  activeModeId: { get: () => activeModeId, set: (v) => { activeModeId = v; } },
+  activePackIndex: { get: () => activePackIndex, set: (v) => { activePackIndex = v; } },
   activeRunKind: { get: () => activeRunKind, set: (v) => { activeRunKind = v; } },
+  activeTrialId: { get: () => activeTrialId, set: (v) => { activeTrialId = v; } },
   applyCharacterToGame: { get: () => applyCharacterToGame },
   applySettings: { get: () => applySettings },
   applySkinToGame: { get: () => applySkinToGame },
+  attempts: { get: () => attempts, set: (v) => { attempts = v; } },
   audio: { get: () => audio },
+  beginStage: { get: () => beginStage },
   cancelPrologue: { get: () => cancelPrologue },
   clamp: { get: () => clamp },
   clearHeldKeys: { get: () => clearHeldKeys },
   closeDialogue: { get: () => closeDialogue },
   codexOpen: { get: () => codexOpen, set: (v) => { codexOpen = v; } },
+  coopGuestMode: { get: () => coopGuestMode, set: (v) => { coopGuestMode = v; } },
+  coopGuestRoom: { get: () => coopGuestRoom, set: (v) => { coopGuestRoom = v; } },
+  cutsceneSeen: { get: () => cutsceneSeen, set: (v) => { cutsceneSeen = v; } },
+  discoverCurrentRoom: { get: () => discoverCurrentRoom },
   esc: { get: () => esc },
   expState: { get: () => expState },
   fishIndexTab: { get: () => fishIndexTab, set: (v) => { fishIndexTab = v; } },
   fishingReel: { get: () => fishingReel, set: (v) => { fishingReel = v; } },
   fishingReelFrame: { get: () => fishingReelFrame, set: (v) => { fishingReelFrame = v; } },
+  formatTime: { get: () => formatTime },
   frontierProgress: { get: () => frontierProgress, set: (v) => { frontierProgress = v; } },
   frontierTab: { get: () => frontierTab, set: (v) => { frontierTab = v; } },
   game: { get: () => game },
@@ -926,9 +937,15 @@ Object.defineProperties(A, {
   horror3D: { get: () => horror3D, set: (v) => { horror3D = v; } },
   horror3DSiteId: { get: () => horror3DSiteId, set: (v) => { horror3DSiteId = v; } },
   horrorRenderLayer: { get: () => horrorRenderLayer },
+  hunterShopOpen: { get: () => hunterShopOpen, set: (v) => { hunterShopOpen = v; } },
   input3D: { get: () => input3D },
   inventoryOpen: { get: () => inventoryOpen, set: (v) => { inventoryOpen = v; } },
+  labDirector: { get: () => labDirector, set: (v) => { labDirector = v; } },
+  labGuestMode: { get: () => labGuestMode, set: (v) => { labGuestMode = v; } },
+  labRewardsOpen: { get: () => labRewardsOpen, set: (v) => { labRewardsOpen = v; } },
+  labRun: { get: () => labRun, set: (v) => { labRun = v; } },
   labState: { get: () => labState },
+  labSummaryOpen: { get: () => labSummaryOpen, set: (v) => { labSummaryOpen = v; } },
   lastGameState: { get: () => lastGameState, set: (v) => { lastGameState = v; } },
   lastTime: { get: () => lastTime, set: (v) => { lastTime = v; } },
   mapOpen: { get: () => mapOpen, set: (v) => { mapOpen = v; } },
@@ -947,7 +964,9 @@ Object.defineProperties(A, {
   mobaResult: { get: () => mobaResult, set: (v) => { mobaResult = v; } },
   mobaRoleFilter: { get: () => mobaRoleFilter, set: (v) => { mobaRoleFilter = v; } },
   mobaUiTimer: { get: () => mobaUiTimer, set: (v) => { mobaUiTimer = v; } },
+  modeRunRewarded: { get: () => modeRunRewarded, set: (v) => { modeRunRewarded = v; } },
   overdriveTab: { get: () => overdriveTab, set: (v) => { overdriveTab = v; } },
+  packRunActive: { get: () => packRunActive, set: (v) => { packRunActive = v; } },
   paused: { get: () => paused, set: (v) => { paused = v; } },
   pirateActive: { get: () => pirateActive, set: (v) => { pirateActive = v; } },
   pirateHeld: { get: () => pirateHeld },
@@ -958,6 +977,7 @@ Object.defineProperties(A, {
   pirateResult: { get: () => pirateResult, set: (v) => { pirateResult = v; } },
   pirateStageId: { get: () => pirateStageId, set: (v) => { pirateStageId = v; } },
   pirateUiTimer: { get: () => pirateUiTimer, set: (v) => { pirateUiTimer = v; } },
+  postCreditTimer: { get: () => postCreditTimer, set: (v) => { postCreditTimer = v; } },
   progress: { get: () => progress, set: (v) => { progress = v; } },
   progressBlock: { get: () => progressBlock },
   puzzleRun: { get: () => puzzleRun, set: (v) => { puzzleRun = v; } },
@@ -967,6 +987,8 @@ Object.defineProperties(A, {
   renderer: { get: () => renderer },
   save3DHorrorState: { get: () => save3DHorrorState },
   saveProgress: { get: () => saveProgress },
+  saveSanitizers: { get: () => saveSanitizers },
+  saveStore: { get: () => saveStore },
   scareDirector: { get: () => scareDirector, set: (v) => { scareDirector = v; } },
   settings: { get: () => settings, set: (v) => { settings = v; } },
   settingsOpen: { get: () => settingsOpen, set: (v) => { settingsOpen = v; } },
@@ -976,8 +998,13 @@ Object.defineProperties(A, {
   showToast: { get: () => showToast },
   spectateGame: { get: () => spectateGame, set: (v) => { spectateGame = v; } },
   spectating: { get: () => spectating, set: (v) => { spectating = v; } },
+  speedrunCleared: { get: () => speedrunCleared, set: (v) => { speedrunCleared = v; } },
+  speedrunLastSummary: { get: () => speedrunLastSummary, set: (v) => { speedrunLastSummary = v; } },
+  speedrunRoomCount: { get: () => speedrunRoomCount, set: (v) => { speedrunRoomCount = v; } },
+  speedrunRun: { get: () => speedrunRun, set: (v) => { speedrunRun = v; } },
   speedrunSummaryOpen: { get: () => speedrunSummaryOpen, set: (v) => { speedrunSummaryOpen = v; } },
   started: { get: () => started, set: (v) => { started = v; } },
+  statsHtml: { get: () => statsHtml },
   syncScreens: { get: () => syncScreens },
   trialRun: { get: () => trialRun, set: (v) => { trialRun = v; } },
   updateHud: { get: () => updateHud },
@@ -1382,7 +1409,7 @@ function defaultProgress() {
     fairy: defaultFairyProgress(),
     cistern: defaultCisternProgress(),
     lanternwake: defaultLanternProgress(),
-    speedrun: defaultSpeedrunProgress(),
+    speedrun: null,
     fishing: null,
     fallen: defaultFallenProgress(),
     crusade: defaultCrusadeProgress(),
@@ -1477,7 +1504,7 @@ function sanitizeProgressPayload(parsed) {
       fairy: sanitizeFairyProgress(parsed.fairy),
       cistern: sanitizeCisternProgress(parsed.cistern),
       lanternwake: sanitizeLanternProgress(parsed.lanternwake),
-      speedrun: sanitizeSpeedrunProgress(parsed.speedrun),
+      speedrun: rawBlock(parsed.speedrun),
       fishing: rawBlock(parsed.fishing),
       fallen: sanitizeFallenProgress(parsed.fallen),
       crusade: sanitizeCrusadeProgress(parsed.crusade),
@@ -4610,6 +4637,7 @@ function markCleared(index, nextIndex = null) {
 }
 
 function updateMenuProgress() {
+  menuHubs?.refresh();
   const clearedCount = progress.cleared.filter(Boolean).length;
   $('menu-progress').textContent = `LEVEL TERBUKA ${progress.unlocked} / ${ROOMS.length} · ${clearedCount} TUNTAS`;
   const expansion = $('menu-expansion-progress');
@@ -5933,243 +5961,21 @@ function handleLanternwakeBoss() {
   updateMenuProgress();
 }
 
-// ── Speedrun: one life, escalating game speed ─────────────────────────────
-function speedrunState() {
-  if (!progress.speedrun) progress.speedrun = defaultSpeedrunProgress();
-  return progress.speedrun;
-}
 
-function speedrunStamp(at) {
-  const ms = Number(at);
-  if (!Number.isFinite(ms) || ms <= 0) return '—';
-  const date = new Date(ms);
-  if (Number.isNaN(date.getTime())) return '—';
-  const pad = (n) => String(n).padStart(2, '0');
-  return `${pad(date.getDate())}/${pad(date.getMonth() + 1)} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
-}
 
-function showSpeedrun() {
-  cancelPrologue();
-  started = false;
-  paused = false;
-  shopOpen = false;
-  mapOpen = false;
-  codexOpen = false;
-  inventoryOpen = false;
-  settingsOpen = false;
-  closeDialogue(true);
-  spectating = false;
-  spectateGame = null;
-  speedrunSummaryOpen = false;
-  menuView = 'speedrun';
-  clearHeldKeys();
-  buildSpeedrunScreen();
-  syncScreens();
-}
 
-function buildSpeedrunScreen() {
-  const summary = speedrunSummary(speedrunState());
-  const stats = speedrunStats(speedrunState());
-  const history = summary.history || [];
-  const box = $('speedrun-summary');
-  if (box) {
-    box.innerHTML = `
-      <div class="stat"><strong>${summary.bestMultiplier ? `${summary.bestMultiplier}×` : '—'}</strong><span>Rekor Kecepatan</span></div>
-      <div class="stat"><strong>${summary.bestCycles}</strong><span>Putaran Tuntas</span></div>
-      <div class="stat"><strong>${summary.bestTime ? formatTime(summary.bestTime) : '—'}</strong><span>Waktu Bertahan</span></div>
-      <div class="stat"><strong>${summary.runs}</strong><span>Run Selesai</span></div>
-    `;
-  }
-  const body = $('speedrun-body');
-  if (body) {
-    body.innerHTML = `
-      <section class="exp-section">
-        <div class="exp-section-head">
-          <h3>ATURAN SATU NYAWA</h3>
-          <span>${SPEEDRUN_LIVES} nyawa · tanpa checkpoint</span>
-        </div>
-        <ul class="speedrun-rules">
-          ${SPEEDRUN_RULES.map((line) => `<li>${esc(line)}</li>`).join('')}
-        </ul>
-      </section>
-      <section class="exp-section">
-        <div class="exp-section-head">
-          <h3>JALUR KECEPATAN</h3>
-          <span>berhenti hanya saat kau gugur</span>
-        </div>
-        <div class="speedrun-ladder">
-          ${[0, 1, 2, 3, 4, 5].map((cycle) => {
-            const mult = speedrunMultiplier(cycle);
-            return `<div class="speedrun-rung"><span>${cycle === 0 ? 'AWAL' : `SETELAH BOS ${cycle}`}</span><strong>${mult}×</strong></div>`;
-          }).join('')}
-          <div class="speedrun-rung endless"><span>DAN SETERUSNYA</span><strong>∞</strong></div>
-        </div>
-      </section>
-      <section class="exp-section">
-        <div class="exp-section-head">
-          <h3>STATISTIK MENDALAM</h3>
-          <span>${stats.attempts ? `${stats.attempts} percobaan tercatat` : 'belum ada data'}</span>
-        </div>
-        <div class="speedrun-stats">
-          <div class="sr-stat"><span>RASIO TUNTAS</span><strong>${stats.clearRate}%</strong><em>${stats.clearedRuns} dari ${stats.attempts} percobaan</em></div>
-          <div class="sr-stat"><span>RATA-RATA BERTAHAN</span><strong>${stats.averageTime ? formatTime(stats.averageTime) : '—'}</strong><em>total ${formatTime(stats.totalTime)}</em></div>
-          <div class="sr-stat"><span>PUTARAN TERPANJANG</span><strong>${stats.longestClear}</strong><em>rata-rata ${stats.averageClears} putaran</em></div>
-          <div class="sr-stat"><span>LANGKAH BERIKUT</span><strong>${stats.nextMultiplier}×</strong><em>${stats.bestMultiplier ? `${stats.bestMultiplier}× sudah tercapai` : 'belum ada rekor'}</em></div>
-        </div>
-        ${stats.ladder.length ? `<div class="speedrun-ladder-detail">
-          ${stats.ladder.map((row) => `<div class="sr-rung-row${row.multiplier === stats.bestMultiplier ? ' record' : ''}">
-            <strong>${row.multiplier}×</strong>
-            <span>${row.attempts} percobaan · ${row.clears} tuntas</span>
-            <span>putaran terbaik ${row.bestCycles}</span>
-            <span>${row.bestTime ? formatTime(row.bestTime) : '—'}</span>
-          </div>`).join('')}
-        </div>` : '<p class="speedrun-empty">Statistik per kecepatan muncul setelah percobaan pertamamu.</p>'}
-      </section>
-      <section class="exp-section">
-        <div class="exp-section-head">
-          <h3>RIWAYAT RUN</h3>
-          <span>${history.length ? `${history.length} percobaan terakhir · terbaru di atas` : 'belum ada percobaan'}</span>
-        </div>
-        ${history.length ? `<ol class="speedrun-history">
-          ${history.map((entry, index) => `<li class="speedrun-history-row${entry.died ? '' : ' cleared'}${entry.multiplier >= summary.bestMultiplier ? ' record' : ''}">
-            <span class="sr-index">#${index + 1}</span>
-            <strong class="sr-speed">${entry.multiplier}×</strong>
-            <span class="sr-meta"><span>${entry.clears} putaran tuntas</span><span>${entry.rooms} ruang</span></span>
-            <span class="sr-time">${formatTime(entry.time)}</span>
-            <em class="sr-result">${entry.died ? 'GUGUR' : 'TUNTAS'}</em>
-            <small class="sr-stamp">${speedrunStamp(entry.at)}</small>
-          </li>`).join('')}
-        </ol>` : '<p class="speedrun-empty">Belum ada riwayat. Setiap percobaan tercatat di sini dan tersimpan di browser ini.</p>'}
-      </section>
-    `;
-  }
-  const start = $('speedrun-start');
-  if (start) {
-    const label = start.querySelector('span');
-    if (label) label.textContent = `MULAI SPEEDRUN ${SPEEDRUN_START_MULTIPLIER}×`;
-  }
-}
 
-function startSpeedrun(cycle = 0, options = {}) {
-  const safeCycle = Math.max(0, Math.min(98, Math.floor(Number(cycle) || 0)));
-  const multiplier = speedrunMultiplier(safeCycle);
-  audio.init();
-  attempts = 1;
-  coopGuestMode = false;
-  coopGuestRoom = -1;
-  activeRunKind = 'speedrun';
-  activeCourtTrial = null;
-  activeCourtRoom = null;
-  activePackIndex = -1;
-  activeFairyStage = -1;
-  activeFairyBoss = null;
-  activeExpansionIndex = null;
-  activeModeId = null;
-  activeTrialId = null;
-  modeRunRewarded = false;
-  packRunActive = false;
-  labRun = null;
-  labDirector = null;
-  labGuestMode = false;
-  labRewardsOpen = false;
-  labSummaryOpen = false;
-  game.labyrinth = false;
-  game.reset();
-  game.oneLife = true;
-  applyCharacterToGame();
-  applySkinToGame();
-  speedrunRoomCount = 0;
-  speedrunCleared = false;
-  speedrunSummaryOpen = false;
-  speedrunRun = { cycle: safeCycle, multiplier, startedAt: performance.now() };
-  cutsceneSeen = new Set();
-  postCreditTimer = -1;
-  game.events.length = 0;
-  started = true;
-  paused = false;
-  hunterShopOpen = false;
-  shopOpen = false;
-  mapOpen = false;
-  codexOpen = false;
-  inventoryOpen = false;
-  settingsOpen = false;
-  closeDialogue(true);
-  spectating = false;
-  spectateGame = null;
-  menuView = 'none';
-  lastGameState = 'playing';
-  accumulator = 0;
-  lastTime = performance.now();
-  clearHeldKeys();
-  discoverCurrentRoom(game.roomIndex);
-  beginStage(game.roomIndex, game.room.name);
-  showBanner(`${multiplier}× SPEEDRUN`, `PUTARAN ${safeCycle + 1} · SATU NYAWA`);
-  if (!options.silent) {
-    showToast(`⚡ ${multiplier}× — ${SPEEDRUN_LIVES} nyawa, tanpa checkpoint.`, 2600);
-  }
-  syncScreens();
-  updateHud();
-}
 
-function finishSpeedrun() {
-  if (activeRunKind !== 'speedrun' || !speedrunRun || speedrunSummaryOpen) return;
-  const attempt = recordSpeedrun(speedrunState(), {
-    multiplier: speedrunRun.multiplier,
-    clears: speedrunRun.cycle,
-    rooms: speedrunRoomCount,
-    time: game.time,
-    died: true,
-  });
-  saveProgress();
-  speedrunLastSummary = attempt;
-  speedrunSummaryOpen = true;
-  speedrunCleared = false;
-  buildSpeedrunSummary(attempt);
-  syncScreens();
-}
 
-function buildSpeedrunSummary(attempt) {
-  const sub = $('speedrun-summary-sub');
-  if (sub) {
-    sub.textContent = attempt.isRecord
-      ? `Rekor baru: ${attempt.bestMultiplier}× dengan ${attempt.bestCycles} putaran tuntas.`
-      : `Kau gugur pada ${attempt.multiplier}×. Rekor ${attempt.bestMultiplier || attempt.multiplier}× masih berdiri.`;
-  }
-  const body = $('speedrun-summary-body');
-  if (body) {
-    body.innerHTML = `${statsHtml([
-      [`${attempt.multiplier}×`, 'Kecepatan'],
-      [attempt.clears, 'Putaran Tuntas'],
-      [attempt.rooms, 'Ruang Dilewati'],
-      [formatTime(attempt.time), 'Waktu Bertahan'],
-    ])}<p class="micro">Rekor tersimpan di progress.speedrun · satu nyawa, tanpa checkpoint.</p>`;
-  }
-  const again = $('speedrun-summary-again');
-  if (again) {
-    const label = again.querySelector('span');
-    if (label) label.textContent = `MULAI LAGI ${SPEEDRUN_START_MULTIPLIER}×`;
-  }
-}
 
-function handleSpeedrunClear() {
-  if (activeRunKind !== 'speedrun' || !speedrunRun) return;
-  const cleared = speedrunRun.multiplier;
-  const nextCycle = speedrunRun.cycle + 1;
-  const nextMultiplier = speedrunMultiplier(nextCycle);
-  // The run has now reached the *next* speed, so that is the multiplier the
-  // record keeps even if the player dies before the new boss falls.
-  const attempt = recordSpeedrun(speedrunState(), {
-    multiplier: nextMultiplier,
-    clears: nextCycle,
-    rooms: speedrunRoomCount,
-    time: game.time,
-    died: false,
-  });
-  saveProgress();
-  speedrunLastSummary = attempt;
-  startSpeedrun(nextCycle, { silent: true });
-  showToast(`⚡ ${cleared}× tuntas — naik ke ${nextMultiplier}×`, 2800);
-}
+
+
+
+
+
+
+
+
 
 
 
@@ -10937,6 +10743,7 @@ window.addEventListener('keydown', (e) => {
 
   if (menuView === 'title' || !started) {
     // Let keyboard users activate the focused menu button with Enter/Space.
+    if ((e.code === 'Escape' || e.code === 'Backspace') && menuView === 'title' && menuHubs?.openHub) { menuHubs.close(); return; }
     if (e.target instanceof HTMLElement && e.target.tagName === 'BUTTON') return;
     if (e.code === 'Enter' || e.code === 'Space' || e.code === 'KeyJ') beginJourney();
     else if (e.code === 'KeyL') showLevels();
@@ -13053,7 +12860,7 @@ function updateHud() {
       const badgeKey = `${speedrunRun.multiplier}/${speedrunRun.cycle}`;
       if (badgeKey !== speedBadgeCache) {
         speedBadgeCache = badgeKey;
-        speedBadge.textContent = `⚡ ${speedrunRun.multiplier}× · ${SPEEDRUN_LIVES} NYAWA · PUTARAN ${speedrunRun.cycle + 1}`;
+        speedBadge.textContent = `⚡ ${speedrunRun.multiplier}× · ${MODES.speedrun.lib.SPEEDRUN_LIVES} NYAWA · PUTARAN ${speedrunRun.cycle + 1}`;
       }
       speedBadge.classList.toggle('danger', speedrunRun.multiplier >= 5);
     } else {
@@ -13764,7 +13571,7 @@ function frame(now) {
       const speedScale = activeRunKind === 'speedrun' && speedrunRun ? speedrunRun.multiplier : 1;
       accumulator += raw * speedScale;
       let steps = 0;
-      const stepCap = activeRunKind === 'speedrun' ? speedrunMaxSubsteps(speedScale) : 10;
+      const stepCap = activeRunKind === 'speedrun' ? MODES.speedrun.lib.speedrunMaxSubsteps(speedScale) : 10;
       while (accumulator >= FIXED && steps < stepCap) {
         game.update(FIXED, inputSnapshot());
         if (activeRunKind === 'atlas') tickAtlasRun(FIXED);
@@ -15039,6 +14846,9 @@ window.__ashen = {
   // Phase 1 mode loader: ids, loaded set, and an awaitable loader.
   get lazyModes() { return Object.keys(MODE_LOADERS); },
   get loadedModes() { return Object.keys(MODES); },
+  get menuHubs() { return menuHubs ? { open: menuHubs.openHub, hubs: menuHubs.hubs() } : null; },
+  openMenuHub(id) { return menuHubs?.open(id) ?? false; },
+  closeMenuHub() { menuHubs?.close(); return true; },
   // Phase 1 save layer: profile slots, debounced writes, export/import.
   get saves() {
     return { active: saveStore.activeSlot, count: SAVE_SLOT_COUNT, pending: saveStore.pendingCount, writes: saveStore.writeCount, slots: saveStore.slots(), areas: Object.keys(SAVE_AREAS) };
@@ -15710,6 +15520,7 @@ window.__ashen = {
     };
   },
   get speedrun() {
+    if (!MODES.speedrun) return null;
     return {
       run: speedrunRun ? { ...speedrunRun } : null,
       progress: speedrunState(),
@@ -16610,6 +16421,22 @@ window.__ashen = {
 // kick off
 // A save that already felled The Oathbreaker ascends into the second menu.
 if (ascendProgress(progress).ok) saveProgress();
+// ── Main menu hubs (Phase 1, v0.39.0): 35 entries folded into 7 hubs ──
+const MENU_SEEN_KEY = 'ashen-vow-menu-seen-v1';
+const menuSeen = new Set((() => { try { return JSON.parse(saveRead(MENU_SEEN_KEY) || '[]'); } catch { return []; } })());
+menuHubs = installMenuHubs({
+  root: document.querySelector('#title-screen .main-menu'),
+  seen: menuSeen,
+  onSeen: (ids) => {
+    for (const id of ids) menuSeen.add(id);
+    saveWrite(MENU_SEEN_KEY, JSON.stringify([...menuSeen]));
+  },
+  lastEntry: () => (progress.lastEntry && typeof progress.lastEntry.id === 'string' ? progress.lastEntry : null),
+  onEntry: (id, label) => {
+    progress.lastEntry = { id, label: String(label).slice(0, 60) };
+    saveProgress();
+  },
+});
 updateMenuProgress();
 buildLevelCards();
 if (MODES.mode3d) buildHorror3DPanel();
