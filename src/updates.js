@@ -1,9 +1,31 @@
 // Ashen Vow — release history shown in the in-game Update Log.
 // Keep the newest entry first. `GAME_VERSION` is the single source of truth
 // for the version shown by the Update Log screen and the debug hooks.
-export const GAME_VERSION = '0.36.0';
+export { GAME_VERSION } from './version.js';
 
 export const UPDATE_LOG = [
+  {
+    version: '0.39.0',
+    date: '25 November 2026',
+    title: 'UPDATE XXVII — ABU YANG LEBIH RINGAN (LIGHTER ASH)',
+    tag: 'LAG DIPERBAIKI · 11 MODE DIMUAT SAAT DIBUKA · 3 PROFIL SIMPANAN · EKSPOR & IMPOR · MENU 7 HUB · v0.39.0',
+    summary:
+      'Fase 1 Master Plan 3.0 dalam satu rilis. Penyebab utama lag ditemukan dan dibuang: filter gamma layar penuh yang dijalankan ulang browser di setiap frame. Sebelas mode kini dimuat hanya saat dibuka, simpanan punya tiga profil dengan ekspor dan impor, dan menu utama yang berisi sekitar 35 tombol dirapikan menjadi tujuh hub.',
+    highlights: [
+      'Lag: kanvas game memakai filter SVG gamma plus brightness/contrast di setiap frame, bahkan pada pengaturan bawaan. Diukur di laptop RTX 3050: kerja GPU turun sekitar 45%, dan tanpa akselerasi GPU kampanye naik dari 29 ke 60 fps. Filter kini hanya dipasang jika gamma, kecerahan, atau kontras diubah.',
+      'Kanvas game kini buram (opaque) dan langitnya digambar dari bitmap cache, sehingga compositor bisa melewati lapisan di belakangnya. Lapisan cache digambar 1:1 pada resolusi perangkat.',
+      'Patahan saat membuka layar dihilangkan: Pilih Level dan Pengaturan memakai content-visibility (tata letak pertama Pilih Level 91 ms menjadi sekitar 5 ms), dan mesin audio disiapkan saat menu diam sehingga klik pertama tidak lagi tersendat sekitar 200 ms.',
+      'Sebelas mode dimuat saat pertama dibuka: Riftwar, Wave Defense, Pirate Tide, Pondok Umpan, Fivefold Trials, Puzzle Adventure, Mode 3D, Catatan Update, Frontier/Overdrive, Speedrun, dan layar Profil. JavaScript yang diurai sebelum menu siap turun dari 3,57 MB menjadi 2,83 MB.',
+      'Tiga profil simpanan dengan cadangan otomatis. Simpanan lama pindah ke Profil 1 saat pertama dibuka dan kunci lama tetap ditulis selama satu rilis. Penulisan digabung: paling banyak satu kali per 2 detik per kunci, dan selalu ditulis saat halaman ditutup.',
+      'Ekspor dan impor: satu berkas JSON per profil dengan versi dan checksum. Impor menolak berkas yang diubah atau dari versi lebih baru, dan profil yang ditimpa disimpan sebagai cadangan. Menghapus profil harus mengetik PROFIL N dan bisa dibatalkan selama 24 jam.',
+      'Menu utama tujuh hub: Lanjutkan, Kampanye, Arc & Ekspansi, Scary Mode, Mode Arena, Arsip, Pengaturan. Hub menampilkan tanda BARU sampai isinya dilihat, dan Lanjutkan membuka mode terakhir yang dimainkan.',
+    ],
+    fixes: [
+      'Cadangan progress tidak lagi disalin di setiap penyimpanan (itu menggandakan biaya setiap tulis); kini sekali per sesi.',
+      'Judul menu menampilkan v0.23.0; kini versi yang benar.',
+      'Lima skrip smoke yang kedaluwarsa diperbaiki, dan semua smoke kini membaca versi dari package.json.',
+    ],
+  },
   {
     version: '0.36.0',
     date: '24 November 2026',

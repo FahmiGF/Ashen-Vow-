@@ -17,6 +17,12 @@ export class SoundKit {
     this.dynamicRange = 'normal';
   }
 
+  /** Build the audio graph early without resuming it (no user gesture needed). */
+  prewarm() {
+    if (this.ctx) return;
+    this.init();
+  }
+
   init() {
     if (this.ctx) {
       if (this.ctx.state === 'suspended') this.ctx.resume();

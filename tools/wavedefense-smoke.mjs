@@ -104,10 +104,10 @@ async function main() {
     await send('Page.bringToFront');
     await boot();
 
-    const hub = await evaluate(`(() => {
+    const hub = await evaluate(`(async () => {
       const A = window.__ashen;
       A.clearProgress();
-      A.showWaveDefense();
+      await A.showWaveDefense();
       return {
         view: A.menuView,
         maps: document.querySelectorAll('[data-wd-map]').length,
@@ -149,9 +149,9 @@ async function main() {
     check('tower picker selects Trebuchet', selected.selected, 'trebuchet');
     check('start button reflects the chosen castle', /EMBER BASTION/.test(selected.label), true);
 
-    const battle = await evaluate(`(() => {
+    const battle = await evaluate(`(async () => {
       const A = window.__ashen;
-      A.startWaveDefenseBattle();
+      await A.startWaveDefenseBattle();
       const canvas = document.querySelector('#wd-canvas');
       const ctx = canvas.getContext('2d');
       const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
@@ -298,9 +298,9 @@ async function main() {
     await send('Page.reload');
     await sleep(350);
     await boot();
-    const persisted = await evaluate(`(() => {
+    const persisted = await evaluate(`(async () => {
       const A = window.__ashen;
-      A.showWaveDefense();
+      await A.showWaveDefense();
       return {
         runs: A.progress.wavedefense.runs,
         wins: A.progress.wavedefense.wins,
@@ -316,13 +316,13 @@ async function main() {
     check('tower roster survives reload', persisted.cards, 14);
 
     // Endless: no wave cap, defeats record in their own ledger.
-    const endless = await evaluate(`(() => {
+    const endless = await evaluate(`(async () => {
       const A = window.__ashen;
-      A.showWaveDefense();
+      await A.showWaveDefense();
       const before = { runs: A.progress.wavedefense.runs, wins: A.progress.wavedefense.wins, losses: A.progress.wavedefense.losses };
       document.querySelector('[data-wd-mode="endless"]').click();
       A.setWaveDefenseMap('sunken_causeway');
-      A.startWaveDefenseBattle();
+      await A.startWaveDefenseBattle();
       const start = A.waveDefense.snapshot;
       A.waveDefenseSetWave(30);
       A.waveDefenseNextWave();

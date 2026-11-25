@@ -256,9 +256,18 @@ test('Update XV remains documented after the Unwritten Wing expansion', () => {
   }
 });
 
-test('the latest update documents the Lanternwake, Vigil Tree and voice release', () => {
+test('the latest update documents the Lighter Ash optimization release', () => {
   const latest = LATEST_UPDATE;
-  assert.equal(latest.version, '0.36.0');
+  assert.equal(latest.version, '0.39.0');
+  const text = [latest.title, latest.summary, ...latest.highlights, ...(latest.fixes || [])].join(' ');
+  for (const pattern of [/LIGHTER ASH/i, /filter gamma/i, /29 ke 60 fps/, /45%/, /content-visibility/, /3,57 MB menjadi 2,83 MB/, /tiga profil/i, /Profil 1/, /checksum/i, /PROFIL N/, /24 jam/, /tujuh hub/i, /Lanjutkan/]) {
+    assert.match(text, pattern);
+  }
+});
+
+test('the Lanternwake, Vigil Tree and voice release stays documented', () => {
+  const latest = UPDATE_LOG.find((entry) => entry.version === '0.36.0');
+  assert.ok(latest);
   const text = [latest.title, latest.summary, ...latest.highlights, ...(latest.fixes || [])].join(' ');
   for (const pattern of [/Lanternwake/i, /669-673/, /ALL_ROOMS kini 674/i, /Orsella/i, /empat fase/i, /progress\.lanternwake/, /Pohon Vigil/i, /21 rank/i, /ElevenLabs/i, /ashen-vow-voice-v1/, /Trailer/i, /80 detik/i, /BOOT-01/, /asset-inventory/i, /Master Plan 3\.0/]) {
     assert.match(text, pattern);

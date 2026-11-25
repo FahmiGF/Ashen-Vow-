@@ -5,6 +5,7 @@ import { spawn } from 'node:child_process';
 import { existsSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { VERSION, VERSION_RE } from './smoke-version.mjs';
 
 const BASE = process.env.ASHEN_URL || 'http://127.0.0.1:4300/';
 const PORT = Number(process.env.CDP_PORT) || 9344;
@@ -99,7 +100,7 @@ try {
     facilities: window.__ashen.veilFacilities.length,
     achievements: window.__ashen.veilAchievements.length,
   }))()`);
-  check(/0\.36\.0/.test(String(boot.title)), `boots v0.36.0 (${String(boot.title).slice(0, 40)})`);
+  check(VERSION_RE.test(String(boot.title)), `boots v${VERSION} (${String(boot.title).slice(0, 40)})`);
   check(boot.chapters === 6 && boot.stages === 30 && boot.bosses === 7, '6 chapters, 30 stages, 7 bosses');
   check(boot.ghosts === 80, `80 Ghost Index entries (${boot.ghosts})`);
   check(boot.tabs === 8 && boot.facilities === 10 && boot.achievements === 14, '8 tabs, 10 facilities, 14 achievements');
@@ -245,7 +246,7 @@ try {
 
   const saved = await evaluate(`(() => {
     try {
-      const raw = JSON.parse(localStorage.getItem('ashen-vow-veil-v1') || 'null');
+      const raw = JSON.parse((window.__ashen?.flushSaves?.(), localStorage).getItem('ashen-vow-veil-v1') || 'null');
       return { exists: !!raw, schema: raw && raw.schemaVersion, stages: raw && raw.campaign.completedStages.length, documented: raw && Object.keys(raw.ghostIndex.records).length };
     } catch { return { exists: false }; }
   })()`);

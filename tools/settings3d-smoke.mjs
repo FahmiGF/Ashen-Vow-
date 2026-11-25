@@ -4,6 +4,7 @@ import { spawn } from 'node:child_process';
 import { existsSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { VERSION, VERSION_RE } from './smoke-version.mjs';
 
 const URL = process.env.ASHEN_URL || 'http://127.0.0.1:4300/';
 const PORT = Number(process.env.CDP_PORT) || 9335;
@@ -70,7 +71,7 @@ try {
   await waitFor(() => evaluate('typeof window.__ashen === "object"'), 20000, 'game boot');
 
   const boot = await evaluate(`({ version: window.__ashen.version, difficulty: window.__ashen.difficulty, categories: window.__ashen.settings && Object.keys(window.__ashen.settings).length })`);
-  check(boot.version === '0.36.0', `version is 0.36.0 (got ${boot.version})`);
+  check(boot.version === VERSION, `version is ${VERSION} (got ${boot.version})`);
   check(boot.difficulty.engine === 'normal' && boot.difficulty.active === 'normal', 'normal difficulty is active in the engine');
   check(boot.categories >= 10, 'versioned settings expose all groups');
 
@@ -137,7 +138,7 @@ try {
     const diag = document.getElementById('settings-diagnostics').textContent;
     document.getElementById('btn-settings-apply').click();
     await new Promise((r) => setTimeout(r, 120));
-    return { diag, saved: JSON.parse(localStorage.getItem('ashen-vow-settings-v1')).graphics.preset };
+    return { diag, saved: JSON.parse((window.__ashen?.flushSaves?.(), localStorage).getItem('ashen-vow-settings-v1')).graphics.preset };
   })()`);
   check(/TIDAK DIDUKUNG/.test(applied.diag) && /TERSIMPAN|MENUNGGU/.test(applied.diag), 'diagnostics reports unsupported features honestly');
   check(applied.saved === 'low', 'Apply persists the settings payload');
@@ -169,19 +170,24 @@ try {
 
   const mode3d = await evaluate(`(async () => {
     document.getElementById('btn-mode3d-menu').click();
+    await window.__ashen.loadMode('mode3d');
     await new Promise((r) => setTimeout(r, 500));
     const select = document.getElementById('select-3d-region');
     const regions = select.options.length;
     select.value = 'astral';
     select.dispatchEvent(new Event('change', { bubbles: true }));
-    await new Promise((r) => setTimeout(r, 600));
     const canvas = document.getElementById('canvas-3d');
     const ctx = canvas.getContext('2d');
-    const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
     let colors = new Set(); let lit = 0;
-    for (let i = 0; i < data.length; i += 64) {
-      const key = data[i] + ',' + data[i+1] + ',' + data[i+2];
-      colors.add(key); if (data[i] + data[i+1] + data[i+2] > 24) lit += 1;
+    // Sample until the scene has rendered (GL warm-up varies run to run).
+    for (let attempt = 0; attempt < 20 && !(colors.size > 120 && lit > 100); attempt += 1) {
+      await new Promise((r) => setTimeout(r, 300));
+      const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+      colors = new Set(); lit = 0;
+      for (let i = 0; i < data.length; i += 64) {
+        const key = data[i] + ',' + data[i+1] + ',' + data[i+2];
+        colors.add(key); if (data[i] + data[i+1] + data[i+2] > 24) lit += 1;
+      }
     }
     return { regions, mode: window.__ashen.mode3D, colors: colors.size, lit, hidden: document.getElementById('mode3d-screen').classList.contains('hidden') };
   })()`);
@@ -262,7 +268,7 @@ try {
     await new Promise((r) => setTimeout(r, 100));
     document.getElementById('btn-settings-apply').click();
     await new Promise((r) => setTimeout(r, 120));
-    const saved = JSON.parse(localStorage.getItem('ashen-vow-settings-v1'));
+    const saved = JSON.parse((window.__ashen?.flushSaves?.(), localStorage).getItem('ashen-vow-settings-v1'));
     return { preset: saved.graphics.preset, music: saved.audio.music, difficulty: saved.gameplay.difficulty };
   })()`);
   check(reset.preset === 'high' && reset.music === 55 && reset.difficulty === 'normal', `confirmed Reset All restores and persists defaults without touching progress (got ${JSON.stringify(reset)})`);

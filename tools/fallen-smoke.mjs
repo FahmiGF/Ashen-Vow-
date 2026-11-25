@@ -14,6 +14,7 @@ import { spawn } from 'node:child_process';
 import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { VERSION, VERSION_RE } from './smoke-version.mjs';
 
 const URL = process.env.ASHEN_URL || 'http://127.0.0.1:4300/';
 const CDP_PORT = Number(process.env.CDP_PORT) || 9237;
@@ -148,8 +149,8 @@ async function main() {
       A.clearProgress();
       return { version: A.version, title: document.title, fallen: !!A.progress.fallen };
     })()`);
-    check('boot reports v0.36.0', boot.version, '0.36.0');
-    assert.match(boot.title, /0.36.0/);
+    check(`boot reports v${VERSION}`, boot.version, VERSION);
+    assert.match(boot.title, VERSION_RE);
     check('fresh saves carry a fallen progress block', boot.fallen, true);
 
     const ascended = await evaluate(`(() => {
@@ -270,7 +271,7 @@ async function main() {
         archive: A.progress.fallen.archive.bosses.includes('aurelian'),
         state: A.snap().state,
         bossHp: A.game.boss ? A.game.boss.hp : null,
-        saved: !!JSON.parse(localStorage.getItem('ashen-vow-progress-v1') || '{}').fallen,
+        saved: !!JSON.parse((window.__ashen?.flushSaves?.(), localStorage).getItem('ashen-vow-progress-v1') || '{}').fallen,
       };
     })()`);
     if (process.env.SMOKE_VERBOSE) console.log('kill', kill);
@@ -288,7 +289,7 @@ async function main() {
 
     const persist = await evaluate(`(() => {
       const A = window.__ashen;
-      const raw = JSON.parse(localStorage.getItem('ashen-vow-progress-v1') || '{}').fallen || {};
+      const raw = JSON.parse((window.__ashen?.flushSaves?.(), localStorage).getItem('ashen-vow-progress-v1') || '{}').fallen || {};
       return { bosses: !!raw.bosses?.aurelian, shards: raw.shards > 0, rooms: raw.rooms?.[0] === true };
     })()`);
     check('fallen progress persists in the shared save key', persist.bosses, true);

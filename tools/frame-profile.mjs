@@ -146,18 +146,18 @@ try {
       A.enterRoom(3);
       return A.snap().room;
     })()`,
-    pirates: `(() => {
+    pirates: `(async () => {
       const A = window.__ashen;
-      A.showPirates();
+      await A.showPirates();
       A.setPirateStage('first_tide');
-      A.startPirateVoyage();
+      await A.startPirateVoyage();
       A.pirateSetKills(4);
       A.pirateStep(0.2);
       return A.pirates.snapshot.enemies.length;
     })()`,
-    pirateEndless: `(() => {
+    pirateEndless: `(async () => {
       const A = window.__ashen;
-      A.startPirateEndless();
+      await A.startPirateEndless();
       for (let i = 0; i < 21; i += 1) A.pirateNextSurge();
       A.pirateStep(0.2);
       return A.pirates.snapshot.surge;
@@ -170,13 +170,13 @@ try {
       A.startCisternStage(1);
       return A.snap().room;
     })()`,
-    wave: `(() => {
+    wave: `(async () => {
       const A = window.__ashen;
-      A.leavePirates();
-      A.showWaveDefense();
+      await A.leavePirates();
+      await A.showWaveDefense();
       A.setWaveDefenseMap('sunken_causeway');
       A.setWaveDefenseMode('classic');
-      A.startWaveDefenseBattle();
+      await A.startWaveDefenseBattle();
       A.waveDefenseGold(5000);
       for (let slot = 0; slot < 12; slot += 1) A.waveDefenseBuild(slot, slot % 4 === 0 ? 'trebuchet' : 'sniper_nest');
       A.waveDefenseSetWave(20);
@@ -184,12 +184,12 @@ try {
       A.waveDefenseStep(7);
       return A.waveDefense.snapshot.wave;
     })()`,
-    waveEndless: `(() => {
+    waveEndless: `(async () => {
       const A = window.__ashen;
-      A.leaveWaveDefense();
-      A.showWaveDefense();
+      await A.leaveWaveDefense();
+      await A.showWaveDefense();
       A.setWaveDefenseMode('endless');
-      A.startWaveDefenseBattle();
+      await A.startWaveDefenseBattle();
       A.waveDefenseGold(5000);
       for (let slot = 0; slot < 14; slot += 1) A.waveDefenseBuild(slot, slot % 3 === 0 ? 'cannon_tower' : 'sniper_nest');
       A.waveDefenseSetWave(26);

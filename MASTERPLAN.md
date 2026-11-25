@@ -1,7 +1,7 @@
 # ASHEN VOW — MASTER PLAN 3.0
 
 > **Road to v1.0: every mode finished, deeper, and faster.**
-> Written 24 November 2026 against the live tree at **v0.36.0**. v0.36.0 ships Updates XXV and XXVI, which had sat unreleased on top of v0.35.0 (Tidewrought Cistern). XXV covers ElevenLabs voice, the in-engine trailer, ghost GLBs, the Vigil Tree and the startup guard. XXVI covers BAB X The Lanternwake and the asset inventory. Phase 0 of this plan is that release.
+> Status 25 November 2026: **v0.39.0** shipped Phase 1 (*Lighter Ash*); see the Phase 1 status note in §4. Written 24 November 2026 against the live tree at **v0.36.0**. v0.36.0 ships Updates XXV and XXVI, which had sat unreleased on top of v0.35.0 (Tidewrought Cistern). XXV covers ElevenLabs voice, the in-engine trailer, ghost GLBs, the Vigil Tree and the startup guard. XXVI covers BAB X The Lanternwake and the asset inventory. Phase 0 of this plan is that release.
 > Live engine totals: **674 rooms** in `ALL_ROOMS`, **116 bosses**, **262 enemy types**, **18 playable classes** (+15 Frontier 3D classes), **776/776** Node tests.
 > The previous plan (Master Plan 2.0: Milestones A–F, Parts I–III, Appendices A–F) is kept unchanged at [`docs/archive/MASTERPLAN-2.0.md`](docs/archive/MASTERPLAN-2.0.md). It stays the idea bank for systems this plan does not schedule yet, such as the Wonderland, Alien Mode, the War Update and Prestige.
 
@@ -137,6 +137,8 @@ State legend: **Playable** means it has real rooms, combat and saves. **Partial*
 **Acceptance:** `npm test` green; `smoke:lanternwake`, `smoke:trailer` and `smoke:scary2` green; the Update Log screen shows v0.36.0 first.
 
 ### Phase 1 — v0.37 – v0.39 *Lighter Ash* (optimization and foundations)
+
+> **Status (v0.39.0, 25 Nov 2026):** shipped as one release. Done: the lag fix (per-frame canvas filter removed; opaque canvas; native-size layer blits), 11 lazy mode screens with stylesheets, `src/version.js`, `src/save.js` with 3 slots, export/import, debounced writes and legacy migration, the 7-hub menu, `tools/boot-probe.mjs`, `tests/budget.test.js`, `tests/save.test.js`. Measured boot JS 3.57 → **2.83 MB**. Not done: the ≤ 900 KB boot budget (blocked by `core.js` importing all arc data — moved to Phase 3), `main.js` ≤ 60 KB (693 KB now), stylesheets 11 → 1 render-blocking, the `drawBackground` render pass, and the first release-gate baseline.
 
 **v0.37.0 — Split and lazy-load**
 - Split `src/main.js` into `src/ui/` modules by screen: `boot.js`, `menu.js`, `hud.js`, `level_select.js`, `settings_ui.js`, `codex_ui.js`, `map_ui.js`, `debug_hooks.js`, plus one `src/modes/<mode>_ui.js` per mode. Target: no file over 120 KB, and `main.js` ≤ 60 KB as a router.

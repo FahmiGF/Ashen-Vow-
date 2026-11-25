@@ -14,6 +14,7 @@ import { spawn } from 'node:child_process';
 import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { VERSION, VERSION_RE } from './smoke-version.mjs';
 
 const URL = process.env.ASHEN_URL || 'http://127.0.0.1:4300/';
 const CDP_PORT = Number(process.env.CDP_PORT) || 9238;
@@ -143,13 +144,14 @@ async function main() {
     }
     assert.equal(booted, true, `game must boot (errors: ${pageErrors.join(' | ')})`);
 
-    const boot = await evaluate(`(() => {
+    const boot = await evaluate(`(async () => {
       const A = window.__ashen;
       A.clearProgress();
-      return { version: A.version, title: document.title, progress: A.progress.speedrun };
+      await A.loadMode('speedrun'); // the speedrun block is sanitized when its mode loads
+      return { version: A.version, title: document.title, progress: A.speedrun.progress };
     })()`);
-    check('boot reports v0.36.0', boot.version, '0.36.0');
-    assert.match(boot.title, /0\.36\.0/);
+    check(`boot reports v${VERSION}`, boot.version, VERSION);
+    assert.match(boot.title, VERSION_RE);
     check('speedrun save starts empty', boot.progress.bestMultiplier, 0);
 
     const hub = await evaluate(`(() => {
@@ -221,7 +223,7 @@ async function main() {
     await sleep(500);
     const ended = await evaluate(`(() => {
       const A = window.__ashen;
-      const saved = JSON.parse(localStorage.getItem('ashen-vow-progress-v1')).speedrun;
+      const saved = JSON.parse((window.__ashen?.flushSaves?.(), localStorage).getItem('ashen-vow-progress-v1')).speedrun;
       return {
         summaryOpen: A.speedrun.summaryOpen,
         screenHidden: document.getElementById('speedrun-summary-screen').classList.contains('hidden'),
@@ -273,7 +275,7 @@ async function main() {
     await sleep(1200);
     const escalated = await evaluate(`(() => {
       const A = window.__ashen;
-      const saved = JSON.parse(localStorage.getItem('ashen-vow-progress-v1')).speedrun;
+      const saved = JSON.parse((window.__ashen?.flushSaves?.(), localStorage).getItem('ashen-vow-progress-v1')).speedrun;
       return {
         multiplier: A.speedrun.multiplier,
         cycle: A.speedrun.run.cycle,
@@ -305,7 +307,7 @@ async function main() {
     await sleep(500);
     const final = await evaluate(`(() => {
       const A = window.__ashen;
-      const saved = JSON.parse(localStorage.getItem('ashen-vow-progress-v1')).speedrun;
+      const saved = JSON.parse((window.__ashen?.flushSaves?.(), localStorage).getItem('ashen-vow-progress-v1')).speedrun;
       return { runs: saved.runs, best: saved.bestMultiplier, text: document.getElementById('speedrun-summary-body').textContent };
     })()`);
     check('second run is recorded', final.runs, 2);
@@ -313,7 +315,7 @@ async function main() {
     check('summary reports the run multiplier', /3×/.test(final.text), true);
 
     const history = await evaluate(`(() => {
-      const saved = JSON.parse(localStorage.getItem('ashen-vow-progress-v1')).speedrun;
+      const saved = JSON.parse((window.__ashen?.flushSaves?.(), localStorage).getItem('ashen-vow-progress-v1')).speedrun;
       return { len: saved.history.length, entries: saved.history };
     })()`);
     check('history records every attempt', history.len, 3);
@@ -328,6 +330,7 @@ async function main() {
     const reloaded = await evaluate(`(async () => {
       const A = window.__ashen;
       document.getElementById('btn-speedrun-menu').click();
+      await A.loadMode('speedrun');
       return {
         view: A.menuView,
         best: A.speedrun.progress.bestMultiplier,

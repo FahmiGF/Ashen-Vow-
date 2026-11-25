@@ -5,6 +5,7 @@ import { spawn } from 'node:child_process';
 import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { VERSION, VERSION_RE } from './smoke-version.mjs';
 
 const URL = process.env.ASHEN_URL || 'http://127.0.0.1:4300/';
 const CDP_PORT = Number(process.env.CDP_PORT) || 9264;
@@ -112,12 +113,12 @@ async function main() {
       hasBattle: !!document.getElementById('pirate-battle'),
     }))()`);
     check(bootState.hasPirate && bootState.hasScreen && bootState.hasBattle, 'Pirate Tide screens exist');
-    check(/0\.36\./.test(`${bootState.version} ${bootState.title}`), `boots v0.36.0 (${bootState.title})`);
+    check(VERSION_RE.test(`${bootState.version} ${bootState.title}`), `boots v${VERSION} (${bootState.title})`);
 
-    const hub = await evaluate(`(() => {
+    const hub = await evaluate(`(async () => {
       const A = window.__ashen;
       A.clearProgress();
-      A.showPirates();
+      await A.showPirates();
       return {
         view: A.menuView,
         cards: document.querySelectorAll('[data-pirate-stage]').length,
@@ -140,10 +141,10 @@ async function main() {
     check(hub.actTwoLocked, 'act two routes stay locked behind the first five');
     check(!hub.active, 'the hub does not start a voyage by itself');
 
-    const start = await evaluate(`(() => {
+    const start = await evaluate(`(async () => {
       const A = window.__ashen;
       A.setPirateStage('first_tide');
-      A.startPirateVoyage();
+      await A.startPirateVoyage();
       const s = A.pirates.snapshot;
       return {
         view: A.menuView,
@@ -224,9 +225,9 @@ async function main() {
     check(boss.card, 'the victory overlay renders');
     check(boss.cleared && boss.wins === 1, 'route progress is saved to the main progress object');
 
-    const next = await evaluate(`(() => {
+    const next = await evaluate(`(async () => {
       const A = window.__ashen;
-      A.showPirates();
+      await A.showPirates();
       A.setPirateStage('bell_below');
       return {
         stage: A.pirates.stageId,
@@ -249,10 +250,10 @@ async function main() {
     check(mobile.overflow <= 1, `phone layout has no horizontal overflow (${mobile.overflow}px)`);
     check(mobile.cards === 10 && mobile.visible, 'the hub remains usable at 390x844');
 
-    const mobileBattle = await evaluate(`(() => {
+    const mobileBattle = await evaluate(`(async () => {
       const A = window.__ashen;
       A.setPirateStage('first_tide');
-      A.startPirateVoyage();
+      await A.startPirateVoyage();
       const battle = document.getElementById('pirate-battle');
       const canvas = document.getElementById('pirate-canvas');
       const controls = document.getElementById('pirate-controls');
@@ -275,7 +276,7 @@ async function main() {
         shotsAfter: A.pirates.snapshot.shotsFired,
         overflow: document.documentElement.scrollWidth - window.innerWidth,
       };
-      A.leavePirates();
+      await A.leavePirates();
       return result;
     })()`);
     check(mobileBattle.position === 'fixed', 'the phone battle escapes the 16:9 frame');
@@ -290,9 +291,9 @@ async function main() {
 
     await send('Page.reload');
     await boot();
-    const reload = await evaluate(`(() => {
+    const reload = await evaluate(`(async () => {
       const A = window.__ashen;
-      A.showPirates();
+      await A.showPirates();
       return {
         cleared: !!A.progress.pirates.stages.first_tide?.cleared,
         unlocked: !document.querySelector('[data-pirate-stage="bell_below"]')?.disabled,
@@ -302,21 +303,21 @@ async function main() {
     check(reload.cleared && reload.unlocked && reload.wins === 1, 'route clears survive a full page reload');
 
     // Act two: open the first five routes, then run the mist hunt end to end.
-    const actTwo = await evaluate(`(() => {
+    const actTwo = await evaluate(`(async () => {
       const A = window.__ashen;
       const stages = A.pirates.stages;
       for (let i = 0; i < 5; i += 1) {
         A.progress.pirates.stages[stages[i].id] = { runs: 1, cleared: true, bestScore: 100, bestTime: 60 };
       }
-      A.showPirates();
+      await A.showPirates();
       const unlocked = !document.querySelector('[data-pirate-stage="mist_hunt"]')?.disabled;
       A.setPirateStage('mist_hunt');
-      A.startPirateVoyage();
+      await A.startPirateVoyage();
       A.pirateSetKills(9);
       const bossName = A.pirates.snapshot.bossName;
       const routeName = A.pirates.snapshot.stageName;
       const sunk = A.pirateSinkBoss();
-      A.showPirates();
+      await A.showPirates();
       return {
         unlocked,
         routeName,
@@ -332,9 +333,9 @@ async function main() {
     check(actTwo.nextUnlocked, 'the act two chain advances to Pasang Kosong');
 
     // Endless tide: surges grow the fleet, captains are bounties, not a finish.
-    const endless = await evaluate(`(() => {
+    const endless = await evaluate(`(async () => {
       const A = window.__ashen;
-      A.showPirates();
+      await A.showPirates();
       const winsBefore = A.progress.pirates.wins;
       const clearedBefore = A.pirates.summary.cleared;
       document.querySelector('[data-pirate-endless]').click();

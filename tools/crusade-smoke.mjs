@@ -14,6 +14,7 @@ import { spawn } from 'node:child_process';
 import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { VERSION, VERSION_RE } from './smoke-version.mjs';
 
 const URL = process.env.ASHEN_URL || 'http://127.0.0.1:4300/';
 const CDP_PORT = Number(process.env.CDP_PORT) || 9241;
@@ -148,8 +149,8 @@ async function main() {
       A.clearProgress();
       return { version: A.version, title: document.title, crusade: !!A.progress.crusade };
     })()`);
-    check('boot reports v0.36.0', boot.version, '0.36.0');
-    assert.match(boot.title, /0.36.0/);
+    check(`boot reports v${VERSION}`, boot.version, VERSION);
+    assert.match(boot.title, VERSION_RE);
     check('fresh saves carry a crusade progress block', boot.crusade, true);
 
     const arc2 = await evaluate(`(() => {
@@ -291,7 +292,7 @@ async function main() {
         cleared: A.progress.crusade.bosses.marshal_aurion,
         banner: A.progress.crusade.banners.includes('banner_of_dawn'),
         sigils: A.progress.crusade.sigils,
-        saved: !!JSON.parse(localStorage.getItem('ashen-vow-progress-v1') || '{}').crusade,
+        saved: !!JSON.parse((window.__ashen?.flushSaves?.(), localStorage).getItem('ashen-vow-progress-v1') || '{}').crusade,
       };
     })()`);
     check('defeating the Marshal records the boss', kill.cleared, true);
@@ -345,7 +346,7 @@ async function main() {
         menu: A.menuView,
         rift: [...document.querySelectorAll('[data-crusade-menu]')].find((b) => b.dataset.crusadeMenu === 'rift')?.disabled,
         levels: A.crusade.summary.levelsCleared,
-        saved: JSON.parse(localStorage.getItem('ashen-vow-progress-v1') || '{}').crusade.arc4Hook,
+        saved: JSON.parse((window.__ashen?.flushSaves?.(), localStorage).getItem('ashen-vow-progress-v1') || '{}').crusade.arc4Hook,
       };
     })()`);
     check('after the clear the game boots to the war camp', reboot.menu, 'crusadeMenu');

@@ -94,6 +94,8 @@ try {
   await sleep(1200);
   await waitFor(() => evaluate('typeof window.__ashen === "object" && typeof window.__ashen.horror3D === "object"'), 20000, 'game boot');
 
+  // 3D Mode is lazy since v0.37.0: load it the way opening the hub does.
+  await evaluate('window.__ashen.loadMode("mode3d").then(() => window.__ashen.buildHorror3DPanel())');
   const boot = await evaluate(`({
     version: window.__ashen.version,
     opened: !document.getElementById('mode3d-screen').classList.contains('hidden'),
@@ -105,6 +107,7 @@ try {
   check(boot.choices === 5, `site selector lists five buildings (got ${boot.choices})`);
 
   await evaluate(`document.getElementById('btn-horror3d-menu').click()`);
+  await evaluate('window.__ashen.loadMode("mode3d")');
   await sleep(500);
   const opened = await evaluate(`(() => {
     const g = window.__ashen.game3D;
@@ -165,7 +168,7 @@ try {
   const exit = await evaluate(`window.__ashen.horror3DExit()`);
   check(exit.active === false && exit.result === 'cleared', 'reaching the exit clears the 3D site');
   await sleep(500);
-  const saved = await evaluate(`JSON.parse(localStorage.getItem('ashen-vow-3dhorror-v1'))`);
+  const saved = await evaluate(`JSON.parse((window.__ashen?.flushSaves?.(), localStorage).getItem('ashen-vow-3dhorror-v1'))`);
   check(saved && saved.clears >= 1 && saved.sites.blackveil_manor.clears === 1, 'clear is written to the dedicated 3D horror save');
 
   const anti = await evaluate(`(async () => {
@@ -184,6 +187,7 @@ try {
   await send('Page.reload', { ignoreCache: true });
   await sleep(1000);
   await waitFor(() => evaluate('typeof window.__ashen === "object" && typeof window.__ashen.horror3D === "object"'), 20000, 'reload boot');
+  await evaluate('window.__ashen.loadMode("mode3d").then(() => window.__ashen.buildHorror3DPanel())');
   const persisted = await evaluate(`({
     clears: window.__ashen.horror3D.summary.clears,
     clearedSites: window.__ashen.horror3D.summary.clearedSites,

@@ -8,6 +8,7 @@ import { spawn } from 'node:child_process';
 import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { VERSION, VERSION_RE } from './smoke-version.mjs';
 
 const URL = process.env.ASHEN_URL || 'http://127.0.0.1:4300/';
 const CDP_PORT = Number(process.env.CDP_PORT) || 9247;
@@ -106,17 +107,20 @@ async function main() {
     await send('Log.enable');
     await send('Page.bringToFront');
     await boot();
-    const initial = await evaluate(`(() => {
+    const initial = await evaluate(`(async () => {
       const A = window.__ashen; A.clearProgress();
+      // Trial and puzzle progress are sanitized when their (lazy) mode opens.
+      await A.showTrials(); await A.showPuzzleAdventure(); A.showMenu();
       return { version: A.version, trials: !!A.progress.trials, puzzle: !!A.progress.puzzle };
     })()`);
-    check('boot reports v0.36.0', initial.version, '0.36.0');
+    check(`boot reports v${VERSION}`, initial.version, VERSION);
     check('save carries trial progress', initial.trials, true);
     check('save carries puzzle progress', initial.puzzle, true);
 
-    const hubs = await evaluate(`(() => {
+    const hubs = await evaluate(`(async () => {
       const A = window.__ashen;
-      A.showTrials();
+      await A.showTrials();
+      await A.loadMode('puzzle');
       return {
         view: A.menuView,
         biomes: document.querySelectorAll('.trials-biome').length,
@@ -137,7 +141,7 @@ async function main() {
     check('puzzle hub groups ten arcs', hubs.puzzleArcs, 10);
     check('puzzle view is active', hubs.puzzleView, 'puzzle');
 
-    const codex = await evaluate(`(() => {
+    const codex = await evaluate(`(async () => {
       const A = window.__ashen;
       document.querySelector('[data-puzzle-tab="index"]').click();
       const indexCards = document.querySelectorAll('.puzzle-lore-card').length;
@@ -145,7 +149,7 @@ async function main() {
       document.querySelector('[data-puzzle-tab="lore"]').click();
       const loreCards = document.querySelectorAll('.puzzle-arc-lore').length;
       const loreText = document.querySelector('#puzzle-body').textContent;
-      A.showPuzzleAdventure('stages');
+      await A.showPuzzleAdventure('stages');
       return { indexCards, indexText, loreCards, loreText };
     })()`);
     check('index lists all twenty-three puzzle systems', codex.indexCards, 23);
@@ -153,11 +157,11 @@ async function main() {
     check('lore lists ten arc chapters', codex.loreCards, 10);
     check('lore carries the lost-mechanism story', /mekanisme|sumpah|penjaga/i.test(codex.loreText), true);
 
-    const hint = await evaluate(`(() => {
+    const hint = await evaluate(`(async () => {
       const A = window.__ashen;
-      A.showPuzzleAdventure();
+      await A.showPuzzleAdventure();
       A.progress.expansion.echoes = 250;
-      A.startPuzzleStage(0);
+      await A.startPuzzleStage(0);
       document.querySelector('#btn-puzzle-hint').click();
       const paid = { echoes: A.progress.expansion.echoes, hints: A.puzzle.progress.stats.hints, status: document.querySelector('#puzzle-status').textContent };
       A.progress.expansion.echoes = 50;
@@ -172,9 +176,9 @@ async function main() {
     check('insufficient Gema gives no hint', hint.poor.hints, 1);
     check('insufficient Gema is explained', /tidak cukup/i.test(hint.poor.status), true);
 
-    const run = await evaluate(`(() => {
+    const run = await evaluate(`(async () => {
       const A = window.__ashen;
-      A.startTrialLevel('forgotten_crypt', 0);
+      await A.startTrialLevel('forgotten_crypt', 0);
       return { room: A.snap().room, enemies: A.game.enemies.length, total: A.trials.run.encounter.total, view: A.menuView };
     })()`);
     check('trial level enters its arena', run.view, 'none');
@@ -193,15 +197,15 @@ async function main() {
     check('first trial level records completion', cleared.cleared, true);
     check('trial returns to the hub', cleared.view, 'trials');
 
-    const boss = await evaluate(`(() => {
+    const boss = await evaluate(`(async () => {
       const A = window.__ashen;
       for (let index = 1; index < 5; index += 1) {
-        A.startTrialLevel('forgotten_crypt', index);
+        await A.startTrialLevel('forgotten_crypt', index);
         for (let wave = 0; wave < 4; wave += 1) { A.game.enemies.length = 0; A.step(0.1); }
         A.step(1.5);
       }
       const unlocked = !document.querySelector('[data-trial-boss="forgotten_crypt"]').disabled;
-      A.startTrialBoss('forgotten_crypt');
+      await A.startTrialBoss('forgotten_crypt');
       const bossName = A.game.boss?.name || '';
       for (let hit = 0; hit < 8; hit += 1) { A.damageBoss(999999); A.step(0.4); A.drainEvents(); }
       A.step(2.5);
@@ -217,15 +221,15 @@ async function main() {
     check('boss reward is recorded once', boss.bosses, 1);
     check('all five clears were banked before the boss', boss.cleared, 5);
 
-    const timed = await evaluate(`(() => {
+    const timed = await evaluate(`(async () => {
       const A = window.__ashen;
-      A.showPuzzleAdventure('stages');
+      await A.showPuzzleAdventure('stages');
       for (let index = 0; index < 9; index += 1) {
-        A.startPuzzleStage(index);
+        await A.startPuzzleStage(index);
         let guard = 0;
         while (!A.puzzle.run.done && guard < 5) { A.solveCurrentPuzzle(); guard += 1; }
       }
-      A.startPuzzleStage(9);
+      await A.startPuzzleStage(9);
       const before = { visible: !document.querySelector('#puzzle-timer').classList.contains('hidden'), limit: A.puzzleTimer.timeLimit, label: document.querySelector('#puzzle-timer').textContent };
       A.expirePuzzleTimer();
       return before;
@@ -242,12 +246,12 @@ async function main() {
     check('expired boss timer returns to the hub', timeout.view, 'puzzle');
     check('failed boss stage does not grant progress', timeout.solved, 9);
 
-    const puzzles = await evaluate(`(() => {
+    const puzzles = await evaluate(`(async () => {
       const A = window.__ashen;
-      A.showPuzzleAdventure('stages');
+      await A.showPuzzleAdventure('stages');
       let solved = 0;
       for (let index = 0; index < 100; index += 1) {
-        A.startPuzzleStage(index);
+        await A.startPuzzleStage(index);
         let guard = 0;
         while (!A.puzzle.run.done && guard < 5) { A.solveCurrentPuzzle(); guard += 1; }
         if (A.puzzle.progress.solved.includes(A.puzzle.run.stage.id)) solved += 1;

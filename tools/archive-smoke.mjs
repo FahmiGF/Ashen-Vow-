@@ -3,6 +3,7 @@ import { spawn } from 'node:child_process';
 import { existsSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { VERSION, VERSION_RE } from './smoke-version.mjs';
 
 const BASE = process.env.ASHEN_URL || 'http://127.0.0.1:4300/';
 const PORT = Number(process.env.CDP_PORT) || 9346;
@@ -82,7 +83,7 @@ try {
     tools: window.__ashen.archiveData.tools.length,
     ghosts: window.__ashen.veilGhosts.length,
   }))()`);
-  check(/0\.36\.0/.test(String(boot.title)), `boots v0.36.0 (${String(boot.title).slice(0, 40)})`);
+  check(VERSION_RE.test(String(boot.title)), `boots v${VERSION} (${String(boot.title).slice(0, 40)})`);
   check(boot.stages === 70 && boot.chapters === 14 && boot.bosses === 16, `70 stages, 14 chapters, 16 bosses (${boot.stages}/${boot.chapters}/${boot.bosses})`);
   check(boot.ghosts === 80 && boot.jumpscares === 38 && boot.tools === 30, `80 ghosts, 38 jumpscares, 30 tools (${boot.ghosts}/${boot.jumpscares}/${boot.tools})`);
 
@@ -112,15 +113,15 @@ try {
 
   const peek = await evaluate(`(async () => {
     const a = window.__ashen;
-    const before = JSON.parse(localStorage.getItem('ashen-vow-veil-v1') || 'null')?.campaign?.completedStages || [];
+    const before = JSON.parse((window.__ashen?.flushSaves?.(), localStorage).getItem('ashen-vow-veil-v1') || 'null')?.campaign?.completedStages || [];
     const preview = a.archivePreview('midnight_city_1');
     await new Promise((r) => setTimeout(r, 120));
-    const save = JSON.parse(localStorage.getItem('ashen-vow-archive-v1') || 'null');
+    const save = JSON.parse((window.__ashen?.flushSaves?.(), localStorage).getItem('ashen-vow-archive-v1') || 'null');
     return {
       ok: preview.ok, type: preview.type, isolated: preview.accessibility.isolated,
       visible: !document.getElementById('archive-preview-screen').classList.contains('hidden'),
       status: a.archive.statuses.midnight_city_1,
-      before, after: JSON.parse(localStorage.getItem('ashen-vow-veil-v1') || 'null')?.campaign?.completedStages || [],
+      before, after: JSON.parse((window.__ashen?.flushSaves?.(), localStorage).getItem('ashen-vow-veil-v1') || 'null')?.campaign?.completedStages || [],
       previews: save?.previews?.midnight_city_1?.count || 0,
       title: document.getElementById('archive-preview-title').textContent,
     };
@@ -185,15 +186,15 @@ try {
     a.setArchiveTab('ghosts');
     await new Promise((r) => setTimeout(r, 100));
     const archive = a.archive;
-    return { state: archive.ghosts.documented, save: JSON.parse(localStorage.getItem('ashen-vow-archive-v1') || 'null')?.jumpscares ? true : false };
+    return { state: archive.ghosts.documented, save: JSON.parse((window.__ashen?.flushSaves?.(), localStorage).getItem('ashen-vow-archive-v1') || 'null')?.jumpscares ? true : false };
   })()`);
   check(synced.state >= 1, 'documentation synchronizes into the live archive');
   check(synced.save === true, 'the archive save exposes the jumpscare record store');
 
   const saved = await evaluate(`(() => {
-    const archive = JSON.parse(localStorage.getItem('ashen-vow-archive-v1') || 'null');
-    const veil = JSON.parse(localStorage.getItem('ashen-vow-veil-v1') || 'null');
-    const eternal = JSON.parse(localStorage.getItem('ashen-vow-eternal-v1') || 'null');
+    const archive = JSON.parse((window.__ashen?.flushSaves?.(), localStorage).getItem('ashen-vow-archive-v1') || 'null');
+    const veil = JSON.parse((window.__ashen?.flushSaves?.(), localStorage).getItem('ashen-vow-veil-v1') || 'null');
+    const eternal = JSON.parse((window.__ashen?.flushSaves?.(), localStorage).getItem('ashen-vow-eternal-v1') || 'null');
     return { archive: !!archive, schema: archive?.schemaVersion, veil: !!veil, eternal: eternal === null || !!eternal, stages: archive?.previews ? Object.keys(archive.previews).length : 0 };
   })()`);
   check(saved.archive && saved.schema === 1 && saved.veil && saved.eternal, 'the archive saves separately while the Arc IX save remains intact and any Arc X save is preserved');

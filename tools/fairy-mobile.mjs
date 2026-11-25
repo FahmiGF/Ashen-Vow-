@@ -15,6 +15,7 @@ import { spawn } from 'node:child_process';
 import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { VERSION, VERSION_RE } from './smoke-version.mjs';
 
 const URL = process.env.ASHEN_URL || 'http://127.0.0.1:4300/';
 const CDP_PORT = Number(process.env.CDP_PORT) || 9237;
@@ -188,6 +189,8 @@ async function main() {
       const A = window.__ashen;
       A.clearProgress();
       A.showMenu();
+      // The entry now sits in a menu hub (v0.39.0).
+      A.openMenuHub('arcs');
       const overflow = window.__overflow();
       return {
         view: A.menuView,
@@ -240,9 +243,9 @@ async function main() {
     check('boss button is reachable', hub.bossButton.fitsWidth, true);
     check('stage button wraps under the card text', hub.cardStacked, true);
 
-    const updates = await evaluate(`(() => {
+    const updates = await evaluate(`(async () => {
       const A = window.__ashen;
-      A.showUpdates();
+      await A.showUpdates();
       const entries = [...document.querySelectorAll('.update-entry, .update-card, #update-log > *')];
       const firstText = document.getElementById('update-log')?.textContent || '';
       return {
@@ -260,7 +263,7 @@ async function main() {
     })()`);
     check('update log opens', updates.view, 'updates');
     check('update log renders the release history', updates.entries >= 12, true);
-    check('update log shows v0.36.0', /v0\.36\.0/i.test(updates.badge || ''), true);
+    check(`update log shows v${VERSION}`, VERSION_RE.test(updates.badge || ''), true);
     check('update log leads with the newest release', Boolean(updates.badge) && updates.firstEntryText.includes(updates.badge.replace(/^.*?(v\d+\.\d+\.\d+).*$/i, '$1')), true);
     check('update log keeps the Faewood entry', /FAEWOOD/i.test(updates.firstText), true);
     check('update log mentions the spectral dragon forms', /Demon Lord of the Last Vow/.test(updates.firstText), true);
@@ -317,7 +320,7 @@ async function main() {
     check('game boots again at the phone size', reloaded.booted, true);
     check('reload lands on the title menu', reloaded.view, 'title');
     check('reload keeps the viewport clean', reloaded.overflow.doc <= 0, true);
-    check('reload reports v0.36.0', reloaded.version, '0.36.0');
+    check(`reload reports v${VERSION}`, reloaded.version, VERSION);
 
     check('no console errors', pageErrors.length, 0);
     if (pageErrors.length) console.error(pageErrors.join('\n'));

@@ -138,6 +138,11 @@ try {
       if (a.game.boss && !a.game.boss.dying) a.game.hurtBoss(220, 90, 1, false);
       await new Promise((r) => setTimeout(r, 120));
     }
+    // The death animation and defeat dialogue still have to play out.
+    for (let i = 0; i < 80 && a.game.state !== 'victory'; i += 1) {
+      for (let line = 0; line < 4; line += 1) a.advanceDialogue();
+      await new Promise((r) => setTimeout(r, 150));
+    }
     await new Promise((r) => setTimeout(r, 400));
     return {
       spawned,
@@ -153,7 +158,7 @@ try {
         menu: a.menuView,
       } : null,
       summary: a.lanternwake.summary,
-      saved: JSON.parse(localStorage.getItem('ashen-vow-progress-v1') || '{}').lanternwake?.boss === true,
+      saved: JSON.parse((window.__ashen?.flushSaves?.(), localStorage).getItem('ashen-vow-progress-v1') || '{}').lanternwake?.boss === true,
     };
   })()`);
   check(boss.spawned?.kind === 'wickbearer' && boss.spawned.phases === 4, 'Orsella spawns with four phases');

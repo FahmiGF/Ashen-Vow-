@@ -15,6 +15,7 @@ import { spawn } from 'node:child_process';
 import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { VERSION, VERSION_RE } from './smoke-version.mjs';
 
 const URL = process.env.ASHEN_URL || 'http://127.0.0.1:4300/';
 const CDP_PORT = Number(process.env.CDP_PORT) || 9240;
@@ -154,12 +155,13 @@ async function main() {
         title: document.title,
       };
     })()`);
-    check('boot reports v0.36.0', boot.version, '0.36.0');
-    check('title screen advertises v0.36.0', boot.title.includes('v0.36.0'), true);
+    check(`boot reports v${VERSION}`, boot.version, VERSION);
+    check(`title screen advertises v${VERSION}`, boot.title.includes(`v${VERSION}`), true);
     check('fishing hub is reachable from the menu', boot.menuButton, true);
     check('debug hooks expose the fishing hub', boot.hasHook, true);
 
     await evaluate(`document.getElementById('btn-fishing-menu').click()`);
+    await evaluate('window.__ashen.loadMode("fishing")');
     await sleep(500);
     const hub = await evaluate(`(() => {
       const A = window.__ashen;
@@ -222,11 +224,11 @@ async function main() {
     check('the wallet shows the starting coins', shop.wallet.includes('250'), true);
     check('the shack names the requested baits', ['Cacing', 'Jangkrik', 'Keju', 'Ikan Kecil (Minnow)', 'Kerang', 'Cumi-cumi', 'Irisan Ikan', 'Udang', 'Cacing Cahaya'].every((name) => shop.names.some((item) => item.includes(name))), true);
 
-    const bought = await evaluate(`(() => {
+    const bought = await evaluate(`(async () => {
       const A = window.__ashen;
-      const one = A.buyBait('cricket', 1);
-      const five = A.buyBait('glowworm', 2);
-      const broke = A.buyBait('slicedfish', 1);
+      const one = await A.buyBait('cricket', 1);
+      const five = await A.buyBait('glowworm', 2);
+      const broke = await A.buyBait('slicedfish', 1);
       return {
         one: { ok: one.ok, total: one.total, coins: one.coins, owned: one.owned },
         five: { ok: five.ok, total: five.total, coins: five.coins, owned: five.owned },
@@ -235,7 +237,7 @@ async function main() {
         worms: A.fishing.state.bait.worm,
         cricket: A.fishing.state.bait.cricket,
         glowworm: A.fishing.state.bait.glowworm || 0,
-        saved: JSON.parse(localStorage.getItem('ashen-vow-progress-v1')).fishing,
+        saved: JSON.parse((window.__ashen?.flushSaves?.(), localStorage).getItem('ashen-vow-progress-v1')).fishing,
       };
     })()`);
     check('buying one cricket costs 25 coins', bought.one.ok && bought.one.total === 25, true);
@@ -265,9 +267,9 @@ async function main() {
     check('the chosen bait becomes the active chip', selected.active, true);
     check('the cast button follows the chosen bait', selected.label.includes('Cahaya'), true);
 
-    const cast = await evaluate(`(() => {
+    const cast = await evaluate(`(async () => {
       const A = window.__ashen;
-      const started = A.beginFishingCast();
+      const started = await A.beginFishingCast();
       const reel = A.fishing.reel;
       const overlay = document.getElementById('fishing-cast');
       const zone = document.getElementById('fishing-reel-zone').style;
@@ -292,12 +294,12 @@ async function main() {
     check('casting spends exactly one bait', cast.glowworm, 1);
     check('the cast counter increments', cast.casts, 1);
 
-    const landed = await evaluate(`(() => {
+    const landed = await evaluate(`(async () => {
       const A = window.__ashen;
       const fishId = A.fishing.reel.fish;
-      const hit = A.strikeFishingReel(0.5);
+      const hit = await A.strikeFishingReel(0.5);
       const s = A.fishing.summary;
-      const saved = JSON.parse(localStorage.getItem('ashen-vow-progress-v1')).fishing;
+      const saved = JSON.parse((window.__ashen?.flushSaves?.(), localStorage).getItem('ashen-vow-progress-v1')).fishing;
       return {
         hit,
         result: A.fishing.reel.result,
@@ -321,11 +323,11 @@ async function main() {
     check('the catch is stored in the save', landed.savedCatch, 1);
     check('the save keeps the new wallet', landed.savedCoins, landed.coins);
 
-    const missed = await evaluate(`(() => {
+    const missed = await evaluate(`(async () => {
       const A = window.__ashen;
-      A.beginFishingCast();
+      await A.beginFishingCast();
       const fishId = A.fishing.reel.fish;
-      const hit = A.strikeFishingReel(0.01);
+      const hit = await A.strikeFishingReel(0.01);
       const s = A.fishing.summary;
       return {
         hit,
@@ -403,9 +405,9 @@ async function main() {
     await send('Page.reload');
     await send('Page.bringToFront');
     await sleep(2400);
-    const reloaded = await evaluate(`(() => {
+    const reloaded = await evaluate(`(async () => {
       const A = window.__ashen;
-      A.showFishing();
+      await A.showFishing();
       const f = A.fishing;
       return {
         version: A.version,
@@ -419,7 +421,7 @@ async function main() {
         chips: document.querySelectorAll('.bait-chip').length,
       };
     })()`);
-    check('reload keeps v0.36.0', reloaded.version, '0.36.0');
+    check(`reload keeps v${VERSION}`, reloaded.version, VERSION);
     check('reload keeps the wallet', reloaded.coins > 25, true);
     check('reload keeps the worms', reloaded.worms, 10);
     check('reload keeps the bought glowworm stack', reloaded.glowworm, 0);

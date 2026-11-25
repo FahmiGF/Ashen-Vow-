@@ -15,6 +15,7 @@ import { spawn } from 'node:child_process';
 import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { VERSION, VERSION_RE } from './smoke-version.mjs';
 
 const URL = process.env.ASHEN_URL || 'http://127.0.0.1:4300/';
 const CDP_PORT = Number(process.env.CDP_PORT) || 9239;
@@ -188,6 +189,8 @@ async function main() {
       const A = window.__ashen;
       A.clearProgress();
       A.showMenu();
+      // The entry now sits in a menu hub (v0.39.0).
+      A.openMenuHub('arena');
       return {
         view: A.menuView,
         overflow: window.__overflow(),
@@ -268,7 +271,7 @@ async function main() {
     await sleep(600);
     const summary = await evaluate(`(() => {
       const A = window.__ashen;
-      const saved = JSON.parse(localStorage.getItem('ashen-vow-progress-v1')).speedrun;
+      const saved = JSON.parse((window.__ashen?.flushSaves?.(), localStorage).getItem('ashen-vow-progress-v1')).speedrun;
       return {
         open: A.speedrun.summaryOpen,
         hidden: document.getElementById('speedrun-summary-screen').classList.contains('hidden'),
@@ -339,9 +342,10 @@ async function main() {
       window.__overflow = () => ({ doc: document.documentElement.scrollWidth - window.innerWidth });
       return true;
     })()`);
-    const reloaded = await evaluate(`(() => {
+    const reloaded = await evaluate(`(async () => {
       const A = window.__ashen;
       document.getElementById('btn-speedrun-menu').click();
+      await A.loadMode('speedrun');
       const row = document.querySelector('.speedrun-history-row');
       return {
         booted: typeof A === 'object',
@@ -355,7 +359,7 @@ async function main() {
       };
     })()`);
     check('game boots again at the phone size', reloaded.booted, true);
-    check('reload reports v0.36.0', reloaded.version, '0.36.0');
+    check(`reload reports v${VERSION}`, reloaded.version, VERSION);
     check('reload lands on the phone speedrun hub', reloaded.view, 'speedrun');
     check('history survives the reload', reloaded.rows, 1);
     check('reloaded history row fits the phone', reloaded.row.fitsWidth, true);

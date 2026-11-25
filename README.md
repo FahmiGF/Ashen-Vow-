@@ -1,4 +1,9 @@
-# Ashen Vow — v0.36.0
+# Ashen Vow — v0.39.0
+
+## v0.39.0 — Lighter Ash (Master Plan 3.0 Phase 1)
+
+The lag fix: the game canvas no longer runs a full-screen SVG gamma filter on every frame (measured on an RTX 3050 laptop: about 45% less GPU work; without GPU compositing the campaign goes from 29 to 60 fps). Eleven mode screens now load on first use (boot JavaScript 3.57 → 2.83 MB, measured with `npm run probe:boot`). Saves have three profiles with export/import, a 24-hour undo on delete, and debounced writes; v0.36 saves move into profile 1 automatically. The ~35-entry main menu is now seven hubs. Verification: `npm test` **791/791** and all 32 browser smoke scripts.
+
 
 ## v0.36.0 — Updates XXV & XXVI released
 

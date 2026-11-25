@@ -71,7 +71,10 @@ import {
   mapNodes,
   mapStats,
 } from './map.js';
-import { PROLOGUE_BEATS, PROLOGUE_TOTAL, drawPrologue } from './prologue.js';
+import {
+  PROLOGUE_BEATS,
+  drawPrologue,
+} from './prologue.js';
 import {
   BOSS_CUTSCENE,
   POST_CREDIT,
@@ -120,46 +123,10 @@ import {
   creditSceneFor,
   isArcFinalBoss,
 } from './credits.js';
+import { GAME_VERSION } from './version.js';
+import { installMenuHubs } from './ui/menu_hubs.js';
+import { createSaveStore, memoryStorage, areaForLegacyKey, SAVE_AREAS, SAVE_SLOT_COUNT } from './save.js';
 import {
-  SPEEDRUN_LIVES,
-  SPEEDRUN_RULES,
-  SPEEDRUN_START_MULTIPLIER,
-  defaultSpeedrunProgress,
-  recordSpeedrun,
-  sanitizeSpeedrunProgress,
-  speedrunLadder,
-  speedrunMaxSubsteps,
-  speedrunMultiplier,
-  speedrunStats,
-  speedrunSummary,
-} from './speedrun.js';
-import {
-  FISHING_BAITS,
-  FISHING_BAIT_TIERS,
-  FISHING_LOCATION,
-  FISHING_SUBTITLE,
-  FISH_TOTAL,
-  baitHighTierChance,
-  defaultFishingProgress,
-  drawFishingIcon,
-  fishRarity,
-  fishingBaitById,
-  fishingBuyBait,
-  fishingCast,
-  fishingEscape,
-  fishingFishById,
-  fishingIndex,
-  fishingLandCatch,
-  fishingSelectBait,
-  fishingShopItems,
-  fishingSummary,
-  reelHit,
-  reelZone,
-  sanitizeFishingProgress,
-} from './fishing.js';
-import { UPDATE_LOG, GAME_VERSION } from './updates.js';
-import {
-  EXPANSION_NAME,
   EXPANSION_ROOM_START,
   TOTAL_LEVELS,
   LEVELS_PER_CHAPTER,
@@ -180,7 +147,6 @@ import {
   HAVEN_UPGRADES,
   UPGRADE_BY_ID,
   HAVEN_NPCS,
-  ALL_NPCS,
   NPC_BY_ID,
   SETTLEMENTS,
   SETTLEMENT_BY_ID,
@@ -208,48 +174,18 @@ import {
   eventTierUnlocked,
 } from './expansion.js';
 import {
-  FRONTIER_VERSION,
-  FRONTIER_CHAPTERS,
-  FRONTIER_LEVEL_SPECS,
-  FRONTIER_CLASSES,
-  FRONTIER_CLASS_BY_ID,
-  ELITE_RANKS,
-  ELITE_MOBS,
-  ELITE_MODIFIERS,
-  FRONTIER_WEAPON_CATEGORIES,
-  REGIONAL_MATERIALS,
-  CRAFTING_RECIPES,
-  CUSTOMIZATION_LAYERS,
-  DYE_PALETTE,
-  MOUNT_ROSTER,
-  COMPANION_ROSTER,
-  CORE_ATTRIBUTES,
-  KINGDOM_DEFENSE_TOWERS,
-  FRONTIER_EXTRA_MODES,
-  SCRIPTING_NODE_WHITELIST,
-  MAP_VALIDATION_RULES,
-  ACCEPTANCE_CHECKLIST_ITEMS,
-  defaultFrontierProgress,
-  sanitizeFrontierProgress,
-} from './frontier.js';
-import { Ashen3DGame, render3D, MODE3D_REGIONS, MODE3D_REGION_LIST, configure3D, gfx3DStatus, content3DSummary } from './mode3d.js';
-import {
   HORROR3D_SAVE_KEY,
   HORROR3D_SITES,
   default3DHorrorSave,
   sanitize3DHorrorSave,
-  record3DHorrorResult,
   horror3DSummary,
-  horror3DSite,
 } from './mode3d_horror.js';
 import { probeCapabilities } from './gpu.js';
 import {
   SETTINGS_CATEGORIES,
-  SETTING_DEFINITIONS,
   SETTING_BY_PATH,
   AUDIO_CHANNELS,
   GRAPHICS_PRESETS,
-  LANGUAGES,
   LANGUAGE_BY_ID,
   getSettingsValue,
   setSettingsValue,
@@ -260,11 +196,9 @@ import {
 } from './settings2.js';
 import { ScareDirector } from './scary.js';
 import {
-  HORROR_EVENTS,
   HORROR_EVENT_LIST,
   HORROR_REWARDS,
   HORROR_SAVE_KEY,
-  HORROR_SETTING_BY_PATH,
   HORROR_TABS,
   HorrorEventDirector,
   HorrorJournal,
@@ -285,8 +219,6 @@ import {
 import {
   HUNTER_ITEMS,
   HUNTER_SAVE_KEY,
-  HUNTER_START_MARKS,
-  HUNTER_ITEM_BY_ID,
   defaultHunterSave,
   hunterBuy,
   hunterCanBuy,
@@ -303,10 +235,8 @@ import {
   DREAD_MODE_LIST,
   DREAD_EQUIPMENT,
   DREAD_JOURNAL_ENTRIES,
-  DREAD_CATEGORIES,
   DREAD_TABS,
   DREAD_SAVE_KEY,
-  DREAD_SETTING_DEFINITIONS,
   UNNATURAL_LIST,
   AwarenessManager,
   DreadEventDirector,
@@ -325,7 +255,6 @@ import {
   GHOST_CLASSIFICATIONS,
   GHOST_RARITIES,
   GHOST_RESEARCH_STAGES,
-  EVIDENCE_TYPES,
   SANITY_CONSUMABLES,
   SANITY_CONDITIONS,
   MIND_UPGRADES,
@@ -339,7 +268,6 @@ import {
   VEIL_FACILITIES,
   VEIL_NPCS,
   SECRET_LOCATIONS,
-  VEIL_COLLECTIBLES,
   VEIL_SETTING_DEFINITIONS,
   VEIL_SAVE_KEY,
   VeilController,
@@ -359,7 +287,6 @@ import {
   veilFacilityState,
   veilNpcDialogue,
   veilCollectibleTotals,
-  veilEquipmentEffects,
 } from './veil.js';
 import {
   ETERNAL_TABS,
@@ -381,37 +308,44 @@ import {
   eternalStageUnlocked,
   eternalBossUnlocked,
   eternalChapterUnlocked,
-  eternalChapterClear,
   eternalFinalUnlocked,
   eternalStagesForChapter,
   eternalSummary,
   sanitizeEternalSettings,
   eternalSettingValue,
   setEternalSetting,
-  resolveEternalPresentation,
   equipmentCost,
 } from './eternal.js';
 import {
-  ARCHIVE_ARCS, ARCHIVE_CHAPTERS, ARCHIVE_CHAPTERS_BY_ID, ARCHIVE_STAGES,
-  ARCHIVE_STAGES_BY_ID, ARCHIVE_BOSSES, ARCHIVE_TOOLS, ARCHIVE_TOOLS_BY_ID,
-  ARCHIVE_TOOL_IDS, ARCHIVE_TOOL_CATEGORIES, ARCHIVE_ACHIEVEMENTS,
-  GHOST_TOOL_REQUIREMENTS, JUMPSCARE_EVENTS, JUMPSCARE_EVENTS_BY_ID,
-  JUMPSCARE_CATEGORIES, ARCHIVE_DISCOVERY_STATES, ARCHIVE_SAVE_KEY,
+  ARCHIVE_ARCS,
+  ARCHIVE_CHAPTERS,
+  ARCHIVE_CHAPTERS_BY_ID,
+  ARCHIVE_STAGES,
+  ARCHIVE_STAGES_BY_ID,
+  ARCHIVE_BOSSES,
+  ARCHIVE_TOOLS,
+  ARCHIVE_TOOLS_BY_ID,
+  ARCHIVE_TOOL_CATEGORIES,
+  ARCHIVE_ACHIEVEMENTS,
+  JUMPSCARE_EVENTS,
+  JUMPSCARE_EVENTS_BY_ID,
+  JUMPSCARE_CATEGORIES,
+  ARCHIVE_DISCOVERY_STATES,
+  ARCHIVE_SAVE_KEY,
 } from './archive_data.js';
-import { ArchiveController, defaultArchiveSave, sanitizeArchiveSave } from './archive.js';
+import {
+  ArchiveController,
+  sanitizeArchiveSave,
+} from './archive.js';
 import { drawVeilAtmosphere } from './render.js';
 import { bossDebugSnapshot } from './boss_core.js';
 import {
   DIFFICULTIES as CAMPAIGN_DIFFICULTIES,
-  DIFFICULTY_BY_ID as CAMPAIGN_DIFFICULTY_BY_ID,
   difficultyWarning,
   difficultyUnlocked,
 } from './difficulty.js';
 import {
-  ATLAS_VERSION,
-  ATLAS_NAME,
   ATLAS_ROOM_START,
-  ATLAS_ROOM_COUNT,
   ATLAS_ZONES,
   ATLAS_ZONE_BY_ID,
   ATLAS_WORLD_TIERS,
@@ -419,14 +353,12 @@ import {
   ATLAS_ABILITY_BY_ID,
   ATLAS_ROOMS,
   ATLAS_ROOM_BY_ID,
-  ATLAS_ENEMY_INFO,
   ATLAS_BOSS_INFO,
   ATLAS_TIMELINE,
   ATLAS_CHARACTERS,
   ATLAS_CHAPTERS,
   ATLAS_ENDINGS,
   LORE_CATEGORIES,
-  LORE_ENTRIES,
   LORE_ENTRY_BY_ID,
   LORE_COMPLETION_REWARDS,
   ATLAS_CONSUMABLES,
@@ -444,19 +376,13 @@ import {
   ATLAS_CHECKLIST,
   ATLAS_QUALITY_PRESETS,
   validateAtlasRooms,
-  atlasZoneForRoom,
-  atlasRoomLocalIndex,
-  atlasRoomForZone,
   revealLore,
   loreCompletion,
   searchLore,
-  sellPrice,
   shopStock,
   buyAtlasItem,
   useAtlasConsumable,
-  applyInfusion,
   weaponMasteryFor,
-  grantWeaponXp,
   defaultAtlasProgress,
   sanitizeAtlasProgress,
   canUnlockAtlasZone,
@@ -487,9 +413,7 @@ import {
   setCourtNgPlus,
   recordCourtTrial,
   HOUSE_ROOMS,
-  HOUSE_ROOM_BY_ID,
   HOUSE_FURNISHINGS,
-  HOUSE_FURNISHING_BY_ID,
   HOUSE_RESIDENTS,
   HOUSE_RESIDENT_BY_ID,
   GIFT_COST,
@@ -524,7 +448,6 @@ import {
   FAIRY_ROOM_START,
   FAIRY_STAGE_COUNT,
   FAIRY_STAGE_ROOMS,
-  FAIRY_ROOMS,
   FAIRY_ROOM_BY_ID,
   FAIRY_STAGES,
   FAIRY_BOSSES,
@@ -534,7 +457,6 @@ import {
   sanitizeFairyProgress,
   fairyStageUnlocked,
   fairyStageCleared,
-  fairyBossesUnlocked,
   fairyBossUnlocked,
   recordFairyStage,
   recordFairyBoss,
@@ -545,7 +467,6 @@ import {
   CISTERN_NAME,
   CISTERN_LOCAL_NAME,
   CISTERN_ROOMS,
-  CISTERN_ROOM_BY_ID,
   CISTERN_STAGE_META,
   CISTERN_STAGE_COUNT,
   defaultCisternProgress,
@@ -564,7 +485,6 @@ import {
   LANTERN_NAME,
   LANTERN_LOCAL_NAME,
   LANTERN_ROOMS,
-  LANTERN_ROOM_BY_ID,
   LANTERN_STAGE_META,
   LANTERN_STAGE_COUNT,
   defaultLanternProgress,
@@ -588,7 +508,6 @@ import {
   FALLEN_REGIONS,
   FALLEN_ROOM_BY_ID,
   FALLEN_ENEMY_INFO,
-  FALLEN_ENEMY_IDS,
   FALLEN_BOSSES,
   FALLEN_BOSS_BY_ID,
   FALLEN_OPTIONAL_BOSSES,
@@ -629,17 +548,13 @@ import {
   shadowDamageMul,
 } from './fallen.js';
 import {
-  CRUSADE_NAME,
   CRUSADE_LOCAL_NAME,
   CRUSADE_SUBTITLE,
   CRUSADE_ROOM_START,
   CRUSADE_ROOMS_PER_LEVEL,
-  CRUSADE_LEVEL_COUNT,
   CRUSADE_LEVELS,
   CRUSADE_ROOM_BY_ID,
   CRUSADE_ENEMY_INFO,
-  CRUSADE_ENEMY_IDS,
-  CRUSADE_BOSSES,
   CRUSADE_BOSS_BY_ID,
   CRUSADE_BANNERS,
   CRUSADE_UPGRADES,
@@ -671,8 +586,6 @@ import {
   valorMultiplier,
 } from './crusade.js';
 import {
-  LABYRINTH_VERSION,
-  LABYRINTH_NAME,
   LABYRINTH_MODES,
   LABYRINTH_MODE_BY_ID,
   LABYRINTH_ZONES,
@@ -681,23 +594,17 @@ import {
   LABYRINTH_BOSS_BY_ID,
   LABYRINTH_ITEMS,
   LABYRINTH_ITEM_BY_ID,
-  LABYRINTH_MODIFIERS,
   LABYRINTH_MODIFIER_BY_ID,
-  ITEM_CATEGORIES,
-  ELITE_TIERS,
   SYNERGIES,
-  RITUALS,
   createLabyrinthRun,
   ensurePlans,
   WaveDirector,
   arenaForRun,
-  cycleScaling,
   stageForCycle,
   rewardChoices,
   applyItemToRun,
   applyLoadoutToGame,
   captureBaseStats,
-  combineTotals,
   itemDescription,
   advanceRituals,
   tickRituals,
@@ -715,164 +622,53 @@ import {
   LABYRINTH_CURRENCIES,
   MASTERY_TRACKS,
 } from './labyrinth.js';
-import {
-  TRIAL_BIOMES,
-  TRIAL_BIOME_BY_ID,
-  TRIAL_BOSS_BY_ID,
-  TRIAL_LEVELS_PER_BIOME,
-  trialSummary,
-  biomeProgress,
-  trialLevelUnlocked,
-  trialBossUnlocked,
-  buildEncounter,
-  waveForEncounter,
-  trialArena,
-  trialBossOverrides,
-  defaultTrialProgress,
-  sanitizeTrialProgress,
-  recordTrialClear,
-  recordTrialBoss,
-} from './trials.js';
-import {
-  PUZZLE_STAGES,
-  PUZZLE_ARCS,
-  PUZZLE_LORE,
-  PUZZLE_TYPE_LORE,
-  PUZZLE_BOSSES,
-  PUZZLE_ABILITIES,
-  PUZZLE_TYPES,
-  PUZZLE_TYPE_BY_ID,
-  PUZZLE_BOSS_BY_ID,
-  generateStagePuzzle,
-  generatePuzzle,
-  applyPuzzleMove,
-  puzzleIsSolved,
-  puzzleStageUnlocked,
-  puzzleSummary,
-  defaultPuzzleProgress,
-  sanitizePuzzleProgress,
-  recordPuzzleSolve,
-  recordPuzzleBoss,
-  PUZZLE_HINT_COST,
-  puzzleHintText,
-  payPuzzleHint,
-  puzzleBossTimer,
-  formatPuzzleTime,
-} from './puzzle.js';
-import {
-  MOBA_HEROES,
-  MOBA_HERO_BY_ID,
-  MOBA_HERO_COUNT,
-  MOBA_MAPS,
-  MOBA_MAP_BY_ID,
-  MOBA_MINION_TYPES,
-  MOBA_JUNGLE_MOBS,
-  MOBA_EPIC_BOSSES,
-  MOBA_EPIC_BY_ID,
-  MOBA_DIFFICULTIES,
-  MOBA_LANES,
-  MOBA_ROLES,
-  createMobaMatch,
-  updateMobaMatch,
-  mobaCast,
-  mobaSetOrder,
-  mobaSnapshot,
-  mobaHeroStats,
-  mobaScreenToWorld,
-  renderMoba,
-  endMobaMatch,
-  mobaSummary,
-  defaultMobaProgress,
-  sanitizeMobaProgress,
-  recordMobaMatch,
-} from './moba.js';
-import {
-  WAVE_DEFENSE_MAPS,
-  WAVE_DEFENSE_MAP_BY_ID,
-  WAVE_DEFENSE_TOWERS,
-  WAVE_DEFENSE_TOWER_BY_ID,
-  WAVE_DEFENSE_DIFFICULTIES,
-  WAVE_DEFENSE_ENEMY_TYPES,
-  WAVE_DEFENSE_BOSSES,
-  WAVE_DEFENSE_TOTAL_WAVES,
-  createWaveDefense,
-  updateWaveDefense,
-  waveDefenseBuild,
-  waveDefenseUpgrade,
-  waveDefenseUpgradeCost,
-  waveDefenseSell,
-  waveDefenseSellValue,
-  waveDefenseSelect,
-  waveDefenseSelectTower,
-  waveDefenseNextWave,
-  waveDefenseSetSpeed,
-  waveDefenseSnapshot,
-  waveDefenseSummary,
-  defaultWaveDefenseProgress,
-  sanitizeWaveDefenseProgress,
-  recordWaveDefense,
-  endWaveDefense,
-  renderWaveDefense,
-} from './wavedefense.js';
-import {
-  PIRATE_STAGES,
-  PIRATE_STAGE_BY_ID,
-  PIRATE_ISLANDS,
-  PIRATE_PORTS,
-  PIRATE_SHIP_TYPES,
-  PIRATE_BOSS_TYPES,
-  PIRATE_DOCK_COST,
-  createPirateVoyage,
-  updatePirateVoyage,
-  setPirateControls,
-  pirateFire,
-  pirateFireAt,
-  pirateDamageShip,
-  pirateDock,
-  pirateNearPort,
-  pirateSnapshot,
-  pirateScreenToWorld,
-  pirateStageUnlocked,
-  pirateSummary,
-  defaultPirateProgress,
-  sanitizePirateProgress,
-  recordPirateVoyage,
-  recordPirateEndless,
-  createPirateEndless,
-  pirateEndlessSurge,
-  PIRATE_ENDLESS_STAGE,
-  renderPirateVoyage,
-} from './pirates.js';
 import { RealmsUI } from './realms_ui.js';
 import { EclipseUI } from './eclipse_ui.js';
 import {
-  ECLIPSE_NAME, ECLIPSE_LOCAL_NAME, ECLIPSE_PITCH, ECLIPSE_ROOM_START,
-  ECLIPSE_ROOMS, ECLIPSE_ROOM_BY_ID, ECLIPSE_ENEMY_INFO, ECLIPSE_BOSSES, ECLIPSE_BOSS_BY_ID,
-  ECLIPSE_SECRET_BOSS, ECLIPSE_SECRET_ROOM_ID, ECLIPSE_FRAGMENTS,
-  GODFALL_ROOM_START, GODFALL_FLOOR_COUNT, GODFALL_BOSSES,
-  defaultEclipseProgress, sanitizeEclipseProgress, unlockEclipse, recordEclipseRoom, recordEclipseBoss,
-  eclipseSummary, createGodfallRun, recordGodfallFloor, failGodfallRun,
-  defaultGodfallProgress, sanitizeGodfallProgress, godfallSummary,
-  defaultGuildState, sanitizeGuildState, advanceGuildWeek, recordRaidResult,
-  createRaidRun, RAID_BY_ID,
-  defaultAwakeningProgress, sanitizeAwakeningProgress, awakeningBonus, grantMastery,
-  createSaveEnvelope, migrateSave, SAVE_KEYS,
-  ECLIPSE_WEAPONS, ECLIPSE_CLASSES,
+  ECLIPSE_LOCAL_NAME,
+  ECLIPSE_ROOM_BY_ID,
+  ECLIPSE_BOSSES,
+  ECLIPSE_BOSS_BY_ID,
+  ECLIPSE_SECRET_BOSS,
+  GODFALL_ROOM_START,
+  GODFALL_FLOOR_COUNT,
+  defaultEclipseProgress,
+  sanitizeEclipseProgress,
+  unlockEclipse,
+  recordEclipseRoom,
+  recordEclipseBoss,
+  createGodfallRun,
+  recordGodfallFloor,
+  failGodfallRun,
+  defaultGodfallProgress,
+  sanitizeGodfallProgress,
+  defaultGuildState,
+  sanitizeGuildState,
+  advanceGuildWeek,
+  recordRaidResult,
+  createRaidRun,
+  RAID_BY_ID,
+  defaultAwakeningProgress,
+  sanitizeAwakeningProgress,
+  grantMastery,
+  migrateSave,
+  SAVE_KEYS,
+  ECLIPSE_WEAPONS,
+  ECLIPSE_CLASSES,
   PerformanceSampler,
 } from './eclipse.js';
-import { RuntimeReporter, releaseChecklist, validateEclipseContent } from './qa.js';
 import {
-  ASTRAL_ROOM_START,
+  RuntimeReporter,
+  releaseChecklist,
+} from './qa.js';
+import {
   ASTRAL_LOCAL_NAME,
-  ASTRAL_NAME,
   defaultAstralProgress,
   sanitizeAstralProgress,
   recordAstralRoomClear,
-  astralSummary,
 } from './astral.js';
 import { defaultRealmsProgress, sanitizeRealmsProgress } from './realms.js';
 import {
-  COOP_MODES,
   COOP_MAX_PLAYERS,
   createLobby,
   joinLobby,
@@ -887,10 +683,391 @@ import {
   partyScaling,
 } from './coop.js';
 
+// ── Mode loader (Phase 1, v0.37.0 Lighter Ash) ────────────────────────
+// Mode screens live in src/modes/<mode>_ui.js and are imported on first use,
+// together with their stylesheet. Each module exports install(A); `A` is this
+// shell's context (live getters/setters over main.js bindings, generated
+// between the @ctx markers below). Moved functions are reached through the
+// lazy stubs between the @stubs markers, so every call site stays unchanged.
+const A = {};
+let menuHubs = null; // main menu hub controller, installed at the end of boot
+const MODE_LOADERS = {
+  moba: { load: () => import('./modes/moba_ui.js'), css: ['./styles-moba.css'] },
+  wavedefense: { load: () => import('./modes/wavedefense_ui.js'), css: ['./styles-wavedefense.css'] },
+  pirates: { load: () => import('./modes/pirates_ui.js'), css: ['./styles-pirates.css'] },
+  fishing: { load: () => import('./modes/fishing_ui.js'), css: ['./styles-fishing.css'] },
+  trials: { load: () => import('./modes/trials_ui.js'), css: [] },
+  puzzle: { load: () => import('./modes/puzzle_ui.js'), css: [] },
+  mode3d: { load: () => import('./modes/mode3d_ui.js'), css: [] },
+  updates: { load: () => import('./modes/updates_ui.js'), css: [] },
+  frontier: { load: () => import('./modes/frontier_ui.js'), css: [] },
+  slots: { load: () => import('./modes/slots_ui.js'), css: [] },
+  speedrun: { load: () => import('./modes/speedrun_ui.js'), css: [] },
+};
+const MODES = {};
+const modePending = {};
+const stylesheetPending = {};
+
+function loadStylesheet(href) {
+  if (stylesheetPending[href]) return stylesheetPending[href];
+  stylesheetPending[href] = new Promise((resolve) => {
+    if (document.querySelector(`link[data-mode-css="${href}"]`)) { resolve(); return; }
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = href;
+    link.dataset.modeCss = href;
+    link.onload = () => resolve();
+    link.onerror = () => resolve();
+    document.head.appendChild(link);
+  });
+  return stylesheetPending[href];
+}
+
+function loadMode(id) {
+  if (MODES[id]) return Promise.resolve(MODES[id]);
+  const def = MODE_LOADERS[id];
+  if (!def) return Promise.reject(new Error(`unknown mode ${id}`));
+  if (!modePending[id]) {
+    modePending[id] = Promise.all([def.load(), ...(def.css || []).map(loadStylesheet)])
+      .then(([mod]) => {
+        MODES[id] = mod.install(A);
+        return MODES[id];
+      })
+      .catch((error) => {
+        delete modePending[id];
+        showToast?.(`Mode gagal dimuat: ${error?.message || error}`);
+        throw error;
+      });
+  }
+  return modePending[id];
+}
+
+function lazyMode(id, name) {
+  return (...args) => (MODES[id] ? MODES[id][name](...args) : loadMode(id).then((mod) => mod[name](...args)));
+}
+
+// Progress blocks owned by lazy modes are kept raw at boot and sanitized the
+// first time their mode reads them, so boot does not import the mode module.
+const sanitizedBlocks = new WeakSet();
+function progressBlock(key, sanitize) {
+  let block = progress[key];
+  if (!block || typeof block !== 'object' || !sanitizedBlocks.has(block)) {
+    block = sanitize(block);
+    progress[key] = block;
+    sanitizedBlocks.add(block);
+  }
+  return block;
+}
+
+function rawBlock(value) {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value : null;
+}
+
+function gfx3DStatusSafe() {
+  return MODES.mode3d
+    ? MODES.mode3d.lib['gfx3DStatus']()
+    : { state: 'not-loaded', available: false, reason: '3D Mode belum dibuka', models: 0, props: 0, hdr: null, msaa: 0, anisotropic: 1, upscaler: null, internalWidth: 0, stats: null };
+}
+
+/* @stubs-begin */
+const mobaState = lazyMode('moba', 'mobaState');
+const showMoba = lazyMode('moba', 'showMoba');
+const mobaHeroCard = lazyMode('moba', 'mobaHeroCard');
+const buildMobaScreen = lazyMode('moba', 'buildMobaScreen');
+const startMobaBattle = lazyMode('moba', 'startMobaBattle');
+const syncMobaAxes = lazyMode('moba', 'syncMobaAxes');
+const toggleMobaPause = lazyMode('moba', 'toggleMobaPause');
+const leaveMoba = lazyMode('moba', 'leaveMoba');
+const completeMobaMatch = lazyMode('moba', 'completeMobaMatch');
+const renderMobaResult = lazyMode('moba', 'renderMobaResult');
+const updateMobaHud = lazyMode('moba', 'updateMobaHud');
+const mobaPointerWorld = lazyMode('moba', 'mobaPointerWorld');
+const mobaFrame = lazyMode('moba', 'mobaFrame');
+const waveDefenseState = lazyMode('wavedefense', 'waveDefenseState');
+const showWaveDefense = lazyMode('wavedefense', 'showWaveDefense');
+const buildWaveDefenseScreen = lazyMode('wavedefense', 'buildWaveDefenseScreen');
+const buildWaveDefensePalette = lazyMode('wavedefense', 'buildWaveDefensePalette');
+const startWaveDefenseBattle = lazyMode('wavedefense', 'startWaveDefenseBattle');
+const toggleWaveDefensePause = lazyMode('wavedefense', 'toggleWaveDefensePause');
+const leaveWaveDefense = lazyMode('wavedefense', 'leaveWaveDefense');
+const completeWaveDefense = lazyMode('wavedefense', 'completeWaveDefense');
+const renderWaveDefenseResult = lazyMode('wavedefense', 'renderWaveDefenseResult');
+const waveDefenseSelectionKey = lazyMode('wavedefense', 'waveDefenseSelectionKey');
+const updateWaveDefenseHud = lazyMode('wavedefense', 'updateWaveDefenseHud');
+const waveDefensePointerWorld = lazyMode('wavedefense', 'waveDefensePointerWorld');
+const waveDefenseSlotAt = lazyMode('wavedefense', 'waveDefenseSlotAt');
+const handleWaveDefenseSlot = lazyMode('wavedefense', 'handleWaveDefenseSlot');
+const waveDefenseFrame = lazyMode('wavedefense', 'waveDefenseFrame');
+const pirateState = lazyMode('pirates', 'pirateState');
+const showPirates = lazyMode('pirates', 'showPirates');
+const buildPirateScreen = lazyMode('pirates', 'buildPirateScreen');
+const syncPirateCanvasSize = lazyMode('pirates', 'syncPirateCanvasSize');
+const beginPirateMatch = lazyMode('pirates', 'beginPirateMatch');
+const startPirateVoyage = lazyMode('pirates', 'startPirateVoyage');
+const startPirateEndless = lazyMode('pirates', 'startPirateEndless');
+const togglePiratePause = lazyMode('pirates', 'togglePiratePause');
+const leavePirates = lazyMode('pirates', 'leavePirates');
+const completePirateVoyage = lazyMode('pirates', 'completePirateVoyage');
+const renderPirateResult = lazyMode('pirates', 'renderPirateResult');
+const updatePirateHud = lazyMode('pirates', 'updatePirateHud');
+const piratePointerWorld = lazyMode('pirates', 'piratePointerWorld');
+const setPirateControlKey = lazyMode('pirates', 'setPirateControlKey');
+const firePirateSide = lazyMode('pirates', 'firePirateSide');
+const dockPirate = lazyMode('pirates', 'dockPirate');
+const piratesFrame = lazyMode('pirates', 'piratesFrame');
+const fishingState = lazyMode('fishing', 'fishingState');
+const fishingKg = lazyMode('fishing', 'fishingKg');
+const closeFishingOverlays = lazyMode('fishing', 'closeFishingOverlays');
+const showFishing = lazyMode('fishing', 'showFishing');
+const closeFishing = lazyMode('fishing', 'closeFishing');
+const buildFishingScreen = lazyMode('fishing', 'buildFishingScreen');
+const selectFishingBait = lazyMode('fishing', 'selectFishingBait');
+const paintFishingCastArt = lazyMode('fishing', 'paintFishingCastArt');
+const fishingReelLoop = lazyMode('fishing', 'fishingReelLoop');
+const beginFishingCast = lazyMode('fishing', 'beginFishingCast');
+const strikeFishingReel = lazyMode('fishing', 'strikeFishingReel');
+const openBaitShop = lazyMode('fishing', 'openBaitShop');
+const closeBaitShop = lazyMode('fishing', 'closeBaitShop');
+const buildBaitShop = lazyMode('fishing', 'buildBaitShop');
+const buyFishingBait = lazyMode('fishing', 'buyFishingBait');
+const openFishIndex = lazyMode('fishing', 'openFishIndex');
+const closeFishIndex = lazyMode('fishing', 'closeFishIndex');
+const setFishIndexTab = lazyMode('fishing', 'setFishIndexTab');
+const paintFishIcons = lazyMode('fishing', 'paintFishIcons');
+const buildFishIndex = lazyMode('fishing', 'buildFishIndex');
+const trialsState = lazyMode('trials', 'trialsState');
+const showTrials = lazyMode('trials', 'showTrials');
+const buildTrialsScreen = lazyMode('trials', 'buildTrialsScreen');
+const startTrialLevel = lazyMode('trials', 'startTrialLevel');
+const startTrialBoss = lazyMode('trials', 'startTrialBoss');
+const spawnTrialWave = lazyMode('trials', 'spawnTrialWave');
+const trialAliveCount = lazyMode('trials', 'trialAliveCount');
+const tickTrials = lazyMode('trials', 'tickTrials');
+const handleTrialBoss = lazyMode('trials', 'handleTrialBoss');
+const updateTrialHud = lazyMode('trials', 'updateTrialHud');
+const puzzleState = lazyMode('puzzle', 'puzzleState');
+const showPuzzleAdventure = lazyMode('puzzle', 'showPuzzleAdventure');
+const buildPuzzleScreen = lazyMode('puzzle', 'buildPuzzleScreen');
+const puzzleIndexMarkup = lazyMode('puzzle', 'puzzleIndexMarkup');
+const puzzleLoreMarkup = lazyMode('puzzle', 'puzzleLoreMarkup');
+const startPuzzleStage = lazyMode('puzzle', 'startPuzzleStage');
+const buildPuzzlePlay = lazyMode('puzzle', 'buildPuzzlePlay');
+const puzzleBoardMarkup = lazyMode('puzzle', 'puzzleBoardMarkup');
+const handlePuzzleBoardClick = lazyMode('puzzle', 'handlePuzzleBoardClick');
+const finishPuzzleStage = lazyMode('puzzle', 'finishPuzzleStage');
+const updatePuzzleTimerWidget = lazyMode('puzzle', 'updatePuzzleTimerWidget');
+const startPuzzleTimer = lazyMode('puzzle', 'startPuzzleTimer');
+const resetPuzzleTimer = lazyMode('puzzle', 'resetPuzzleTimer');
+const stopPuzzleTimer = lazyMode('puzzle', 'stopPuzzleTimer');
+const updatePuzzleTimer = lazyMode('puzzle', 'updatePuzzleTimer');
+const timeoutPuzzleStage = lazyMode('puzzle', 'timeoutPuzzleStage');
+const resetPuzzleBoard = lazyMode('puzzle', 'resetPuzzleBoard');
+const showPuzzleHint = lazyMode('puzzle', 'showPuzzleHint');
+const showMode3D = lazyMode('mode3d', 'showMode3D');
+const start3DHorrorRun = lazyMode('mode3d', 'start3DHorrorRun');
+const start3DHorror = lazyMode('mode3d', 'start3DHorror');
+const restart3DHorror = lazyMode('mode3d', 'restart3DHorror');
+const buildHorror3DPanel = lazyMode('mode3d', 'buildHorror3DPanel');
+const drain3DHorrorEvents = lazyMode('mode3d', 'drain3DHorrorEvents');
+const closeMode3D = lazyMode('mode3d', 'closeMode3D');
+const mode3dFrame = lazyMode('mode3d', 'mode3dFrame');
+const buildUpdateLog = lazyMode('updates', 'buildUpdateLog');
+const showUpdates = lazyMode('updates', 'showUpdates');
+const buildOverdriveScreen = lazyMode('frontier', 'buildOverdriveScreen');
+const buildFrontierScreen = lazyMode('frontier', 'buildFrontierScreen');
+const showFrontier = lazyMode('frontier', 'showFrontier');
+const closeFrontier = lazyMode('frontier', 'closeFrontier');
+const showOverdrive = lazyMode('frontier', 'showOverdrive');
+const closeOverdrive = lazyMode('frontier', 'closeOverdrive');
+const showSlots = lazyMode('slots', 'showSlots');
+const buildSlotsScreen = lazyMode('slots', 'buildSlotsScreen');
+const switchSlot = lazyMode('slots', 'switchSlot');
+const exportSlotFile = lazyMode('slots', 'exportSlot');
+const importSlotFile = lazyMode('slots', 'importSlot');
+const deleteSlotFile = lazyMode('slots', 'deleteSlot');
+const undoDeleteSlot = lazyMode('slots', 'undoDeleteSlot');
+const speedrunState = lazyMode('speedrun', 'speedrunState');
+const speedrunStamp = lazyMode('speedrun', 'speedrunStamp');
+const showSpeedrun = lazyMode('speedrun', 'showSpeedrun');
+const buildSpeedrunScreen = lazyMode('speedrun', 'buildSpeedrunScreen');
+const startSpeedrun = lazyMode('speedrun', 'startSpeedrun');
+const finishSpeedrun = lazyMode('speedrun', 'finishSpeedrun');
+const buildSpeedrunSummary = lazyMode('speedrun', 'buildSpeedrunSummary');
+const handleSpeedrunClear = lazyMode('speedrun', 'handleSpeedrunClear');
+/* @stubs-end */
+
+/* @ctx-begin */
+Object.defineProperties(A, {
+  $: { get: () => $ },
+  accumulator: { get: () => accumulator, set: (v) => { accumulator = v; } },
+  activeCourtRoom: { get: () => activeCourtRoom, set: (v) => { activeCourtRoom = v; } },
+  activeCourtTrial: { get: () => activeCourtTrial, set: (v) => { activeCourtTrial = v; } },
+  activeExpansionIndex: { get: () => activeExpansionIndex, set: (v) => { activeExpansionIndex = v; } },
+  activeFairyBoss: { get: () => activeFairyBoss, set: (v) => { activeFairyBoss = v; } },
+  activeFairyStage: { get: () => activeFairyStage, set: (v) => { activeFairyStage = v; } },
+  activeModeId: { get: () => activeModeId, set: (v) => { activeModeId = v; } },
+  activePackIndex: { get: () => activePackIndex, set: (v) => { activePackIndex = v; } },
+  activeRunKind: { get: () => activeRunKind, set: (v) => { activeRunKind = v; } },
+  activeTrialId: { get: () => activeTrialId, set: (v) => { activeTrialId = v; } },
+  applyCharacterToGame: { get: () => applyCharacterToGame },
+  applySettings: { get: () => applySettings },
+  applySkinToGame: { get: () => applySkinToGame },
+  attempts: { get: () => attempts, set: (v) => { attempts = v; } },
+  audio: { get: () => audio },
+  beginStage: { get: () => beginStage },
+  cancelPrologue: { get: () => cancelPrologue },
+  clamp: { get: () => clamp },
+  clearHeldKeys: { get: () => clearHeldKeys },
+  closeDialogue: { get: () => closeDialogue },
+  codexOpen: { get: () => codexOpen, set: (v) => { codexOpen = v; } },
+  coopGuestMode: { get: () => coopGuestMode, set: (v) => { coopGuestMode = v; } },
+  coopGuestRoom: { get: () => coopGuestRoom, set: (v) => { coopGuestRoom = v; } },
+  cutsceneSeen: { get: () => cutsceneSeen, set: (v) => { cutsceneSeen = v; } },
+  discoverCurrentRoom: { get: () => discoverCurrentRoom },
+  esc: { get: () => esc },
+  expState: { get: () => expState },
+  fishIndexTab: { get: () => fishIndexTab, set: (v) => { fishIndexTab = v; } },
+  fishingReel: { get: () => fishingReel, set: (v) => { fishingReel = v; } },
+  fishingReelFrame: { get: () => fishingReelFrame, set: (v) => { fishingReelFrame = v; } },
+  formatTime: { get: () => formatTime },
+  frontierProgress: { get: () => frontierProgress, set: (v) => { frontierProgress = v; } },
+  frontierTab: { get: () => frontierTab, set: (v) => { frontierTab = v; } },
+  game: { get: () => game },
+  game3D: { get: () => game3D, set: (v) => { game3D = v; } },
+  horror3D: { get: () => horror3D, set: (v) => { horror3D = v; } },
+  horror3DSiteId: { get: () => horror3DSiteId, set: (v) => { horror3DSiteId = v; } },
+  horrorRenderLayer: { get: () => horrorRenderLayer },
+  hunterShopOpen: { get: () => hunterShopOpen, set: (v) => { hunterShopOpen = v; } },
+  input3D: { get: () => input3D },
+  inventoryOpen: { get: () => inventoryOpen, set: (v) => { inventoryOpen = v; } },
+  labDirector: { get: () => labDirector, set: (v) => { labDirector = v; } },
+  labGuestMode: { get: () => labGuestMode, set: (v) => { labGuestMode = v; } },
+  labRewardsOpen: { get: () => labRewardsOpen, set: (v) => { labRewardsOpen = v; } },
+  labRun: { get: () => labRun, set: (v) => { labRun = v; } },
+  labState: { get: () => labState },
+  labSummaryOpen: { get: () => labSummaryOpen, set: (v) => { labSummaryOpen = v; } },
+  lastGameState: { get: () => lastGameState, set: (v) => { lastGameState = v; } },
+  lastTime: { get: () => lastTime, set: (v) => { lastTime = v; } },
+  mapOpen: { get: () => mapOpen, set: (v) => { mapOpen = v; } },
+  menuView: { get: () => menuView, set: (v) => { menuView = v; } },
+  mobaActive: { get: () => mobaActive, set: (v) => { mobaActive = v; } },
+  mobaAim: { get: () => mobaAim, set: (v) => { mobaAim = v; } },
+  mobaDifficulty: { get: () => mobaDifficulty, set: (v) => { mobaDifficulty = v; } },
+  mobaHeld: { get: () => mobaHeld },
+  mobaHeroId: { get: () => mobaHeroId, set: (v) => { mobaHeroId = v; } },
+  mobaInput: { get: () => mobaInput },
+  mobaLane: { get: () => mobaLane, set: (v) => { mobaLane = v; } },
+  mobaMapId: { get: () => mobaMapId, set: (v) => { mobaMapId = v; } },
+  mobaMatch: { get: () => mobaMatch, set: (v) => { mobaMatch = v; } },
+  mobaPaused: { get: () => mobaPaused, set: (v) => { mobaPaused = v; } },
+  mobaRecorded: { get: () => mobaRecorded, set: (v) => { mobaRecorded = v; } },
+  mobaResult: { get: () => mobaResult, set: (v) => { mobaResult = v; } },
+  mobaRoleFilter: { get: () => mobaRoleFilter, set: (v) => { mobaRoleFilter = v; } },
+  mobaUiTimer: { get: () => mobaUiTimer, set: (v) => { mobaUiTimer = v; } },
+  modeRunRewarded: { get: () => modeRunRewarded, set: (v) => { modeRunRewarded = v; } },
+  overdriveTab: { get: () => overdriveTab, set: (v) => { overdriveTab = v; } },
+  packRunActive: { get: () => packRunActive, set: (v) => { packRunActive = v; } },
+  paused: { get: () => paused, set: (v) => { paused = v; } },
+  pirateActive: { get: () => pirateActive, set: (v) => { pirateActive = v; } },
+  pirateHeld: { get: () => pirateHeld },
+  pirateLastSnapshot: { get: () => pirateLastSnapshot, set: (v) => { pirateLastSnapshot = v; } },
+  pirateMatch: { get: () => pirateMatch, set: (v) => { pirateMatch = v; } },
+  piratePaused: { get: () => piratePaused, set: (v) => { piratePaused = v; } },
+  pirateRecorded: { get: () => pirateRecorded, set: (v) => { pirateRecorded = v; } },
+  pirateResult: { get: () => pirateResult, set: (v) => { pirateResult = v; } },
+  pirateStageId: { get: () => pirateStageId, set: (v) => { pirateStageId = v; } },
+  pirateUiTimer: { get: () => pirateUiTimer, set: (v) => { pirateUiTimer = v; } },
+  postCreditTimer: { get: () => postCreditTimer, set: (v) => { postCreditTimer = v; } },
+  progress: { get: () => progress, set: (v) => { progress = v; } },
+  progressBlock: { get: () => progressBlock },
+  puzzleRun: { get: () => puzzleRun, set: (v) => { puzzleRun = v; } },
+  puzzleSelected: { get: () => puzzleSelected, set: (v) => { puzzleSelected = v; } },
+  puzzleTab: { get: () => puzzleTab, set: (v) => { puzzleTab = v; } },
+  puzzleTimerInterval: { get: () => puzzleTimerInterval, set: (v) => { puzzleTimerInterval = v; } },
+  renderer: { get: () => renderer },
+  save3DHorrorState: { get: () => save3DHorrorState },
+  saveProgress: { get: () => saveProgress },
+  saveSanitizers: { get: () => saveSanitizers },
+  saveStore: { get: () => saveStore },
+  scareDirector: { get: () => scareDirector, set: (v) => { scareDirector = v; } },
+  settings: { get: () => settings, set: (v) => { settings = v; } },
+  settingsOpen: { get: () => settingsOpen, set: (v) => { settingsOpen = v; } },
+  shopOpen: { get: () => shopOpen, set: (v) => { shopOpen = v; } },
+  showBanner: { get: () => showBanner },
+  showMenu: { get: () => showMenu },
+  showToast: { get: () => showToast },
+  spectateGame: { get: () => spectateGame, set: (v) => { spectateGame = v; } },
+  spectating: { get: () => spectating, set: (v) => { spectating = v; } },
+  speedrunCleared: { get: () => speedrunCleared, set: (v) => { speedrunCleared = v; } },
+  speedrunLastSummary: { get: () => speedrunLastSummary, set: (v) => { speedrunLastSummary = v; } },
+  speedrunRoomCount: { get: () => speedrunRoomCount, set: (v) => { speedrunRoomCount = v; } },
+  speedrunRun: { get: () => speedrunRun, set: (v) => { speedrunRun = v; } },
+  speedrunSummaryOpen: { get: () => speedrunSummaryOpen, set: (v) => { speedrunSummaryOpen = v; } },
+  started: { get: () => started, set: (v) => { started = v; } },
+  statsHtml: { get: () => statsHtml },
+  syncScreens: { get: () => syncScreens },
+  trialRun: { get: () => trialRun, set: (v) => { trialRun = v; } },
+  updateHud: { get: () => updateHud },
+  wdActive: { get: () => wdActive, set: (v) => { wdActive = v; } },
+  wdDifficulty: { get: () => wdDifficulty, set: (v) => { wdDifficulty = v; } },
+  wdEndless: { get: () => wdEndless, set: (v) => { wdEndless = v; } },
+  wdFeedKey: { get: () => wdFeedKey, set: (v) => { wdFeedKey = v; } },
+  wdMapId: { get: () => wdMapId, set: (v) => { wdMapId = v; } },
+  wdMatch: { get: () => wdMatch, set: (v) => { wdMatch = v; } },
+  wdPaused: { get: () => wdPaused, set: (v) => { wdPaused = v; } },
+  wdRecorded: { get: () => wdRecorded, set: (v) => { wdRecorded = v; } },
+  wdRenderDirty: { get: () => wdRenderDirty, set: (v) => { wdRenderDirty = v; } },
+  wdResult: { get: () => wdResult, set: (v) => { wdResult = v; } },
+  wdSelectedTowerId: { get: () => wdSelectedTowerId, set: (v) => { wdSelectedTowerId = v; } },
+  wdSelectionKey: { get: () => wdSelectionKey, set: (v) => { wdSelectionKey = v; } },
+  wdUiTimer: { get: () => wdUiTimer, set: (v) => { wdUiTimer = v; } },
+});
+/* @ctx-end */
+
 const $ = (id) => document.getElementById(id);
 const FIXED = 1 / 120;
 const PROGRESS_KEY = 'ashen-vow-progress-v1';
 const CHARACTER_KEY = 'ashen-vow-character-v1';
+
+// ── Save layer (Phase 1, v0.38.0) ──────────────────────────────────────
+// Every per-profile key goes through src/save.js: three slots, debounced
+// writes (at most one per key per 2 s, flushed on pagehide), slot 1 mirrored
+// to the pre-v0.38 keys for one release. Settings and voice stay global.
+const saveStorage = (() => {
+  try { const s = window.localStorage; s.getItem('ashen-vow-probe'); return s; } catch { return memoryStorage(); }
+})();
+const saveStore = createSaveStore(saveStorage, { mirrorLegacy: true });
+saveStore.migrateLegacy();
+
+// Import passes each area through its sanitizer; areas without one here are
+// repaired by their own loader when the profile boots.
+const saveSanitizers = {
+  progress: (raw) => sanitizeProgressPayload(migrateSave(raw)?.ok ? migrateSave(raw).progress : raw),
+  character: (raw) => sanitizeCharacter(raw),
+  hunter: (raw) => sanitizeHunterSave(raw),
+  secrets: (raw) => sanitizeSecretsSave(raw),
+  horror3d: (raw) => sanitize3DHorrorSave(raw),
+  archive: (raw) => sanitizeArchiveSave(raw),
+};
+
+function saveRead(key) {
+  const area = areaForLegacyKey(key);
+  if (area) return saveStore.read(area);
+  try { return saveStorage.getItem(key); } catch { return null; }
+}
+
+function saveWrite(key, value) {
+  const area = areaForLegacyKey(key);
+  if (area) { saveStore.write(area, value); return; }
+  const text = typeof value === 'function' ? value() : value;
+  try {
+    if (text === null || text === undefined) saveStorage.removeItem(key);
+    else saveStorage.setItem(key, String(text));
+  } catch { /* storage unavailable */ }
+}
+
+window.addEventListener('pagehide', () => saveStore.flush());
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') saveStore.flush(); });
 const clamp = (v, lo, hi) => (v < lo ? lo : v > hi ? hi : v);
 
 // ── Overdrive Hub state ───────────────────────────────────────────
@@ -932,13 +1109,15 @@ let godfallRun = null;
 let activeRaid = null;
 let eclipseRunStartedAt = 0;
 const framePerf = new PerformanceSampler({ capacity: 240 });
+let memorySampleAt = 0;
+let memorySampleMb = 0;
 const runtimeReporter = new RuntimeReporter();
 runtimeReporter.install();
 let activeFairyStage = -1;
 let activeFairyBoss = null;
 let fairyRunStartedAt = 0;
 let frontierTab = 'campaign200';
-let frontierProgress = defaultFrontierProgress();
+let frontierProgress = null; // created when the Frontier mode loads
 let atlasTab = 'zones';
 let atlasZoneId = 'vael';
 let activeAtlasRoom = null;
@@ -1230,15 +1409,15 @@ function defaultProgress() {
     fairy: defaultFairyProgress(),
     cistern: defaultCisternProgress(),
     lanternwake: defaultLanternProgress(),
-    speedrun: defaultSpeedrunProgress(),
-    fishing: defaultFishingProgress(),
+    speedrun: null,
+    fishing: null,
     fallen: defaultFallenProgress(),
     crusade: defaultCrusadeProgress(),
-    trials: defaultTrialProgress(),
-    puzzle: defaultPuzzleProgress(),
-    moba: defaultMobaProgress(),
-    wavedefense: defaultWaveDefenseProgress(),
-    pirates: defaultPirateProgress(),
+    trials: null,
+    puzzle: null,
+    moba: null,
+    wavedefense: null,
+    pirates: null,
     astral: defaultAstralProgress(),
     realms: defaultRealmsProgress(),
     eclipse: defaultEclipseProgress(),
@@ -1273,22 +1452,27 @@ function readProgressPayload(raw) {
 function loadProgress() {
   let parsed = null;
   try {
-    parsed = readProgressPayload(localStorage.getItem(PROGRESS_KEY));
+    parsed = readProgressPayload(saveRead(PROGRESS_KEY));
   } catch {
     parsed = null;
   }
   if (!parsed) {
     try {
-      parsed = readProgressPayload(localStorage.getItem(SAVE_KEYS.backup));
-      if (parsed) localStorage.setItem(SAVE_KEYS.backup, JSON.stringify(parsed));
+      parsed = readProgressPayload(saveRead(SAVE_KEYS.backup));
+      if (parsed) saveWrite(SAVE_KEYS.backup, JSON.stringify(parsed));
     } catch { /* storage unavailable */ }
   }
   const migration = parsed ? migrateSave(parsed) : null;
   if (migration?.ok) parsed = migration.progress;
   try {
-    const raw = localStorage.getItem(PROGRESS_KEY);
-    if (raw && (!migration || !migration.ok)) localStorage.setItem(SAVE_KEYS.quarantine, raw.slice(0, 200000));
+    const raw = saveRead(PROGRESS_KEY);
+    if (raw && (!migration || !migration.ok)) saveWrite(SAVE_KEYS.quarantine, raw.slice(0, 200000));
   } catch { /* storage unavailable */ }
+  return sanitizeProgressPayload(parsed);
+}
+
+/** Repair a parsed (and migrated) progress object; also used on import. */
+function sanitizeProgressPayload(parsed) {
   try {
     if (!parsed || typeof parsed !== 'object') return defaultProgress();
     const cleared = ROOMS.map((_, i) => !!parsed.cleared?.[i]);
@@ -1320,15 +1504,15 @@ function loadProgress() {
       fairy: sanitizeFairyProgress(parsed.fairy),
       cistern: sanitizeCisternProgress(parsed.cistern),
       lanternwake: sanitizeLanternProgress(parsed.lanternwake),
-      speedrun: sanitizeSpeedrunProgress(parsed.speedrun),
-      fishing: sanitizeFishingProgress(parsed.fishing),
+      speedrun: rawBlock(parsed.speedrun),
+      fishing: rawBlock(parsed.fishing),
       fallen: sanitizeFallenProgress(parsed.fallen),
       crusade: sanitizeCrusadeProgress(parsed.crusade),
-      trials: sanitizeTrialProgress(parsed.trials),
-      puzzle: sanitizePuzzleProgress(parsed.puzzle),
-      moba: sanitizeMobaProgress(parsed.moba),
-      wavedefense: sanitizeWaveDefenseProgress(parsed.wavedefense),
-      pirates: sanitizePirateProgress(parsed.pirates),
+      trials: rawBlock(parsed.trials),
+      puzzle: rawBlock(parsed.puzzle),
+      moba: rawBlock(parsed.moba),
+      wavedefense: rawBlock(parsed.wavedefense),
+      pirates: rawBlock(parsed.pirates),
       astral: sanitizeAstralProgress(parsed.astral),
       realms: sanitizeRealmsProgress(parsed.realms),
       eclipse: sanitizeEclipseProgress(parsed.eclipse),
@@ -1342,14 +1526,23 @@ function loadProgress() {
   }
 }
 
+let progressBackedUp = false;
+
 function saveProgress() {
   if (activeRunKind === 'hack' && hackSnapshot) return;
   try {
-    const previous = localStorage.getItem(PROGRESS_KEY);
-    if (previous) localStorage.setItem(SAVE_KEYS.backup, previous);
+    // The backup is the last save this session started from, taken once:
+    // copying it on every save doubled the storage cost of each write.
+    if (!progressBackedUp) {
+      const previous = saveRead(PROGRESS_KEY);
+      if (previous) {
+        progressBackedUp = true;
+        saveWrite(SAVE_KEYS.backup, previous);
+      }
+    }
     progress.version = 1;
     progress.schemaVersion = 2;
-    localStorage.setItem(PROGRESS_KEY, JSON.stringify(progress));
+    saveWrite(PROGRESS_KEY, () => JSON.stringify(progress));
   } catch {
     /* storage unavailable — keep in memory */
   }
@@ -1360,7 +1553,7 @@ let progress = loadProgress();
 // ── Hidden secrets ───────────────────────────────────────────────────────
 function loadSecretsSave() {
   try {
-    const raw = localStorage.getItem(SECRETS_SAVE_KEY);
+    const raw = saveRead(SECRETS_SAVE_KEY);
     return sanitizeSecretsSave(raw ? JSON.parse(raw) : defaultSecretsSave());
   } catch {
     return sanitizeSecretsSave(defaultSecretsSave());
@@ -1378,7 +1571,7 @@ let lastCreditAttempt = null;
 const creditArcLastAt = {};
 
 function saveSecretsState() {
-  try { localStorage.setItem(SECRETS_SAVE_KEY, JSON.stringify(secretsState)); } catch { /* storage unavailable */ }
+  try { saveWrite(SECRETS_SAVE_KEY, JSON.stringify(secretsState)); } catch { /* storage unavailable */ }
 }
 
 function currentSecretMode() {
@@ -1489,7 +1682,7 @@ function closeCreditScene() {
 // ── Update XVII: 3D Scary Mode save ──────────────────────────────────────
 function load3DHorrorSave() {
   try {
-    const raw = localStorage.getItem(HORROR3D_SAVE_KEY);
+    const raw = saveRead(HORROR3D_SAVE_KEY);
     return sanitize3DHorrorSave(raw ? JSON.parse(raw) : {});
   } catch {
     return default3DHorrorSave();
@@ -1500,7 +1693,7 @@ let horror3D = load3DHorrorSave();
 let horror3DSiteId = horror3D.lastSite || HORROR3D_SITES[0].id;
 
 function save3DHorrorState() {
-  try { localStorage.setItem(HORROR3D_SAVE_KEY, JSON.stringify(horror3D)); } catch { /* storage unavailable */ }
+  try { saveWrite(HORROR3D_SAVE_KEY, JSON.stringify(horror3D)); } catch { /* storage unavailable */ }
 }
 
 // ── Scary Mode 2.0 — The Nightmare Protocol (Update XI) ───────────────────
@@ -1508,7 +1701,7 @@ function save3DHorrorState() {
 // horror difficulty (enemy behaviour), scare presentation, and anti-jumpscare.
 function loadHorrorJournalState() {
   try {
-    const raw = localStorage.getItem(HORROR_SAVE_KEY);
+    const raw = saveRead(HORROR_SAVE_KEY);
     return new HorrorJournal(raw ? JSON.parse(raw) : {});
   } catch {
     return new HorrorJournal({});
@@ -1532,14 +1725,14 @@ function horrorSettings() {
 
 function saveHorrorState() {
   try {
-    localStorage.setItem(HORROR_SAVE_KEY, JSON.stringify(horrorJournal.toJSON()));
+    saveWrite(HORROR_SAVE_KEY, JSON.stringify(horrorJournal.toJSON()));
   } catch { /* storage unavailable */ }
 }
 
 // ── Update XIX: The Hunter's Kit ─────────────────────────────────────────
 function loadHunterState() {
   try {
-    const raw = localStorage.getItem(HUNTER_SAVE_KEY);
+    const raw = saveRead(HUNTER_SAVE_KEY);
     return sanitizeHunterSave(raw ? JSON.parse(raw) : defaultHunterSave());
   } catch {
     return sanitizeHunterSave(defaultHunterSave());
@@ -1550,7 +1743,7 @@ let hunterState = loadHunterState();
 let hunterShopOpen = false;
 
 function saveHunterState() {
-  try { localStorage.setItem(HUNTER_SAVE_KEY, JSON.stringify(hunterState)); } catch { /* storage unavailable */ }
+  try { saveWrite(HUNTER_SAVE_KEY, JSON.stringify(hunterState)); } catch { /* storage unavailable */ }
 }
 
 /** Persistent stock is copied into a run; spent stock is copied back out. */
@@ -2062,7 +2255,7 @@ function dreadSettings() {
 
 function loadDreadJournal() {
   try {
-    const raw = localStorage.getItem(DREAD_SAVE_KEY);
+    const raw = saveRead(DREAD_SAVE_KEY);
     return new DreadJournal(raw ? JSON.parse(raw) : {});
   } catch {
     return new DreadJournal({});
@@ -2071,7 +2264,7 @@ function loadDreadJournal() {
 
 function saveDreadState() {
   try {
-    localStorage.setItem(DREAD_SAVE_KEY, JSON.stringify(dreadJournal.toJSON()));
+    saveWrite(DREAD_SAVE_KEY, JSON.stringify(dreadJournal.toJSON()));
   } catch { /* storage unavailable */ }
 }
 
@@ -2503,9 +2696,9 @@ function veilSettings() {
 function ensureVeil() {
   if (veilController) return veilController;
   let raw = null;
-  try { raw = JSON.parse(localStorage.getItem(VEIL_SAVE_KEY) || 'null'); } catch { raw = null; }
+  try { raw = JSON.parse(saveRead(VEIL_SAVE_KEY) || 'null'); } catch { raw = null; }
   let legacyDread = null;
-  try { legacyDread = JSON.parse(localStorage.getItem(DREAD_SAVE_KEY) || 'null'); } catch { legacyDread = null; }
+  try { legacyDread = JSON.parse(saveRead(DREAD_SAVE_KEY) || 'null'); } catch { legacyDread = null; }
   veilController = new VeilController({ save: raw || {}, legacyDread, settings: veilSettings() });
   veilController.sanity.settings = veilSettings().sanity;
   return veilController;
@@ -2514,7 +2707,7 @@ function ensureVeil() {
 function saveVeilProfile() {
   if (!veilController) return false;
   try {
-    localStorage.setItem(VEIL_SAVE_KEY, JSON.stringify(veilController.toJSON()));
+    saveWrite(VEIL_SAVE_KEY, JSON.stringify(veilController.toJSON()));
     return true;
   } catch { return false; }
 }
@@ -3001,7 +3194,7 @@ function eternalSettings() {
 function ensureEternal() {
   if (eternalController) return eternalController;
   let raw = null;
-  try { raw = JSON.parse(localStorage.getItem(ETERNAL_SAVE_KEY) || 'null'); } catch { raw = null; }
+  try { raw = JSON.parse(saveRead(ETERNAL_SAVE_KEY) || 'null'); } catch { raw = null; }
   eternalController = new EternalController({ save: raw || {}, veil: ensureVeil(), settings: eternalSettings() });
   eternalController.settings = eternalSettings();
   if (raw && !eternalController.save.campaign.unlocked) {
@@ -3014,7 +3207,7 @@ function ensureEternal() {
 function saveEternalProfile() {
   if (!eternalController) return false;
   try {
-    localStorage.setItem(ETERNAL_SAVE_KEY, JSON.stringify(eternalController.toJSON()));
+    saveWrite(ETERNAL_SAVE_KEY, JSON.stringify(eternalController.toJSON()));
     saveVeilProfile();
     return true;
   } catch { return false; }
@@ -3399,7 +3592,7 @@ const ARCHIVE_STATE_LABEL = { undiscovered: 'UNDISCOVERED', rumored: 'RUMORED', 
 function ensureArchive() {
   if (archiveController) return archiveController;
   let raw = null;
-  try { raw = JSON.parse(localStorage.getItem(ARCHIVE_SAVE_KEY) || 'null'); } catch { raw = null; }
+  try { raw = JSON.parse(saveRead(ARCHIVE_SAVE_KEY) || 'null'); } catch { raw = null; }
   const veil = ensureVeil();
   const eternal = ensureEternal();
   archiveController = new ArchiveController({ save: sanitizeArchiveSave(raw || {}), veil, eternal, index: veil.index });
@@ -3408,7 +3601,7 @@ function ensureArchive() {
 
 function saveArchiveProfile() {
   if (!archiveController) return false;
-  try { localStorage.setItem(ARCHIVE_SAVE_KEY, JSON.stringify(archiveController.toJSON())); return true; } catch { return false; }
+  try { saveWrite(ARCHIVE_SAVE_KEY, JSON.stringify(archiveController.toJSON())); return true; } catch { return false; }
 }
 
 function archiveSelectedStage() {
@@ -4054,7 +4247,7 @@ function sanitizeCharacter(raw) {
 
 function loadCharacter() {
   try {
-    const raw = localStorage.getItem(CHARACTER_KEY);
+    const raw = saveRead(CHARACTER_KEY);
     if (!raw) return defaultCharacter();
     return sanitizeCharacter(JSON.parse(raw));
   } catch {
@@ -4324,7 +4517,7 @@ realmsUI.runDifficulty = 'normal';
 
 function saveCharacter() {
   try {
-    localStorage.setItem(CHARACTER_KEY, JSON.stringify(character));
+    saveWrite(CHARACTER_KEY, JSON.stringify(character));
   } catch {
     /* storage unavailable - keep in memory */
   }
@@ -4444,6 +4637,7 @@ function markCleared(index, nextIndex = null) {
 }
 
 function updateMenuProgress() {
+  menuHubs?.refresh();
   const clearedCount = progress.cleared.filter(Boolean).length;
   $('menu-progress').textContent = `LEVEL TERBUKA ${progress.unlocked} / ${ROOMS.length} · ${clearedCount} TUNTAS`;
   const expansion = $('menu-expansion-progress');
@@ -5767,674 +5961,63 @@ function handleLanternwakeBoss() {
   updateMenuProgress();
 }
 
-// ── Speedrun: one life, escalating game speed ─────────────────────────────
-function speedrunState() {
-  if (!progress.speedrun) progress.speedrun = defaultSpeedrunProgress();
-  return progress.speedrun;
-}
 
-function speedrunStamp(at) {
-  const ms = Number(at);
-  if (!Number.isFinite(ms) || ms <= 0) return '—';
-  const date = new Date(ms);
-  if (Number.isNaN(date.getTime())) return '—';
-  const pad = (n) => String(n).padStart(2, '0');
-  return `${pad(date.getDate())}/${pad(date.getMonth() + 1)} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
-}
 
-function showSpeedrun() {
-  cancelPrologue();
-  started = false;
-  paused = false;
-  shopOpen = false;
-  mapOpen = false;
-  codexOpen = false;
-  inventoryOpen = false;
-  settingsOpen = false;
-  closeDialogue(true);
-  spectating = false;
-  spectateGame = null;
-  speedrunSummaryOpen = false;
-  menuView = 'speedrun';
-  clearHeldKeys();
-  buildSpeedrunScreen();
-  syncScreens();
-}
 
-function buildSpeedrunScreen() {
-  const summary = speedrunSummary(speedrunState());
-  const stats = speedrunStats(speedrunState());
-  const history = summary.history || [];
-  const box = $('speedrun-summary');
-  if (box) {
-    box.innerHTML = `
-      <div class="stat"><strong>${summary.bestMultiplier ? `${summary.bestMultiplier}×` : '—'}</strong><span>Rekor Kecepatan</span></div>
-      <div class="stat"><strong>${summary.bestCycles}</strong><span>Putaran Tuntas</span></div>
-      <div class="stat"><strong>${summary.bestTime ? formatTime(summary.bestTime) : '—'}</strong><span>Waktu Bertahan</span></div>
-      <div class="stat"><strong>${summary.runs}</strong><span>Run Selesai</span></div>
-    `;
-  }
-  const body = $('speedrun-body');
-  if (body) {
-    body.innerHTML = `
-      <section class="exp-section">
-        <div class="exp-section-head">
-          <h3>ATURAN SATU NYAWA</h3>
-          <span>${SPEEDRUN_LIVES} nyawa · tanpa checkpoint</span>
-        </div>
-        <ul class="speedrun-rules">
-          ${SPEEDRUN_RULES.map((line) => `<li>${esc(line)}</li>`).join('')}
-        </ul>
-      </section>
-      <section class="exp-section">
-        <div class="exp-section-head">
-          <h3>JALUR KECEPATAN</h3>
-          <span>berhenti hanya saat kau gugur</span>
-        </div>
-        <div class="speedrun-ladder">
-          ${[0, 1, 2, 3, 4, 5].map((cycle) => {
-            const mult = speedrunMultiplier(cycle);
-            return `<div class="speedrun-rung"><span>${cycle === 0 ? 'AWAL' : `SETELAH BOS ${cycle}`}</span><strong>${mult}×</strong></div>`;
-          }).join('')}
-          <div class="speedrun-rung endless"><span>DAN SETERUSNYA</span><strong>∞</strong></div>
-        </div>
-      </section>
-      <section class="exp-section">
-        <div class="exp-section-head">
-          <h3>STATISTIK MENDALAM</h3>
-          <span>${stats.attempts ? `${stats.attempts} percobaan tercatat` : 'belum ada data'}</span>
-        </div>
-        <div class="speedrun-stats">
-          <div class="sr-stat"><span>RASIO TUNTAS</span><strong>${stats.clearRate}%</strong><em>${stats.clearedRuns} dari ${stats.attempts} percobaan</em></div>
-          <div class="sr-stat"><span>RATA-RATA BERTAHAN</span><strong>${stats.averageTime ? formatTime(stats.averageTime) : '—'}</strong><em>total ${formatTime(stats.totalTime)}</em></div>
-          <div class="sr-stat"><span>PUTARAN TERPANJANG</span><strong>${stats.longestClear}</strong><em>rata-rata ${stats.averageClears} putaran</em></div>
-          <div class="sr-stat"><span>LANGKAH BERIKUT</span><strong>${stats.nextMultiplier}×</strong><em>${stats.bestMultiplier ? `${stats.bestMultiplier}× sudah tercapai` : 'belum ada rekor'}</em></div>
-        </div>
-        ${stats.ladder.length ? `<div class="speedrun-ladder-detail">
-          ${stats.ladder.map((row) => `<div class="sr-rung-row${row.multiplier === stats.bestMultiplier ? ' record' : ''}">
-            <strong>${row.multiplier}×</strong>
-            <span>${row.attempts} percobaan · ${row.clears} tuntas</span>
-            <span>putaran terbaik ${row.bestCycles}</span>
-            <span>${row.bestTime ? formatTime(row.bestTime) : '—'}</span>
-          </div>`).join('')}
-        </div>` : '<p class="speedrun-empty">Statistik per kecepatan muncul setelah percobaan pertamamu.</p>'}
-      </section>
-      <section class="exp-section">
-        <div class="exp-section-head">
-          <h3>RIWAYAT RUN</h3>
-          <span>${history.length ? `${history.length} percobaan terakhir · terbaru di atas` : 'belum ada percobaan'}</span>
-        </div>
-        ${history.length ? `<ol class="speedrun-history">
-          ${history.map((entry, index) => `<li class="speedrun-history-row${entry.died ? '' : ' cleared'}${entry.multiplier >= summary.bestMultiplier ? ' record' : ''}">
-            <span class="sr-index">#${index + 1}</span>
-            <strong class="sr-speed">${entry.multiplier}×</strong>
-            <span class="sr-meta"><span>${entry.clears} putaran tuntas</span><span>${entry.rooms} ruang</span></span>
-            <span class="sr-time">${formatTime(entry.time)}</span>
-            <em class="sr-result">${entry.died ? 'GUGUR' : 'TUNTAS'}</em>
-            <small class="sr-stamp">${speedrunStamp(entry.at)}</small>
-          </li>`).join('')}
-        </ol>` : '<p class="speedrun-empty">Belum ada riwayat. Setiap percobaan tercatat di sini dan tersimpan di browser ini.</p>'}
-      </section>
-    `;
-  }
-  const start = $('speedrun-start');
-  if (start) {
-    const label = start.querySelector('span');
-    if (label) label.textContent = `MULAI SPEEDRUN ${SPEEDRUN_START_MULTIPLIER}×`;
-  }
-}
 
-function startSpeedrun(cycle = 0, options = {}) {
-  const safeCycle = Math.max(0, Math.min(98, Math.floor(Number(cycle) || 0)));
-  const multiplier = speedrunMultiplier(safeCycle);
-  audio.init();
-  attempts = 1;
-  coopGuestMode = false;
-  coopGuestRoom = -1;
-  activeRunKind = 'speedrun';
-  activeCourtTrial = null;
-  activeCourtRoom = null;
-  activePackIndex = -1;
-  activeFairyStage = -1;
-  activeFairyBoss = null;
-  activeExpansionIndex = null;
-  activeModeId = null;
-  activeTrialId = null;
-  modeRunRewarded = false;
-  packRunActive = false;
-  labRun = null;
-  labDirector = null;
-  labGuestMode = false;
-  labRewardsOpen = false;
-  labSummaryOpen = false;
-  game.labyrinth = false;
-  game.reset();
-  game.oneLife = true;
-  applyCharacterToGame();
-  applySkinToGame();
-  speedrunRoomCount = 0;
-  speedrunCleared = false;
-  speedrunSummaryOpen = false;
-  speedrunRun = { cycle: safeCycle, multiplier, startedAt: performance.now() };
-  cutsceneSeen = new Set();
-  postCreditTimer = -1;
-  game.events.length = 0;
-  started = true;
-  paused = false;
-  hunterShopOpen = false;
-  shopOpen = false;
-  mapOpen = false;
-  codexOpen = false;
-  inventoryOpen = false;
-  settingsOpen = false;
-  closeDialogue(true);
-  spectating = false;
-  spectateGame = null;
-  menuView = 'none';
-  lastGameState = 'playing';
-  accumulator = 0;
-  lastTime = performance.now();
-  clearHeldKeys();
-  discoverCurrentRoom(game.roomIndex);
-  beginStage(game.roomIndex, game.room.name);
-  showBanner(`${multiplier}× SPEEDRUN`, `PUTARAN ${safeCycle + 1} · SATU NYAWA`);
-  if (!options.silent) {
-    showToast(`⚡ ${multiplier}× — ${SPEEDRUN_LIVES} nyawa, tanpa checkpoint.`, 2600);
-  }
-  syncScreens();
-  updateHud();
-}
 
-function finishSpeedrun() {
-  if (activeRunKind !== 'speedrun' || !speedrunRun || speedrunSummaryOpen) return;
-  const attempt = recordSpeedrun(speedrunState(), {
-    multiplier: speedrunRun.multiplier,
-    clears: speedrunRun.cycle,
-    rooms: speedrunRoomCount,
-    time: game.time,
-    died: true,
-  });
-  saveProgress();
-  speedrunLastSummary = attempt;
-  speedrunSummaryOpen = true;
-  speedrunCleared = false;
-  buildSpeedrunSummary(attempt);
-  syncScreens();
-}
 
-function buildSpeedrunSummary(attempt) {
-  const sub = $('speedrun-summary-sub');
-  if (sub) {
-    sub.textContent = attempt.isRecord
-      ? `Rekor baru: ${attempt.bestMultiplier}× dengan ${attempt.bestCycles} putaran tuntas.`
-      : `Kau gugur pada ${attempt.multiplier}×. Rekor ${attempt.bestMultiplier || attempt.multiplier}× masih berdiri.`;
-  }
-  const body = $('speedrun-summary-body');
-  if (body) {
-    body.innerHTML = `${statsHtml([
-      [`${attempt.multiplier}×`, 'Kecepatan'],
-      [attempt.clears, 'Putaran Tuntas'],
-      [attempt.rooms, 'Ruang Dilewati'],
-      [formatTime(attempt.time), 'Waktu Bertahan'],
-    ])}<p class="micro">Rekor tersimpan di progress.speedrun · satu nyawa, tanpa checkpoint.</p>`;
-  }
-  const again = $('speedrun-summary-again');
-  if (again) {
-    const label = again.querySelector('span');
-    if (label) label.textContent = `MULAI LAGI ${SPEEDRUN_START_MULTIPLIER}×`;
-  }
-}
 
-function handleSpeedrunClear() {
-  if (activeRunKind !== 'speedrun' || !speedrunRun) return;
-  const cleared = speedrunRun.multiplier;
-  const nextCycle = speedrunRun.cycle + 1;
-  const nextMultiplier = speedrunMultiplier(nextCycle);
-  // The run has now reached the *next* speed, so that is the multiplier the
-  // record keeps even if the player dies before the new boss falls.
-  const attempt = recordSpeedrun(speedrunState(), {
-    multiplier: nextMultiplier,
-    clears: nextCycle,
-    rooms: speedrunRoomCount,
-    time: game.time,
-    died: false,
-  });
-  saveProgress();
-  speedrunLastSummary = attempt;
-  startSpeedrun(nextCycle, { silent: true });
-  showToast(`⚡ ${cleared}× tuntas — naik ke ${nextMultiplier}×`, 2800);
-}
 
-// ── Fishing: bait shack, reel minigame, illustrated index ───────────────
-const FISH_SHAPE_LABELS = {
-  slender: 'MEMANJANG',
-  round: 'BUNDAR',
-  flat: 'PIPIH',
-  eel: 'BELUT',
-  shell: 'BERCANGKANG',
-  squid: 'BERKAKI',
-  spiky: 'BERTARING',
-};
 
-function fishingState() {
-  if (!progress.fishing) progress.fishing = defaultFishingProgress();
-  return progress.fishing;
-}
 
-function fishingKg(value) {
-  const n = Number(value) || 0;
-  if (!n) return '—';
-  return n >= 10 ? `${n.toFixed(1)} kg` : `${n.toFixed(2)} kg`;
-}
 
-function closeFishingOverlays() {
-  cancelAnimationFrame(fishingReelFrame);
-  fishingReelFrame = 0;
-  fishingReel = null;
-  $('fishing-cast')?.classList.add('hidden');
-}
 
-function showFishing() {
-  cancelPrologue();
-  started = false;
-  paused = false;
-  shopOpen = false;
-  mapOpen = false;
-  codexOpen = false;
-  inventoryOpen = false;
-  settingsOpen = false;
-  closeDialogue(true);
-  spectating = false;
-  spectateGame = null;
-  speedrunSummaryOpen = false;
-  closeFishingOverlays();
-  menuView = 'fishing';
-  fishIndexTab = 0;
-  clearHeldKeys();
-  buildFishingScreen();
-  syncScreens();
-}
 
-function closeFishing() {
-  closeFishingOverlays();
-  showMenu();
-}
 
-function buildFishingScreen() {
-  const p = fishingState();
-  const summary = fishingSummary(p);
-  const selected = fishingBaitById(summary.selectedBait) || FISHING_BAITS[0];
-  const owned = p.bait[selected.id] || 0;
-  const summaryBox = $('fishing-summary');
-  if (summaryBox) {
-    summaryBox.innerHTML = `
-      <div><span>KOIN</span><strong>${summary.coins}</strong><em>${summary.earned} koin dari tangkapan</em></div>
-      <div><span>UMPAN</span><strong>${summary.owned}</strong><em>${summary.baitKinds} jenis di tas</em></div>
-      <div><span>INDEKS</span><strong>${summary.discovered} / ${summary.total}</strong><em>${summary.completion}% koleksi</em></div>
-      <div><span>TANGKAPAN</span><strong>${summary.successRate}%</strong><em>${summary.catches} berhasil · ${summary.escapes} lepas</em></div>
-    `;
-  }
-  const body = $('fishing-body');
-  if (body) {
-    body.innerHTML = `
-      <section class="exp-section">
-        <div class="exp-section-head">
-          <h3>PILIH UMPAN</h3>
-          <span>${summary.hasStarterBait ? 'cacing siap dipakai' : 'umban habis — beli di pondok'}</span>
-        </div>
-        <div class="bait-rack">
-          ${FISHING_BAITS.map((bait) => {
-            const count = p.bait[bait.id] || 0;
-            const active = summary.selectedBait === bait.id;
-            return `<button class="bait-chip tier-${bait.tier}${active ? ' active' : ''}${count ? '' : ' empty'}" type="button" data-fishing-bait="${bait.id}">
-              <span class="bait-glyph" style="--bait:${bait.color};--bait-accent:${bait.accent}" aria-hidden="true">${bait.glyph}</span>
-              <span class="bait-copy"><strong>${esc(bait.short)}</strong><em>${bait.price} koin · ${count} tersisa</em></span>
-              <small>${baitHighTierChance(bait.id)}% langka+</small>
-            </button>`;
-          }).join('')}
-        </div>
-      </section>
-      <section class="exp-section">
-        <div class="exp-section-head">
-          <h3>DANAU ABU</h3>
-          <span>${summary.casts} lemparan · rekor ${fishingKg(summary.bestKg)}</span>
-        </div>
-        <div class="fishing-pond">
-          <div class="fishing-pond-art" aria-hidden="true">
-            <span class="pond-sun"></span>
-            <span class="pond-wave w1"></span>
-            <span class="pond-wave w2"></span>
-            <span class="pond-float"></span>
-            <span class="pond-hut"></span>
-          </div>
-          <div class="fishing-pond-copy">
-            <h4>${esc(FISHING_LOCATION)}</h4>
-            <p>${esc(FISHING_SUBTITLE)}</p>
-            <div class="fishing-pond-meta">
-              <span>UMPAN AKTIF<b>${esc(selected.short)} ×${owned}</b></span>
-              <span>PELUANG LANGKA+<b>${baitHighTierChance(selected.id)}%</b></span>
-              <span>TERTANGKAP<b>${summary.catches}</b></span>
-            </div>
-          </div>
-        </div>
-      </section>
-    `;
-  }
-  const cast = $('fishing-cast-start');
-  if (cast) {
-    const label = cast.querySelector('span');
-    if (label) label.textContent = owned ? `LEMPAR KAIL (${selected.short} ×${owned})` : 'UMPAN HABIS';
-    cast.disabled = owned <= 0;
-  }
-}
 
-function selectFishingBait(baitId) {
-  if (!fishingSelectBait(fishingState(), baitId)) return false;
-  saveProgress();
-  buildFishingScreen();
-  return true;
-}
 
-function paintFishingCastArt(fish, landed) {
-  const canvas = $('fishing-cast-canvas');
-  const ctx = canvas?.getContext('2d');
-  if (!ctx) return;
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.setTransform(2, 0, 0, 2, 0, 0);
-  if (fish && landed) {
-    drawFishingIcon(ctx, fish, 60, 35, 58);
-    return;
-  }
-  ctx.strokeStyle = 'rgba(150, 205, 220, 0.45)';
-  ctx.lineWidth = 1.5;
-  for (let i = 0; i < 3; i += 1) {
-    ctx.beginPath();
-    ctx.ellipse(60, 44, 18 + i * 13, 5 + i * 4, 0, 0, Math.PI * 2);
-    ctx.stroke();
-  }
-  ctx.beginPath();
-  ctx.fillStyle = '#e0b06a';
-  ctx.arc(60, 44, 6, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = '#8a5a2a';
-  ctx.fillRect(59, 16, 2, 22);
-}
 
-function fishingReelLoop(now) {
-  if (!fishingReel || fishingReel.resolved) {
-    fishingReelFrame = 0;
-    return;
-  }
-  const delta = Math.min(0.05, Math.max(0, (now - (fishingReel.last || now)) / 1000));
-  fishingReel.last = now;
-  fishingReel.position += (fishingReel.dir * delta) / 0.85;
-  if (fishingReel.position >= 1) {
-    fishingReel.position = 1;
-    fishingReel.dir = -1;
-  } else if (fishingReel.position <= 0) {
-    fishingReel.position = 0;
-    fishingReel.dir = 1;
-  }
-  const marker = $('fishing-reel-marker');
-  if (marker) marker.style.left = `${Math.round(fishingReel.position * 1000) / 10}%`;
-  fishingReelFrame = requestAnimationFrame(fishingReelLoop);
-}
 
-function beginFishingCast() {
-  const p = fishingState();
-  const cast = fishingCast(p, p.selectedBait, Math.random());
-  if (!cast.ok) {
-    showToast(cast.reason === 'empty' ? 'Umpan habis — beli di pondok umpan.' : 'Umpan itu tidak dikenal.', 2200);
-    return false;
-  }
-  saveProgress();
-  const bait = fishingBaitById(cast.bait);
-  fishingReel = {
-    fish: cast.fish,
-    zone: reelZone(cast.fish),
-    bait: bait ? bait.short : 'umpan',
-    position: 0,
-    dir: 1,
-    last: performance.now(),
-    resolved: false,
-    result: '',
-  };
-  buildFishingScreen();
-  const overlay = $('fishing-cast');
-  if (!overlay) return false;
-  overlay.classList.remove('hidden');
-  const name = $('fishing-cast-name');
-  const sub = $('fishing-cast-sub');
-  const result = $('fishing-cast-result');
-  if (name) name.textContent = 'SESUATU MENGGIGIT!';
-  if (sub) sub.textContent = `Umpan ${fishingReel.bait} · tekan TARIK saat penanda di zona terang`;
-  if (result) {
-    result.textContent = '';
-    result.className = 'fishing-cast-result';
-  }
-  const zoneEl = $('fishing-reel-zone');
-  if (zoneEl) {
-    zoneEl.style.left = `${(fishingReel.zone.center - fishingReel.zone.half) * 100}%`;
-    zoneEl.style.width = `${fishingReel.zone.half * 2 * 100}%`;
-  }
-  const marker = $('fishing-reel-marker');
-  if (marker) marker.style.left = '0%';
-  const strike = $('fishing-strike');
-  if (strike) {
-    const label = strike.querySelector('span');
-    if (label) label.textContent = 'TARIK!';
-  }
-  paintFishingCastArt(null, false);
-  cancelAnimationFrame(fishingReelFrame);
-  fishingReelFrame = requestAnimationFrame(fishingReelLoop);
-  return true;
-}
 
-function strikeFishingReel(position) {
-  if (!fishingReel || fishingReel.resolved) return false;
-  fishingReel.resolved = true;
-  cancelAnimationFrame(fishingReelFrame);
-  fishingReelFrame = 0;
-  const at = typeof position === 'number' ? position : fishingReel.position;
-  const p = fishingState();
-  const fish = fishingReel.fish;
-  const rarity = fishRarity(fish.tier);
-  const hit = reelHit(fish, at);
-  const name = $('fishing-cast-name');
-  const sub = $('fishing-cast-sub');
-  const result = $('fishing-cast-result');
-  const strike = $('fishing-strike');
-  if (strike) {
-    const label = strike.querySelector('span');
-    if (label) label.textContent = 'LEMPAR LAGI';
-  }
-  if (hit) {
-    const landed = fishingLandCatch(p, fish, Math.random());
-    saveProgress();
-    fishingReel.result = 'hit';
-    if (name) name.textContent = `${fish.name} · ${fishingKg(landed.kg)}`;
-    if (sub) {
-      sub.textContent = `${rarity.name} · ${fish.value} koin${landed.isRecord ? ' · REKOR BERAT BARU' : ''} · tertangkap ${landed.caughtCount}×`;
-    }
-    if (result) {
-      result.textContent = 'TERTARIK!';
-      result.className = 'fishing-cast-result hit';
-    }
-    paintFishingCastArt(fish, true);
-    showToast(`🎣 ${fish.name} — ${fishingKg(landed.kg)} (+${fish.value} koin)`, 2400);
-  } else {
-    fishingEscape(p);
-    saveProgress();
-    fishingReel.result = 'miss';
-    if (name) name.textContent = 'IKAN ITU LEPAS';
-    if (sub) sub.textContent = `${rarity.name} · penanda meleset dari zona — umpan tetap terpakai`;
-    if (result) {
-      result.textContent = 'LEPAS';
-      result.className = 'fishing-cast-result miss';
-    }
-    paintFishingCastArt(fish, true);
-  }
-  return hit;
-}
 
-function openBaitShop() {
-  closeFishingOverlays();
-  menuView = 'baitShop';
-  buildBaitShop();
-  syncScreens();
-}
 
-function closeBaitShop() {
-  menuView = 'fishing';
-  buildFishingScreen();
-  syncScreens();
-}
 
-function buildBaitShop() {
-  const p = fishingState();
-  const summary = fishingSummary(p);
-  const wallet = $('bait-shop-wallet');
-  if (wallet) {
-    wallet.innerHTML = `
-      <span class="wallet-coin" aria-hidden="true">◉</span>
-      <strong>${summary.coins}</strong>
-      <em>koin · ${summary.owned} umpan di tas</em>
-    `;
-  }
-  const body = $('bait-shop-body');
-  if (!body) return;
-  body.innerHTML = FISHING_BAIT_TIERS.map((tier) => `
-    <section class="bait-shelf tier-${tier.tier}">
-      <div class="exp-section-head">
-        <h3>${esc(tier.name)}</h3>
-        <span>${tier.price} koin / unit · ${esc(tier.note)}</span>
-      </div>
-      <div class="bait-shelf-grid">
-        ${FISHING_BAITS.filter((bait) => bait.tier === tier.tier).map((bait) => {
-          const count = p.bait[bait.id] || 0;
-          const canOne = summary.coins >= bait.price;
-          const canFive = summary.coins >= bait.price * 5;
-          return `<article class="bait-shop-card${count ? '' : ' unbought'}">
-            <span class="bait-shop-glyph" style="--bait:${bait.color};--bait-accent:${bait.accent}" aria-hidden="true">${bait.glyph}</span>
-            <div class="bait-shop-copy">
-              <h4>${esc(bait.name)}</h4>
-              <em>${baitHighTierChance(bait.id)}% peluang ikan langka+</em>
-              <p>${esc(bait.blurb)}</p>
-              <div class="bait-shop-meta">
-                <span>HARGA<b>${bait.price}</b></span>
-                <span>DIMILIKI<b>${count}</b></span>
-              </div>
-            </div>
-            <div class="bait-shop-actions">
-              <button class="btn btn-primary btn-compact" type="button" data-buy-bait="${bait.id}" data-bait-qty="1"${canOne ? '' : ' disabled'}>BELI ×1</button>
-              <button class="btn btn-ghost btn-compact" type="button" data-buy-bait="${bait.id}" data-bait-qty="5"${canFive ? '' : ' disabled'}>BELI ×5</button>
-            </div>
-          </article>`;
-        }).join('')}
-      </div>
-    </section>
-  `).join('');
-}
 
-function buyFishingBait(baitId, qty = 1) {
-  const result = fishingBuyBait(fishingState(), baitId, qty);
-  if (!result.ok) {
-    showToast(
-      result.reason === 'coins'
-        ? `Koin kurang: ${result.name || 'umpan'} butuh ${result.total}, kau punya ${result.coins}.`
-        : result.reason === 'full'
-          ? 'Tas umpan penuh untuk jenis ini.'
-          : 'Umpan itu tidak dijual di sini.',
-      2200,
-    );
-    return result;
-  }
-  saveProgress();
-  buildBaitShop();
-  showToast(`+${result.qty} ${result.name} · ${result.total} koin`, 2000);
-  return result;
-}
 
-function openFishIndex() {
-  closeFishingOverlays();
-  menuView = 'fishIndex';
-  buildFishIndex();
-  syncScreens();
-}
 
-function closeFishIndex() {
-  menuView = 'fishing';
-  buildFishingScreen();
-  syncScreens();
-}
 
-function setFishIndexTab(tier) {
-  fishIndexTab = Math.max(0, Math.min(5, Math.floor(Number(tier) || 0)));
-  buildFishIndex();
-}
 
-function paintFishIcons() {
-  for (const canvas of document.querySelectorAll('#fish-index-body canvas[data-fish-icon]')) {
-    const fish = fishingFishById(canvas.dataset.fishIcon);
-    const ctx = canvas.getContext('2d');
-    if (!fish || !ctx) continue;
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.setTransform(2, 0, 0, 2, 0, 0);
-    drawFishingIcon(ctx, fish, 60, 35, 60);
-  }
-}
 
-function buildFishIndex() {
-  const p = fishingState();
-  const index = fishingIndex(p);
-  const summary = fishingSummary(p);
-  const summaryBox = $('fish-index-summary');
-  if (summaryBox) {
-    summaryBox.innerHTML = `
-      <div><span>SPESIES</span><strong>${summary.discovered} / ${FISH_TOTAL}</strong><em>${summary.completion}% indeks</em></div>
-      <div><span>TANGKAPAN</span><strong>${summary.catches}</strong><em>${summary.casts} lemparan</em></div>
-      <div><span>REKOR BERAT</span><strong>${fishingKg(summary.bestKg)}</strong><em>${summary.bestFish ? esc(fishingFishById(summary.bestFish)?.name || '—') : 'belum ada'}</em></div>
-      <div><span>KOIN</span><strong>${summary.coins}</strong><em>${summary.earned} total didapat</em></div>
-    `;
-  }
-  const tabs = $('fish-index-tabs');
-  if (tabs) {
-    tabs.innerHTML = [0, 1, 2, 3, 4, 5].map((tier) => `<button class="fish-tab${fishIndexTab === tier ? ' active' : ''}" type="button" data-fish-tier="${tier}">${tier ? fishRarity(tier).name : `SEMUA ${FISH_TOTAL}`}</button>`).join('');
-  }
-  const body = $('fish-index-body');
-  if (!body) return;
-  const rows = fishIndexTab ? index.filter((row) => row.fish.tier === fishIndexTab) : index;
-  body.innerHTML = rows.map((row) => {
-    const fish = row.fish;
-    return `<article class="fish-card tier-${fish.tier}${row.discovered ? '' : ' unknown'}">
-      <div class="fish-card-art" style="--fish:${fish.body};--fish-accent:${fish.fin}">
-        <canvas data-fish-icon="${fish.id}" width="240" height="140" role="img" aria-label="Gambar ${esc(fish.name)}"></canvas>
-      </div>
-      <div class="fish-card-body">
-        <div class="fish-card-head">
-          <h4>${esc(fish.name)}</h4>
-          <span class="fish-rarity">${row.rarity.name}</span>
-        </div>
-        <p class="fish-card-note">${esc(fish.note)}</p>
-        <div class="fish-meta">
-          <span>TIPE<b>${FISH_SHAPE_LABELS[fish.shape] || fish.shape}</b></span>
-          <span>BERAT<b>${fish.minKg}–${fish.maxKg} kg</b></span>
-          <span>NILAI<b>${fish.value} koin</b></span>
-          <span>TERBUKA<b>${row.count > 0 ? 'YA' : 'BELUM'}</b></span>
-          <span>TERTANGKAP<b>${row.count}</b></span>
-          <span>REKOR<b>${fishingKg(row.bestKg)}</b></span>
-        </div>
-        <div class="fish-odds">
-          <span class="fish-odds-head">PELUANG PER UMPAN</span>
-          ${row.chances.map((entry) => `<span class="fish-odds-chip${entry.baitId === row.bestBait ? ' best' : ''}">${esc(entry.baitName)}<b>${entry.chance}%</b></span>`).join('')}
-        </div>
-      </div>
-    </article>`;
-  }).join('');
-  paintFishIcons();
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 function fairyStageStatus(state, index) {
   if (fairyStageCleared(state, index)) return 'cleared';
@@ -8069,1061 +7652,112 @@ function showExpansion(tab = 'campaign') {
   syncScreens();
 }
 
-function showMode3D(subMode = 'campaign', options = {}) {
-  cancelPrologue();
-  started = false;
-  paused = false;
-  shopOpen = false;
-  mapOpen = false;
-  codexOpen = false;
-  inventoryOpen = false;
-  settingsOpen = false;
-  closeDialogue(true);
-  spectating = false;
-  spectateGame = null;
-  menuView = 'mode3d';
-  const region = $('select-3d-region')?.value || 'thornveil';
-  const area = $('select-3d-area')?.value || '';
-  if (!game3D) {
-    game3D = new Ashen3DGame({
-      viewW: 960,
-      viewH: 540,
-      subMode,
-      region,
-      quality: settings.graphics.preset === 'extreme' ? 'ultra' : settings.graphics.preset,
-      visualSettings: settings.graphics,
-      hudSettings: settings.hud,
-      cameraSensitivity: settings.controls.cameraSensitivity / 100,
-    });
-  } else {
-    game3D.subMode = subMode;
-    game3D.setRegion(region);
-  }
-  if (area && subMode !== 'scary') game3D.setArea(area);
-  game3D.player.weaponId = game.player.weapon;
-  if (subMode === 'scary') {
-    start3DHorrorRun(options.siteId || horror3DSiteId, options);
-  } else {
-    buildHorror3DPanel();
-  }
-  clearHeldKeys();
-  syncScreens();
-}
 
-function start3DHorrorRun(siteId, options = {}) {
-  const site = horror3DSite(siteId);
-  if (!site || !game3D) return null;
-  horror3DSiteId = site.id;
-  const anti = options.antiJumpscare ?? $('horror3d-anti')?.checked ?? horror3D.settings.antiJumpscare;
-  const intensity = options.intensity || $('horror3d-intensity')?.value || horror3D.settings.intensity;
-  horror3D.settings.antiJumpscare = !!anti;
-  horror3D.settings.intensity = ['reduced', 'full', 'nightmare'].includes(intensity) ? intensity : 'full';
-  horror3D.lastSite = site.id;
-  save3DHorrorState();
-  const active = game3D.startHorrorSite(site.id, { antiJumpscare: !!anti, intensity: horror3D.settings.intensity });
-  if (!active) return null;
-  game3D.player.weaponId = game.player.weapon;
-  buildHorror3DPanel();
-  syncScreens();
-  return game3D.horrorSnapshot();
-}
 
-function start3DHorror(siteId = horror3DSiteId, options = {}) {
-  if (menuView !== 'mode3d' || !game3D) {
-    showMode3D('scary', { siteId, ...options });
-    return game3D?.horrorSnapshot() || null;
-  }
-  return start3DHorrorRun(siteId, options);
-}
 
-function restart3DHorror() {
-  const siteId = game3D?.horror?.siteId || horror3DSiteId;
-  return start3DHorror(siteId, {
-    antiJumpscare: game3D?.horror?.antiJumpscare,
-    intensity: game3D?.horror?.intensity,
-  });
-}
 
-function buildHorror3DPanel() {
-  const summary = horror3DSummary(horror3D);
-  const list = $('horror3d-sites');
-  if (list) {
-    list.innerHTML = summary.sites.map((entry) => `
-      <button class="horror3d-card${entry.cleared ? ' cleared' : ''}${entry.id === horror3DSiteId ? ' active' : ''}" type="button" data-horror-site="${entry.id}">
-        <span class="horror3d-card-level">SITUS ${String(entry.level).padStart(2, '0')} · ${entry.difficulty.toUpperCase()}</span>
-        <strong>${entry.name}</strong>
-        <em>${entry.cleared ? `CLEARED · ${entry.bestTime ? entry.bestTime.toFixed(1) + 's' : '—'}` : `${entry.attempts} percobaan · ${entry.deaths} mati`}</em>
-      </button>`).join('');
-  }
-  const summaryEl = $('horror3d-summary');
-  if (summaryEl) {
-    summaryEl.textContent = `${summary.clearedSites}/${summary.totalSites} situs dibersihkan · ${summary.scares} jumpscare · ${summary.deaths} kematian${summary.bestTime ? ` · rekor ${summary.bestTime.toFixed(1)}s` : ''}`;
-  }
-  const select = $('horror3d-select');
-  if (select && select.options.length !== HORROR3D_SITES.length) {
-    select.innerHTML = HORROR3D_SITES.map((entry) => `
-      <option value="${entry.id}">${entry.level} · ${entry.name} — ${entry.difficulty}</option>`).join('');
-  }
-  if (select) select.value = horror3DSiteId;
-  const anti = $('horror3d-anti');
-  if (anti) anti.checked = !!horror3D.settings.antiJumpscare;
-  const intensity = $('horror3d-intensity');
-  if (intensity) intensity.value = horror3D.settings.intensity;
-}
 
-function drain3DHorrorEvents() {
-  if (!game3D) return;
-  for (const event of game3D.drainHorrorEvents()) {
-    if (event.type === 'horrorStart') {
-      horror3D.lastSite = event.siteId;
-      horror3D.lastResult = null;
-      horror3DSiteId = event.siteId;
-      save3DHorrorState();
-    } else if (event.type === 'horrorCleared' || event.type === 'horrorDead') {
-      const result = record3DHorrorResult(horror3D, {
-        siteId: event.siteId,
-        result: event.type === 'horrorCleared' ? 'cleared' : 'dead',
-        time: event.time,
-        scares: event.scares,
-        phase: event.phase,
-      });
-      save3DHorrorState();
-      buildHorror3DPanel();
-      if (result.ok && result.unlocked.length) showToast(`PENCAPAIAN 3D SCARY · ${result.unlocked.join(' · ')}`, 3200);
-    }
-  }
-}
 
-function closeMode3D() {
-  showMenu();
-}
 
-function showFrontier(tab = 'campaign200') {
-  cancelPrologue();
-  started = false;
-  paused = false;
-  shopOpen = false;
-  mapOpen = false;
-  codexOpen = false;
-  inventoryOpen = false;
-  settingsOpen = false;
-  closeDialogue(true);
-  spectating = false;
-  spectateGame = null;
-  menuView = 'frontier';
-  frontierTab = tab;
-  clearHeldKeys();
-  buildFrontierScreen();
-  syncScreens();
-}
 
-function closeFrontier() {
-  showMenu();
-}
 
-// ── Riftwar: hub, battlefield and result handling ───────────────────────
-function mobaState() {
-  if (!progress.moba) progress.moba = defaultMobaProgress();
-  return progress.moba;
-}
 
-function showMoba() {
-  cancelPrologue();
-  started = false;
-  paused = false;
-  shopOpen = false;
-  mapOpen = false;
-  codexOpen = false;
-  inventoryOpen = false;
-  settingsOpen = false;
-  closeDialogue(true);
-  spectating = false;
-  spectateGame = null;
-  menuView = 'moba';
-  clearHeldKeys();
-  buildMobaScreen();
-  syncScreens();
-}
 
-function mobaHeroCard(hero) {
-  const selected = hero.id === mobaHeroId;
-  return `<button class="moba-hero-card${selected ? ' active' : ''}" type="button" data-moba-hero="${hero.id}" style="--hero:${hero.color}" aria-pressed="${selected}">
-    <span class="mh-glyph">${hero.glyph}</span>
-    <span class="mh-name">${esc(hero.name)}</span>
-    <span class="mh-meta"><span>${MOBA_ROLES[hero.role]?.name || hero.role}</span><span>L1</span></span>
-    <span class="mh-origin">${hero.source === 'core' ? 'KAMPANYE' : 'FRONTIER'} · ${esc(hero.className)}</span>
-  </button>`;
-}
 
-function buildMobaScreen() {
-  const state = mobaState();
-  const summary = mobaSummary(state);
-  const content = $('moba-summary');
-  if (content) {
-    content.innerHTML = `
-      <div class="moba-stat"><span>PERTEMPURAN</span><strong>${summary.matches}</strong></div>
-      <div class="moba-stat"><span>KEMENANGAN</span><strong>${summary.wins}</strong></div>
-      <div class="moba-stat"><span>WIN RATE</span><strong>${summary.winRate}%</strong></div>
-      <div class="moba-stat"><span>HERO DIMAINKAN</span><strong>${summary.heroesPlayed}/${summary.heroes}</strong></div>
-      <div class="moba-stat"><span>REKOR TERCEPAT</span><strong>${summary.bestTime ? formatPuzzleTime(summary.bestTime) : '—'}</strong></div>`;
-  }
-  if (!MOBA_HERO_BY_ID[mobaHeroId]) mobaHeroId = MOBA_HEROES[0].id;
-  if (!MOBA_MAP_BY_ID[mobaMapId]) mobaMapId = MOBA_MAPS[0].id;
-  if (!MOBA_LANES.includes(mobaLane)) mobaLane = 'mid';
-  if (!MOBA_DIFFICULTIES.some((entry) => entry.id === mobaDifficulty)) mobaDifficulty = 'knight';
-  const roles = $('moba-role-filter');
-  if (roles) {
-    roles.innerHTML = ['all', ...Object.keys(MOBA_ROLES)].map((role) => `<button class="${mobaRoleFilter === role ? 'active' : ''}" type="button" data-moba-role="${role}">${role === 'all' ? 'SEMUA' : MOBA_ROLES[role].name.toUpperCase()}</button>`).join('');
-  }
-  const roster = $('moba-roster');
-  if (roster) {
-    const filtered = MOBA_HEROES.filter((hero) => mobaRoleFilter === 'all' || hero.role === mobaRoleFilter);
-    roster.innerHTML = filtered.map(mobaHeroCard).join('');
-  }
-  const count = $('moba-hero-count');
-  if (count) count.textContent = `${MOBA_HEROES.length} HERO · ${MOBA_ROLES[MOBA_HERO_BY_ID[mobaHeroId]?.role]?.name || 'SEMUA'}`;
-  const maps = $('moba-maps');
-  if (maps) {
-    maps.innerHTML = MOBA_MAPS.map((map) => `<button class="moba-map-card${map.id === mobaMapId ? ' active' : ''}" type="button" data-moba-map="${map.id}">
-      <strong>${esc(map.name)}</strong><em>${esc(map.subtitle)}</em><span>${esc(map.lore)}</span>
-      <span>${map.epics.length} BOS EPIK · ${map.camps.length} JUNGLE CAMP</span>
-    </button>`).join('');
-  }
-  const lanes = $('moba-lanes');
-  if (lanes) lanes.innerHTML = MOBA_LANES.map((lane) => `<button class="${lane === mobaLane ? 'active' : ''}" type="button" data-moba-lane="${lane}">${lane.toUpperCase()}</button>`).join('');
-  const difficulties = $('moba-difficulties');
-  if (difficulties) difficulties.innerHTML = MOBA_DIFFICULTIES.map((entry) => `<button class="${entry.id === mobaDifficulty ? 'active' : ''}" type="button" data-moba-difficulty="${entry.id}" title="${esc(entry.desc)}">${entry.name.toUpperCase()}</button>`).join('');
-  const codex = $('moba-codex');
-  if (codex) {
-    const map = MOBA_MAP_BY_ID[mobaMapId];
-    codex.innerHTML = `
-      <article><h4>MINION &amp; MENARA</h4><p>${MOBA_MINION_TYPES.length} tipe minion · ${map.towers.filter((tower) => tower.tier !== 'guard').length} menara lane + ${map.towers.filter((tower) => tower.tier === 'guard').length} penjaga nexus. Gelombang berjalan di tiga jalur.</p></article>
-      <article><h4>JUNGLE &amp; BOS</h4><p>${MOBA_JUNGLE_MOBS.length} mob jungle · ${MOBA_EPIC_BOSSES.length} bos epik. Bunuh bos untuk memberi seluruh tim buff damage.</p></article>
-      <article><h4>${esc(map.name)}</h4><p>${map.epics.map((pit) => esc(MOBA_EPIC_BY_ID[pit.boss]?.name || pit.boss)).join(' · ')}. ${esc(map.lore)}</p></article>`;
-  }
-  const button = $('btn-moba-start');
-  if (button) button.innerHTML = `<span>MULAI PERTEMPURAN</span><em>${esc(MOBA_HERO_BY_ID[mobaHeroId]?.name)} · ${esc(MOBA_MAP_BY_ID[mobaMapId]?.name)} · ${mobaLane.toUpperCase()}</em>`;
-}
 
-function startMobaBattle() {
-  if (!MOBA_HERO_BY_ID[mobaHeroId]) mobaHeroId = MOBA_HEROES[0].id;
-  if (!MOBA_MAP_BY_ID[mobaMapId]) mobaMapId = MOBA_MAPS[0].id;
-  mobaMatch = createMobaMatch({
-    heroId: mobaHeroId,
-    mapId: mobaMapId,
-    lane: mobaLane,
-    difficulty: mobaDifficulty,
-    seed: (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0,
-  });
-  mobaActive = true;
-  mobaPaused = false;
-  mobaResult = null;
-  mobaRecorded = false;
-  mobaUiTimer = 0;
-  mobaAim = { x: mobaMatch.player.x, y: mobaMatch.player.y };
-  mobaInput.moveX = 0;
-  mobaInput.moveY = 0;
-  mobaInput.moveTarget = null;
-  mobaInput.castSlot = -1;
-  mobaInput.recall = false;
-  mobaHeld.clear();
-  started = false;
-  paused = false;
-  shopOpen = false;
-  mapOpen = false;
-  codexOpen = false;
-  inventoryOpen = false;
-  settingsOpen = false;
-  menuView = 'mobaBattle';
-  accumulator = 0;
-  lastTime = performance.now();
-  $('moba-result')?.classList.add('hidden');
-  $('moba-pause')?.classList.add('hidden');
-  updateMobaHud(true);
-  syncScreens();
-}
 
-function syncMobaAxes() {
-  const left = mobaHeld.has('ArrowLeft') || mobaHeld.has('KeyA');
-  const right = mobaHeld.has('ArrowRight') || mobaHeld.has('KeyD');
-  const up = mobaHeld.has('ArrowUp');
-  const down = mobaHeld.has('ArrowDown');
-  mobaInput.moveX = (right ? 1 : 0) - (left ? 1 : 0);
-  mobaInput.moveY = (down ? 1 : 0) - (up ? 1 : 0);
-  if (mobaInput.moveX || mobaInput.moveY) mobaInput.moveTarget = null;
-}
 
-function toggleMobaPause(next = !mobaPaused) {
-  if (!mobaActive || !mobaMatch) return;
-  mobaPaused = !!next;
-  mobaHeld.clear();
-  mobaInput.moveX = 0;
-  mobaInput.moveY = 0;
-  lastTime = performance.now();
-  syncScreens();
-  updateMobaHud(true);
-}
 
-function leaveMoba() {
-  mobaActive = false;
-  mobaPaused = false;
-  mobaMatch = null;
-  mobaResult = null;
-  mobaRecorded = false;
-  mobaHeld.clear();
-  showMoba();
-}
 
-function completeMobaMatch() {
-  if (!mobaMatch || mobaMatch.phase !== 'ended' || mobaRecorded) return;
-  mobaRecorded = true;
-  const win = mobaMatch.winner === 'blue';
-  const p = mobaMatch.player;
-  const saved = recordMobaMatch(mobaState(), {
-    win,
-    heroId: mobaMatch.heroId,
-    mapId: mobaMatch.mapId,
-    lane: mobaMatch.playerLane,
-    duration: mobaMatch.time,
-    kills: p?.kills || 0,
-    deaths: p?.deaths || 0,
-    assists: p?.assists || 0,
-  });
-  progress.moba = saved.progress;
-  saveProgress();
-  mobaResult = {
-    ...saved,
-    win,
-    mapName: mobaMatch.map.name,
-    heroName: p?.name || 'Penjaga',
-    snapshot: mobaSnapshot(mobaMatch),
-    heroes: mobaHeroStats(mobaMatch),
-    score: { blue: mobaMatch.teams.blue.kills, red: mobaMatch.teams.red.kills },
-  };
-  renderMobaResult();
-  updateMobaHud(true);
-}
 
-function renderMobaResult() {
-  const overlay = $('moba-result');
-  if (!overlay || !mobaResult) return;
-  const r = mobaResult;
-  const blue = r.heroes.filter((hero) => hero.team === 'blue').sort((a, b) => b.kills - a.kills);
-  const red = r.heroes.filter((hero) => hero.team === 'red').sort((a, b) => b.kills - a.kills);
-  overlay.innerHTML = `<div class="moba-modal-card moba-result-card ${r.win ? 'victory' : 'defeat'}">
-    <p class="eyebrow">RIFTWAR · ${esc(r.mapName)} · ${formatPuzzleTime(r.snapshot.time)}</p>
-    <h3 class="moba-result-title">${r.win ? 'NEXUS MUSUH JATUH' : 'NEXUS KITA TERBELAH'}</h3>
-    <p>${r.win ? `${esc(r.heroName)} memimpin Penjaga Sumpah menutup celah.` : `${esc(r.heroName)} bertahan sampai nexus terakhir, tetapi pasukan Rift menang.`}</p>
-    <div class="moba-result-stats">
-      <div><span>KILL</span><b>${r.snapshot.player?.kills || 0}</b></div>
-      <div><span>DEATH</span><b>${r.snapshot.player?.deaths || 0}</b></div>
-      <div><span>ASSIST</span><b>${r.snapshot.player?.assists || 0}</b></div>
-      <div><span>SKOR</span><b>${r.score.blue} : ${r.score.red}</b></div>
-    </div>
-    <div class="moba-team-table">${blue.map((hero) => `<div><b>${esc(hero.name)}</b><span>${hero.kills}/${hero.deaths}/${hero.assists}</span><span>L${hero.level}</span></div>`).join('')}</div>
-    <div class="moba-team-table">${red.map((hero) => `<div><b>${esc(hero.name)}</b><span>${hero.kills}/${hero.deaths}/${hero.assists}</span><span>L${hero.level}</span></div>`).join('')}</div>
-    <div class="moba-result-actions">
-      <button class="btn btn-primary" type="button" data-moba-action="rematch">COBA LAGI</button>
-      <button class="btn btn-ghost" type="button" data-moba-action="leave">KEMBALI KE HUB</button>
-    </div>
-  </div>`;
-  overlay.classList.remove('hidden');
-}
 
-function updateMobaHud(force = false) {
-  if (!mobaMatch) return;
-  if (mobaMatch.phase === 'ended' && !mobaRecorded) completeMobaMatch();
-  if (!force && mobaUiTimer < 1 / 15) return;
-  mobaUiTimer = 0;
-  const p = mobaMatch.player;
-  const setText = (id, value) => { const node = $(id); if (node) node.textContent = value; };
-  setText('moba-map-name', mobaMatch.map.name.toUpperCase());
-  setText('moba-clock', formatPuzzleTime(mobaMatch.time));
-  setText('moba-wave', `GELOMBANG ${mobaMatch.wave}`);
-  setText('moba-blue-score', mobaMatch.teams.blue.kills);
-  setText('moba-red-score', mobaMatch.teams.red.kills);
-  if (p) {
-    setText('moba-player-name', p.name);
-    setText('moba-player-glyph', p.glyph);
-    setText('moba-player-role', MOBA_ROLES[p.role]?.name || p.role);
-    setText('moba-player-level', `L${p.level}`);
-    setText('moba-player-gold', `◈ ${p.gold}`);
-    setText('moba-player-hp-text', `${Math.ceil(p.hp)} / ${p.maxHp}`);
-    setText('moba-player-mana-text', `${Math.ceil(p.mana)} / ${p.maxMana}`);
-    setText('moba-player-kda', `${p.kills} / ${p.deaths} / ${p.assists}`);
-    const hp = $('moba-player-hp'); if (hp) hp.style.width = `${Math.max(0, p.hp / p.maxHp) * 100}%`;
-    const mana = $('moba-player-mana'); if (mana) mana.style.width = `${Math.max(0, p.mana / p.maxMana) * 100}%`;
-    const respawn = $('moba-respawn');
-    if (respawn) {
-      respawn.classList.toggle('hidden', !p.dead);
-      respawn.textContent = p.dead ? `RESPAWN ${Math.max(0, p.respawnTimer || 0).toFixed(1)}` : '';
-    }
-    const abilities = $('moba-abilities');
-    if (abilities) {
-      abilities.innerHTML = p.abilities.map((ability, index) => `<button class="moba-ability${p.cooldowns[index] > 0 ? ' cooling' : ''}" type="button" data-moba-cast="${index}">
-        <span class="ma-key">${ability.slot}</span><span class="ma-name">${esc(ability.name)}</span><span class="ma-cost">${ability.mana} MP</span><span class="ma-cd">${p.cooldowns[index] > 0 ? `${p.cooldowns[index].toFixed(1)}s` : 'SIAP'}</span>
-      </button>`).join('');
-    }
-  }
-  const teamHtml = (team) => mobaHeroStats(mobaMatch).filter((hero) => hero.team === team).map((hero) => `<div class="mt-row${hero.dead ? ' dead' : ''}"><b>${esc(hero.name)}</b><i>L${hero.level}</i><span>${hero.kills}/${hero.deaths}</span></div>`).join('');
-  const blue = $('moba-team-blue'); if (blue) blue.innerHTML = teamHtml('blue');
-  const red = $('moba-team-red'); if (red) red.innerHTML = teamHtml('red');
-  const feed = $('moba-feed');
-  if (feed) {
-    const events = mobaMatch.texts.slice(-4).reverse();
-    feed.innerHTML = events.map((event) => `<span style="color:${event.color}">${esc(event.text)}</span>`).join('');
-  }
-  const pause = $('moba-pause');
-  if (pause) pause.classList.toggle('hidden', !mobaPaused);
-}
 
-function mobaPointerWorld(event) {
-  const canvas = $('moba-canvas');
-  if (!canvas || !mobaMatch) return null;
-  const rect = canvas.getBoundingClientRect();
-  const x = ((event.clientX - rect.left) / Math.max(1, rect.width)) * canvas.width;
-  const y = ((event.clientY - rect.top) / Math.max(1, rect.height)) * canvas.height;
-  return mobaScreenToWorld(mobaMatch, x, y, canvas.width, canvas.height);
-}
 
-// ── Wave Defense: hub, castle battlefield and result handling ──────
-function waveDefenseState() {
-  if (!progress.wavedefense) progress.wavedefense = defaultWaveDefenseProgress();
-  return progress.wavedefense;
-}
 
-function showWaveDefense() {
-  cancelPrologue();
-  started = false;
-  paused = false;
-  shopOpen = false;
-  mapOpen = false;
-  codexOpen = false;
-  inventoryOpen = false;
-  settingsOpen = false;
-  closeDialogue(true);
-  spectating = false;
-  spectateGame = null;
-  wdActive = false;
-  wdPaused = false;
-  wdMatch = null;
-  wdResult = null;
-  wdRecorded = false;
-  wdRenderDirty = true;
-  menuView = 'wavedefense';
-  clearHeldKeys();
-  buildWaveDefenseScreen();
-  syncScreens();
-}
 
-function buildWaveDefenseScreen() {
-  const state = waveDefenseState();
-  const summary = waveDefenseSummary(state);
-  const summaryEl = $('wd-summary');
-  if (summaryEl) {
-    summaryEl.innerHTML = `
-      <div class="wd-stat"><span>PERTAHANAN</span><strong>${summary.runs}</strong><em>${summary.wins} menang · ${summary.losses} kalah</em></div>
-      <div class="wd-stat"><span>WIN RATE</span><strong>${summary.winRate}%</strong><em>${summary.mapsPlayed}/${summary.mapsTotal} benteng</em></div>
-      <div class="wd-stat"><span>GELOMBANG</span><strong>${summary.bestWave}/${WAVE_DEFENSE_TOTAL_WAVES}</strong><em>rekor tertinggi</em></div>
-      <div class="wd-stat"><span>SKOR</span><strong>${summary.bestScore}</strong><em>rekor benteng</em></div>
-      <div class="wd-stat"><span>TOTAL KILL</span><strong>${summary.totalKills}</strong><em>${summary.totalLeaks} bocor</em></div>
-      <div class="wd-stat"><span>MENARA</span><strong>${summary.towers}</strong><em>${summary.enemies} musuh · ${summary.bosses} bos</em></div>`;
-  }
-  if (!WAVE_DEFENSE_MAP_BY_ID[wdMapId]) wdMapId = WAVE_DEFENSE_MAPS[0].id;
-  if (!WAVE_DEFENSE_DIFFICULTIES.some((entry) => entry.id === wdDifficulty)) wdDifficulty = 'knight';
-  if (!WAVE_DEFENSE_TOWER_BY_ID[wdSelectedTowerId]) wdSelectedTowerId = WAVE_DEFENSE_TOWERS[0].id;
-  const maps = $('wd-maps');
-  if (maps) {
-    maps.innerHTML = WAVE_DEFENSE_MAPS.map((map) => {
-      const record = state.maps?.[map.id] || {};
-      return `<button class="wd-map-card${map.id === wdMapId ? ' active' : ''}" type="button" data-wd-map="${map.id}">
-        <strong>${esc(map.name)}</strong><em>${esc(map.subtitle)}</em><span>${esc(map.lore)}</span>
-        <b>${map.slots.length} POS · REKOR GEL ${record.bestWave || 0} · SKOR ${record.bestScore || 0}</b>
-      </button>`;
-    }).join('');
-  }
-  const diffs = $('wd-difficulties');
-  if (diffs) diffs.innerHTML = WAVE_DEFENSE_DIFFICULTIES.map((entry) => `<button class="${entry.id === wdDifficulty ? 'active' : ''}" type="button" data-wd-difficulty="${entry.id}" title="${esc(entry.desc)}">${entry.name} · ${entry.castle} HP</button>`).join('');
-  const modes = $('wd-modes');
-  if (modes) {
-    const best = summary.endlessBest || {};
-    modes.innerHTML = `
-      <button class="${wdEndless ? '' : 'active'}" type="button" data-wd-mode="classic">KAMPANYE · 24 GELOMBANG<em>Rekor gel ${summary.bestWave}/${WAVE_DEFENSE_TOTAL_WAVES} · skor ${summary.bestScore}</em></button>
-      <button class="${wdEndless ? 'active' : ''}" type="button" data-wd-mode="endless">TANPA AKHIR<em>Rekor gel ${best.bestWave || 0} · ${best.bestKills || 0} kill · skor ${best.bestScore || 0}</em></button>`;
-  }
-  const towers = $('wd-towers');
-  if (towers) {
-    towers.innerHTML = WAVE_DEFENSE_TOWERS.map((tower) => `<button class="wd-tower-card${tower.id === wdSelectedTowerId ? ' active' : ''}" type="button" data-wd-tower="${tower.id}" style="--tower-color:${tower.color}">
-      <span class="wt-top"><span class="wt-glyph">${tower.glyph}</span><strong>${esc(tower.name)}</strong></span>
-      <em>${tower.cost} EMAS</em>
-      <span>${esc(tower.desc)}</span>
-      <span class="wt-stats">DMG ${tower.damage} · RANGE ${tower.range} · ${tower.rate.toFixed(2)}/s${tower.splash ? ` · AREA ${tower.splash}` : ''}</span>
-    </button>`).join('');
-  }
-  const count = $('wd-tower-count');
-  if (count) count.textContent = `${WAVE_DEFENSE_TOWERS.length} JENIS · ${WAVE_DEFENSE_ENEMY_TYPES.length} MUSUH · ${WAVE_DEFENSE_BOSSES.length} BOS`;
-  const button = $('btn-wd-start');
-  if (button) button.innerHTML = `<span>${wdEndless ? 'MULAI TANPA AKHIR' : 'MULAI PERTAHANAN'}</span><em>${esc(WAVE_DEFENSE_MAP_BY_ID[wdMapId]?.name || 'ASHEN KEEP')} · ${WAVE_DEFENSE_TOWER_BY_ID[wdSelectedTowerId]?.name || 'BALLISTA'} · ${WAVE_DEFENSE_DIFFICULTIES.find((entry) => entry.id === wdDifficulty)?.name || 'KNIGHT'}${wdEndless ? ' · ∞' : ''}</em>`;
-}
 
-function buildWaveDefensePalette() {
-  const palette = $('wd-palette');
-  if (!palette) return;
-  palette.innerHTML = WAVE_DEFENSE_TOWERS.map((tower) => `<button type="button" data-wd-tower="${tower.id}" style="--tower-color:${tower.color}">
-    <span class="wp-glyph">${tower.glyph}</span><span class="wp-name">${esc(tower.name)}</span><span class="wp-cost">${tower.cost}</span>
-  </button>`).join('');
-  wdSelectionKey = '';
-  wdFeedKey = '';
-}
 
-function startWaveDefenseBattle() {
-  if (!WAVE_DEFENSE_MAP_BY_ID[wdMapId]) wdMapId = WAVE_DEFENSE_MAPS[0].id;
-  if (!WAVE_DEFENSE_TOWER_BY_ID[wdSelectedTowerId]) wdSelectedTowerId = WAVE_DEFENSE_TOWERS[0].id;
-  wdMatch = createWaveDefense({
-    mapId: wdMapId,
-    difficulty: wdDifficulty,
-    endless: wdEndless,
-    seed: (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0,
-  });
-  waveDefenseSelectTower(wdMatch, wdSelectedTowerId);
-  wdActive = true;
-  wdPaused = false;
-  wdResult = null;
-  wdRecorded = false;
-  wdUiTimer = 0;
-  wdRenderDirty = true;
-  started = false;
-  paused = false;
-  shopOpen = false;
-  mapOpen = false;
-  codexOpen = false;
-  inventoryOpen = false;
-  settingsOpen = false;
-  menuView = 'wavedefenseBattle';
-  accumulator = 0;
-  lastTime = performance.now();
-  $('wd-result')?.classList.add('hidden');
-  $('wd-pause')?.classList.add('hidden');
-  buildWaveDefensePalette();
-  updateWaveDefenseHud(true);
-  syncScreens();
-  const canvas = $('wd-canvas');
-  const ctx = canvas?.getContext('2d');
-  if (canvas && ctx) renderWaveDefense(ctx, wdMatch, { width: canvas.width, height: canvas.height, time: performance.now() / 1000 });
-}
 
-function toggleWaveDefensePause(next = !wdPaused) {
-  if (!wdActive || !wdMatch) return;
-  wdPaused = !!next;
-  lastTime = performance.now();
-  wdRenderDirty = true;
-  syncScreens();
-  updateWaveDefenseHud(true);
-}
 
-function leaveWaveDefense() {
-  wdActive = false;
-  wdPaused = false;
-  wdMatch = null;
-  wdResult = null;
-  wdRecorded = false;
-  wdRenderDirty = true;
-  showWaveDefense();
-}
 
-function completeWaveDefense() {
-  if (!wdMatch || wdMatch.phase !== 'ended' || wdRecorded) return;
-  wdRecorded = true;
-  const saved = recordWaveDefense(waveDefenseState(), wdMatch);
-  progress.wavedefense = saved.progress;
-  saveProgress();
-  wdResult = {
-    ...saved,
-    mapName: wdMatch.map.name,
-    difficultyName: WAVE_DEFENSE_DIFFICULTIES.find((entry) => entry.id === wdMatch.difficulty)?.name || 'KNIGHT',
-    snapshot: waveDefenseSnapshot(wdMatch),
-  };
-  renderWaveDefenseResult();
-  updateWaveDefenseHud(true);
-}
 
-function renderWaveDefenseResult() {
-  const overlay = $('wd-result');
-  if (!overlay || !wdResult) return;
-  const r = wdResult;
-  const endless = !!r.endless || !!r.snapshot?.endless;
-  const win = r.win || r.snapshot?.result === 'victory';
-  const title = endless ? 'PASANG TANPA AKHIR' : win ? 'MAHKOTA BERTAHAN' : 'GERBANG TERBELAH';
-  const body = endless
-    ? `Benteng jatuh pada gelombang ${r.snapshot?.wave || 0}. Rekor ${r.isRecord ? 'diperbarui' : 'tetap berdiri'}.`
-    : win ? 'Dua puluh empat gelombang hancur. Benteng terakhir masih berdiri.' : `Benteng jatuh pada gelombang ${r.snapshot?.wave || 0}. Bangun lebih awal dan tutup jalur dengan area damage.`;
-  overlay.innerHTML = `<div class="wd-modal wd-result-card ${endless || win ? 'victory' : 'defeat'}">
-    <p class="eyebrow">WAVE DEFENSE · ${esc(endless ? 'TANPA AKHIR' : r.mapName)} · ${formatPuzzleTime(r.snapshot?.time || 0)}</p>
-    <h3 class="wd-result-title">${title}</h3>
-    <p>${body}</p>
-    <div class="wd-result-stats">
-      <div><span>GELOMBANG</span><b>${r.snapshot?.wave || 0}${endless ? '' : `/${WAVE_DEFENSE_TOTAL_WAVES}`}</b></div>
-      <div><span>KILL</span><b>${r.snapshot?.stats?.kills || 0}</b></div>
-      <div><span>BOCOR</span><b>${r.snapshot?.stats?.leaks || 0}</b></div>
-      <div><span>SKOR</span><b>${r.snapshot?.score || 0}</b></div>
-    </div>
-    <div class="wd-result-actions">
-      <button class="btn btn-primary" type="button" data-wd-action="rematch">COBA LAGI</button>
-      <button class="btn btn-ghost" type="button" data-wd-action="leave">KEMBALI KE HUB</button>
-    </div>
-  </div>`;
-  overlay.classList.remove('hidden');
-}
 
-function waveDefenseSelectionKey() {
-  if (!wdMatch) return '';
-  const tower = wdMatch.selectedSlot >= 0 ? wdMatch.towers.find((entry) => entry.slot === wdMatch.selectedSlot) : null;
-  return tower ? `${tower.id}:${tower.level}:${wdMatch.gold >= waveDefenseUpgradeCost(tower)}` : `slot:${wdMatch.selectedSlot}:${wdMatch.gold}`;
-}
 
-function updateWaveDefenseHud(force = false) {
-  if (!wdMatch) return;
-  if (wdMatch.phase === 'ended' && !wdRecorded) completeWaveDefense();
-  if (!force && wdUiTimer < 1 / 8) return;
-  wdUiTimer = 0;
-  const m = wdMatch;
-  const setText = (id, value) => { const node = $(id); if (node) node.textContent = value; };
-  const hpRatio = Math.max(0, m.castle.hp / m.castle.maxHp);
-  setText('wd-castle-text', `${Math.ceil(m.castle.hp)} / ${m.castle.maxHp}`);
-  const fill = $('wd-castle-fill');
-  if (fill) fill.style.width = `${hpRatio * 100}%`;
-  const bar = $('wd-castle-bar');
-  if (bar) bar.classList.toggle('low', hpRatio <= 0.3);
-  setText('wd-map-name', m.endless ? `${m.map.name} · TANPA AKHIR` : m.map.name);
-  setText('wd-wave', m.phase === 'prep' ? 'SIAP' : `GELOMBANG ${m.wave}`);
-  setText('wd-phase', m.phase === 'prep'
-    ? `GELOMBANG ${m.wave + 1}${m.endless ? ' · TANPA AKHIR' : ` / ${m.totalWaves}`} DALAM ${Math.max(0, m.prepTimer).toFixed(1)}`
-    : m.phase === 'wave' ? `${m.enemies.length} MUSUH · ${m.stats.kills} KILL` : 'PERTAHANAN SELESAI');
-  setText('wd-gold', m.gold);
-  setText('wd-score', m.score);
-  setText('wd-kills', m.stats.kills);
 
-  const next = $('btn-wd-next');
-  if (next) {
-    next.disabled = m.phase !== 'prep';
-    next.textContent = m.phase === 'prep' ? `KIRIM GELOMBANG ${Math.min(m.totalWaves, m.wave + 1)}` : m.phase === 'wave' ? `GELOMBANG ${m.wave} BERJALAN` : 'PERTAHANAN SELESAI';
-  }
-  document.querySelectorAll('#wd-speed [data-wd-speed]').forEach((button) => button.classList.toggle('active', Number(button.dataset.wdSpeed) === m.speed));
-  document.querySelectorAll('#wd-palette [data-wd-tower]').forEach((button) => {
-    const def = WAVE_DEFENSE_TOWER_BY_ID[button.dataset.wdTower];
-    button.classList.toggle('active', button.dataset.wdTower === m.buildTowerId);
-    button.classList.toggle('disabled', !def || m.gold < def.cost);
-  });
 
-  const boss = m.enemies.find((enemy) => enemy.boss);
-  const bossPanel = $('wd-boss-panel');
-  if (bossPanel) {
-    bossPanel.classList.toggle('hidden', !boss);
-    if (boss) {
-      setText('wd-boss-name', `${boss.name} · ${Math.ceil(boss.hp)} / ${boss.maxHp}`);
-      const bossFill = $('wd-boss-fill');
-      if (bossFill) bossFill.style.width = `${Math.max(0, boss.hp / boss.maxHp) * 100}%`;
-    }
-  }
 
-  const selection = $('wd-selection');
-  const key = waveDefenseSelectionKey();
-  if (selection && key !== wdSelectionKey) {
-    wdSelectionKey = key;
-    const tower = m.selectedSlot >= 0 ? m.towers.find((entry) => entry.slot === m.selectedSlot) : null;
-    if (tower) {
-      const def = WAVE_DEFENSE_TOWER_BY_ID[tower.towerId];
-      const cost = waveDefenseUpgradeCost(tower);
-      const maxed = tower.level >= 3;
-      selection.innerHTML = `<div class="ws-line"><strong>${esc(def.name)} · POS ${tower.slot + 1}</strong><span>LEVEL ${tower.level}/3</span><em>${def.cost} emas</em></div>
-        <p>${esc(def.desc)}</p>
-        <div class="wd-selection-actions">
-          <button type="button" data-wd-action="upgrade" ${maxed || m.gold < cost ? 'disabled' : ''}>${maxed ? 'LEVEL MAKSIMUM' : `TINGKATKAN · ${cost} EMAS`}</button>
-          <button type="button" data-wd-action="sell">JUAL +${waveDefenseSellValue(tower)}</button>
-        </div>`;
-    } else {
-      const def = WAVE_DEFENSE_TOWER_BY_ID[m.buildTowerId];
-      selection.innerHTML = `<div class="ws-line"><strong>POS ${m.selectedSlot >= 0 ? m.selectedSlot + 1 : '—'}</strong><span>${def?.name || 'PILIH MENARA'}</span><em>${def?.cost || 0} emas</em></div>
-        <p>Klik pos kosong untuk membangun. Pilih menara di panel kiri, lalu klik pos di sepanjang jalan.</p>
-        <div class="wd-selection-actions"><button type="button" data-wd-action="hint" disabled>MENUNGGU POS</button></div>`;
-    }
-  }
 
-  const feedKey = m.texts.map((entry) => entry.text).join('|');
-  if (feedKey !== wdFeedKey) {
-    wdFeedKey = feedKey;
-    const feed = $('wd-feed');
-    if (feed) feed.innerHTML = m.texts.slice(-5).reverse().map((entry) => `<span style="color:${entry.color}">${esc(entry.text)}</span>`).join('');
-  }
-  const pause = $('wd-pause');
-  if (pause) pause.classList.toggle('hidden', !wdPaused);
-}
 
-function waveDefensePointerWorld(event) {
-  const canvas = $('wd-canvas');
-  if (!canvas) return null;
-  const rect = canvas.getBoundingClientRect();
-  return {
-    x: ((event.clientX - rect.left) / Math.max(1, rect.width)) * canvas.width,
-    y: ((event.clientY - rect.top) / Math.max(1, rect.height)) * canvas.height,
-  };
-}
 
-function waveDefenseSlotAt(x, y) {
-  if (!wdMatch) return -1;
-  let best = -1;
-  let bestDist = 27;
-  for (const slot of wdMatch.slots) {
-    const dist = Math.hypot(slot.x - x, slot.y - y);
-    if (dist < bestDist) { bestDist = dist; best = slot.index; }
-  }
-  return best;
-}
 
-function handleWaveDefenseSlot(index) {
-  if (!wdMatch || wdMatch.phase === 'ended' || index < 0) return;
-  const slot = wdMatch.slots[index];
-  if (!slot) return;
-  if (slot.towerId === null) {
-    const def = WAVE_DEFENSE_TOWER_BY_ID[wdMatch.buildTowerId];
-    if (def && wdMatch.gold >= def.cost) waveDefenseBuild(wdMatch, index, wdMatch.buildTowerId);
-    else waveDefenseSelect(wdMatch, index);
-  } else {
-    waveDefenseSelect(wdMatch, index);
-  }
-  wdRenderDirty = true;
-  updateWaveDefenseHud(true);
-}
 
-// ── Pirate Tide: open-world hub, voyage and result handling ─────────
-function pirateState() {
-  if (!progress.pirates) progress.pirates = defaultPirateProgress();
-  return progress.pirates;
-}
 
-function showPirates() {
-  cancelPrologue();
-  started = false;
-  paused = false;
-  shopOpen = false;
-  mapOpen = false;
-  codexOpen = false;
-  inventoryOpen = false;
-  settingsOpen = false;
-  closeDialogue(true);
-  spectating = false;
-  spectateGame = null;
-  pirateActive = false;
-  piratePaused = false;
-  pirateMatch = null;
-  pirateResult = null;
-  pirateRecorded = false;
-  pirateLastSnapshot = null;
-  pirateHeld.clear();
-  menuView = 'pirates';
-  if (!pirateStageUnlocked(pirateState(), pirateStageId)) pirateStageId = PIRATE_STAGES[0].id;
-  buildPirateScreen();
-  syncScreens();
-}
 
-function buildPirateScreen() {
-  const state = pirateState();
-  const summary = pirateSummary(state);
-  const summaryEl = $('pirate-summary');
-  if (summaryEl) {
-    summaryEl.innerHTML = `
-      <div class="pirate-stat"><span>PELAYARAN</span><strong>${summary.voyages}</strong><em>${summary.wins} menang · ${summary.losses} kalah</em></div>
-      <div class="pirate-stat"><span>KAPTEN</span><strong>${summary.cleared}/${summary.total}</strong><em>rute selesai</em></div>
-      <div class="pirate-stat"><span>AKURASI MERIAM</span><strong>${summary.accuracy}%</strong><em>${summary.totalHits}/${summary.totalShots} tembakan</em></div>
-      <div class="pirate-stat"><span>KAPAL TENGGELAM</span><strong>${summary.totalKills}</strong><em>${summary.totalGold} emas dirampas</em></div>
-      <div class="pirate-stat"><span>SKOR TERBAIK</span><strong>${summary.bestScore}</strong><em>laut terbuka</em></div>
-      <div class="pirate-stat"><span>DUNIA</span><strong>${summary.islands}</strong><em>${summary.ports} pelabuhan · ${summary.bosses} kapten</em></div>`;
-  }
-  const stages = $('pirate-stages');
-  if (stages) {
-    stages.innerHTML = PIRATE_STAGES.map((stage) => {
-      const unlocked = pirateStageUnlocked(state, stage.id);
-      const record = state.stages?.[stage.id] || {};
-      return `<button class="pirate-stage-card${stage.id === pirateStageId ? ' active' : ''}${unlocked ? '' : ' locked'}" type="button" data-pirate-stage="${stage.id}" ${unlocked ? '' : 'disabled'}>
-        <span class="ps-index">${String(stage.index + 1).padStart(2, '0')}</span>
-        <strong>${esc(stage.name)}</strong>
-        <em>${esc(stage.subtitle)}</em>
-        <span>${esc(stage.desc)}</span>
-        <b>${unlocked ? `${record.cleared ? 'SELESAI' : `${stage.targetKills} KAPAL + KAPTEN`}${record.bestTime ? ` · ${formatPuzzleTime(record.bestTime)}` : ''}` : 'TERKUNCI · SELESAIKAN RUTE SEBELUMNYA'}</b>
-      </button>`;
-    }).join('');
-  }
-  const world = $('pirate-world');
-  if (world) {
-    world.innerHTML = PIRATE_ISLANDS.map((island) => `<div class="pirate-island${island.port ? ' port' : ''}">
-      <strong>${esc(island.name)}</strong><span>${island.port ? 'PELABUHAN · REPARASI' : 'PERAIRAN TERBUKA'}</span>
-    </div>`).join('');
-  }
-  const endlessEl = $('pirate-endless');
-  if (endlessEl) {
-    const best = summary.endless || {};
-    endlessEl.innerHTML = `<div class="pirate-endless-card">
-      <div class="pe-copy">
-        <strong>PASANG TAK BERUJUNG</strong>
-        <span>Tanpa kapten terakhir. Setiap pasang menambah armada, memperkuat lambungmu, dan mendatangkan kapten baru tiap tiga pasang. Berlabuh tetap bisa menyelamatkan lambung.</span>
-        <em>REKOR: PASANG ${best.bestSurge || 0} · ${best.bestKills || 0} KAPAL · SKOR ${best.bestScore || 0}</em>
-      </div>
-      <button id="btn-pirate-endless" class="btn btn-ghost" type="button" data-pirate-endless="start">MULAI PASANG TAK BERUJUNG</button>
-    </div>`;
-  }
-  const count = $('pirate-count');
-  if (count) count.textContent = `${PIRATE_SHIP_TYPES.length} JENIS KAPAL · ${PIRATE_BOSS_TYPES.length} KAPTEN · ${PIRATE_PORTS.length} PELABUHAN`;
-  const button = $('btn-pirate-start');
-  if (button) {
-    const stage = PIRATE_STAGE_BY_ID[pirateStageId] || PIRATE_STAGES[0];
-    button.innerHTML = `<span>TAK LAYAR</span><em>${esc(stage.name)} · ${stage.targetKills} kapal · ${esc(PIRATE_BOSS_TYPES.find((boss) => boss.id === stage.bossId)?.name || 'KAPTEN')}</em>`;
-  }
-  const controls = $('pirate-controls');
-  if (controls) controls.classList.add('hidden');
-}
 
-function syncPirateCanvasSize() {
-  const canvas = $('pirate-canvas');
-  if (!canvas) return null;
-  const rect = canvas.getBoundingClientRect();
-  if (rect.width < 2 || rect.height < 2) return canvas;
-  const dpr = Math.min(2, window.devicePixelRatio || 1);
-  let width = rect.width * dpr;
-  let height = rect.height * dpr;
-  const scale = Math.min(1, 1280 / width, 900 / height);
-  width = Math.max(320, Math.round(width * scale));
-  height = Math.max(240, Math.round(height * scale));
-  if (canvas.width !== width) canvas.width = width;
-  if (canvas.height !== height) canvas.height = height;
-  return canvas;
-}
 
-function beginPirateMatch(match) {
-  pirateMatch = match;
-  pirateActive = true;
-  piratePaused = false;
-  pirateResult = null;
-  pirateRecorded = false;
-  pirateLastSnapshot = null;
-  pirateUiTimer = 0;
-  pirateHeld.clear();
-  started = false;
-  paused = false;
-  shopOpen = false;
-  mapOpen = false;
-  codexOpen = false;
-  inventoryOpen = false;
-  settingsOpen = false;
-  menuView = 'piratesBattle';
-  accumulator = 0;
-  lastTime = performance.now();
-  $('pirate-result')?.classList.add('hidden');
-  $('pirate-pause')?.classList.add('hidden');
-  $('pirate-controls')?.classList.remove('hidden');
-  updatePirateHud(true);
-  syncScreens();
-  const canvas = syncPirateCanvasSize();
-  const ctx = canvas?.getContext('2d');
-  if (canvas && ctx) renderPirateVoyage(ctx, pirateMatch, { width: canvas.width, height: canvas.height, time: performance.now() / 1000 });
-  return true;
-}
 
-function startPirateVoyage() {
-  const stage = PIRATE_STAGE_BY_ID[pirateStageId] || PIRATE_STAGES[0];
-  if (!pirateStageUnlocked(pirateState(), stage.id)) return false;
-  return beginPirateMatch(createPirateVoyage({
-    stageId: stage.id,
-    seed: (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0,
-  }));
-}
 
-function startPirateEndless() {
-  return beginPirateMatch(createPirateEndless({
-    seed: (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0,
-  }));
-}
 
-function togglePiratePause(next = !piratePaused) {
-  if (!pirateActive || !pirateMatch || pirateMatch.phase !== 'sailing') return;
-  piratePaused = !!next;
-  pirateHeld.clear();
-  setPirateControls(pirateMatch, { throttle: 0, turn: 0 });
-  lastTime = performance.now();
-  syncScreens();
-  updatePirateHud(true);
-}
 
-function leavePirates() {
-  pirateActive = false;
-  piratePaused = false;
-  pirateMatch = null;
-  pirateResult = null;
-  pirateRecorded = false;
-  pirateLastSnapshot = null;
-  pirateHeld.clear();
-  showPirates();
-}
 
-function completePirateVoyage() {
-  if (!pirateMatch || pirateRecorded) return;
-  if (pirateMatch.phase !== 'cleared' && pirateMatch.phase !== 'sunk') return;
-  pirateRecorded = true;
-  const saved = pirateMatch.endless
-    ? recordPirateEndless(pirateState(), pirateMatch)
-    : recordPirateVoyage(pirateState(), pirateMatch);
-  progress.pirates = saved.progress;
-  saveProgress();
-  pirateResult = {
-    ...saved,
-    snapshot: pirateSnapshot(pirateMatch),
-    endless: !!pirateMatch.endless,
-    bossName: PIRATE_BOSS_TYPES.find((boss) => boss.id === pirateMatch.stage.bossId)?.name || '',
-  };
-  buildPirateScreen();
-  renderPirateResult();
-  updatePirateHud(true);
-}
 
-function renderPirateResult() {
-  const overlay = $('pirate-result');
-  if (!overlay || !pirateResult) return;
-  const r = pirateResult;
-  const endless = !!r.endless;
-  const win = r.win;
-  const title = endless ? 'PASANG BERAKHIR' : win ? 'KAPTEN JATUH' : 'LAMBUNG TERBELAH';
-  const body = endless
-    ? `Kau bertahan sampai pasang ${r.surge || r.snapshot?.surge || 1} dan menenggelamkan ${r.kills || 0} kapal. ${r.isRecord ? 'Rekor baru tersimpan.' : 'Rekor lama masih berdiri.'}`
-    : win
-      ? `${esc(r.bossName)} tenggelam. Laut terbuka dan rute berikutnya menunggu.`
-      : `Kau tenggelam setelah ${r.snapshot?.kills || 0} kapal. Pelabuhan dapat memulihkan lambung, tetapi hanya jika masih ada emas.`;
-  overlay.innerHTML = `<div class="pirate-modal pirate-result-card ${endless || win ? 'victory' : 'defeat'}">
-    <p class="eyebrow">PIRATE TIDE · ${esc(endless ? 'PASANG TAK BERUJUNG' : r.stageName)} · ${formatPuzzleTime(r.time || r.snapshot?.time || 0)}</p>
-    <h3>${title}</h3>
-    <p>${body}</p>
-    <div class="pirate-result-stats">
-      ${endless ? `<div><span>PASANG</span><b>${r.surge || 0}</b></div>` : ''}
-      <div><span>KAPAL</span><b>${endless ? r.kills || 0 : `${r.snapshot?.kills || 0}/${r.snapshot?.targetKills || 0}`}</b></div>
-      <div><span>TEMBAKAN</span><b>${r.snapshot?.shotsFired || 0}</b></div>
-      <div><span>KAPTEN</span><b>${r.snapshot?.captains || 0}</b></div>
-      <div><span>SKOR</span><b>${r.score || 0}</b></div>
-    </div>
-    <div class="pirate-result-actions">
-      <button class="btn btn-primary" type="button" data-pirate-action="retry">LAYAR LAGI</button>
-      <button class="btn btn-ghost" type="button" data-pirate-action="leave">KEMBALI KE HUB</button>
-    </div>
-  </div>`;
-  overlay.classList.remove('hidden');
-}
 
-function updatePirateHud(force = false) {
-  if (!pirateMatch) return;
-  if ((pirateMatch.phase === 'cleared' || pirateMatch.phase === 'sunk') && !pirateRecorded) completePirateVoyage();
-  if (!force && pirateUiTimer < 1 / 8) return;
-  pirateUiTimer = 0;
-  const snapshot = pirateSnapshot(pirateMatch);
-  pirateLastSnapshot = snapshot;
-  const setText = (id, value) => { const node = $(id); if (node) node.textContent = value; };
-  const p = snapshot.player;
-  const hpPct = clamp(p.hp / p.maxHp, 0, 1) * 100;
-  setText('pirate-hull-text', `${Math.ceil(p.hp)} / ${p.maxHp}`);
-  const hull = $('pirate-hull-fill'); if (hull) hull.style.width = `${hpPct}%`;
-  setText('pirate-stage-name', snapshot.stageName);
-  setText('pirate-objective', snapshot.endless
-    ? `${snapshot.kills} KAPAL · PASANG ${snapshot.surge} · ${Math.ceil(snapshot.surgeTimer)}s`
-    : snapshot.bossSpawned
-      ? (snapshot.bossDefeated ? 'KAPTEN TENGGELAM' : `KAPTEN: ${snapshot.bossName}`)
-      : `${snapshot.kills}/${snapshot.targetKills} KAPAL · CARI KAPTEN`);
-  setText('pirate-gold', snapshot.gold);
-  setText('pirate-kills', snapshot.endless ? snapshot.kills : `${snapshot.kills}/${snapshot.targetKills}`);
-  setText('pirate-score', snapshot.score);
-  setText('pirate-speed', `${Math.round(Math.abs(pirateMatch.player.speed))} KN`);
-  setText('pirate-port-text', snapshot.nearPort?.inRange ? `BERLABUH · ${PIRATE_DOCK_COST} EMAS` : (snapshot.nearPort?.name || 'PELABUHAN'));
-  const portButton = $('btn-pirate-dock');
-  if (portButton) {
-    portButton.disabled = !snapshot.nearPort?.inRange || snapshot.gold < PIRATE_DOCK_COST || p.hp >= p.maxHp || snapshot.phase !== 'sailing';
-    portButton.classList.toggle('ready', snapshot.nearPort?.inRange && snapshot.gold >= PIRATE_DOCK_COST && p.hp < p.maxHp);
-  }
-  const portPanel = $('pirate-port');
-  if (portPanel) portPanel.classList.toggle('hidden', !snapshot.nearPort?.inRange);
-  const bossPanel = $('pirate-boss-panel');
-  if (bossPanel) bossPanel.classList.toggle('hidden', !snapshot.bossSpawned || snapshot.bossDefeated);
-  setText('pirate-boss-name', snapshot.bossName);
-  const bossFill = $('pirate-boss-fill');
-  if (bossFill) bossFill.style.width = `${snapshot.bossMaxHp ? clamp(snapshot.bossHp / snapshot.bossMaxHp, 0, 1) * 100 : 0}%`;
-  const portCd = $('pirate-port-cooldown');
-  if (portCd) portCd.textContent = snapshot.reloadPort > 0 ? `${snapshot.reloadPort.toFixed(1)}s` : 'SIAP';
-  const starboardCd = $('pirate-starboard-cooldown');
-  if (starboardCd) starboardCd.textContent = snapshot.reloadStarboard > 0 ? `${snapshot.reloadStarboard.toFixed(1)}s` : 'SIAP';
-  const portFire = $('btn-pirate-fire-port');
-  if (portFire) portFire.classList.toggle('cooling', snapshot.reloadPort > 0);
-  const starboardFire = $('btn-pirate-fire-starboard');
-  if (starboardFire) starboardFire.classList.toggle('cooling', snapshot.reloadStarboard > 0);
-  const feed = $('pirate-feed');
-  if (feed) {
-    feed.innerHTML = snapshot.messages.map((message) => `<span class="${message.tone}">${esc(message.text)}</span>`).join('');
-  }
-  const pause = $('pirate-pause');
-  if (pause) pause.classList.toggle('hidden', !piratePaused);
-}
 
-function piratePointerWorld(event) {
-  const canvas = $('pirate-canvas');
-  if (!canvas || !pirateMatch) return null;
-  const rect = canvas.getBoundingClientRect();
-  const x = ((event.clientX - rect.left) / Math.max(1, rect.width)) * canvas.width;
-  const y = ((event.clientY - rect.top) / Math.max(1, rect.height)) * canvas.height;
-  return pirateScreenToWorld(pirateMatch, x, y, canvas.width, canvas.height);
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 const pirateHeld = new Set();
-function setPirateControlKey(code, down) {
-  if (!pirateActive) return;
-  if (down) pirateHeld.add(code);
-  else pirateHeld.delete(code);
-  if (!pirateMatch) return;
-  const throttle = (pirateHeld.has('KeyW') || pirateHeld.has('ArrowUp') ? 1 : 0) - (pirateHeld.has('KeyS') || pirateHeld.has('ArrowDown') ? 1 : 0);
-  const turn = (pirateHeld.has('KeyD') || pirateHeld.has('ArrowRight') ? 1 : 0) - (pirateHeld.has('KeyA') || pirateHeld.has('ArrowLeft') ? 1 : 0);
-  setPirateControls(pirateMatch, { throttle, turn });
-}
 
-function firePirateSide(side) {
-  if (!pirateActive || piratePaused || !pirateMatch) return false;
-  const fired = pirateFire(pirateMatch, side);
-  if (fired) updatePirateHud(true);
-  return fired;
-}
 
-function dockPirate() {
-  if (!pirateActive || piratePaused || !pirateMatch) return;
-  const result = pirateDock(pirateMatch);
-  if (!result.ok) showToast(result.reason, 1800);
-  else showToast(`Lambung dipulihkan +${Math.round(result.healed)}.`, 1600);
-  updatePirateHud(true);
-}
 
-// ── Overdrive Hub ─────────────────────────────────────────────────
-function showOverdrive(tab = 'campaign301') {
-  cancelPrologue();
-  started = false;
-  paused = false;
-  shopOpen = false;
-  mapOpen = false;
-  codexOpen = false;
-  inventoryOpen = false;
-  settingsOpen = false;
-  closeDialogue(true);
-  spectating = false;
-  spectateGame = null;
-  menuView = 'overdrive';
-  overdriveTab = tab;
-  clearHeldKeys();
-  buildOverdriveScreen();
-  syncScreens();
-}
 
-function closeOverdrive() {
-  showMenu();
-}
+
+
+
+
+
 
 // ── The Sundered Atlas hub ─────────────────────────────────────────
 function showAtlas(tab = 'zones') {
@@ -10119,463 +8753,19 @@ function handleAtlasAction(action, el) {
   return false;
 }
 
-const OVERDRIVE_CHAPTERS = [
-  { number: 21, levelStart: 201, levelEnd: 210, name: 'The Drowned Capital', boss: 'The Sunken Emperor', color: '#4fc3f7', hazard: 'Rising floodwaters & whirlpools' },
-  { number: 22, levelStart: 211, levelEnd: 220, name: 'Crystalheart Depths', boss: 'The Prism Devourer', color: '#ce93d8', hazard: 'Prismatic light beams & crystal spikes' },
-  { number: 23, levelStart: 221, levelEnd: 230, name: 'The Infernal Foundry', boss: 'Forge Titan', color: '#ff7043', hazard: 'Molten iron pours & blast furnaces' },
-  { number: 24, levelStart: 231, levelEnd: 240, name: 'The Verdant Grave', boss: 'Mother of Thorns', color: '#81c784', hazard: 'Toxic spores & entangling roots' },
-  { number: 25, levelStart: 241, levelEnd: 250, name: 'The Astral Citadel', boss: 'The Starbound Regent', color: '#fff176', hazard: 'Gravity inversion & star shards' },
-  { number: 26, levelStart: 251, levelEnd: 260, name: 'The Frozen Dominion', boss: 'The Pale Frost Monarch', color: '#80deea', hazard: 'Blizzard walls & permafrost floors' },
-  { number: 27, levelStart: 261, levelEnd: 270, name: 'The Clockwork Expanse', boss: 'The Grand Horologist', color: '#ffcc02', hazard: 'Time-shifting gears & chrono mines' },
-  { number: 28, levelStart: 271, levelEnd: 280, name: 'The Shattered Void', boss: 'The Unmade', color: '#b388ff', hazard: 'Reality fractures & void rifts' },
-  { number: 29, levelStart: 281, levelEnd: 290, name: 'The Sunken Sands', boss: 'The Sandstorm Sovereign', color: '#ffca28', hazard: 'Quicksand pits & sandstorm blindness' },
-  { number: 30, levelStart: 291, levelEnd: 300, name: 'The Final Pantheon', boss: 'The First God', color: '#ef9a9a', hazard: 'Divine retribution beams & world-breaking quakes' },
-];
 
-const OVERDRIVE_SPELL_SCHOOLS = [
-  { name: 'Storm', icon: '⚡', color: '#90caf9', spells: ['Chain Lightning', 'Thunderclap', 'Storm Surge', 'Eye of the Storm'] },
-  { name: 'Void', icon: '🌑', color: '#b39ddb', spells: ['Singularity', 'Void Rift', 'Dark Pulse', 'Oblivion'] },
-  { name: 'Nature', icon: '🌿', color: '#a5d6a7', spells: ['Thornwall', 'Regrowth', 'Spore Burst', 'Nature\'s Wrath'] },
-  { name: 'Infernal', icon: '🔥', color: '#ff8a65', spells: ['Fireball', 'Inferno', 'Lava Geyser', 'Phoenix Strike'] },
-  { name: 'Frost', icon: '❄', color: '#80deea', spells: ['Frost Nova', 'Ice Lance', 'Blizzard', 'Absolute Zero'] },
-  { name: 'Celestial', icon: '⭐', color: '#fff59d', spells: ['Starfall', 'Divine Light', 'Comet Strike', 'Supernova'] },
-  { name: 'Blood', icon: '🩸', color: '#ef9a9a', spells: ['Bloodbolt', 'Crimson Drain', 'Hemorrhage', 'Blood Pact'] },
-  { name: 'Chronomancy', icon: '⏳', color: '#ffcc80', spells: ['Time Stop', 'Rewind', 'Haste', 'Temporal Bomb'] },
-];
 
-const OVERDRIVE_BOSSES = [
-  { name: 'Ashen Dragon', phases: 5, armor: true, shield: true, stagger: true },
-  { name: 'The Iron Colossus', phases: 4, armor: true, shield: false, stagger: true },
-  { name: 'The Hollow Broodmother', phases: 4, armor: false, shield: true, stagger: true },
-  { name: 'The Watching Void', phases: 5, armor: false, shield: true, stagger: false },
-  { name: 'The Black Paladin', phases: 3, armor: true, shield: true, stagger: true },
-  { name: 'Glacier Wyrm', phases: 4, armor: true, shield: false, stagger: true },
-  { name: 'Worldroot Ancient', phases: 4, armor: false, shield: false, stagger: true },
-  { name: 'The Fallen Seraph', phases: 5, armor: true, shield: true, stagger: true },
-];
 
-const OVERDRIVE_MODES = [
-  { name: 'Endless Crucible', desc: 'Bertahan tanpa batas melawan gelombang musuh tak berujung.' },
-  { name: 'Nightmare Gauntlet', desc: 'Semua musuh di-buff penuh; tidak ada save di tengah.' },
-  { name: 'Speedrun Trial', desc: 'Capai finish sebelum timer habis. Leaderboard global.' },
-  { name: 'Soul Drain', desc: 'Tiap serangan mengurangi max HP. Manage ekonomi nyawamu.' },
-  { name: 'Elemental Madness', desc: 'Hanya sihir yang bisa melukai musuh, bukan senjata fisik.' },
-  { name: 'Iron Vow', desc: 'Mati sekali = permainan berakhir total. Roguelite klasik.' },
-  { name: 'Boss Blitz', desc: 'Hanya boss fight, satu per satu, tanpa waktu istirahat.' },
-  { name: 'Cursed Run', desc: 'Dua modifier kutukan acak aktif tiap chapter.' },
-  { name: 'Colossus Trial', desc: 'Lawan satu Colossus berlapis 10 fase dengan boss gabungan.' },
-  { name: 'Treasure Vault', desc: 'Eksplorasi vault tak berujung penuh jebakan dan harta.' },
-  { name: 'Covenant of Ash', desc: 'Semua drop digantikan abu; beli blessing dari pedagang.' },
-  { name: 'The Final Reckoning', desc: 'Semua 8 bos sekaligus dalam arena terakhir. Tidak ada retry.' },
-];
 
-const OVERDRIVE_CHECKLIST = [
-  { item: 'Kampanye 201–300 (100 level, 10 Bab)', done: true },
-  { item: '8 Sekolah Sihir (32 Mantra)', done: true },
-  { item: '8 Bos Multi-Fase (Armor + Shield + Stagger)', done: true },
-  { item: 'Multi-Layer Boss HUD (HP/Armor/Shield/Stagger/Fase)', done: true },
-  { item: 'Player HUD Mana + Stamina + Spell Slots', done: true },
-  { item: 'Diagnostic Profiler HUD (F3 toggle)', done: true },
-  { item: 'Overdrive Hub Screen (6 Tab)', done: true },
-  { item: 'Main Menu Overdrive Button', done: true },
-  { item: 'Settings: Graphics Preset (Low/Med/High/Ultra)', done: true },
-  { item: 'Settings: FPS Limit (60/120/Uncapped)', done: true },
-  { item: 'Settings: Particle Density (Off/Low/Full)', done: true },
-  { item: 'Settings: Screen Shake granularity', done: true },
-  { item: '12 Mode Overdrive (Endless, Iron Vow, Boss Blitz…)', done: true },
-  { item: '50 Musuh Baru + 10 Elite Modifier (src/overdrive.js)', done: true },
-  { item: 'Perf Profiler + Culling + Object Pool (src/perf.js)', done: true },
-  { item: 'Boss Combat Engine (src/boss_overdrive.js)', done: true },
-  { item: 'Test Suite (tests/overdrive.test.js) hijau', done: true },
-  { item: 'Save Migration + Backup Recovery', done: true },
-];
 
-function buildOverdriveScreen() {
-  const summaryEl = $('overdrive-summary');
-  if (summaryEl) {
-    summaryEl.innerHTML = `
-      <div class="stat-card">
-        <span class="stat-label">LEVEL BARU</span>
-        <strong class="stat-value">100</strong>
-        <em class="stat-sub">Level 201–300 · 10 Bab</em>
-      </div>
-      <div class="stat-card">
-        <span class="stat-label">MANTRA</span>
-        <strong class="stat-value">32</strong>
-        <em class="stat-sub">8 Sekolah Sihir · 4 Mantra/sekolah</em>
-      </div>
-      <div class="stat-card">
-        <span class="stat-label">BOS MULTI-FASE</span>
-        <strong class="stat-value">8</strong>
-        <em class="stat-sub">Armor · Shield · Stagger</em>
-      </div>
-      <div class="stat-card">
-        <span class="stat-label">CHECKLIST RILIS</span>
-        <strong class="stat-value" style="color:#52b788;">18 / 18 SIAP</strong>
-        <em class="stat-sub">Semua Modul Terverifikasi</em>
-      </div>
-    `;
-  }
 
-  const tabs = document.querySelectorAll('#overdrive-tabs .exp-tab');
-  tabs.forEach((t) => { t.classList.toggle('active', t.dataset.tab === overdriveTab); });
 
-  const bodyEl = $('overdrive-body');
-  if (!bodyEl) return;
 
-  if (overdriveTab === 'campaign301') {
-    bodyEl.innerHTML = `
-      <div class="frontier-grid frontier-grid-2">
-        ${OVERDRIVE_CHAPTERS.map((ch) => `
-          <div class="frontier-card" style="border-left: 4px solid ${ch.color};">
-            <div class="frontier-card-head">
-              <strong style="color:${ch.color};font-size:14px;">BAB ${ch.number}: ${ch.name}</strong>
-              <span class="frontier-badge frontier-badge-gold">Lv. ${ch.levelStart}–${ch.levelEnd}</span>
-            </div>
-            <div style="font-size:11.5px;color:#ced4da;margin:4px 0;">
-              <b style="color:#a7c957;">👑 Bos:</b> ${ch.boss}
-            </div>
-            <div style="font-size:11px;background:rgba(0,0,0,0.3);padding:6px 10px;border-radius:4px;">
-              <span style="color:#ffd166;">⚠ Bahaya:</span> ${ch.hazard}
-            </div>
-          </div>
-        `).join('')}
-      </div>`;
-  } else if (overdriveTab === 'spellschools') {
-    bodyEl.innerHTML = `
-      <div class="frontier-grid frontier-grid-2">
-        ${OVERDRIVE_SPELL_SCHOOLS.map((school) => `
-          <div class="frontier-card" style="border-top: 3px solid ${school.color};">
-            <div class="frontier-card-head">
-              <strong style="color:${school.color};font-size:15px;">${school.icon} Sekolah ${school.name}</strong>
-              <span class="frontier-badge" style="background:${school.color}22;color:${school.color};border:1px solid ${school.color}44;">4 Mantra</span>
-            </div>
-            <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;">
-              ${school.spells.map((sp) => `<span class="frontier-badge frontier-badge-blue">${sp}</span>`).join('')}
-            </div>
-          </div>
-        `).join('')}
-      </div>`;
-  } else if (overdriveTab === 'bossfase') {
-    bodyEl.innerHTML = `
-      <div class="frontier-grid frontier-grid-2">
-        ${OVERDRIVE_BOSSES.map((b) => `
-          <div class="frontier-card">
-            <div class="frontier-card-head">
-              <strong style="color:#ef9a9a;font-size:14px;">${b.name}</strong>
-              <span class="frontier-badge frontier-badge-purple">${b.phases} FASE</span>
-            </div>
-            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;">
-              ${b.armor ? '<span class="frontier-badge" style="background:#78909c33;color:#90a4ae;border:1px solid #546e7a;">⛊ ARMOR</span>' : ''}
-              ${b.shield ? '<span class="frontier-badge" style="background:#1565c033;color:#64b5f6;border:1px solid #0d47a1;">🛡 SHIELD</span>' : ''}
-              ${b.stagger ? '<span class="frontier-badge" style="background:#e65c0033;color:#ffab91;border:1px solid #bf360c;">💥 STAGGER</span>' : ''}
-            </div>
-            <div class="boss-minibars" style="margin-top:8px;">
-              <div class="boss-minibar-row"><span class="boss-minibar-lbl">HP</span><div class="boss-minibar-track"><div class="boss-minibar-fill" style="width:100%;background:#ef5350;"></div></div></div>
-              ${b.armor ? '<div class="boss-minibar-row"><span class="boss-minibar-lbl">ARM</span><div class="boss-minibar-track"><div class="boss-minibar-fill" style="width:100%;background:#607d8b;"></div></div></div>' : ''}
-              ${b.shield ? '<div class="boss-minibar-row"><span class="boss-minibar-lbl">SHD</span><div class="boss-minibar-track"><div class="boss-minibar-fill" style="width:100%;background:#1565c0;"></div></div></div>' : ''}
-              ${b.stagger ? '<div class="boss-minibar-row"><span class="boss-minibar-lbl">STG</span><div class="boss-minibar-track"><div class="boss-minibar-fill" style="width:30%;background:#ff6d00;"></div></div></div>' : ''}
-            </div>
-          </div>
-        `).join('')}
-      </div>`;
-  } else if (overdriveTab === 'profiler') {
-    bodyEl.innerHTML = `
-      <div class="frontier-card" style="max-width:520px;margin:0 auto;">
-        <strong style="color:#ffd166;font-size:15px;">⊡ Diagnostic Profiler HUD</strong>
-        <p style="font-size:12px;color:#b7a486;margin:8px 0;">
-          Tekan <kbd>F3</kbd> atau tombol ⊡ di pojok HUD untuk toggle profiler saat bermain.
-        </p>
-        <div class="profiler-hud profiler-demo" style="position:relative;display:block;margin:12px 0;">
-          <div class="profiler-row"><span class="profiler-key">FPS</span><span class="profiler-val">60</span><span class="profiler-key">MS</span><span class="profiler-val">16.7</span></div>
-          <div class="profiler-row"><span class="profiler-key">ENT</span><span class="profiler-val">12</span><span class="profiler-key">PTL</span><span class="profiler-val">48</span></div>
-          <div class="profiler-row"><span class="profiler-key">MEM</span><span class="profiler-val">~24 MB</span></div>
-        </div>
-        <ul style="font-size:11.5px;color:#ced4da;padding-left:18px;margin:4px 0;">
-          <li>FPS rata-rata + frame time (ms)</li>
-          <li>Jumlah entitas aktif + partikel</li>
-          <li>Estimasi memori (KB/MB)</li>
-          <li>⚠ STUTTER alert jika frame > 50ms</li>
-        </ul>
-      </div>`;
-  } else if (overdriveTab === 'modes') {
-    bodyEl.innerHTML = `
-      <div class="frontier-grid frontier-grid-3">
-        ${OVERDRIVE_MODES.map((m, i) => `
-          <div class="frontier-card">
-            <div class="frontier-card-head">
-              <strong style="color:#ffd166;font-size:13px;">${i + 1}. ${m.name}</strong>
-            </div>
-            <p style="font-size:11.5px;color:#ced4da;margin:4px 0;">${m.desc}</p>
-          </div>
-        `).join('')}
-      </div>`;
-  } else if (overdriveTab === 'checklist') {
-    const done = OVERDRIVE_CHECKLIST.filter((c) => c.done).length;
-    bodyEl.innerHTML = `
-      <div style="margin-bottom:12px;text-align:center;">
-        <strong style="color:#52b788;font-size:20px;">${done} / ${OVERDRIVE_CHECKLIST.length} SIAP RILIS</strong>
-      </div>
-      <div class="overdrive-checklist">
-        ${OVERDRIVE_CHECKLIST.map((c) => `
-          <div class="checklist-item ${c.done ? 'done' : ''}">
-            <span class="checklist-icon">${c.done ? '✅' : '⬜'}</span>
-            <span class="checklist-text">${c.item}</span>
-          </div>
-        `).join('')}
-      </div>`;
-  }
-}
 
-function buildFrontierScreen() {
-  const summaryEl = $('frontier-summary');
-  if (summaryEl) {
-    summaryEl.innerHTML = `
-      <div class="stat-card">
-        <span class="stat-label">LEVEL KAMPANYE</span>
-        <strong class="stat-value">200 / 200</strong>
-        <em class="stat-sub">100 Asli · 100 Beyond the Veil</em>
-      </div>
-      <div class="stat-card">
-        <span class="stat-label">KELAS AKTIF</span>
-        <strong class="stat-value">${FRONTIER_CLASS_BY_ID[frontierProgress.activeClass]?.name || 'Warden'}</strong>
-        <em class="stat-sub">15 Kelas · 45 Spesialisasi</em>
-      </div>
-      <div class="stat-card">
-        <span class="stat-label">ELITE MOBS</span>
-        <strong class="stat-value">15 / 15</strong>
-        <em class="stat-sub">7 Peringkat E1–E7 · 10 Modifier</em>
-      </div>
-      <div class="stat-card">
-        <span class="stat-label">CHECKLIST RILIS</span>
-        <strong class="stat-value" style="color:#52b788;">30 / 30 SIAP</strong>
-        <em class="stat-sub">Semua Modul Terverifikasi</em>
-      </div>
-    `;
-  }
 
-  const tabs = document.querySelectorAll('#frontier-tabs .exp-tab');
-  tabs.forEach((t) => {
-    t.classList.toggle('active', t.dataset.tab === frontierTab);
-  });
 
-  const bodyEl = $('frontier-body');
-  if (!bodyEl) return;
 
-  if (frontierTab === 'campaign200') {
-    bodyEl.innerHTML = `
-      <div class="frontier-grid frontier-grid-2">
-        ${FRONTIER_CHAPTERS.map((ch) => `
-          <div class="frontier-card" style="border-left: 4px solid ${ch.color};">
-            <div class="frontier-card-head">
-              <strong style="color: ${ch.color}; font-size: 15px;">BAB ${ch.number}: ${ch.english}</strong>
-              <span class="frontier-badge frontier-badge-gold">Lv. ${ch.levelStart}–${ch.levelEnd}</span>
-            </div>
-            <div style="font-size: 12px; color: #b7a486;">${ch.name} — Kesulitan: <b style="color:#ff7043;">${ch.difficulty}</b></div>
-            <p style="font-size: 11.5px; color: #ced4da; margin: 4px 0;">${ch.lore}</p>
-            <div style="font-size: 11px; background: rgba(0,0,0,0.3); padding: 6px 10px; border-radius: 4px;">
-              <span style="color:#ffd166;">⚡ Mekanisme Wilayah:</span> ${ch.mechanic}
-            </div>
-            <div style="font-size: 11px; color:#a7c957;">
-              <b>👑 Bos Utama:</b> ${ch.bossName} (${ch.bossTitle})
-            </div>
-          </div>
-        `).join('')}
-      </div>
-    `;
-  } else if (frontierTab === 'classes15') {
-    bodyEl.innerHTML = `
-      <div class="frontier-grid frontier-grid-3">
-        ${FRONTIER_CLASSES.map((cls) => `
-          <div class="frontier-card" style="border-top: 3px solid ${cls.color};">
-            <div class="frontier-card-head">
-              <strong style="color: ${cls.color}; font-size: 14px;">${cls.icon} ${cls.name}</strong>
-              <span class="frontier-badge frontier-badge-blue">${cls.mainWeapon}</span>
-            </div>
-            <div style="font-size: 11px; color: #ffd166;">${cls.title} · ${cls.combatIdentity}</div>
-            <div style="font-size: 11px; margin: 4px 0; color: #ced4da;">
-              <b>Jurus:</b> ${cls.abilities.map((a) => a.name).join(', ')}
-            </div>
-            <div style="font-size: 11px; background: rgba(0,0,0,0.35); padding: 6px; border-radius: 4px;">
-              <b style="color: #48cae4;">Spesialisasi:</b><br/>
-              ${cls.specializations.map((s) => `• <b>${s.name}</b>: ${s.role}`).join('<br/>')}
-            </div>
-            <div style="font-size: 10px; color: #8ec5fc; margin-top: auto;">
-              🔓 <em>${cls.unlockCondition}</em>
-            </div>
-          </div>
-        `).join('')}
-      </div>
-    `;
-  } else if (frontierTab === 'elites15') {
-    bodyEl.innerHTML = `
-      <div style="margin-bottom: 12px; font-size: 12px; color: #b7a486;">
-        <b>7 Peringkat Elite:</b> ${ELITE_RANKS.map((r) => `<span class="frontier-badge" style="background:${r.color}22; color:${r.color}; border:1px solid ${r.color}44;">${r.id} ${r.name}</span>`).join(' ')}
-      </div>
-      <div class="frontier-grid frontier-grid-3">
-        ${ELITE_MOBS.map((em) => `
-          <div class="frontier-card">
-            <div class="frontier-card-head">
-              <strong style="color: #ff7043; font-size: 13px;">${em.name}</strong>
-              <span class="frontier-badge frontier-badge-purple">${em.rank}</span>
-            </div>
-            <div style="font-size: 11px; color: #ffd166;">📍 Wilayah: ${em.biome}</div>
-            <p style="font-size: 11px; color: #ced4da; margin: 4px 0;"><b>Mekanisme Unik:</b> ${em.uniqueMechanic}</p>
-            <p style="font-size: 10.5px; color: #9fb4bd;">${em.ability}</p>
-            <div style="font-size: 10px; color: #b7a486; font-style: italic; margin-top: auto;">
-              Drop: ${em.dropLore}
-            </div>
-          </div>
-        `).join('')}
-      </div>
-      <div style="margin-top: 14px; padding: 12px; background: rgba(0,0,0,0.4); border-radius: 6px;">
-        <strong style="color: #ffd166; font-size: 13px;">10 Modifier Tempur Elite Acak:</strong>
-        <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px;">
-          ${ELITE_MODIFIERS.map((m) => `
-            <span class="frontier-badge frontier-badge-blue" title="${m.effect}">
-              <b>${m.name}</b>: ${m.effect}
-            </span>
-          `).join('')}
-        </div>
-      </div>
-    `;
-  } else if (frontierTab === 'weapons15') {
-    bodyEl.innerHTML = `
-      <div style="margin-bottom: 10px;">
-        <h3 style="color:#ffd166; font-size: 14px; margin-bottom: 6px;">15 Kategori Senjata &amp; Gaya Bertarung</h3>
-        <div class="frontier-grid frontier-grid-3">
-          ${FRONTIER_WEAPON_CATEGORIES.map((w) => `
-            <div class="frontier-card">
-              <div class="frontier-card-head">
-                <strong style="color: #8ec5fc;">${w.name}</strong>
-                <span class="frontier-badge frontier-badge-gold">${w.style}</span>
-              </div>
-              <p style="font-size: 11px; color: #ced4da;">${w.desc}</p>
-            </div>
-          `).join('')}
-        </div>
-      </div>
-      <div style="margin-top: 16px;">
-        <h3 style="color:#ffd166; font-size: 14px; margin-bottom: 6px;">8 Material Regional &amp; Resep Pandai Besi</h3>
-        <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px;">
-          ${REGIONAL_MATERIALS.map((m) => `
-            <div style="background: rgba(0,0,0,0.4); border: 1px solid var(--line); padding: 6px 10px; border-radius: 4px; font-size: 11px;">
-              ${m.icon} <b>${m.name}</b> <span style="color:#8ec5fc;">(${m.region})</span>
-            </div>
-          `).join('')}
-        </div>
-        <div class="frontier-grid frontier-grid-2">
-          ${CRAFTING_RECIPES.map((r) => `
-            <div class="frontier-card">
-              <strong style="color: #ffd166;">⚒️ ${r.name}</strong>
-              <div style="font-size: 11px; color: #ced4da;">Bahan: ${Object.entries(r.materials).map(([k, v]) => `${v}x ${k}`).join(', ')}</div>
-              <div style="font-size: 11px; color: #52b788;">Pasif: ${r.passive}</div>
-            </div>
-          `).join('')}
-        </div>
-      </div>
-    `;
-  } else if (frontierTab === 'customization12') {
-    bodyEl.innerHTML = `
-      <div class="frontier-grid frontier-grid-2">
-        <div class="frontier-card">
-          <h3 style="color:#ffd166; font-size: 14px;">12 Lapis Visual Zirah</h3>
-          <p style="font-size: 11px; color: #ced4da;">Visual zirah terpisah sepenuhnya dari status gameplay. Pemain dapat menyembunyikan atau mengubah tiap lapis secara mandiri:</p>
-          <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; font-size: 11px;">
-            ${CUSTOMIZATION_LAYERS.map((l) => `
-              <div style="background: rgba(0,0,0,0.3); padding: 4px 8px; border-radius: 4px;">
-                <b>${l.name}</b><br/><span style="color:#9fb4bd;">${l.desc}</span>
-              </div>
-            `).join('')}
-          </div>
-        </div>
-        <div class="frontier-card">
-          <h3 style="color:#ffd166; font-size: 14px;">Stasiun Pewarna (10 Dyes Murni)</h3>
-          <p style="font-size: 11px; color: #ced4da;">Pilih warna untuk zirah dan jubah tanpa biaya:</p>
-          <div class="dye-chip-row">
-            ${DYE_PALETTE.map((d) => `
-              <div class="dye-chip" style="background:${d.hex};" title="${d.name}: ${d.desc}"></div>
-            `).join('')}
-          </div>
-          <div style="margin-top: 14px;">
-            <h4 style="color:#8ec5fc; font-size: 12px; margin-bottom: 4px;">10 Mount &amp; 10 Companion</h4>
-            <div style="font-size: 11px; color:#ced4da;">
-              <b>Mount:</b> ${MOUNT_ROSTER.map((m) => m.name).join(', ')}<br/>
-              <b>Companion:</b> ${COMPANION_ROSTER.map((c) => c.name).join(', ')}
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
-  } else if (frontierTab === 'modes') {
-    bodyEl.innerHTML = `
-      <div style="margin-bottom: 12px;">
-        <h3 style="color:#ffd166; font-size: 14px; margin-bottom: 6px;">Kingdom Defense — 10 Menara Pertahanan</h3>
-        <div class="frontier-grid frontier-grid-3">
-          ${KINGDOM_DEFENSE_TOWERS.map((t) => `
-            <div class="frontier-card">
-              <div class="frontier-card-head">
-                <strong style="color: #ffd166;">🏰 ${t.name}</strong>
-                <span class="frontier-badge frontier-badge-blue">${t.cost} Abu</span>
-              </div>
-              <div style="font-size: 11px; color: #ced4da;">Dmg: ${t.dmg} · Kecepatan: ${t.rate}/dtk · Jangkauan: ${t.range}px</div>
-              <div style="font-size: 10.5px; color: #a7c957;">${t.specialty}</div>
-            </div>
-          `).join('')}
-        </div>
-      </div>
-      <h3 style="color:#ffd166; font-size: 14px; margin: 16px 0 6px;">Mode Permainan Tambahan</h3>
-      <div class="frontier-grid frontier-grid-2">
-        ${FRONTIER_EXTRA_MODES.map((m) => `
-          <div class="frontier-card">
-            <strong style="color: #8ec5fc;">${m.icon} ${m.name}</strong>
-            <p style="font-size: 11px; color: #ced4da;">${m.desc}</p>
-          </div>
-        `).join('')}
-      </div>
-    `;
-  } else if (frontierTab === 'worldbuilder') {
-    bodyEl.innerHTML = `
-      <div class="frontier-grid frontier-grid-2">
-        <div class="frontier-card">
-          <h3 style="color:#ffd166; font-size: 14px;">Pembangun Dunia 2D &amp; 3D</h3>
-          <p style="font-size: 11px; color: #ced4da;">Editor peta modular dengan dukungan terrain sculpting 3D, penempatan prefab, arena bos, dan batas kamera dinamis.</p>
-          <div style="font-size: 11px; color:#52b788; line-height: 1.6;">
-            ✔ Terrain Sculpting: Raise, Lower, Smooth, Flatten, Paint Material<br/>
-            ✔ Penempatan Bos Terkalahkan dari Kampanye 1–200<br/>
-            ✔ 10 Aturan Validasi Otomatis Sebelum Publikasi
-          </div>
-        </div>
-        <div class="frontier-card">
-          <h3 style="color:#ffd166; font-size: 14px;">Katalog Node Visual Scripting</h3>
-          <p style="font-size: 11px; color: #ced4da;">Sistem scripting berbasis node berizin aman (whitelisted):</p>
-          <div style="display: flex; flex-wrap: wrap; gap: 4px;">
-            ${SCRIPTING_NODE_WHITELIST.map((node) => `
-              <span class="frontier-badge frontier-badge-purple" style="font-size: 10px;">${node}</span>
-            `).join('')}
-          </div>
-        </div>
-      </div>
-    `;
-  } else if (frontierTab === 'checklist') {
-    bodyEl.innerHTML = `
-      <div style="margin-bottom: 12px; font-size: 12px; color: #b7a486;">
-        Semua 30 kriteria penerimaan rilis untuk ekspansi Infinite Frontiers &amp; 3D Mode telah terpenuhi dan terverifikasi secara deterministik.
-      </div>
-      <div class="checklist-list">
-        ${ACCEPTANCE_CHECKLIST_ITEMS.map((item) => `
-          <div class="checklist-item">
-            <span class="checklist-check">✔</span>
-            <div>
-              <span style="color:#ffd166; font-weight:bold; font-size:10.5px; text-transform:uppercase;">[${item.group}]</span>
-              <span style="color:#ced4da; margin-left: 4px;">${item.label}</span>
-            </div>
-          </div>
-        `).join('')}
-      </div>
-    `;
-  }
-}
+
 
 function showCredits() {
   menuView = 'credits';
@@ -10583,53 +8773,9 @@ function showCredits() {
   syncScreens();
 }
 
-// ── update log ───────────────────────────────────────────────────────────
-function buildUpdateLog() {
-  const wrap = $('update-log');
-  if (!wrap) return;
-  wrap.innerHTML = UPDATE_LOG.map((entry, index) => `
-    <article class="update-entry${index === 0 ? ' latest' : ''}">
-      <header class="update-head">
-        <div class="update-version-row">
-          <span class="update-version">v${entry.version}</span>
-          <span class="update-tag">${entry.tag}</span>
-          ${index === 0 ? '<span class="update-current">TERBARU</span>' : ''}
-        </div>
-        <span class="update-date">${entry.date}</span>
-      </header>
-      <h3 class="update-title">${entry.title}</h3>
-      <p class="update-summary">${entry.summary}</p>
-      <ul class="update-list">
-        ${entry.highlights.map((line) => `<li>${line}</li>`).join('')}
-      </ul>
-      ${entry.fixes?.length ? `
-        <div class="update-fixes">
-          <span>PERBAIKAN &amp; PENYESUAIAN</span>
-          <ul>${entry.fixes.map((line) => `<li>${line}</li>`).join('')}</ul>
-        </div>` : ''}
-    </article>
-  `).join('');
-  const badge = $('updates-version');
-  if (badge) badge.textContent = `VERSI SAAT INI · v${GAME_VERSION}`;
-}
 
-function showUpdates() {
-  cancelPrologue();
-  started = false;
-  paused = false;
-  shopOpen = false;
-  mapOpen = false;
-  codexOpen = false;
-  inventoryOpen = false;
-  settingsOpen = false;
-  closeDialogue(true);
-  spectating = false;
-  spectateGame = null;
-  menuView = 'updates';
-  clearHeldKeys();
-  buildUpdateLog();
-  syncScreens();
-}
+
+
 
 // ── settings screen ──────────────────────────────────────────────────────
 function showSettings(tab = null) {
@@ -11663,12 +9809,20 @@ let aiDebugOpen = false;
 let debugOpen = false;
 let debugPanelGate = 0;
 
+function canvasFilterFor(graphics) {
+  const parts = [];
+  if (Number(graphics.gamma) !== 100) parts.push('url(#ashen-gamma)');
+  if (Number(graphics.brightness) !== 100) parts.push(`brightness(${graphics.brightness}%)`);
+  if (Number(graphics.contrast) !== 100) parts.push(`contrast(${graphics.contrast}%)`);
+  return parts.length ? parts.join(' ') : 'none';
+}
+
 function applySettings({ persist = true } = {}) {
   const capabilities = detectCapabilities();
   // Spatial audio is a real WebAudio listener/panner mode, not a label.
   audio.setSpatial(settings.audio.spatial);
   // Push the graphics controls that the WebGL2 pipeline actually consumes.
-  configure3D({
+  if (MODES.mode3d) MODES.mode3d.lib.configure3D({
     renderScale: settings.graphics.renderScale,
     upscaling: settings.graphics.upscaling,
     upscaler: settings.graphics.upscaling,
@@ -11736,7 +9890,11 @@ function applySettings({ persist = true } = {}) {
   root.style.setProperty('--hud-opacity', String(settings.hud.opacity / 100));
   root.style.setProperty('--safe-area', `${settings.display.safeArea}%`);
   root.style.setProperty('--subtitle-bg', String(settings.accessibility.subtitleBackground / 100));
-  canvas.style.filter = `url(#ashen-gamma) brightness(${settings.graphics.brightness}%) contrast(${settings.graphics.contrast}%)`;
+  // A CSS filter on the live canvas is re-run on every composited frame, and
+  // the SVG gamma pass has no fast path: it halved the frame rate without GPU
+  // compositing (29 → 57 fps measured) and kept the GPU busy otherwise. Apply
+  // only the parts that differ from neutral.
+  canvas.style.filter = canvasFilterFor(settings.graphics);
   const exponent = String(1 / Math.max(0.5, settings.graphics.gamma / 100));
   for (const id of ['gamma-r', 'gamma-g', 'gamma-b']) {
     const node = $(id);
@@ -11766,7 +9924,7 @@ function applySettings({ persist = true } = {}) {
     game3D.visualSettings = settings.graphics;
     game3D.hudSettings = settings.hud;
     game3D.cameraSensitivity = settings.controls.cameraSensitivity / 100;
-    game3D.region = MODE3D_REGIONS[game3D.region] ? game3D.region : 'thornveil';
+    game3D.region = MODES.mode3d.lib.MODE3D_REGIONS[game3D.region] ? game3D.region : 'thornveil';
   }
   applyLanguage();
   const btn = $('sound-btn');
@@ -11989,7 +10147,7 @@ function buildDiagnostics() {
     ['Brightness / Contrast / Gamma', 'applied', 'Canvas colour transfer (gamma SVG + CSS)'],
     ['HDR', caps.hdrRenderTarget ? 'applied' : caps.hdr ? 'partial' : 'unsupported', caps.hdrRenderTarget ? 'RGBA16F render target + ACES tonemap' : 'Display HDR terdeteksi tetapi render target float tidak tersedia'],
     ['Ray Tracing', 'unsupported', 'WebGL2 tidak menyediakan pipeline ray tracing perangkat keras'],
-    ['3D pipeline', gfx3DStatus().state === 'ready' ? 'applied' : 'ready', gfx3DStatus().available ? `WebGL2 + GLB · ${gfx3DStatus().models} model · ${gfx3DStatus().props} prop` : `Fallback Canvas (${gfx3DStatus().reason || gfx3DStatus().state})`],
+    ['3D pipeline', gfx3DStatusSafe().state === 'ready' ? 'applied' : 'ready', gfx3DStatusSafe().available ? `WebGL2 + GLB · ${gfx3DStatusSafe().models} model · ${gfx3DStatusSafe().props} prop` : `Fallback Canvas (${gfx3DStatusSafe().reason || gfx3DStatusSafe().state})`],
     ['GPU', caps.gpuRenderer ? 'applied' : 'unsupported', caps.gpuRenderer ? `${caps.gpuRenderer}${caps.gpuTier ? ` · ${caps.gpuTier}` : ''}` : 'Identitas GPU tidak tersedia'],
     ['Anisotropic', caps.maxAnisotropy > 1 ? 'applied' : 'unsupported', caps.maxAnisotropy > 1 ? `maksimum ${caps.maxAnisotropy}×` : 'Ekstensi aniso tidak tersedia'],
     ['Spatial audio', settings.audio.spatial === 'stereo' ? 'off' : 'applied', settings.audio.spatial === 'spatial' ? 'HRTF PannerNode + listener' : settings.audio.spatial === 'surround' ? 'Equal-power panner + listener' : 'Mix stereo non-posisional'],
@@ -12373,7 +10531,7 @@ window.addEventListener('keydown', (e) => {
     }
     if (wdPaused) return;
     if (e.code === 'Space') {
-      if (waveDefenseNextWave(wdMatch)) {
+      if (MODES.wavedefense.lib.waveDefenseNextWave(wdMatch)) {
         wdRenderDirty = true;
         updateWaveDefenseHud(true);
       }
@@ -12381,8 +10539,8 @@ window.addEventListener('keydown', (e) => {
     }
     const towerIndex = Number(e.code.replace('Digit', '')) - 1;
     if (Number.isInteger(towerIndex) && towerIndex >= 0 && towerIndex < 9) {
-      wdSelectedTowerId = WAVE_DEFENSE_TOWERS[towerIndex].id;
-      waveDefenseSelectTower(wdMatch, wdSelectedTowerId);
+      wdSelectedTowerId = MODES.wavedefense.lib.WAVE_DEFENSE_TOWERS[towerIndex].id;
+      MODES.wavedefense.lib.waveDefenseSelectTower(wdMatch, wdSelectedTowerId);
       wdRenderDirty = true;
       updateWaveDefenseHud(true);
     }
@@ -12402,7 +10560,7 @@ window.addEventListener('keydown', (e) => {
     if (mobaPaused) return;
     const cast = { KeyQ: 0, KeyW: 1, KeyE: 2, KeyR: 3, Digit1: 0, Digit2: 1, Digit3: 2, Digit4: 3 }[e.code];
     if (cast !== undefined) {
-      mobaCast(mobaMatch, cast, mobaAim);
+      MODES.moba.lib.mobaCast(mobaMatch, cast, mobaAim);
       return;
     }
     if (e.code === 'KeyB') {
@@ -12578,13 +10736,14 @@ window.addEventListener('keydown', (e) => {
     return;
   }
 
-  if (menuView === 'levels' || menuView === 'credits' || menuView === 'updates' || menuView === 'character' || menuView === 'expansion') {
+  if (menuView === 'levels' || menuView === 'credits' || menuView === 'updates' || menuView === 'character' || menuView === 'expansion' || menuView === 'slots') {
     if (e.code === 'Escape' || e.code === 'Backspace') showMenu();
     return;
   }
 
   if (menuView === 'title' || !started) {
     // Let keyboard users activate the focused menu button with Enter/Space.
+    if ((e.code === 'Escape' || e.code === 'Backspace') && menuView === 'title' && menuHubs?.openHub) { menuHubs.close(); return; }
     if (e.target instanceof HTMLElement && e.target.tagName === 'BUTTON') return;
     if (e.code === 'Enter' || e.code === 'Space' || e.code === 'KeyJ') beginJourney();
     else if (e.code === 'KeyL') showLevels();
@@ -12733,7 +10892,7 @@ function labState() {
 
 function labCheckpointLoad() {
   try {
-    const raw = localStorage.getItem(LAB_CHECKPOINT_KEY);
+    const raw = saveRead(LAB_CHECKPOINT_KEY);
     return raw ? JSON.parse(raw) : null;
   } catch {
     return null;
@@ -12743,7 +10902,7 @@ function labCheckpointLoad() {
 function labCheckpointSave() {
   if (!labRun || labGuestMode || !canCheckpoint(labRun.cycle)) return;
   try {
-    localStorage.setItem(LAB_CHECKPOINT_KEY, JSON.stringify(serializeLabyrinthRun(labRun)));
+    saveWrite(LAB_CHECKPOINT_KEY, JSON.stringify(serializeLabyrinthRun(labRun)));
   } catch {
     /* storage unavailable */
   }
@@ -12751,7 +10910,7 @@ function labCheckpointSave() {
 
 function labCheckpointClear() {
   try {
-    localStorage.removeItem(LAB_CHECKPOINT_KEY);
+    saveWrite(LAB_CHECKPOINT_KEY, null);
   } catch {
     /* ignore */
   }
@@ -13152,623 +11311,61 @@ function closeLabSummary() {
   showLabyrinth('records');
 }
 
-// ── Fivefold Trials ───────────────────────────────────────────────────────
-function trialsState() {
-  if (!progress.trials) progress.trials = defaultTrialProgress();
-  return progress.trials;
-}
 
-function showTrials() {
-  cancelPrologue();
-  started = false;
-  paused = false;
-  shopOpen = false;
-  mapOpen = false;
-  codexOpen = false;
-  inventoryOpen = false;
-  settingsOpen = false;
-  closeDialogue(true);
-  spectating = false;
-  spectateGame = null;
-  trialRun = null;
-  activeRunKind = 'legacy';
-  menuView = 'trials';
-  clearHeldKeys();
-  buildTrialsScreen();
-  syncScreens();
-}
 
-function buildTrialsScreen() {
-  const p = trialsState();
-  const summary = trialSummary(p);
-  const head = $('trials-summary');
-  if (head) {
-    head.innerHTML = `
-      <div class="lab-stat"><span>LEVEL SELESAI</span><strong>${summary.clearedLevels}/${summary.levels}</strong></div>
-      <div class="lab-stat"><span>BIOME</span><strong>${summary.biomes}</strong></div>
-      <div class="lab-stat"><span>MUSUH DIJADWALKAN</span><strong>${summary.enemies}</strong></div>
-      <div class="lab-stat"><span>ELITE DIJAMIN</span><strong>${summary.elites}</strong></div>
-      <div class="lab-stat"><span>BOS GUGUR</span><strong>${summary.bosses}/${summary.biomes}</strong></div>
-      <div class="lab-stat"><span>PROGRES</span><strong>${summary.completion}%</strong></div>`;
-  }
-  const body = $('trials-body');
-  if (!body) return;
-  body.innerHTML = TRIAL_BIOMES.map((biome) => {
-    const state = biomeProgress(p, biome.id);
-    const zone = LABYRINTH_ZONE_BY_ID[biome.id];
-    const levels = biome.levels.map((level, index) => {
-      const cleared = p.cleared[biome.id][index];
-      const unlocked = trialLevelUnlocked(p, biome.id, index);
-      return `<button class="trial-level ${cleared ? 'cleared' : ''}" type="button"
-        data-trial-biome="${biome.id}" data-trial-level="${index}" ${unlocked ? '' : 'disabled'}>
-        <b>${index + 1}. ${esc(level.name)}</b>
-        <span>${cleared ? 'SELESAI' : unlocked ? '20 MUSUH · 4 ARKETIPE · 1 ELITE' : 'TERKUNCI'}</span>
-        <span>ELITE: ${esc(level.elite.name)}</span>
-      </button>`;
-    }).join('');
-    return `<article class="trials-biome" style="--zone:${zone?.color || '#d8b06a'}">
-      <div class="trials-biome-head">
-        <h3>${esc(biome.name)}</h3>
-        <em>${esc(biome.localName)} · ${state.cleared}/${TRIAL_LEVELS_PER_BIOME}</em>
-        <span class="trials-boss">BOS: ${esc(biome.boss.name)} · ${biome.boss.phases} FASE</span>
-      </div>
-      <div class="trials-levels">${levels}
-        <button class="trial-level boss ${state.bossCleared ? 'cleared' : ''}" type="button" data-trial-boss="${biome.id}" ${state.bossUnlocked ? '' : 'disabled'}>
-          <b>${state.bossCleared ? '✔ ' : ''}${esc(biome.boss.name)}</b>
-          <span>${state.bossCleared ? 'BOS GUGUR' : state.bossUnlocked ? 'ARENA BOS TERBUKA' : 'SELESAIKAN 5 LEVEL'}</span>
-          <span>${biome.boss.phases} fase · ${biome.boss.hp} HP dasar</span>
-        </button>
-      </div>
-    </article>`;
-  }).join('');
-}
 
-function startTrialLevel(biomeId, levelIndex) {
-  audio.init();
-  const biome = TRIAL_BIOME_BY_ID[biomeId];
-  const level = biome?.levels[levelIndex];
-  if (!level || !trialLevelUnlocked(trialsState(), biomeId, levelIndex)) return false;
-  activeRunKind = 'trials';
-  activeExpansionIndex = null;
-  game.reset();
-  applyCharacterToGame();
-  applySkinToGame();
-  game.labyrinth = true;
-  game.player.relic = true;
-  game.ash = Math.max(game.ash, 80);
-  trialRun = {
-    mode: 'level', biomeId, levelIndex, biome, level,
-    encounter: buildEncounter(level), wave: -1, finished: false, clearTimer: 0,
-    startedAt: performance.now(), hudTimer: 0,
-  };
-  game.loadArena(trialArena(biome, level));
-  spawnTrialWave();
-  started = true;
-  paused = false;
-  shopOpen = false;
-  mapOpen = false;
-  codexOpen = false;
-  inventoryOpen = false;
-  settingsOpen = false;
-  closeDialogue(true);
-  spectating = false;
-  menuView = 'none';
-  lastGameState = 'playing';
-  accumulator = 0;
-  lastTime = performance.now();
-  clearHeldKeys();
-  showBanner(level.name, `${biome.localName} · 20 musuh · 4 arketipe · 1 elite`);
-  syncScreens();
-  updateHud();
-  updateTrialHud();
-  return true;
-}
 
-function startTrialBoss(biomeId) {
-  audio.init();
-  const biome = TRIAL_BIOME_BY_ID[biomeId];
-  if (!biome || !trialBossUnlocked(trialsState(), biomeId)) return false;
-  activeRunKind = 'trials';
-  game.reset();
-  applyCharacterToGame();
-  applySkinToGame();
-  game.labyrinth = true;
-  game.player.relic = true;
-  game.ash = Math.max(game.ash, 160);
-  trialRun = {
-    mode: 'boss', biomeId, biome, level: biome.levels[biome.levels.length - 1],
-    encounter: null, wave: 0, finished: false, clearTimer: 0,
-    startedAt: performance.now(), hudTimer: 0,
-  };
-  game.loadArena(trialArena(biome, biome.levels[biome.levels.length - 1]));
-  game.spawnBoss('trial_boss', trialBossOverrides(biome.boss));
-  started = true;
-  paused = false;
-  shopOpen = false;
-  mapOpen = false;
-  codexOpen = false;
-  inventoryOpen = false;
-  settingsOpen = false;
-  closeDialogue(true);
-  spectating = false;
-  menuView = 'none';
-  lastGameState = 'playing';
-  accumulator = 0;
-  lastTime = performance.now();
-  clearHeldKeys();
-  showBanner(biome.boss.name, `${biome.boss.title} · ${biome.boss.phases} fase`);
-  syncScreens();
-  updateHud();
-  updateTrialHud();
-  return true;
-}
 
-function spawnTrialWave() {
-  if (!trialRun?.encounter) return;
-  trialRun.wave += 1;
-  const units = waveForEncounter(trialRun.encounter, trialRun.wave);
-  units.forEach((unit, index) => {
-    game.spawnEnemy({
-      type: unit.type,
-      name: unit.name,
-      x: clamp(260 + index * 230, 80, WORLD_W - 120),
-      minX: 40,
-      maxX: WORLD_W - 80,
-      elite: unit.elite,
-      eliteRank: unit.eliteRank,
-      hpScale: unit.hpScale,
-      dmgScale: unit.dmgScale,
-    });
-  });
-  showToast(`Wave ${trialRun.wave + 1}/${trialRun.encounter.waves.length}${units.some((unit) => unit.elite) ? ' — ELITE' : ''}`, 1600);
-  updateTrialHud();
-}
 
-function trialAliveCount() {
-  return game.enemies.filter((enemy) => !enemy.dead && enemy.hp > 0).length;
-}
 
-function tickTrials(dt) {
-  if (!trialRun) return;
-  if (game.state === 'dead') {
-    trialsState().stats.deaths += 1;
-    saveProgress();
-    trialRun = null;
-    showTrials();
-    showToast('Trial gagal — coba lagi.', 2200);
-    return;
-  }
-  if (trialRun.clearTimer > 0) {
-    trialRun.clearTimer -= dt;
-    if (trialRun.clearTimer <= 0) {
-      trialRun = null;
-      showTrials();
-    }
-    return;
-  }
-  if (trialRun.mode === 'boss') return;
-  trialRun.hudTimer += dt;
-  if (trialRun.hudTimer >= 0.25) {
-    trialRun.hudTimer = 0;
-    updateTrialHud();
-  }
-  if (trialAliveCount() > 0) return;
-  if (trialRun.wave < trialRun.encounter.waves.length - 1) {
-    spawnTrialWave();
-    return;
-  }
-  if (!trialRun.finished) {
-    trialRun.finished = true;
-    const record = recordTrialClear(progress.trials, trialRun.level.id, { time: (performance.now() - trialRun.startedAt) / 1000 });
-    progress.trials = record.progress;
-    if (record.firstClear) {
-      game.ash += 120;
-      labState().currencies.shards += 2;
-      showToast(`${trialRun.level.name} selesai — 20 musuh, 1 elite. Boss ${record.bossUnlocked ? 'terbuka' : 'terkunci'}.`, 2600);
-    } else {
-      showToast('Level ini sudah pernah diselesaikan.', 1800);
-    }
-    saveProgress();
-    trialRun.clearTimer = 1.2;
-  }
-}
 
-function handleTrialBoss(ev) {
-  if (!trialRun || trialRun.mode !== 'boss') return;
-  const record = recordTrialBoss(progress.trials, trialRun.biomeId);
-  progress.trials = record.progress;
-  if (record.firstClear && record.reward) {
-    game.ash += record.reward.ash;
-    labState().currencies.shards += record.reward.shards;
-    showToast(`${ev.name} gugur — ${record.reward.name} diraih.`, 2600);
-  }
-  saveProgress();
-  trialRun.clearTimer = 1.8;
-}
 
-function updateTrialHud() {
-  const hud = $('trial-hud');
-  const show = started && !spectating && menuView === 'none' && activeRunKind === 'trials' && !!trialRun;
-  if (hud) hud.classList.toggle('hidden', !show);
-  if (!show) return;
-  const levelEl = $('trial-hud-level');
-  const biomeEl = $('trial-hud-biome');
-  const waveEl = $('trial-hud-wave');
-  const enemyEl = $('trial-hud-enemies');
-  const eliteEl = $('trial-hud-elite');
-  if (levelEl) levelEl.textContent = trialRun.mode === 'boss' ? 'BOSS' : `LEVEL ${trialRun.levelIndex + 1} / 5`;
-  if (biomeEl) biomeEl.textContent = trialRun.biome?.localName || '';
-  if (waveEl) waveEl.textContent = trialRun.mode === 'boss' ? 'ARENA BOS' : `WAVE ${Math.max(1, trialRun.wave + 1)} / 4`;
-  if (enemyEl) enemyEl.textContent = trialRun.mode === 'boss' ? (game.boss ? `${game.boss.hp}/${game.boss.maxHp}` : 'BOS') : `${Math.max(0, 20 - Math.max(0, trialRun.wave) * 5 - trialAliveCount())} / 20 MUSUH`;
-  if (eliteEl) eliteEl.textContent = trialRun.mode === 'boss' ? `${trialRun.biome?.boss?.phases || 3} FASE` : '1 ELITE DIJAMIN';
-}
 
-// ── Puzzle Adventure ──────────────────────────────────────────────────────
-function puzzleState() {
-  if (!progress.puzzle) progress.puzzle = defaultPuzzleProgress();
-  return progress.puzzle;
-}
 
-function showPuzzleAdventure(tab) {
-  const nextTab = typeof tab === 'string' ? tab : puzzleTab;
-  stopPuzzleTimer();
-  cancelPrologue();
-  started = false;
-  paused = false;
-  shopOpen = false;
-  mapOpen = false;
-  codexOpen = false;
-  inventoryOpen = false;
-  settingsOpen = false;
-  closeDialogue(true);
-  spectating = false;
-  puzzleRun = null;
-  puzzleSelected = -1;
-  puzzleTab = nextTab;
-  menuView = 'puzzle';
-  clearHeldKeys();
-  buildPuzzleScreen();
-  syncScreens();
-}
 
-function buildPuzzleScreen() {
-  const p = puzzleState();
-  const summary = puzzleSummary(p);
-  const wallet = expState();
-  const head = $('puzzle-summary');
-  if (head) {
-    head.innerHTML = `
-      <div class="lab-stat"><span>TAHAP</span><strong>${summary.solved}/${summary.stages}</strong></div>
-      <div class="lab-stat"><span>ARC</span><strong>${summary.arcs}</strong></div>
-      <div class="lab-stat"><span>JENIS TEKA-TEKI</span><strong>${summary.types}</strong></div>
-      <div class="lab-stat"><span>KEMAMPUAN</span><strong>${summary.abilities}/${summary.abilityTotal}</strong></div>
-      <div class="lab-stat"><span>PROGRES</span><strong>${summary.percent}%</strong></div>
-      <div class="lab-stat"><span>BOSS</span><strong>${summary.bosses}</strong></div>
-      <div class="lab-stat"><span>GEMA</span><strong>✦ ${wallet.echoes}</strong></div>
-      <div class="lab-stat"><span>BERIKUTNYA</span><strong>${summary.next ? summary.next.name : 'SELESAI'}</strong></div>`;
-  }
-  document.querySelectorAll('[data-puzzle-tab]').forEach((button) => {
-    button.classList.toggle('active', button.dataset.puzzleTab === puzzleTab);
-  });
-  const body = $('puzzle-body');
-  if (!body) return;
-  if (puzzleTab === 'index') {
-    body.innerHTML = puzzleIndexMarkup(p);
-    return;
-  }
-  if (puzzleTab === 'lore') {
-    body.innerHTML = puzzleLoreMarkup();
-    return;
-  }
-  const abilities = PUZZLE_ABILITIES.map((ability) => `<span class="puzzle-ability ${p.abilities.includes(ability.id) ? '' : 'locked'}">${p.abilities.includes(ability.id) ? '✦' : '◇'} ${esc(ability.name)}</span>`).join('');
-  let currentArc = 0;
-  const stages = PUZZLE_STAGES.map((stage) => {
-    const solved = p.solved.includes(stage.id);
-    const unlocked = puzzleStageUnlocked(p, stage.index);
-    const type = PUZZLE_TYPE_BY_ID[stage.typeId];
-    const heading = stage.arc !== currentArc
-      ? `<div class="puzzle-arc-head"><span>ARC ${stage.arc}</span><strong>${esc(stage.arcTitle)}</strong><em>${stage.arc === 1 ? '10 TAHAP' : '10 TAHAP · BOS'}</em></div>`
-      : '';
-    currentArc = stage.arc;
-    return `${heading}<article class="puzzle-stage ${solved ? 'cleared' : ''} ${stage.timed ? 'timed' : ''} ${unlocked ? '' : 'locked'}">
-      <span class="puzzle-stage-index">${String(stage.index + 1).padStart(2, '0')}</span>
-      <div>
-        <h3>${esc(stage.name)}</h3>
-        <p>${esc(stage.location)} · ${esc(type?.name || stage.typeId)}${stage.boss ? ` · BOS-TIMED ${formatPuzzleTime(stage.timeLimit)}` : ''}</p>
-      </div>
-      <button class="btn btn-ghost btn-compact" type="button" data-puzzle-stage="${stage.index}" ${unlocked ? '' : 'disabled'}>
-        ${solved ? 'SELESAI' : unlocked ? 'MAINKAN' : 'TERKUNCI'}
-      </button>
-    </article>`;
-  }).join('');
-  body.innerHTML = `<div class="puzzle-abilities">${abilities}</div>${stages}`;
-}
 
-function puzzleIndexMarkup(progress) {
-  const counts = {};
-  for (const stage of PUZZLE_STAGES) counts[stage.typeId] = (counts[stage.typeId] || 0) + 1;
-  const cards = PUZZLE_TYPES.map((type) => `<article class="puzzle-lore-card">
-    <div class="puzzle-lore-head"><span>${String(type.index + 1).padStart(2, '0')} · ${esc(type.engine)}</span><strong>${esc(type.name)}</strong><em>${counts[type.id] || 0}x TAHAP</em></div>
-    <p>${esc(type.desc)}</p>
-    <blockquote>${esc(PUZZLE_TYPE_LORE[type.id] || '')}</blockquote>
-  </article>`).join('');
-  return `<div class="puzzle-lore-intro"><span>INDEKS MEKANISME</span><p>${esc(PUZZLE_LORE.intro)}</p><em>${PUZZLE_TYPES.length} sistem · ${PUZZLE_STAGES.length} tahap · ${progress.solved.length} tuntas</em></div>
-    <div class="puzzle-lore-grid">${cards}</div>`;
-}
 
-function puzzleLoreMarkup() {
-  const arcs = PUZZLE_ARCS.map((arc) => {
-    const stages = PUZZLE_STAGES.filter((stage) => stage.arc === arc.arc);
-    const boss = PUZZLE_BOSS_BY_ID[arc.boss];
-    return `<article class="puzzle-arc-lore">
-      <div class="puzzle-lore-head"><span>ARC ${arc.arc} · ${stages.length} TAHAP</span><strong>${esc(arc.title)}</strong><em>${esc(boss?.name || 'BOS')}</em></div>
-      <p>${esc(arc.story)}</p>
-      <blockquote>${esc(arc.secret)}</blockquote>
-      <small>${esc(boss?.lore || '')}</small>
-    </article>`;
-  }).join('');
-  return `<div class="puzzle-lore-intro"><span>CATATAN LORE</span><p>${esc(PUZZLE_LORE.intro)}</p><em>${PUZZLE_ARCS.length} arc · ${PUZZLE_BOSSES.length} bos</em></div>
-    <div class="puzzle-lore-stack">${arcs}</div>
-    <div class="puzzle-lore-epilogue"><span>EPILOG</span><p>${esc(PUZZLE_LORE.epilogue)}</p></div>`;
-}
 
-function startPuzzleStage(index) {
-  const stage = PUZZLE_STAGES[index];
-  if (!stage || !puzzleStageUnlocked(puzzleState(), index)) return false;
-  const phases = stage.boss ? (PUZZLE_BOSS_BY_ID[stage.boss]?.phases || [stage.typeId]) : [stage.typeId];
-  puzzleRun = {
-    stageIndex: index, stage, phase: 0, phases,
-    puzzle: generatePuzzle(phases[0], stage.difficulty, `arc|${stage.id}|0`), done: false,
-    timeLimit: puzzleBossTimer(stage), deadline: 0,
-  };
-  puzzleSelected = -1;
-  menuView = 'puzzlePlay';
-  buildPuzzlePlay();
-  startPuzzleTimer();
-  syncScreens();
-  return true;
-}
 
-function buildPuzzlePlay() {
-  if (!puzzleRun) return;
-  const { stage, puzzle, phase, phases } = puzzleRun;
-  const eyebrow = $('puzzle-play-eyebrow');
-  const title = $('puzzle-play-title');
-  const desc = $('puzzle-play-desc');
-  const status = $('puzzle-status');
-  if (eyebrow) eyebrow.textContent = `ARC ${stage.arc} · ${stage.location.toUpperCase()} · STAGE ${stage.index + 1} / ${PUZZLE_STAGES.length}${phases.length > 1 ? ` · FASE ${phase + 1}/${phases.length}` : ''}`;
-  if (title) title.textContent = puzzle.typeName;
-  if (desc) desc.textContent = PUZZLE_TYPE_BY_ID[puzzle.typeId]?.desc || '';
-  if (status) status.textContent = `Langkah: ${puzzle.moves} · Susun sampai mekanisme menyala.`;
-  const wallet = $('puzzle-currency');
-  if (wallet) wallet.textContent = `✦ ${expState().echoes} GEMA · PETUNJUK ${PUZZLE_HINT_COST} GEMA`;
-  updatePuzzleTimerWidget();
-  const board = $('puzzle-board');
-  if (!board) return;
-  board.innerHTML = puzzleBoardMarkup(puzzle);
-}
 
-function puzzleBoardMarkup(puzzle) {
-  if (puzzle.engine === 'path') {
-    const pathCells = new Set(puzzle.state.path.map(([x, y]) => `${x},${y}`));
-    const blocked = new Set(puzzle.blocked);
-    const cells = [];
-    for (let y = 0; y < puzzle.h; y += 1) {
-      for (let x = 0; x < puzzle.w; x += 1) {
-        const key = `${x},${y}`;
-        const isStart = x === puzzle.start[0] && y === puzzle.start[1];
-        const isGoal = x === puzzle.goal[0] && y === puzzle.goal[1];
-        const classes = ['puzzle-cell'];
-        if (blocked.has(key)) classes.push('blocked');
-        if (pathCells.has(key)) classes.push('path');
-        if (isStart) classes.push('start');
-        if (isGoal) classes.push('goal');
-        cells.push(`<button class="${classes.join(' ')}" type="button" data-cell="${x},${y}" ${blocked.has(key) ? 'disabled' : ''}>${isStart ? '●' : isGoal ? '□' : pathCells.has(key) ? '·' : ''}</button>`);
-      }
-    }
-    return `<div class="puzzle-board" style="grid-template-columns:repeat(${puzzle.w},minmax(0,1fr))">${cells.join('')}</div>`;
-  }
-  if (puzzle.engine === 'pipes') {
-    const glyph = { straight: '│', elbow: '└', tee: '┬', cross: '┼', deadend: '╵' };
-    const cells = puzzle.pieces.map((kind, index) => {
-      const rotation = puzzle.state.rotations[index] || 0;
-      const source = index === 0;
-      const sink = index === puzzle.base.length - 1;
-      return `<button class="puzzle-cell ${source ? 'source' : ''} ${sink ? 'target' : ''}" type="button" data-rotate="${index}" title="Putar pipa">
-        <span style="display:inline-block;transform:rotate(${rotation * 90}deg)">${glyph[kind] || '┼'}</span>
-      </button>`;
-    }).join('');
-    return `<div class="puzzle-board" style="grid-template-columns:repeat(${puzzle.w},minmax(0,1fr))">${cells}</div>`;
-  }
-  if (puzzle.engine === 'beam') {
-    const cells = [];
-    for (let y = 0; y < puzzle.h; y += 1) {
-      for (let x = 0; x < puzzle.w; x += 1) {
-        const mirrorIndex = (puzzle.mirrorPositions || []).findIndex(([mx, my]) => mx === x && my === y);
-        const isSource = x === puzzle.source[0] && y === puzzle.source[1];
-        const isTarget = x === puzzle.target[0] && y === puzzle.target[1];
-        if (mirrorIndex >= 0) {
-          const glyph = puzzle.mirrors[mirrorIndex] === '/' ? '/' : '\\';
-          const rotation = puzzle.state.rotations[mirrorIndex] || 0;
-          cells.push(`<button class="puzzle-cell mirror" type="button" data-rotate="${mirrorIndex}"><span style="display:inline-block;transform:rotate(${rotation * 90}deg)">${glyph}</span></button>`);
-        } else {
-          cells.push(`<button class="puzzle-cell ${isSource ? 'source' : ''} ${isTarget ? 'target' : ''}" type="button" disabled>${isSource ? '◉' : isTarget ? '◈' : ''}</button>`);
-        }
-      }
-    }
-    return `<div class="puzzle-board" style="grid-template-columns:repeat(${puzzle.w},minmax(0,1fr))">${cells.join('')}</div>`;
-  }
-  if (puzzle.engine === 'sequence' || puzzle.engine === 'image' || puzzle.engine === 'swap') {
-    const labels = puzzle.engine === 'image'
-      ? puzzle.state.order.map((value) => `PETAK ${value + 1}`)
-      : puzzle.state.order.map((value) => String(value).replace('rune_', 'RUNE '));
-    const tiles = labels.map((label, index) => `<button class="puzzle-tile ${puzzleSelected === index ? 'selected' : ''}" type="button" data-swap="${index}">${esc(label)}</button>`).join('');
-    return `<div class="puzzle-sequence">${tiles}</div>`;
-  }
-  if (puzzle.engine === 'gear' || puzzle.engine === 'toggle') {
-    const cells = puzzle.state.state.map((value, index) => `<button class="puzzle-cell ${value ? 'on' : ''}" type="button" data-toggle="${index}">${value ? '✦' : '◇'}<span style="font-size:9px;display:block">${index + 1}</span></button>`).join('');
-    return `<div class="puzzle-board" style="grid-template-columns:repeat(${Math.min(6, puzzle.count)},minmax(0,1fr))">${cells}</div>`;
-  }
-  return '<p class="puzzle-status">Teka-teki ini belum punya papan.</p>';
-}
 
-function handlePuzzleBoardClick(event) {
-  if (!puzzleRun || puzzleRun.done) return;
-  const puzzle = puzzleRun.puzzle;
-  let move = null;
-  const cell = event.target.closest('[data-cell]');
-  if (cell) {
-    const [x, y] = cell.dataset.cell.split(',').map(Number);
-    move = { cell: [x, y] };
-  }
-  const rotate = event.target.closest('[data-rotate]');
-  if (rotate) move = { rotate: Number(rotate.dataset.rotate), turns: 1 };
-  const swap = event.target.closest('[data-swap]');
-  if (swap) {
-    const index = Number(swap.dataset.swap);
-    if (puzzleSelected < 0) {
-      puzzleSelected = index;
-      buildPuzzlePlay();
-      return;
-    }
-    if (puzzleSelected === index) {
-      puzzleSelected = -1;
-      buildPuzzlePlay();
-      return;
-    }
-    move = { a: puzzleSelected, b: index };
-    puzzleSelected = -1;
-  }
-  const toggle = event.target.closest('[data-toggle]');
-  if (toggle) move = { index: Number(toggle.dataset.toggle) };
-  if (!move) return;
-  const result = applyPuzzleMove(puzzle, move);
-  if (!result.ok) {
-    const status = $('puzzle-status');
-    if (status) status.textContent = 'Langkah itu tidak valid untuk mekanisme ini.';
-    return;
-  }
-  puzzleRun.puzzle = result.puzzle;
-  buildPuzzlePlay();
-  if (puzzleIsSolved(result.puzzle)) finishPuzzleStage();
-}
 
-function finishPuzzleStage() {
-  if (!puzzleRun) return;
-  const run = puzzleRun;
-  if (run.phase < run.phases.length - 1) {
-    run.phase += 1;
-    puzzleSelected = -1;
-    run.puzzle = generatePuzzle(run.phases[run.phase], run.stage.difficulty, `arc|${run.stage.id}|${run.phase}`);
-    resetPuzzleTimer();
-    buildPuzzlePlay();
-    showToast(`Mekanisme fase ${run.phase + 1} aktif — waktu diatur ulang.`, 2000);
-    return;
-  }
-  run.done = true;
-  stopPuzzleTimer();
-  const record = recordPuzzleSolve(progress.puzzle, run.stage.id, { moves: run.puzzle.moves });
-  progress.puzzle = record.progress;
-  if (run.stage.boss) {
-    const boss = recordPuzzleBoss(progress.puzzle, run.stage.boss);
-    progress.puzzle = boss.progress;
-    if (boss.firstClear) showToast(`${PUZZLE_BOSS_BY_ID[run.stage.boss]?.name || 'Bos'} dikalahkan — Ancient Compass diraih.`, 3000);
-  }
-  saveProgress();
-  const status = $('puzzle-status');
-  if (status) status.textContent = 'Mekanisme menyala. Jalan terbuka.';
-  setTimeout(() => {
-    if (menuView === 'puzzlePlay') showPuzzleAdventure('stages');
-  }, 900);
-}
 
-function updatePuzzleTimerWidget() {
-  const widget = $('puzzle-timer');
-  const value = $('puzzle-timer-value');
-  if (!widget || !value) return;
-  const timed = !!puzzleRun?.stage?.timed && !puzzleRun.done;
-  widget.classList.toggle('hidden', !timed);
-  if (!timed) return;
-  const remaining = puzzleRun.deadline > 0 ? (puzzleRun.deadline - Date.now()) / 1000 : puzzleRun.timeLimit;
-  value.textContent = formatPuzzleTime(remaining);
-  widget.classList.toggle('danger', remaining <= 15);
-}
 
-function startPuzzleTimer() {
-  stopPuzzleTimer();
-  if (!puzzleRun?.stage?.timed) {
-    updatePuzzleTimerWidget();
-    return;
-  }
-  puzzleRun.timeLimit = puzzleBossTimer(puzzleRun.stage);
-  puzzleRun.deadline = Date.now() + puzzleRun.timeLimit * 1000;
-  updatePuzzleTimerWidget();
-  puzzleTimerInterval = setInterval(updatePuzzleTimer, 200);
-}
 
-function resetPuzzleTimer() {
-  if (!puzzleRun?.stage?.timed) return;
-  puzzleRun.deadline = Date.now() + puzzleRun.timeLimit * 1000;
-  updatePuzzleTimerWidget();
-}
 
-function stopPuzzleTimer() {
-  if (puzzleTimerInterval) clearInterval(puzzleTimerInterval);
-  puzzleTimerInterval = null;
-  const widget = $('puzzle-timer');
-  if (widget) widget.classList.add('hidden');
-}
 
-function updatePuzzleTimer() {
-  if (!puzzleRun || puzzleRun.done) {
-    stopPuzzleTimer();
-    return;
-  }
-  updatePuzzleTimerWidget();
-  if (puzzleRun.deadline > 0 && Date.now() >= puzzleRun.deadline) timeoutPuzzleStage();
-}
 
-function timeoutPuzzleStage() {
-  if (!puzzleRun || puzzleRun.done) return;
-  puzzleRun.done = true;
-  stopPuzzleTimer();
-  const run = puzzleRun;
-  puzzleState().stats.timeouts += 1;
-  saveProgress();
-  const status = $('puzzle-status');
-  if (status) status.textContent = `WAKTU HABIS — ${PUZZLE_BOSS_BY_ID[run.stage.boss]?.name || 'bos'} menutup mekanisme. Coba lagi.`;
-  const timer = $('puzzle-timer');
-  if (timer) { timer.classList.remove('hidden'); timer.classList.add('danger'); }
-  const value = $('puzzle-timer-value');
-  if (value) value.textContent = '00:00';
-  setTimeout(() => {
-    if (menuView === 'puzzlePlay' && puzzleRun === run) showPuzzleAdventure('stages');
-  }, 1400);
-}
 
-function resetPuzzleBoard() {
-  if (!puzzleRun) return;
-  puzzleRun.puzzle = generatePuzzle(puzzleRun.puzzle.typeId, puzzleRun.puzzle.difficulty, puzzleRun.puzzle.seed);
-  puzzleSelected = -1;
-  buildPuzzlePlay();
-}
 
-function showPuzzleHint() {
-  if (!puzzleRun || puzzleRun.done) return;
-  const status = $('puzzle-status');
-  const wallet = expState();
-  const payment = payPuzzleHint(progress.puzzle, wallet.echoes, puzzleRun.stage.id, PUZZLE_HINT_COST);
-  if (!payment.ok) {
-    if (status) status.textContent = `Gema tidak cukup. Butuh ✦ ${payment.cost} Gema — kumpulkan dari kampanye utama. (Punya ✦ ${payment.echoes})`;
-    return;
-  }
-  wallet.echoes = payment.echoes;
-  progress.puzzle = payment.progress;
-  saveProgress();
-  if (status) status.textContent = `−✦ ${payment.cost} Gema · ${puzzleHintText(puzzleRun.puzzle)} · Sisa ✦ ${wallet.echoes}.`;
-  const balance = $('puzzle-currency');
-  if (balance) balance.textContent = `✦ ${wallet.echoes} GEMA · PETUNJUK ${PUZZLE_HINT_COST} GEMA`;
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 function updateLabHud() {
   const hud = $('lab-hud');
@@ -14447,11 +12044,11 @@ $('moba-canvas')?.addEventListener('pointerdown', (event) => {
   const point = mobaPointerWorld(event);
   if (!point) return;
   mobaAim = point;
-  mobaSetOrder(mobaMatch, point.x, point.y);
+  MODES.moba.lib.mobaSetOrder(mobaMatch, point.x, point.y);
 });
 $('moba-abilities')?.addEventListener('click', (event) => {
   const button = event.target.closest('[data-moba-cast]');
-  if (button && mobaActive && !mobaPaused) mobaCast(mobaMatch, Number(button.dataset.mobaCast), mobaAim);
+  if (button && mobaActive && !mobaPaused) MODES.moba.lib.mobaCast(mobaMatch, Number(button.dataset.mobaCast), mobaAim);
 });
 $('moba-result')?.addEventListener('click', (event) => {
   const action = event.target.closest('[data-moba-action]')?.dataset.mobaAction;
@@ -14466,7 +12063,7 @@ $('btn-wd-quit')?.addEventListener('click', leaveWaveDefense);
 $('btn-wd-resume')?.addEventListener('click', () => toggleWaveDefensePause(false));
 $('btn-wd-pause-leave')?.addEventListener('click', leaveWaveDefense);
 $('btn-wd-next')?.addEventListener('click', () => {
-  if (waveDefenseNextWave(wdMatch)) {
+  if (MODES.wavedefense.lib.waveDefenseNextWave(wdMatch)) {
     wdRenderDirty = true;
     updateWaveDefenseHud(true);
   }
@@ -14485,21 +12082,21 @@ $('wd-battle')?.addEventListener('click', (event) => {
   const tower = event.target.closest('[data-wd-tower]');
   if (tower && wdMatch) {
     wdSelectedTowerId = tower.dataset.wdTower;
-    waveDefenseSelectTower(wdMatch, wdSelectedTowerId);
+    MODES.wavedefense.lib.waveDefenseSelectTower(wdMatch, wdSelectedTowerId);
     wdRenderDirty = true;
     updateWaveDefenseHud(true);
     return;
   }
   const speed = event.target.closest('[data-wd-speed]');
   if (speed && wdMatch) {
-    waveDefenseSetSpeed(wdMatch, Number(speed.dataset.wdSpeed));
+    MODES.wavedefense.lib.waveDefenseSetSpeed(wdMatch, Number(speed.dataset.wdSpeed));
     updateWaveDefenseHud(true);
   }
 });
 $('wd-selection')?.addEventListener('click', (event) => {
   const action = event.target.closest('[data-wd-action]')?.dataset.wdAction;
-  if (action === 'upgrade') waveDefenseUpgrade(wdMatch);
-  else if (action === 'sell') waveDefenseSell(wdMatch);
+  if (action === 'upgrade') MODES.wavedefense.lib.waveDefenseUpgrade(wdMatch);
+  else if (action === 'sell') MODES.wavedefense.lib.waveDefenseSell(wdMatch);
   wdRenderDirty = true;
   updateWaveDefenseHud(true);
 });
@@ -14538,7 +12135,7 @@ $('pirate-canvas')?.addEventListener('pointerdown', (event) => {
   if (!pirateActive || piratePaused || pirateMatch?.phase !== 'sailing') return;
   const point = piratePointerWorld(event);
   if (!point) return;
-  pirateFireAt(pirateMatch, point.x, point.y);
+  MODES.pirates.lib.pirateFireAt(pirateMatch, point.x, point.y);
   updatePirateHud(true);
 });
 $('pirate-controls')?.addEventListener('pointerdown', (event) => {
@@ -14656,6 +12253,7 @@ fetch('/api/admin/session', { credentials: 'same-origin' })
 $('btn-settings-menu').addEventListener('click', () => showSettings('graphics'));
 $('btn-difficulty-menu')?.addEventListener('click', () => showSettings('difficulty'));
 $('btn-credits').addEventListener('click', showCredits);
+$('btn-slots-menu')?.addEventListener('click', () => showSlots());
 $('btn-updates').addEventListener('click', showUpdates);
 $('btn-map-menu').addEventListener('click', openMap);
 $('btn-codex-menu').addEventListener('click', () => openCodex());
@@ -14750,7 +12348,7 @@ $('select-3d-area')?.addEventListener('change', (e) => {
 $('select-3d-region')?.addEventListener('change', (e) => {
   if (!game3D) return;
   game3D.setRegion(e.target.value);
-  showToast(`3D region: ${MODE3D_REGIONS[e.target.value]?.name || e.target.value}`, 1800);
+  showToast(`3D region: ${MODES.mode3d.lib.MODE3D_REGIONS[e.target.value]?.name || e.target.value}`, 1800);
 });
 $('select-3d-submode')?.addEventListener('change', (e) => {
   if (game3D) game3D.subMode = e.target.value;
@@ -15138,6 +12736,7 @@ function syncScreens() {
   $('title-screen').classList.toggle('hidden', menuView !== 'title' || covered);
   $('levels-screen').classList.toggle('hidden', menuView !== 'levels' || covered);
   $('credits-screen').classList.toggle('hidden', menuView !== 'credits' || covered);
+  $('slots-screen')?.classList.toggle('hidden', menuView !== 'slots' || covered);
   $('updates-screen').classList.toggle('hidden', menuView !== 'updates' || covered);
   $('character-screen').classList.toggle('hidden', menuView !== 'character' || covered);
   $('scary-screen')?.classList.toggle('hidden', menuView !== 'scary' || covered);
@@ -15261,7 +12860,7 @@ function updateHud() {
       const badgeKey = `${speedrunRun.multiplier}/${speedrunRun.cycle}`;
       if (badgeKey !== speedBadgeCache) {
         speedBadgeCache = badgeKey;
-        speedBadge.textContent = `⚡ ${speedrunRun.multiplier}× · ${SPEEDRUN_LIVES} NYAWA · PUTARAN ${speedrunRun.cycle + 1}`;
+        speedBadge.textContent = `⚡ ${speedrunRun.multiplier}× · ${MODES.speedrun.lib.SPEEDRUN_LIVES} NYAWA · PUTARAN ${speedrunRun.cycle + 1}`;
       }
       speedBadge.classList.toggle('danger', speedrunRun.multiplier >= 5);
     } else {
@@ -15858,6 +13457,14 @@ function adaptResolution() {
   }
 }
 
+
+
+
+
+
+
+
+
 function frame(now) {
   // Schedule first so an exception in a handler cannot permanently stop the loop.
   requestAnimationFrame(frame);
@@ -15872,7 +13479,13 @@ function frame(now) {
     renderGate = now;
   }
 
-  framePerf.sample(raw * 1000, performance.memory ? performance.memory.usedJSHeapSize / 1048576 : 0);
+  // performance.memory is a slow getter; reading it once a second is enough
+  // for the peak-memory figure.
+  if (now - memorySampleAt > 1000) {
+    memorySampleAt = now;
+    memorySampleMb = performance.memory ? performance.memory.usedJSHeapSize / 1048576 : 0;
+  }
+  framePerf.sample(raw * 1000, memorySampleMb);
 
   // Scary Mode 2.0: events, presence, and difficulty sync. Never runs in menus.
   if (started && !paused && menuView === 'none') horrorTick(raw);
@@ -15892,47 +13505,17 @@ function frame(now) {
   }
 
   if (pirateActive) {
-    if (pirateMatch && !piratePaused && pirateMatch.phase === 'sailing') {
-      updatePirateVoyage(pirateMatch, Math.min(raw, 0.05));
-    }
-    if (pirateMatch) {
-      const canvas = $('pirate-canvas');
-      const ctx = canvas?.getContext('2d');
-      if (canvas && ctx) renderPirateVoyage(ctx, pirateMatch, { width: canvas.width, height: canvas.height, time: now / 1000 });
-    }
-    if (pirateMatch?.phase === 'cleared' || pirateMatch?.phase === 'sunk') completePirateVoyage();
-    pirateUiTimer += raw;
-    updatePirateHud();
+    piratesFrame(raw, now);
     return;
   }
 
   if (wdActive) {
-    if (wdMatch && !wdPaused && wdMatch.phase !== 'ended') {
-      updateWaveDefense(wdMatch, Math.min(raw, 0.05));
-    }
-    if (wdMatch && (!wdPaused || wdRenderDirty)) {
-      const canvas = $('wd-canvas');
-      const ctx = canvas?.getContext('2d');
-      if (canvas && ctx) renderWaveDefense(ctx, wdMatch, { width: canvas.width, height: canvas.height, time: now / 1000 });
-    }
-    wdRenderDirty = false;
-    if (wdMatch?.phase === 'ended') completeWaveDefense();
-    wdUiTimer += raw;
-    updateWaveDefenseHud();
+    waveDefenseFrame(raw, now);
     return;
   }
 
   if (mobaActive) {
-    if (mobaMatch && !mobaPaused && mobaMatch.phase === 'playing') {
-      updateMobaMatch(mobaMatch, Math.min(raw, 0.05), mobaInput);
-      mobaInput.castSlot = -1;
-    }
-    const canvas = $('moba-canvas');
-    const ctx = canvas?.getContext('2d');
-    if (canvas && ctx) renderMoba(ctx, mobaMatch, { width: canvas.width, height: canvas.height, time: now / 1000 });
-    if (mobaMatch?.phase === 'ended') completeMobaMatch();
-    mobaUiTimer += raw;
-    updateMobaHud();
+    mobaFrame(raw, now);
     return;
   }
 
@@ -15988,7 +13571,7 @@ function frame(now) {
       const speedScale = activeRunKind === 'speedrun' && speedrunRun ? speedrunRun.multiplier : 1;
       accumulator += raw * speedScale;
       let steps = 0;
-      const stepCap = activeRunKind === 'speedrun' ? speedrunMaxSubsteps(speedScale) : 10;
+      const stepCap = activeRunKind === 'speedrun' ? MODES.speedrun.lib.speedrunMaxSubsteps(speedScale) : 10;
       while (accumulator >= FIXED && steps < stepCap) {
         game.update(FIXED, inputSnapshot());
         if (activeRunKind === 'atlas') tickAtlasRun(FIXED);
@@ -16025,43 +13608,7 @@ function frame(now) {
       renderer.drawCharacterPreview(previewCtx, character, character.characterId, now / 1000);
     }
 
-    if (menuView === 'mode3d' && game3D) {
-      game3D.update(raw, input3D);
-      drain3DHorrorEvents();
-      // Position the listener at the live camera and play world effects through
-      // HRTF panners when spatial audio is enabled.
-      {
-        const cam3D = game3D.camera;
-        const forwardX = cam3D.targetX - cam3D.x;
-        const forwardY = cam3D.targetY - cam3D.y;
-        const forwardZ = cam3D.targetZ - cam3D.z;
-        const forwardLength = Math.hypot(forwardX, forwardY, forwardZ) || 1;
-        audio.setListener(
-          { x: cam3D.x, y: cam3D.y, z: cam3D.z },
-          { x: forwardX / forwardLength, y: forwardY / forwardLength, z: forwardZ / forwardLength },
-        );
-        for (const soundEvent of game3D.drainSounds()) {
-          audio.playAt(soundEvent.type, { x: soundEvent.x, y: soundEvent.y, z: soundEvent.z });
-        }
-      }
-      const canvas3D = $('canvas-3d');
-      if (canvas3D) {
-        const ctx3D = canvas3D.getContext('2d');
-        if (ctx3D) {
-          render3D(ctx3D, game3D);
-          // Scary Mode presents in 3D too: same effect data, camera-aware layer.
-          const horror3D = horrorRenderLayer();
-          if (horror3D) renderer.drawHorrorAtmosphere(ctx3D, horror3D, canvas3D.width, canvas3D.height);
-          const scare3D = scareDirector?.active;
-          if (scare3D) renderer.drawScareOverlay(ctx3D, scare3D, canvas3D.width, canvas3D.height);
-        }
-      }
-      input3D.jumpJustPressed = false;
-      input3D.attackJustPressed = false;
-      input3D.dashJustPressed = false;
-      input3D.interactJustPressed = false;
-      input3D.lockOnJustPressed = false;
-    }
+    if (menuView === 'mode3d' && game3D) mode3dFrame(raw);
   }
 
   drainEvents();
@@ -16081,7 +13628,7 @@ function frame(now) {
   }
 }
 
-window.addEventListener('resize', () => { renderer.resize(); syncPirateCanvasSize(); });
+window.addEventListener('resize', () => { renderer.resize(); if (MODES.pirates) syncPirateCanvasSize(); });
 
 // ── The Fallen Ones (Arc II: Heavenly Descent) ──────────────────────────
 // A second, ascended campaign. All rules live in src/fallen.js; this layer
@@ -17296,6 +14843,25 @@ window.addEventListener('keydown', crusadeKeydown);
 
 // ── debug hooks (used by automated smoke tests) ─────────────────────────
 window.__ashen = {
+  // Phase 1 mode loader: ids, loaded set, and an awaitable loader.
+  get lazyModes() { return Object.keys(MODE_LOADERS); },
+  get loadedModes() { return Object.keys(MODES); },
+  get menuHubs() { return menuHubs ? { open: menuHubs.openHub, hubs: menuHubs.hubs() } : null; },
+  openMenuHub(id) { return menuHubs?.open(id) ?? false; },
+  closeMenuHub() { menuHubs?.close(); return true; },
+  // Phase 1 save layer: profile slots, debounced writes, export/import.
+  get saves() {
+    return { active: saveStore.activeSlot, count: SAVE_SLOT_COUNT, pending: saveStore.pendingCount, writes: saveStore.writeCount, slots: saveStore.slots(), areas: Object.keys(SAVE_AREAS) };
+  },
+  flushSaves() { saveStore.flush(); return saveStore.writeCount; },
+  saveProgress,
+  showSlots,
+  switchSlot,
+  exportSlot: exportSlotFile,
+  importSlot: importSlotFile,
+  deleteSlot: deleteSlotFile,
+  undoDeleteSlot,
+  loadMode,
   get secrets() {
     return {
       state: JSON.parse(JSON.stringify(secretsState)),
@@ -17669,10 +15235,10 @@ window.__ashen = {
   },
   eternalSave: saveEternalProfile,
   get gfx3D() {
-    return gfx3DStatus();
+    return gfx3DStatusSafe();
   },
   get mode3dContent() {
-    return content3DSummary();
+    return (MODES.mode3d ? MODES.mode3d.lib.content3DSummary() : null);
   },
   get horror3D() {
     return {
@@ -17712,8 +15278,8 @@ window.__ashen = {
     const canvas = $('canvas-3d');
     const ctx = canvas?.getContext('2d');
     if (!ctx || !game3D) return null;
-    render3D(ctx, game3D);
-    return gfx3DStatus();
+    MODES.mode3d.lib.render3D(ctx, game3D);
+    return gfx3DStatusSafe();
   },
   start3DHorror,
   restart3DHorror,
@@ -17954,6 +15520,7 @@ window.__ashen = {
     };
   },
   get speedrun() {
+    if (!MODES.speedrun) return null;
     return {
       run: speedrunRun ? { ...speedrunRun } : null,
       progress: speedrunState(),
@@ -18068,11 +15635,12 @@ window.__ashen = {
     return result;
   },
   get fishing() {
+    if (!MODES.fishing) return null;
     return {
       state: fishingState(),
-      summary: fishingSummary(fishingState()),
-      index: fishingIndex(fishingState()),
-      shop: fishingShopItems(),
+      summary: MODES.fishing.lib.fishingSummary(fishingState()),
+      index: MODES.fishing.lib.fishingIndex(fishingState()),
+      shop: MODES.fishing.lib.fishingShopItems(),
       reel: fishingReel
         ? {
             fish: fishingReel.fish.id,
@@ -18360,7 +15928,8 @@ window.__ashen = {
   startTrialLevel,
   startTrialBoss,
   get trials() {
-    return { progress: trialsState(), summary: trialSummary(trialsState()), run: trialRun };
+    if (!MODES.trials) return null;
+    return { progress: trialsState(), summary: MODES.trials.lib.trialSummary(trialsState()), run: trialRun };
   },
   showPuzzleAdventure,
   buildPuzzleScreen,
@@ -18369,17 +15938,18 @@ window.__ashen = {
     if (!puzzleRun || puzzleRun.done) return false;
     let current = puzzleRun.puzzle;
     for (const move of current.solution || []) {
-      const result = applyPuzzleMove(current, move);
+      const result = MODES.puzzle.lib.applyPuzzleMove(current, move);
       if (!result.ok) return false;
       current = result.puzzle;
     }
-    if (!puzzleIsSolved(current)) return false;
+    if (!MODES.puzzle.lib.puzzleIsSolved(current)) return false;
     puzzleRun.puzzle = current;
     finishPuzzleStage();
     return true;
   },
   get puzzle() {
-    return { progress: puzzleState(), summary: puzzleSummary(puzzleState()), run: puzzleRun, tab: puzzleTab };
+    if (!MODES.puzzle) return null;
+    return { progress: puzzleState(), summary: MODES.puzzle.lib.puzzleSummary(puzzleState()), run: puzzleRun, tab: puzzleTab };
   },
   get puzzleTimer() {
     if (!puzzleRun?.stage?.timed) return null;
@@ -18390,48 +15960,51 @@ window.__ashen = {
     };
   },
   get moba() {
+    if (!MODES.moba) return null;
     return {
       progress: mobaState(),
-      summary: mobaSummary(mobaState()),
+      summary: MODES.moba.lib.mobaSummary(mobaState()),
       active: mobaActive,
       paused: mobaPaused,
       heroId: mobaHeroId,
       mapId: mobaMapId,
       lane: mobaLane,
       difficulty: mobaDifficulty,
-      snapshot: mobaSnapshot(mobaMatch),
+      snapshot: MODES.moba.lib.mobaSnapshot(mobaMatch),
       result: mobaResult,
     };
   },
   get waveDefense() {
+    if (!MODES.wavedefense) return null;
     return {
       progress: waveDefenseState(),
-      summary: waveDefenseSummary(waveDefenseState()),
+      summary: MODES.wavedefense.lib.waveDefenseSummary(waveDefenseState()),
       active: wdActive,
       paused: wdPaused,
       mapId: wdMapId,
       difficulty: wdDifficulty,
       endless: wdEndless,
       selectedTowerId: wdSelectedTowerId,
-      snapshot: waveDefenseSnapshot(wdMatch),
+      snapshot: MODES.wavedefense.lib.waveDefenseSnapshot(wdMatch),
       result: wdResult,
     };
   },
   get pirates() {
+    if (!MODES.pirates) return null;
     return {
       progress: pirateState(),
-      summary: pirateSummary(pirateState()),
+      summary: MODES.pirates.lib.pirateSummary(pirateState()),
       active: pirateActive,
       paused: piratePaused,
       stageId: pirateStageId,
       mode: pirateMatch?.mode || 'route',
       endless: pirateState().endless,
-      snapshot: pirateSnapshot(pirateMatch),
+      snapshot: MODES.pirates.lib.pirateSnapshot(pirateMatch),
       result: pirateResult,
-      stages: PIRATE_STAGES,
-      islands: PIRATE_ISLANDS,
-      shipTypes: PIRATE_SHIP_TYPES,
-      bosses: PIRATE_BOSS_TYPES,
+      stages: MODES.pirates.lib.PIRATE_STAGES,
+      islands: MODES.pirates.lib.PIRATE_ISLANDS,
+      shipTypes: MODES.pirates.lib.PIRATE_SHIP_TYPES,
+      bosses: MODES.pirates.lib.PIRATE_BOSS_TYPES,
     };
   },
   showPirates,
@@ -18439,40 +16012,40 @@ window.__ashen = {
   startPirateVoyage,
   startPirateEndless,
   pirateNextSurge() {
-    const ok = pirateEndlessSurge(pirateMatch);
+    const ok = MODES.pirates.lib.pirateEndlessSurge(pirateMatch);
     updatePirateHud(true);
     return ok;
   },
   leavePirates,
   setPirateStage(id) {
-    if (!PIRATE_STAGE_BY_ID[id]) return false;
+    if (!MODES.pirates.lib.PIRATE_STAGE_BY_ID[id]) return false;
     pirateStageId = id;
     buildPirateScreen();
     return true;
   },
   togglePiratePause,
   pirateFire(side) { return firePirateSide(side); },
-  pirateDock,
+  pirateDock: (...args) => MODES.pirates.lib.pirateDock(...args),
   pirateStep(seconds = 1) {
     if (!pirateMatch) return null;
     const frames = Math.max(1, Math.round(Number(seconds) * 60));
-    for (let i = 0; i < frames && pirateMatch.phase === 'sailing'; i += 1) updatePirateVoyage(pirateMatch, 1 / 60);
+    for (let i = 0; i < frames && pirateMatch.phase === 'sailing'; i += 1) MODES.pirates.lib.updatePirateVoyage(pirateMatch, 1 / 60);
     if (pirateMatch.phase === 'cleared' || pirateMatch.phase === 'sunk') completePirateVoyage();
     updatePirateHud(true);
-    return pirateSnapshot(pirateMatch);
+    return MODES.pirates.lib.pirateSnapshot(pirateMatch);
   },
   pirateSetControls(throttle, turn) {
-    return setPirateControls(pirateMatch, { throttle, turn });
+    return MODES.pirates.lib.setPirateControls(pirateMatch, { throttle, turn });
   },
   pirateSetKills(kills = 0) {
     if (!pirateMatch) return null;
     pirateMatch.kills = Math.max(0, Math.floor(Number(kills) || 0));
-    if (pirateMatch.kills >= pirateMatch.stage.targetKills) updatePirateVoyage(pirateMatch, 1 / 60);
+    if (pirateMatch.kills >= pirateMatch.stage.targetKills) MODES.pirates.lib.updatePirateVoyage(pirateMatch, 1 / 60);
     updatePirateHud(true);
-    return pirateSnapshot(pirateMatch);
+    return MODES.pirates.lib.pirateSnapshot(pirateMatch);
   },
   pirateDamageShip(id, amount = 9999) {
-    const ok = pirateDamageShip(pirateMatch, id, amount);
+    const ok = MODES.pirates.lib.pirateDamageShip(pirateMatch, id, amount);
     if (pirateMatch?.phase === 'cleared' || pirateMatch?.phase === 'sunk') completePirateVoyage();
     updatePirateHud(true);
     return ok;
@@ -18480,7 +16053,7 @@ window.__ashen = {
   pirateSinkBoss() {
     const boss = pirateMatch?.enemies.find((enemy) => enemy.type.boss);
     if (!boss) return false;
-    pirateDamageShip(pirateMatch, boss.id, 99999);
+    MODES.pirates.lib.pirateDamageShip(pirateMatch, boss.id, 99999);
     completePirateVoyage();
     updatePirateHud(true);
     return true;
@@ -18490,7 +16063,7 @@ window.__ashen = {
     const canvas = $('pirate-canvas');
     const ctx = canvas?.getContext('2d');
     if (!canvas || !ctx) return false;
-    renderPirateVoyage(ctx, pirateMatch, { width: canvas.width, height: canvas.height, time: performance.now() / 1000 });
+    MODES.pirates.lib.renderPirateVoyage(ctx, pirateMatch, { width: canvas.width, height: canvas.height, time: performance.now() / 1000 });
     return true;
   },
   showWaveDefense,
@@ -18498,13 +16071,13 @@ window.__ashen = {
   startWaveDefenseBattle,
   leaveWaveDefense,
   setWaveDefenseMap(id) {
-    if (!WAVE_DEFENSE_MAP_BY_ID[id]) return false;
+    if (!MODES.wavedefense.lib.WAVE_DEFENSE_MAP_BY_ID[id]) return false;
     wdMapId = id;
     buildWaveDefenseScreen();
     return true;
   },
   setWaveDefenseDifficulty(id) {
-    if (!WAVE_DEFENSE_DIFFICULTIES.some((entry) => entry.id === id)) return false;
+    if (!MODES.wavedefense.lib.WAVE_DEFENSE_DIFFICULTIES.some((entry) => entry.id === id)) return false;
     wdDifficulty = id;
     buildWaveDefenseScreen();
     return true;
@@ -18520,15 +16093,15 @@ window.__ashen = {
     return wdEndless;
   },
   setWaveDefenseTower(id) {
-    if (!WAVE_DEFENSE_TOWER_BY_ID[id]) return false;
+    if (!MODES.wavedefense.lib.WAVE_DEFENSE_TOWER_BY_ID[id]) return false;
     wdSelectedTowerId = id;
-    if (wdMatch) waveDefenseSelectTower(wdMatch, id);
+    if (wdMatch) MODES.wavedefense.lib.waveDefenseSelectTower(wdMatch, id);
     buildWaveDefenseScreen();
     updateWaveDefenseHud(true);
     return true;
   },
   waveDefenseBuild(slot, towerId = wdMatch?.buildTowerId) {
-    return waveDefenseBuild(wdMatch, slot, towerId);
+    return MODES.wavedefense.lib.waveDefenseBuild(wdMatch, slot, towerId);
   },
   waveDefenseGold(amount = 100) {
     if (!wdMatch) return 0;
@@ -18541,17 +16114,17 @@ window.__ashen = {
     const canvas = $('wd-canvas');
     const ctx = canvas?.getContext('2d');
     if (!canvas || !ctx) return false;
-    renderWaveDefense(ctx, wdMatch, { width: canvas.width, height: canvas.height, time: performance.now() / 1000 });
+    MODES.wavedefense.lib.renderWaveDefense(ctx, wdMatch, { width: canvas.width, height: canvas.height, time: performance.now() / 1000 });
     return true;
   },
   waveDefenseUpgrade() {
-    return waveDefenseUpgrade(wdMatch);
+    return MODES.wavedefense.lib.waveDefenseUpgrade(wdMatch);
   },
   waveDefenseSell() {
-    return waveDefenseSell(wdMatch);
+    return MODES.wavedefense.lib.waveDefenseSell(wdMatch);
   },
   waveDefenseNextWave() {
-    const ok = waveDefenseNextWave(wdMatch);
+    const ok = MODES.wavedefense.lib.waveDefenseNextWave(wdMatch);
     updateWaveDefenseHud(true);
     return ok;
   },
@@ -18566,20 +16139,20 @@ window.__ashen = {
     wdMatch.projectiles = [];
     wdRenderDirty = true;
     updateWaveDefenseHud(true);
-    return waveDefenseSnapshot(wdMatch);
+    return MODES.wavedefense.lib.waveDefenseSnapshot(wdMatch);
   },
   waveDefenseStep(seconds = 1) {
     if (!wdMatch) return null;
     const frames = Math.max(1, Math.round(Number(seconds) * 60));
-    for (let i = 0; i < frames && wdMatch.phase !== 'ended'; i += 1) updateWaveDefense(wdMatch, 1 / 60);
+    for (let i = 0; i < frames && wdMatch.phase !== 'ended'; i += 1) MODES.wavedefense.lib.updateWaveDefense(wdMatch, 1 / 60);
     if (wdMatch.phase === 'ended') completeWaveDefense();
     wdRenderDirty = true;
     updateWaveDefenseHud(true);
-    return waveDefenseSnapshot(wdMatch);
+    return MODES.wavedefense.lib.waveDefenseSnapshot(wdMatch);
   },
   waveDefenseWin() {
     if (!wdMatch) return false;
-    endWaveDefense(wdMatch, 'victory');
+    MODES.wavedefense.lib.endWaveDefense(wdMatch, 'victory');
     completeWaveDefense();
     wdRenderDirty = true;
     updateWaveDefenseHud(true);
@@ -18590,7 +16163,7 @@ window.__ashen = {
     wdMatch.castle.hp = Math.max(0, wdMatch.castle.hp - Math.max(1, Number(amount) || 1));
     wdMatch.castle.flash = 0.5;
     if (wdMatch.castle.hp <= 0) {
-      endWaveDefense(wdMatch, 'defeat');
+      MODES.wavedefense.lib.endWaveDefense(wdMatch, 'defeat');
       completeWaveDefense();
     }
     wdRenderDirty = true;
@@ -18602,40 +16175,40 @@ window.__ashen = {
   startMobaBattle,
   leaveMoba,
   setMobaHero(id) {
-    if (!MOBA_HERO_BY_ID[id]) return false;
+    if (!MODES.moba.lib.MOBA_HERO_BY_ID[id]) return false;
     mobaHeroId = id;
     buildMobaScreen();
     return true;
   },
   setMobaMap(id) {
-    if (!MOBA_MAP_BY_ID[id]) return false;
+    if (!MODES.moba.lib.MOBA_MAP_BY_ID[id]) return false;
     mobaMapId = id;
     buildMobaScreen();
     return true;
   },
   setMobaLane(lane) {
-    if (!MOBA_LANES.includes(lane)) return false;
+    if (!MODES.moba.lib.MOBA_LANES.includes(lane)) return false;
     mobaLane = lane;
     buildMobaScreen();
     return true;
   },
   mobaCast(slot, aim = {}) {
-    return mobaCast(mobaMatch, Number(slot), aim);
+    return MODES.moba.lib.mobaCast(mobaMatch, Number(slot), aim);
   },
   mobaSetOrder(x, y) {
-    return mobaSetOrder(mobaMatch, x, y);
+    return MODES.moba.lib.mobaSetOrder(mobaMatch, x, y);
   },
   mobaStep(seconds = 1) {
     if (!mobaMatch) return null;
     const frames = Math.max(1, Math.round(Number(seconds) * 60));
-    for (let i = 0; i < frames && mobaMatch.phase === 'playing'; i += 1) updateMobaMatch(mobaMatch, 1 / 60, mobaInput);
+    for (let i = 0; i < frames && mobaMatch.phase === 'playing'; i += 1) MODES.moba.lib.updateMobaMatch(mobaMatch, 1 / 60, mobaInput);
     if (mobaMatch.phase === 'ended') completeMobaMatch();
     updateMobaHud(true);
-    return mobaSnapshot(mobaMatch);
+    return MODES.moba.lib.mobaSnapshot(mobaMatch);
   },
   mobaWin() {
     if (!mobaMatch) return false;
-    endMobaMatch(mobaMatch, 'blue');
+    MODES.moba.lib.endMobaMatch(mobaMatch, 'blue');
     completeMobaMatch();
     return true;
   },
@@ -18645,7 +16218,7 @@ window.__ashen = {
     if (!core) return false;
     core.hp = Math.max(0, core.hp - Math.max(1, Number(amount) || 1));
     if (core.hp <= 0) {
-      endMobaMatch(mobaMatch, team === 'blue' ? 'red' : 'blue');
+      MODES.moba.lib.endMobaMatch(mobaMatch, team === 'blue' ? 'red' : 'blue');
       completeMobaMatch();
     }
     updateMobaHud(true);
@@ -18848,9 +16421,25 @@ window.__ashen = {
 // kick off
 // A save that already felled The Oathbreaker ascends into the second menu.
 if (ascendProgress(progress).ok) saveProgress();
+// ── Main menu hubs (Phase 1, v0.39.0): 35 entries folded into 7 hubs ──
+const MENU_SEEN_KEY = 'ashen-vow-menu-seen-v1';
+const menuSeen = new Set((() => { try { return JSON.parse(saveRead(MENU_SEEN_KEY) || '[]'); } catch { return []; } })());
+menuHubs = installMenuHubs({
+  root: document.querySelector('#title-screen .main-menu'),
+  seen: menuSeen,
+  onSeen: (ids) => {
+    for (const id of ids) menuSeen.add(id);
+    saveWrite(MENU_SEEN_KEY, JSON.stringify([...menuSeen]));
+  },
+  lastEntry: () => (progress.lastEntry && typeof progress.lastEntry.id === 'string' ? progress.lastEntry : null),
+  onEntry: (id, label) => {
+    progress.lastEntry = { id, label: String(label).slice(0, 60) };
+    saveProgress();
+  },
+});
 updateMenuProgress();
 buildLevelCards();
-buildHorror3DPanel();
+if (MODES.mode3d) buildHorror3DPanel();
 applyCharacterToGame();
 applySettings();
 if (progress.crusade?.cleared) {
@@ -19223,5 +16812,10 @@ Object.defineProperties(window.__ashen, {
 
 updateVoiceBadge();
 void refreshVoiceStatus();
+
+// Creating an AudioContext costs ~200 ms on Windows (device init). Do it while
+// the menu is idle so the first click or run start does not stall; the context
+// stays suspended until a gesture resumes it through audio.init().
+(window.requestIdleCallback || ((fn) => setTimeout(fn, 600)))(() => { try { audio.prewarm(); } catch { /* audio unavailable */ } }, { timeout: 2500 });
 
 window.__ashenBootReady?.();
