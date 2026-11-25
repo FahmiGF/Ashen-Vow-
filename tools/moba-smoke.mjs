@@ -104,10 +104,10 @@ async function main() {
     await send('Page.bringToFront');
     await boot();
 
-    const hub = await evaluate(`(() => {
+    const hub = await evaluate(`(async () => {
       const A = window.__ashen;
       A.clearProgress();
-      A.showMoba();
+      await A.showMoba();
       return {
         view: A.menuView,
         heroes: document.querySelectorAll('[data-moba-hero]').length,
@@ -149,9 +149,9 @@ async function main() {
     check('difficulty picker selects Veteran', selected.difficulty, 'veteran');
     check('start button names the selected hero', /Riftwalker/.test(selected.label), true);
 
-    const battle = await evaluate(`(() => {
+    const battle = await evaluate(`(async () => {
       const A = window.__ashen;
-      A.startMobaBattle();
+      await A.startMobaBattle();
       return {
         view: A.menuView,
         active: A.moba.active,
@@ -262,9 +262,9 @@ async function main() {
     await send('Page.reload');
     await sleep(350);
     await boot();
-    const persisted = await evaluate(`(() => {
+    const persisted = await evaluate(`(async () => {
       const A = window.__ashen;
-      A.showMoba();
+      await A.showMoba();
       return {
         matches: A.progress.moba.matches,
         wins: A.progress.moba.wins,
