@@ -1,9 +1,9 @@
 {
   "name": "ashen-vow",
-  "version": "0.36.0",
+  "version": "0.39.0",
   "private": true,
   "type": "module",
-  "description": "Ashen Vow v0.36.0 — BAB X The Lanternwake with a four-phase Wickbearer, the Scary Mode Vigil Tree, ElevenLabs voice, an in-engine cinematic trailer and a startup guard",
+  "description": "Ashen Vow v0.39.0 — Lighter Ash: the per-frame canvas filter removed, eleven modes loaded on demand, three save profiles with export/import, and a seven-hub main menu",
   "scripts": {
     "start": "node server.js",
     "test": "node --test tests/*.test.js",

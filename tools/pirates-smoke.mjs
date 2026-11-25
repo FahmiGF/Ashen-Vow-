@@ -5,6 +5,7 @@ import { spawn } from 'node:child_process';
 import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { VERSION, VERSION_RE } from './smoke-version.mjs';
 
 const URL = process.env.ASHEN_URL || 'http://127.0.0.1:4300/';
 const CDP_PORT = Number(process.env.CDP_PORT) || 9264;
@@ -112,7 +113,7 @@ async function main() {
       hasBattle: !!document.getElementById('pirate-battle'),
     }))()`);
     check(bootState.hasPirate && bootState.hasScreen && bootState.hasBattle, 'Pirate Tide screens exist');
-    check(/0\.36\./.test(`${bootState.version} ${bootState.title}`), `boots v0.36.0 (${bootState.title})`);
+    check(VERSION_RE.test(`${bootState.version} ${bootState.title}`), `boots v${VERSION} (${bootState.title})`);
 
     const hub = await evaluate(`(async () => {
       const A = window.__ashen;

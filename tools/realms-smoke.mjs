@@ -5,6 +5,7 @@ import { spawn } from 'node:child_process';
 import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { VERSION, VERSION_RE } from './smoke-version.mjs';
 
 const URL = process.env.ASHEN_URL || 'http://127.0.0.1:4300/';
 const CDP_PORT = Number(process.env.CDP_PORT) || 9333;
@@ -82,7 +83,7 @@ try {
       allRooms: A.game.constructor ? true : false,
     };
   })()`);
-  check(boot.version === '0.36.0', 'version is 0.36.0');
+  check(boot.version === VERSION, `version is v${VERSION}`);
   check(boot.realmsButton && boot.stageButton && boot.astralButton, 'new menu buttons exist');
 
   const realms = await evaluate(`(async () => {

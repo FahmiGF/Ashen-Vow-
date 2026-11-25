@@ -5,6 +5,7 @@ import { spawn } from 'node:child_process';
 import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { VERSION, VERSION_RE } from './smoke-version.mjs';
 
 const URL = process.env.ASHEN_URL || 'http://127.0.0.1:4300/';
 const CDP_PORT = Number(process.env.CDP_PORT) || 9334;
@@ -81,7 +82,7 @@ try {
       style: [...document.styleSheets].some((sheet) => String(sheet.href).includes('styles-eclipse')),
     };
   })()`);
-  check(boot.version === '0.36.0', `version is 0.36.0 (got ${boot.version})`);
+  check(boot.version === VERSION, `version is ${VERSION} (got ${boot.version})`);
   check(boot.button && boot.screen && boot.style, 'Eclipse menu, screen and stylesheet are wired');
 
   const campaign = await evaluate(`(async () => {

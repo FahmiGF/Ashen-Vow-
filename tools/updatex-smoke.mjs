@@ -4,6 +4,7 @@ import { spawn } from 'node:child_process';
 import { existsSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { VERSION, VERSION_RE } from './smoke-version.mjs';
 
 const BASE = process.env.ASHEN_URL || 'http://127.0.0.1:4300/';
 const PORT = Number(process.env.CDP_PORT) || 9338;
@@ -108,7 +109,7 @@ try {
     scary: window.__ashen.scary,
     menu: window.__ashen.menuView,
   }))()`);
-  check(String(boot.version).includes('0.36.0'), `boots v0.36.0 (${String(boot.version).slice(0, 48)})`);
+  check(String(boot.version).includes(VERSION), `boots v${VERSION} (${String(boot.version).slice(0, 48)})`);
   check(boot.scary && boot.scary.enabled === false, 'Scary Mode is disabled by default');
 
   // ── AI navigation in the live engine ──

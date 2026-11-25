@@ -5,6 +5,7 @@ import { spawn } from 'node:child_process';
 import { existsSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { VERSION, VERSION_RE } from './smoke-version.mjs';
 
 const BASE = process.env.ASHEN_URL || 'http://127.0.0.1:4300/';
 const PORT = Number(process.env.CDP_PORT) || 9341;
@@ -102,7 +103,7 @@ try {
       tabs: window.__ashen.dreadTabs.length,
     },
   }))()`);
-  check(/0\.36\.0/.test(String(boot.version)), `boots v0.36.0 (${String(boot.version).slice(0, 44)})`);
+  check(VERSION_RE.test(String(boot.version)), `boots v${VERSION} (${String(boot.version).slice(0, 44)})`);
   check(boot.dread && boot.dread.settings.enabled === true, 'The Dread Beyond is enabled by default');
   check(boot.dread.settings.awarenessEnabled === false, 'Awareness is opt-in');
   check(boot.counts.environments === 5 && boot.counts.enemies === 7 && boot.counts.bosses === 3, '5 environments, 7 Unnatural, 3 bosses');

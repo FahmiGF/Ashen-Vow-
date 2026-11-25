@@ -11,6 +11,7 @@ import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import assert from 'node:assert/strict';
+import { VERSION, VERSION_RE } from './smoke-version.mjs';
 
 const PORT = Number(process.env.LAB_PORT) || 4312;
 const URL = process.env.ASHEN_URL || `http://127.0.0.1:${PORT}/`;
@@ -158,7 +159,7 @@ try {
       titleVisible: !document.getElementById('labyrinth-screen').classList.contains('hidden'),
     };
   })()`);
-  check('boot reports v0.36.0', boot.version === '0.36.0', boot.version);
+  check(`boot reports v${VERSION}`, boot.version === VERSION, boot.version);
   check('lab hub shows 10 modes and 5 tabs', boot.modes === 10 && boot.tabs === 5, JSON.stringify(boot));
   check('lab hub renders', boot.menu === 'labyrinth' && boot.titleVisible);
 

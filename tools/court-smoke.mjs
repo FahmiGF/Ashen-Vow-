@@ -11,6 +11,7 @@ import { spawn } from 'node:child_process';
 import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { VERSION, VERSION_RE } from './smoke-version.mjs';
 
 const URL = process.env.ASHEN_URL || 'http://127.0.0.1:4300/';
 const CDP_PORT = Number(process.env.CDP_PORT) || 9233;
@@ -141,8 +142,8 @@ async function main() {
       A.clearProgress();
       return { version: A.version, title: document.title, levelCards: document.querySelectorAll('#level-cards .level-card').length };
     })()`);
-    assert.equal(boot.version, '0.36.0');
-    assert.match(boot.title, /0.36.0/);
+    assert.equal(boot.version, VERSION);
+    assert.match(boot.title, VERSION_RE);
 
     // Hub render.
     const hub = await evaluate(`(() => {

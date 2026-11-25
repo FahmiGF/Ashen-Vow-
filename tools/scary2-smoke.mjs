@@ -4,6 +4,7 @@ import { spawn } from 'node:child_process';
 import { existsSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { VERSION, VERSION_RE } from './smoke-version.mjs';
 
 const BASE = process.env.ASHEN_URL || 'http://127.0.0.1:4300/';
 const PORT = Number(process.env.CDP_PORT) || 9339;
@@ -94,7 +95,7 @@ try {
     scary: window.__ashen.settings.scary,
     campaign: window.__ashen.settings.gameplay.difficulty,
   }))()`);
-  check(/0\.36\.0/.test(String(boot.version)), `boots v0.36.0 (${String(boot.version).slice(0, 42)})`);
+  check(VERSION_RE.test(String(boot.version)), `boots v${VERSION} (${String(boot.version).slice(0, 42)})`);
   check(boot.scary.enabled === false && boot.scary.antiJumpscare === false, 'Scary Mode and anti-jumpscare are off by default');
   check(boot.scary.difficulty === 'normal', 'default horror difficulty is Normal');
 

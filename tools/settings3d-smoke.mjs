@@ -4,6 +4,7 @@ import { spawn } from 'node:child_process';
 import { existsSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { VERSION, VERSION_RE } from './smoke-version.mjs';
 
 const URL = process.env.ASHEN_URL || 'http://127.0.0.1:4300/';
 const PORT = Number(process.env.CDP_PORT) || 9335;
@@ -70,7 +71,7 @@ try {
   await waitFor(() => evaluate('typeof window.__ashen === "object"'), 20000, 'game boot');
 
   const boot = await evaluate(`({ version: window.__ashen.version, difficulty: window.__ashen.difficulty, categories: window.__ashen.settings && Object.keys(window.__ashen.settings).length })`);
-  check(boot.version === '0.36.0', `version is 0.36.0 (got ${boot.version})`);
+  check(boot.version === VERSION, `version is ${VERSION} (got ${boot.version})`);
   check(boot.difficulty.engine === 'normal' && boot.difficulty.active === 'normal', 'normal difficulty is active in the engine');
   check(boot.categories >= 10, 'versioned settings expose all groups');
 

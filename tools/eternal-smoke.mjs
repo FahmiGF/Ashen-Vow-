@@ -3,6 +3,7 @@ import { spawn } from 'node:child_process';
 import { existsSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { VERSION, VERSION_RE } from './smoke-version.mjs';
 
 const BASE = process.env.ASHEN_URL || 'http://127.0.0.1:4300/';
 const PORT = Number(process.env.CDP_PORT) || 9345;
@@ -99,7 +100,7 @@ try {
     events: window.__ashen.eternalWorldEvents.length,
     milestones: window.__ashen.eternalRankMilestones.length,
   }))()`);
-  check(/0\.36\.0/.test(String(boot.title)), `boots v0.36.0 (${String(boot.title).slice(0, 40)})`);
+  check(VERSION_RE.test(String(boot.title)), `boots v${VERSION} (${String(boot.title).slice(0, 40)})`);
   check(boot.chapters === 8 && boot.stages === 40 && boot.bosses === 9, `8 chapters, 40 stages, 9 bosses (${boot.chapters}/${boot.stages}/${boot.bosses})`);
   check(boot.ghosts === 80, `80 Ghost Index entries (${boot.ghosts})`);
   check(boot.hunts === 7 && boot.equipment === 12 && boot.events === 11 && boot.milestones === 10, '7 hunts, 12 equipment, 11 events, 10 rank milestones');

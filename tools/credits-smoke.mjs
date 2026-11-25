@@ -5,6 +5,7 @@ import { spawn } from 'node:child_process';
 import { existsSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { VERSION, VERSION_RE } from './smoke-version.mjs';
 
 const BASE = process.env.ASHEN_URL || 'http://127.0.0.1:4300/';
 const PORT = Number(process.env.CDP_PORT) || 9352;
@@ -101,7 +102,7 @@ try {
     sequence: window.__ashen.secretSequence,
     summary: window.__ashen.secrets.summary,
   })`);
-  check(/^0\.36\./.test(boot.version), `boots v0.36.0 (${boot.version})`);
+  check(VERSION_RE.test(boot.version), `boots v${VERSION} (${boot.version})`);
   check(boot.arcs.length === 11, `eleven arc credit scenes are registered (${boot.arcs.length})`);
   check(boot.arcs.some((arc) => arc.id === 'arc1' && arc.bosses.legacy.includes('oathbreaker')), 'Arc I maps the real Oathbreaker final boss');
   check(boot.arcs.some((arc) => arc.id === 'eternal' && arc.bosses.eternal.includes('first_forgotten')), 'Arc X maps The First Forgotten');
@@ -194,7 +195,7 @@ try {
     title: document.title,
   })`);
   check(persisted.summary.levels >= 1 && persisted.summary.modes >= 1, 'rune and mode secrets survive a full page reload');
-  check(/^0\.36\./.test(persisted.version) && /0\.36\.0/.test(persisted.title), 'reload keeps the v0.36.0 build');
+  check(VERSION_RE.test(persisted.version) && VERSION_RE.test(persisted.title), `reload keeps the v${VERSION} build`);
 
   check(errors.length === 0, `no runtime or console errors${errors.length ? `: ${errors.slice(0, 3).join(' | ')}` : ''}`);
   console.log(`\nCredit scene + secret smoke: ${checks}/${checks} checks passed`);

@@ -8,6 +8,7 @@ import { spawn } from 'node:child_process';
 import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { VERSION, VERSION_RE } from './smoke-version.mjs';
 
 const URL = process.env.ASHEN_URL || 'http://127.0.0.1:4300/';
 const CDP_PORT = Number(process.env.CDP_PORT) || 9247;
@@ -112,7 +113,7 @@ async function main() {
       await A.showTrials(); await A.showPuzzleAdventure(); A.showMenu();
       return { version: A.version, trials: !!A.progress.trials, puzzle: !!A.progress.puzzle };
     })()`);
-    check('boot reports v0.36.0', initial.version, '0.36.0');
+    check(`boot reports v${VERSION}`, initial.version, VERSION);
     check('save carries trial progress', initial.trials, true);
     check('save carries puzzle progress', initial.puzzle, true);
 

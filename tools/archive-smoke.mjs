@@ -3,6 +3,7 @@ import { spawn } from 'node:child_process';
 import { existsSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { VERSION, VERSION_RE } from './smoke-version.mjs';
 
 const BASE = process.env.ASHEN_URL || 'http://127.0.0.1:4300/';
 const PORT = Number(process.env.CDP_PORT) || 9346;
@@ -82,7 +83,7 @@ try {
     tools: window.__ashen.archiveData.tools.length,
     ghosts: window.__ashen.veilGhosts.length,
   }))()`);
-  check(/0\.36\.0/.test(String(boot.title)), `boots v0.36.0 (${String(boot.title).slice(0, 40)})`);
+  check(VERSION_RE.test(String(boot.title)), `boots v${VERSION} (${String(boot.title).slice(0, 40)})`);
   check(boot.stages === 70 && boot.chapters === 14 && boot.bosses === 16, `70 stages, 14 chapters, 16 bosses (${boot.stages}/${boot.chapters}/${boot.bosses})`);
   check(boot.ghosts === 80 && boot.jumpscares === 38 && boot.tools === 30, `80 ghosts, 38 jumpscares, 30 tools (${boot.ghosts}/${boot.jumpscares}/${boot.tools})`);
 

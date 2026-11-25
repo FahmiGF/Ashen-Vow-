@@ -15,6 +15,7 @@ import { spawn } from 'node:child_process';
 import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { VERSION, VERSION_RE } from './smoke-version.mjs';
 
 const URL = process.env.ASHEN_URL || 'http://127.0.0.1:4300/';
 const CDP_PORT = Number(process.env.CDP_PORT) || 9239;
@@ -358,7 +359,7 @@ async function main() {
       };
     })()`);
     check('game boots again at the phone size', reloaded.booted, true);
-    check('reload reports v0.36.0', reloaded.version, '0.36.0');
+    check(`reload reports v${VERSION}`, reloaded.version, VERSION);
     check('reload lands on the phone speedrun hub', reloaded.view, 'speedrun');
     check('history survives the reload', reloaded.rows, 1);
     check('reloaded history row fits the phone', reloaded.row.fitsWidth, true);

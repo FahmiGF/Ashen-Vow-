@@ -16,6 +16,7 @@ import { spawn } from 'node:child_process';
 import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { VERSION, VERSION_RE } from './smoke-version.mjs';
 
 const URL = process.env.ASHEN_URL || 'http://127.0.0.1:4300/';
 const CDP_PORT = Number(process.env.CDP_PORT) || 9266;
@@ -134,8 +135,8 @@ async function main() {
       A.clearProgress();
       return { version: A.version, title: document.title, rooms: A.cistern.rooms.length, stageCount: A.cistern.stageCount };
     })()`);
-    check(boot.version === '0.36.0', `boots v0.36.0 (${boot.version})`);
-    check(/0\.36\.0/.test(boot.title), 'title carries v0.36.0');
+    check(boot.version === VERSION, `boots v${VERSION} (${boot.version})`);
+    check(VERSION_RE.test(boot.title), `title carries v${VERSION}`);
     check(boot.rooms === 7 && boot.stageCount === 5, 'chapter exposes 7 rooms and 5 stages');
 
     const locked = await evaluate(`(() => {
@@ -309,7 +310,7 @@ async function main() {
     check(persisted.boss === true && persisted.secrets === 1, 'boss and secret records survive a reload');
     check(persisted.percent >= 80, `completion percent is reported (${persisted.percent}%)`);
     check(persisted.cards === 7 && /TAHAP/.test(persisted.label), 'the section rebuilds after reload');
-    check(persisted.version === '0.36.0', 'the reload keeps the 0.36.0 build');
+    check(persisted.version === VERSION, `the reload keeps the v${VERSION} build`);
 
     check(pageErrors.length === 0, `no console errors (${pageErrors.join(' | ')})`);
 

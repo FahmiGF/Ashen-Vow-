@@ -15,6 +15,7 @@ import { spawn } from 'node:child_process';
 import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { VERSION, VERSION_RE } from './smoke-version.mjs';
 
 const URL = process.env.ASHEN_URL || 'http://127.0.0.1:4300/';
 const CDP_PORT = Number(process.env.CDP_PORT) || 9240;
@@ -154,8 +155,8 @@ async function main() {
         title: document.title,
       };
     })()`);
-    check('boot reports v0.36.0', boot.version, '0.36.0');
-    check('title screen advertises v0.36.0', boot.title.includes('v0.36.0'), true);
+    check(`boot reports v${VERSION}`, boot.version, VERSION);
+    check(`title screen advertises v${VERSION}`, boot.title.includes(`v${VERSION}`), true);
     check('fishing hub is reachable from the menu', boot.menuButton, true);
     check('debug hooks expose the fishing hub', boot.hasHook, true);
 
@@ -420,7 +421,7 @@ async function main() {
         chips: document.querySelectorAll('.bait-chip').length,
       };
     })()`);
-    check('reload keeps v0.36.0', reloaded.version, '0.36.0');
+    check(`reload keeps v${VERSION}`, reloaded.version, VERSION);
     check('reload keeps the wallet', reloaded.coins > 25, true);
     check('reload keeps the worms', reloaded.worms, 10);
     check('reload keeps the bought glowworm stack', reloaded.glowworm, 0);
