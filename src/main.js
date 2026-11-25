@@ -17,6 +17,17 @@ import {
   DEFAULT_APPEARANCE,
 } from './core.js';
 import { Renderer } from './render.js';
+import {
+  bossVoiceLine,
+  bossVoiceSummary,
+  archetypeForBoss,
+  sanitizeBossVoiceSettings,
+  sanitizeVoiceManifest,
+  resolveBossVoiceSource,
+  BOSS_VOICE_SOURCE_LABEL,
+  PLAYER_SPEAKER,
+} from './boss_voice.js';
+import { VoiceFX } from './voice_fx.js';
 import { SoundKit } from './audio.js';
 import { MusicManager, bossTrackFor } from './music.js';
 import {
@@ -12132,6 +12143,8 @@ const DIALOGUE_PHASE_LABEL = {
   intro: 'PERTEMPURAN DIMULAI',
   phase2: 'FASE II',
   phase3: 'FASE III',
+  phase4: 'FASE IV',
+  phase5: 'FASE V',
   defeat: 'AKHIR PERTEMPURAN',
 };
 
@@ -12147,14 +12160,167 @@ function queueDialogue(ev) {
   syncScreens();
 }
 
-// Boss lines are voiced through the shared voice layer: ElevenLabs when the
-// server holds a key, browser speech otherwise, silence if neither exists.
+// ── Boss voice ────────────────────────────────────────────────────────────
+// Boss lines never use plain text-to-speech. Order: a human recording listed
+// in assets/voice/manifest.json (processed by the boss's archetype chain),
+// then AI speech only if the player allowed it (always processed), then a
+// wordless cinematic vocal sting under the subtitle. See src/boss_voice.js.
+const BOSS_VOICE_KEY = 'ashen-vow-bossvoice-v1';
+let bossVoiceSettings = (() => {
+  try {
+    return sanitizeBossVoiceSettings(JSON.parse(localStorage.getItem(BOSS_VOICE_KEY) || 'null'));
+  } catch {
+    return sanitizeBossVoiceSettings(null);
+  }
+})();
+let bossVoiceRecorded = new Set();
+let bossVoicePaths = {};
+let bossVoiceFx = null;
+let bossVoiceHandle = null;
+let bossVoiceToken = 0;
+let bossVoiceLast = { source: 'none', id: null, archetype: null, error: '' };
+const bossVoiceBuffers = new Map();
+
+function saveBossVoiceSettings() {
+  try {
+    localStorage.setItem(BOSS_VOICE_KEY, JSON.stringify(bossVoiceSettings));
+  } catch {
+    /* storage unavailable */
+  }
+  updateBossVoiceButton();
+}
+
+async function loadBossVoiceManifest() {
+  try {
+    const res = await fetch('assets/voice/manifest.json', { cache: 'no-cache' });
+    if (!res.ok) throw new Error(String(res.status));
+    const manifest = sanitizeVoiceManifest(await res.json());
+    bossVoiceRecorded = new Set(manifest.files);
+    bossVoicePaths = manifest.paths;
+  } catch {
+    bossVoiceRecorded = new Set();
+  }
+  return bossVoiceRecorded.size;
+}
+
+function ensureBossVoiceFx() {
+  audio.init();
+  if (!audio.ctx) return null;
+  if (!bossVoiceFx || bossVoiceFx.ctx !== audio.ctx) bossVoiceFx = new VoiceFX(audio.ctx, audio.busFor('dialogue'));
+  return bossVoiceFx;
+}
+
+function stopBossVoice() {
+  bossVoiceToken += 1;
+  bossVoiceHandle?.stop();
+  bossVoiceHandle = null;
+}
+
+async function decodeVoice(arrayBuffer) {
+  const ctx = audio.ctx;
+  return await new Promise((resolve, reject) => {
+    const p = ctx.decodeAudioData(arrayBuffer, resolve, reject);
+    if (p && typeof p.then === 'function') p.then(resolve, reject);
+  });
+}
+
+async function playBossLine(kind, key, index, line) {
+  stopVoice();
+  stopBossVoice();
+  const token = bossVoiceToken;
+  const fx = ensureBossVoiceFx();
+  const row = bossVoiceLine(kind, key, index);
+  const isPlayer = (line?.speaker || row?.speaker) === PLAYER_SPEAKER;
+  const archetype = isPlayer ? 'hero' : row?.archetype || archetypeForBoss(kind);
+  let source = resolveBossVoiceSource({
+    settings: bossVoiceSettings,
+    recorded: bossVoiceRecorded,
+    kind,
+    key,
+    index,
+    text: line?.text ?? null,
+    aiConfigured: voiceStatus.configured,
+    online: voiceStatus.online,
+    voiceEnabled: voiceSave.enabled,
+  });
+  if (!fx) source = 'none';
+  // The player's own lines get no sting: the boss owns the music of the scene.
+  if (source === 'sting' && isPlayer) source = 'none';
+  bossVoiceLast = { source, id: row?.id || null, archetype, error: '' };
+  updateBossVoiceButton();
+  if (source === 'none') return source;
+  const volume = (voiceSave.volume / 100) * 1.1;
+  try {
+    if (source === 'recorded' || source === 'ai') {
+      let buffer = source === 'recorded' ? bossVoiceBuffers.get(row.id) : null;
+      if (!buffer) {
+        const res = source === 'recorded'
+          ? await fetch(bossVoicePaths[row.id] || row.file)
+          : await fetch('/api/voice', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(voiceRequestFor({ text: line.text, cast: VOICE_BOSS_CAST[kind] || 'narrator', save: voiceSave }).body),
+          });
+        if (!res.ok) throw new Error(`voice HTTP ${res.status}`);
+        buffer = await decodeVoice(await res.arrayBuffer());
+        if (source === 'recorded') bossVoiceBuffers.set(row.id, buffer);
+        if (bossVoiceBuffers.size > 48) bossVoiceBuffers.delete(bossVoiceBuffers.keys().next().value);
+      }
+      if (token !== bossVoiceToken) return source;
+      bossVoiceHandle = fx.play(buffer, archetype, { volume, processing: source === 'ai' ? true : bossVoiceSettings.processing });
+    } else {
+      bossVoiceHandle = fx.sting(archetype, key, { volume: volume * 0.8 });
+    }
+    voiceSave.linesPlayed += 1;
+  } catch (error) {
+    // A missing file or a failed request degrades to the sting, never to TTS.
+    bossVoiceLast = { ...bossVoiceLast, source: 'sting', error: String(error.message || error) };
+    if (token === bossVoiceToken && !isPlayer && bossVoiceSettings.stings) bossVoiceHandle = fx.sting(archetype, key, { volume: volume * 0.8 });
+    updateBossVoiceButton();
+    return 'sting';
+  }
+  return source;
+}
+
+const BOSS_VOICE_CYCLE = [
+  { mode: 'recorded-first', allowAi: false, label: 'REKAMAN + STING' },
+  { mode: 'recorded-first', allowAi: true, label: 'REKAMAN + AI (DIPROSES)' },
+  { mode: 'stings-only', allowAi: false, label: 'STING SAJA' },
+  { mode: 'off', allowAi: false, label: 'MATI' },
+];
+
+function bossVoiceModeLabel() {
+  const entry = BOSS_VOICE_CYCLE.find((c) => c.mode === bossVoiceSettings.mode && c.allowAi === bossVoiceSettings.allowAi)
+    || BOSS_VOICE_CYCLE.find((c) => c.mode === bossVoiceSettings.mode);
+  return entry?.label || 'REKAMAN + STING';
+}
+
+function updateBossVoiceButton() {
+  const btn = $('btn-dialogue-voice');
+  if (!btn) return;
+  btn.textContent = `${BOSS_VOICE_SOURCE_LABEL[bossVoiceLast.source] || 'SUARA'} · ${bossVoiceModeLabel()}`;
+  btn.setAttribute('aria-label', `Suara boss: ${bossVoiceModeLabel()}. Klik untuk ganti.`);
+}
+
+function cycleBossVoiceMode() {
+  const i = BOSS_VOICE_CYCLE.findIndex((c) => c.mode === bossVoiceSettings.mode && c.allowAi === bossVoiceSettings.allowAi);
+  const next = BOSS_VOICE_CYCLE[(i + 1) % BOSS_VOICE_CYCLE.length];
+  bossVoiceSettings = sanitizeBossVoiceSettings({ ...bossVoiceSettings, mode: next.mode, allowAi: next.allowAi });
+  saveBossVoiceSettings();
+  if (dialogueOpen) speakDialogueLine();
+  return bossVoiceSettings;
+}
+
+$('btn-dialogue-voice')?.addEventListener('click', (event) => {
+  event.stopPropagation();
+  cycleBossVoiceMode();
+});
+
 function speakDialogueLine() {
-  if (!dialogueOpen || !voiceSave.autoplayInDialogue || !voiceSave.enabled) return;
+  if (!dialogueOpen || !voiceSave.autoplayInDialogue) return;
   const line = dialogueLines[dialogueIndex];
   if (!line?.text) return;
-  const castId = VOICE_BOSS_CAST[dialogueMeta?.kind] || 'narrator';
-  void speakVoiceLine(line.text, castId);
+  void playBossLine(dialogueMeta?.kind, dialogueMeta?.phase || 'intro', dialogueIndex, line);
 }
 
 function renderDialogue() {
@@ -19190,7 +19356,35 @@ Object.assign(window.__ashen, {
   },
 });
 
+Object.assign(window.__ashen, {
+  playBossLine: (kind, key = 'intro', index = 0) => {
+    const row = bossVoiceLine(kind, key, index);
+    return playBossLine(kind, key, index, row ? { speaker: row.speaker, text: row.text } : { text: '' });
+  },
+  stopBossVoice,
+  cycleBossVoiceMode,
+  setBossVoice: (patch = {}) => {
+    bossVoiceSettings = sanitizeBossVoiceSettings({ ...bossVoiceSettings, ...patch });
+    saveBossVoiceSettings();
+    return { ...bossVoiceSettings };
+  },
+  loadBossVoiceManifest,
+});
+
 Object.defineProperties(window.__ashen, {
+  bossVoice: {
+    configurable: true,
+    get() {
+      return {
+        settings: { ...bossVoiceSettings },
+        recorded: bossVoiceRecorded.size,
+        last: { ...bossVoiceLast },
+        active: bossVoiceFx ? bossVoiceFx.active.size : 0,
+        summary: bossVoiceSummary(),
+        button: $('btn-dialogue-voice')?.textContent || '',
+      };
+    },
+  },
   voice: {
     configurable: true,
     get() {
@@ -19223,5 +19417,7 @@ Object.defineProperties(window.__ashen, {
 
 updateVoiceBadge();
 void refreshVoiceStatus();
+updateBossVoiceButton();
+void loadBossVoiceManifest();
 
 window.__ashenBootReady?.();

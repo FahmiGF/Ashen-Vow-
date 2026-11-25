@@ -18,6 +18,8 @@
     "smoke:speedrun": "node tools/speedrun-smoke.mjs",
     "smoke:speedrun:mobile": "node tools/speedrun-mobile.mjs",
     "smoke:fishing": "node tools/fishing-smoke.mjs",
+    "voice:script": "node tools/voice-script.mjs",
+    "smoke:bossvoice": "node tools/bossvoice-smoke.mjs",
     "smoke:fallen": "node tools/fallen-smoke.mjs",
     "audit:gadgets": "node tools/gadget-audit.mjs",
     "smoke:crusade": "node tools/crusade-smoke.mjs",

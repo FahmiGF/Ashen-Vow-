@@ -6,6 +6,13 @@
 > Roadmap: [`MASTERPLAN.md`](MASTERPLAN.md) (Master Plan 3.0, phases 0–7 to v1.0). The previous plan is archived at [`docs/archive/MASTERPLAN-2.0.md`](docs/archive/MASTERPLAN-2.0.md).
 > Repo: `https://github.com/FahmiGF/Ashen-Vow-` · branch `main` · push account `isshinAshinaSeal`.
 
+## 0. Boss Voice (branch feat/boss-voice, save-compatible)
+
+- `src/boss_voice.js` — pure: every boss line (613 across all 116 bosses) becomes a voice-script row with id `<kind>.<key>.<n>`, file `assets/voice/boss/<kind>/<key>-<n>.mp3`, and one of 12 archetypes (titan, wyrm, choir, regal, feral, spectral, fae, radiant, abyssal, drowned, matron, hero) carrying a processing profile and actor direction. `resolveBossVoiceSource` order: human recording in `assets/voice/manifest.json` → AI speech only when `allowAi` (always processed) → wordless sting → none. Plain browser TTS is never used for bosses.
+- `src/voice_fx.js` — WebAudio chain (pitch, low-shelf, presence, drive, detuned doubling, slap echo, generated convolution reverb, compressor) on the `dialogue` bus, plus `sting()` formant-choir/growl swells with a sub hit on phase lines.
+- `src/main.js` — `playBossLine`, `#btn-dialogue-voice` mode cycle, save key `ashen-vow-bossvoice-v1`, hooks `bossVoice`, `playBossLine`, `stopBossVoice`, `cycleBossVoiceMode`, `setBossVoice`, `loadBossVoiceManifest`. `server.js` serves .mp3/.ogg/.wav/.m4a.
+- `npm run voice:script` writes `docs/voice-script.md` (the recording script) and refreshes the manifest. Tests: `tests/bossvoice.test.js`; browser: `npm run smoke:bossvoice`.
+
 ## 0. v0.36.0 — Update XXVI: Arc XI The Lanternwake + Asset Inventory (save-compatible)
 
 - `src/lanternwake.js` — **BAB X / Arc XI**, a tenth campaign chapter at rooms **669–673** (four halls + the boss altar). Every hall spawns exactly **20 enemies: 19 normal + 1 guaranteed elite** across four engine archetypes (chaser, ranged, lunge, slam); the five bodies are `wick_moth`, `lantern_wisp`, `taper_hound`, `ash_bearer` and the elite `wickbearer_acolyte`. Halls are generated deterministically per index, so no two halls share a layout.

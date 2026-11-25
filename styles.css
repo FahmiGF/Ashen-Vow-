@@ -3052,6 +3052,25 @@ kbd {
   color: #8d7a60;
 }
 
+/* Boss voice source switch (recorded / AI+FX / sting / off). */
+.dialogue-voice {
+  margin-left: auto;
+  margin-right: 10px;
+  padding: 5px 9px;
+  font-family: var(--font-display);
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  color: #c9b595;
+  background: rgba(12, 9, 7, 0.8);
+  border: 1px solid rgba(201, 162, 92, 0.3);
+  cursor: pointer;
+}
+
+.dialogue-voice:hover {
+  color: #f1dfbc;
+  border-color: var(--gold-bright);
+}
+
 .dialogue-foot .btn-small {
   flex: 0 0 auto;
   padding: 8px 22px 7px;
