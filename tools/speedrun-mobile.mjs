@@ -268,7 +268,7 @@ async function main() {
     await sleep(600);
     const summary = await evaluate(`(() => {
       const A = window.__ashen;
-      const saved = JSON.parse(localStorage.getItem('ashen-vow-progress-v1')).speedrun;
+      const saved = JSON.parse((window.__ashen?.flushSaves?.(), localStorage).getItem('ashen-vow-progress-v1')).speedrun;
       return {
         open: A.speedrun.summaryOpen,
         hidden: document.getElementById('speedrun-summary-screen').classList.contains('hidden'),

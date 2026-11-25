@@ -47,6 +47,9 @@
     "smoke:cistern": "node tools/cistern-smoke.mjs",
     "smoke:lanternwake": "node tools/lanternwake-smoke.mjs",
     "smoke:trailer": "node tools/trailer-smoke.mjs",
-    "probe:render": "node tools/render-probe.mjs"
+    "probe:render": "node tools/render-probe.mjs",
+    "smoke:saves": "node tools/saves-smoke.mjs",
+    "probe:boot": "node tools/boot-probe.mjs",
+    "probe:campaign": "node tools/campaign-probe.mjs"
   }
 }

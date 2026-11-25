@@ -168,7 +168,7 @@ try {
   const exit = await evaluate(`window.__ashen.horror3DExit()`);
   check(exit.active === false && exit.result === 'cleared', 'reaching the exit clears the 3D site');
   await sleep(500);
-  const saved = await evaluate(`JSON.parse(localStorage.getItem('ashen-vow-3dhorror-v1'))`);
+  const saved = await evaluate(`JSON.parse((window.__ashen?.flushSaves?.(), localStorage).getItem('ashen-vow-3dhorror-v1'))`);
   check(saved && saved.clears >= 1 && saved.sites.blackveil_manor.clears === 1, 'clear is written to the dedicated 3D horror save');
 
   const anti = await evaluate(`(async () => {

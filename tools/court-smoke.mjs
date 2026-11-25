@@ -256,7 +256,7 @@ async function main() {
         roomIndex: A.game.roomIndex,
         cleared: A.court.progress.cleared[0],
         marks: A.court.progress.marks,
-        saved: JSON.parse(localStorage.getItem('ashen-vow-progress-v1')).court.cleared[0],
+        saved: JSON.parse((window.__ashen?.flushSaves?.(), localStorage).getItem('ashen-vow-progress-v1')).court.cleared[0],
       };
     })()`);
     assert.equal(cleared.roomIndex, 355);

@@ -161,7 +161,7 @@ try {
     return window.__ashen.secrets.summary;
   })()`);
   check(sequence.modes === beforeModes + 1, 'the hidden sequence records exactly one mode mark');
-  const saved = await evaluate(`JSON.parse(localStorage.getItem('ashen-vow-secrets-v1'))`);
+  const saved = await evaluate(`JSON.parse((window.__ashen?.flushSaves?.(), localStorage).getItem('ashen-vow-secrets-v1'))`);
   check(saved && saved.found.length >= 2 && saved.levelFinds >= 1 && saved.modeFinds >= 1, 'the separate secret save stores only found ids and counts');
 
   await evaluate('window.__ashen.start(7)');

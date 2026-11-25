@@ -163,7 +163,7 @@ try {
     await new Promise((r) => setTimeout(r, 200));
     const messages = A.progress.guild?.activity?.length || 0;
     const raids = document.querySelectorAll('.eclipse-raid').length;
-    const persisted = JSON.parse(localStorage.getItem('ashen-vow-progress-v1') || '{}').guild?.guild?.name || '';
+    const persisted = JSON.parse((window.__ashen?.flushSaves?.(), localStorage).getItem('ashen-vow-progress-v1') || '{}').guild?.guild?.name || '';
     return { created, messages, raids, persisted };
   })()`);
   check(guild.created === 'Eclipse Wardens' && guild.persisted === 'Eclipse Wardens', 'guild creation persists under the versioned save');
@@ -190,7 +190,7 @@ try {
     const selects = document.querySelectorAll('[data-action="graphics-change"]').length;
     document.querySelector('[data-preset="low"]').click();
     await new Promise((r) => setTimeout(r, 200));
-    const stored = JSON.parse(localStorage.getItem('ashen-vow-settings-v1') || '{}').gameplay || {};
+    const stored = JSON.parse((window.__ashen?.flushSaves?.(), localStorage).getItem('ashen-vow-settings-v1') || '{}').gameplay || {};
     const canvasWidth = document.getElementById('game').width;
     return { presets, selects, preset: stored.graphicsPreset, cap: stored.frameCap, scale: stored.resolutionScale, renderScale: A.renderer.options.resolutionScale, canvasWidth, budget: document.querySelectorAll('.eclipse-budget > div').length };
   })()`);
@@ -211,8 +211,8 @@ try {
   check(qa.honest && qa.contentPass, 'QA reports content validation and blocked gates honestly');
 
   const save = await evaluate(`(() => {
-    const raw = localStorage.getItem('ashen-vow-progress-v1') || '{}';
-    const backup = localStorage.getItem('ashen-vow-progress-v1-backup') || '';
+    const raw = (window.__ashen?.flushSaves?.(), localStorage).getItem('ashen-vow-progress-v1') || '{}';
+    const backup = (window.__ashen?.flushSaves?.(), localStorage).getItem('ashen-vow-progress-v1-backup') || '';
     const parsed = JSON.parse(raw);
     return { schema: parsed.schemaVersion, backup: !!backup, eclipse: !!parsed.eclipse, godfall: !!parsed.godfall, guild: !!parsed.guild, awakening: !!parsed.awakening };
   })()`);

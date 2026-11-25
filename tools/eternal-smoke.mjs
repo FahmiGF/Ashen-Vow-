@@ -233,9 +233,9 @@ try {
   check(boss.defeated === true, 'the final Arc X boss clear is recorded');
 
   const saved = await evaluate(`(() => {
-    const eternal = JSON.parse(localStorage.getItem('ashen-vow-eternal-v1') || 'null');
-    const veil = JSON.parse(localStorage.getItem('ashen-vow-veil-v1') || 'null');
-    const settings = JSON.parse(localStorage.getItem('ashen-vow-settings-v1') || 'null');
+    const eternal = JSON.parse((window.__ashen?.flushSaves?.(), localStorage).getItem('ashen-vow-eternal-v1') || 'null');
+    const veil = JSON.parse((window.__ashen?.flushSaves?.(), localStorage).getItem('ashen-vow-veil-v1') || 'null');
+    const settings = JSON.parse((window.__ashen?.flushSaves?.(), localStorage).getItem('ashen-vow-settings-v1') || 'null');
     return {
       eternal: !!eternal, schema: eternal && eternal.schemaVersion, stages: eternal && eternal.campaign.completedStages.length,
       veil: !!veil, veilSchema: veil && veil.schemaVersion,

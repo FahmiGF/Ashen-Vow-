@@ -165,7 +165,7 @@ async function main() {
         before,
         after: A.skillSummary.bonuses.ultDamage,
         points: A.skills.points,
-        saved: JSON.parse(localStorage.getItem('ashen-vow-progress-v1')).skills.ranks.ult_damage,
+        saved: JSON.parse((window.__ashen?.flushSaves?.(), localStorage).getItem('ashen-vow-progress-v1')).skills.ranks.ult_damage,
         label: document.getElementById('char-ability-key').textContent,
       };
     })()`);

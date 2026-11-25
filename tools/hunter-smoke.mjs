@@ -120,7 +120,7 @@ try {
     const a = window.__ashen.buyHunterItem('salt_flare');
     const b = window.__ashen.buyHunterItem('spirit_bane');
     const c = window.__ashen.buyHunterItem('smoke_grenade');
-    return { a, b, c, save: JSON.parse(localStorage.getItem('ashen-vow-hunter-v1')) };
+    return { a, b, c, save: JSON.parse((window.__ashen?.flushSaves?.(), localStorage).getItem('ashen-vow-hunter-v1')) };
   })()`);
   check(bought.a.ok && bought.b.ok && bought.c.ok, 'three tools can be bought with marks');
   check(bought.save.items.salt_flare === 1 && bought.save.items.spirit_bane === 1 && bought.save.items.smoke_grenade === 1, 'purchases are written to ashen-vow-hunter-v1');
@@ -194,7 +194,7 @@ try {
   check(shot.result.ok && (shot.dead || shot.hp <= 30), 'spirit round fights back against the ghost');
   const rewarded = await evaluate(`(() => {
     window.__ashen.drainEvents();
-    return JSON.parse(localStorage.getItem('ashen-vow-hunter-v1'));
+    return JSON.parse((window.__ashen?.flushSaves?.(), localStorage).getItem('ashen-vow-hunter-v1'));
   })()`);
   check(rewarded.marks >= 67 && rewarded.banished >= 1, 'banishing a ghost pays its Hunter bounty');
   check(!rewarded.items.spirit_bane, 'the spent spirit round is persisted back to the save');
@@ -221,7 +221,7 @@ try {
       before,
       after: window.__ashen.game.hunterItemCount('grave_bell'),
       bought,
-      save: JSON.parse(localStorage.getItem('ashen-vow-hunter-v1')),
+      save: JSON.parse((window.__ashen?.flushSaves?.(), localStorage).getItem('ashen-vow-hunter-v1')),
     };
   })()`);
   check(liveShop.open && liveShop.bought.ok && liveShop.after === liveShop.before + 1, 'the shop adds stock to the current run');
@@ -243,7 +243,7 @@ try {
   await waitFor(() => evaluate('typeof window.__ashen === "object" && typeof window.__ashen.hunter === "object"'), 20000, 'reload boot');
   const persisted = await evaluate(`({
     hunter: window.__ashen.hunter,
-    save: JSON.parse(localStorage.getItem('ashen-vow-hunter-v1')),
+    save: JSON.parse((window.__ashen?.flushSaves?.(), localStorage).getItem('ashen-vow-hunter-v1')),
     version: window.__ashen.version,
     title: document.title,
   })`);

@@ -158,7 +158,7 @@ try {
         menu: a.menuView,
       } : null,
       summary: a.lanternwake.summary,
-      saved: JSON.parse(localStorage.getItem('ashen-vow-progress-v1') || '{}').lanternwake?.boss === true,
+      saved: JSON.parse((window.__ashen?.flushSaves?.(), localStorage).getItem('ashen-vow-progress-v1') || '{}').lanternwake?.boss === true,
     };
   })()`);
   check(boss.spawned?.kind === 'wickbearer' && boss.spawned.phases === 4, 'Orsella spawns with four phases');

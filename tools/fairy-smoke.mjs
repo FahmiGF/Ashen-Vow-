@@ -146,7 +146,7 @@ async function main() {
     const boot = await evaluate(`(() => {
       const A = window.__ashen;
       A.clearProgress();
-      return { version: A.version, title: document.title, progressKey: !!localStorage.getItem('ashen-vow-progress-v1') };
+      return { version: A.version, title: document.title, progressKey: !!(window.__ashen?.flushSaves?.(), localStorage).getItem('ashen-vow-progress-v1') };
     })()`);
     check('boot reports v0.36.0', boot.version, '0.36.0');
     assert.match(boot.title, /0\.36\.0/);
@@ -211,7 +211,7 @@ async function main() {
         room: A.game.roomIndex,
         stage: A.fairy.activeStage,
         cleared: A.fairy.progress.stages[0],
-        saved: JSON.parse(localStorage.getItem('ashen-vow-progress-v1')).fairy.stages[0],
+        saved: JSON.parse((window.__ashen?.flushSaves?.(), localStorage).getItem('ashen-vow-progress-v1')).fairy.stages[0],
         mobs: A.game.enemies.length,
       };
     })()`);
@@ -283,7 +283,7 @@ async function main() {
         boss: A.game.boss?.kind || null,
         music: A.musicTrack,
         slimeCleared: A.fairy.progress.bosses.magma,
-        saved: JSON.parse(localStorage.getItem('ashen-vow-progress-v1')).fairy.bosses.magma,
+        saved: JSON.parse((window.__ashen?.flushSaves?.(), localStorage).getItem('ashen-vow-progress-v1')).fairy.bosses.magma,
       };
     })()`);
     check('slime defeat opens the blessing screen', slime.blessing, 'blessing');

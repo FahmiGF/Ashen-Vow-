@@ -228,7 +228,7 @@ try {
     const a = window.__ashen;
     a.setVoice({ enabled: true, volume: 77 });
     await new Promise((r) => setTimeout(r, 60));
-    const raw = JSON.parse(localStorage.getItem('ashen-vow-voice-v1'));
+    const raw = JSON.parse((window.__ashen?.flushSaves?.(), localStorage).getItem('ashen-vow-voice-v1'));
     a.setVoice({ volume: 85 });
     return { key: !!raw, volume: raw?.volume, enabled: raw?.enabled };
   })()`);

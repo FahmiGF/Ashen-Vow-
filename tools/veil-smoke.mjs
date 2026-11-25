@@ -245,7 +245,7 @@ try {
 
   const saved = await evaluate(`(() => {
     try {
-      const raw = JSON.parse(localStorage.getItem('ashen-vow-veil-v1') || 'null');
+      const raw = JSON.parse((window.__ashen?.flushSaves?.(), localStorage).getItem('ashen-vow-veil-v1') || 'null');
       return { exists: !!raw, schema: raw && raw.schemaVersion, stages: raw && raw.campaign.completedStages.length, documented: raw && Object.keys(raw.ghostIndex.records).length };
     } catch { return { exists: false }; }
   })()`);

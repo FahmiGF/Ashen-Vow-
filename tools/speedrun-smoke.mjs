@@ -221,7 +221,7 @@ async function main() {
     await sleep(500);
     const ended = await evaluate(`(() => {
       const A = window.__ashen;
-      const saved = JSON.parse(localStorage.getItem('ashen-vow-progress-v1')).speedrun;
+      const saved = JSON.parse((window.__ashen?.flushSaves?.(), localStorage).getItem('ashen-vow-progress-v1')).speedrun;
       return {
         summaryOpen: A.speedrun.summaryOpen,
         screenHidden: document.getElementById('speedrun-summary-screen').classList.contains('hidden'),
@@ -273,7 +273,7 @@ async function main() {
     await sleep(1200);
     const escalated = await evaluate(`(() => {
       const A = window.__ashen;
-      const saved = JSON.parse(localStorage.getItem('ashen-vow-progress-v1')).speedrun;
+      const saved = JSON.parse((window.__ashen?.flushSaves?.(), localStorage).getItem('ashen-vow-progress-v1')).speedrun;
       return {
         multiplier: A.speedrun.multiplier,
         cycle: A.speedrun.run.cycle,
@@ -305,7 +305,7 @@ async function main() {
     await sleep(500);
     const final = await evaluate(`(() => {
       const A = window.__ashen;
-      const saved = JSON.parse(localStorage.getItem('ashen-vow-progress-v1')).speedrun;
+      const saved = JSON.parse((window.__ashen?.flushSaves?.(), localStorage).getItem('ashen-vow-progress-v1')).speedrun;
       return { runs: saved.runs, best: saved.bestMultiplier, text: document.getElementById('speedrun-summary-body').textContent };
     })()`);
     check('second run is recorded', final.runs, 2);
@@ -313,7 +313,7 @@ async function main() {
     check('summary reports the run multiplier', /3×/.test(final.text), true);
 
     const history = await evaluate(`(() => {
-      const saved = JSON.parse(localStorage.getItem('ashen-vow-progress-v1')).speedrun;
+      const saved = JSON.parse((window.__ashen?.flushSaves?.(), localStorage).getItem('ashen-vow-progress-v1')).speedrun;
       return { len: saved.history.length, entries: saved.history };
     })()`);
     check('history records every attempt', history.len, 3);

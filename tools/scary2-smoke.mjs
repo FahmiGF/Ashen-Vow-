@@ -160,7 +160,7 @@ try {
     document.querySelector('[data-horror-tree-reset]')?.click();
     await new Promise((r) => setTimeout(r, 140));
     const afterReset = window.__ashen.horrorTree.available;
-    const saved = JSON.parse(localStorage.getItem('ashen-vow-horror-v1') || '{}').skills || {};
+    const saved = JSON.parse((window.__ashen?.flushSaves?.(), localStorage).getItem('ashen-vow-horror-v1') || '{}').skills || {};
     document.querySelector('[data-scary-tab="jumpscare"]').click();
     await new Promise((r) => setTimeout(r, 120));
     return { nodes, points, afterSpend, rank, tierTwoLocked, afterReset, savedVow: saved.vow_iron || 0 };

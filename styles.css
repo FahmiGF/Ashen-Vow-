@@ -7300,3 +7300,21 @@ html[lang='ar'] .settings2-inner, html[lang='ar'] .screen-inner { font-family: v
    after; settings rows get the same treatment. */
 .level-card { content-visibility: auto; contain-intrinsic-size: auto 220px; }
 .settings2-row { content-visibility: auto; contain-intrinsic-size: auto 64px; }
+
+/* Phase 1 (v0.38.0): profile slots */
+.slot-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr)); gap: 14px; margin: 14px 0; }
+.slot-card { border: 1px solid rgba(201, 162, 92, 0.3); background: linear-gradient(180deg, rgba(24, 18, 12, 0.94), rgba(9, 7, 5, 0.98)); padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.slot-card.active { border-color: var(--gold, #c9a25c); box-shadow: 0 0 0 1px rgba(201, 162, 92, 0.35) inset; }
+.slot-card header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.slot-card h3 { margin: 0; letter-spacing: 0.16em; font-size: 0.95rem; }
+.slot-badge { font-size: 0.62rem; letter-spacing: 0.18em; padding: 3px 7px; border: 1px solid currentColor; color: var(--gold, #c9a25c); }
+.slot-card dl { margin: 0; display: grid; gap: 4px; font-size: 0.78rem; }
+.slot-card dl div { display: flex; justify-content: space-between; gap: 10px; }
+.slot-card dt { color: #a68d68; }
+.slot-card dd { margin: 0; text-align: right; }
+.slot-empty { margin: 0; color: #a68d68; font-size: 0.8rem; }
+.slot-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: auto; }
+.slot-actions .btn { padding: 6px 10px; font-size: 0.7rem; }
+.slot-danger { color: #e08a7a; }
+.slot-confirm { display: grid; gap: 6px; font-size: 0.75rem; }
+.slot-confirm input { background: #0b0806; color: inherit; border: 1px solid rgba(224, 138, 122, 0.5); padding: 6px 8px; font: inherit; }

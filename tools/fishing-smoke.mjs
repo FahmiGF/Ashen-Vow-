@@ -236,7 +236,7 @@ async function main() {
         worms: A.fishing.state.bait.worm,
         cricket: A.fishing.state.bait.cricket,
         glowworm: A.fishing.state.bait.glowworm || 0,
-        saved: JSON.parse(localStorage.getItem('ashen-vow-progress-v1')).fishing,
+        saved: JSON.parse((window.__ashen?.flushSaves?.(), localStorage).getItem('ashen-vow-progress-v1')).fishing,
       };
     })()`);
     check('buying one cricket costs 25 coins', bought.one.ok && bought.one.total === 25, true);
@@ -298,7 +298,7 @@ async function main() {
       const fishId = A.fishing.reel.fish;
       const hit = await A.strikeFishingReel(0.5);
       const s = A.fishing.summary;
-      const saved = JSON.parse(localStorage.getItem('ashen-vow-progress-v1')).fishing;
+      const saved = JSON.parse((window.__ashen?.flushSaves?.(), localStorage).getItem('ashen-vow-progress-v1')).fishing;
       return {
         hit,
         result: A.fishing.reel.result,

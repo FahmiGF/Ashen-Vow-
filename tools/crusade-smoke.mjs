@@ -291,7 +291,7 @@ async function main() {
         cleared: A.progress.crusade.bosses.marshal_aurion,
         banner: A.progress.crusade.banners.includes('banner_of_dawn'),
         sigils: A.progress.crusade.sigils,
-        saved: !!JSON.parse(localStorage.getItem('ashen-vow-progress-v1') || '{}').crusade,
+        saved: !!JSON.parse((window.__ashen?.flushSaves?.(), localStorage).getItem('ashen-vow-progress-v1') || '{}').crusade,
       };
     })()`);
     check('defeating the Marshal records the boss', kill.cleared, true);
@@ -345,7 +345,7 @@ async function main() {
         menu: A.menuView,
         rift: [...document.querySelectorAll('[data-crusade-menu]')].find((b) => b.dataset.crusadeMenu === 'rift')?.disabled,
         levels: A.crusade.summary.levelsCleared,
-        saved: JSON.parse(localStorage.getItem('ashen-vow-progress-v1') || '{}').crusade.arc4Hook,
+        saved: JSON.parse((window.__ashen?.flushSaves?.(), localStorage).getItem('ashen-vow-progress-v1') || '{}').crusade.arc4Hook,
       };
     })()`);
     check('after the clear the game boots to the war camp', reboot.menu, 'crusadeMenu');

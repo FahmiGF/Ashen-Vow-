@@ -136,6 +136,7 @@ import {
   speedrunSummary,
 } from './speedrun.js';
 import { GAME_VERSION } from './version.js';
+import { createSaveStore, memoryStorage, areaForLegacyKey, SAVE_AREAS, SAVE_SLOT_COUNT } from './save.js';
 import {
   EXPANSION_ROOM_START,
   TOTAL_LEVELS,
@@ -710,6 +711,7 @@ const MODE_LOADERS = {
   mode3d: { load: () => import('./modes/mode3d_ui.js'), css: [] },
   updates: { load: () => import('./modes/updates_ui.js'), css: [] },
   frontier: { load: () => import('./modes/frontier_ui.js'), css: [] },
+  slots: { load: () => import('./modes/slots_ui.js'), css: [] },
 };
 const MODES = {};
 const modePending = {};
@@ -886,10 +888,19 @@ const showFrontier = lazyMode('frontier', 'showFrontier');
 const closeFrontier = lazyMode('frontier', 'closeFrontier');
 const showOverdrive = lazyMode('frontier', 'showOverdrive');
 const closeOverdrive = lazyMode('frontier', 'closeOverdrive');
+const showSlots = lazyMode('slots', 'showSlots');
+const buildSlotsScreen = lazyMode('slots', 'buildSlotsScreen');
+const switchSlot = lazyMode('slots', 'switchSlot');
+const exportSlotFile = lazyMode('slots', 'exportSlot');
+const importSlotFile = lazyMode('slots', 'importSlot');
+const deleteSlotFile = lazyMode('slots', 'deleteSlot');
+const undoDeleteSlot = lazyMode('slots', 'undoDeleteSlot');
 /* @stubs-end */
 
 /* @ctx-begin */
 Object.defineProperties(A, {
+  saveSanitizers: { get: () => saveSanitizers },
+  saveStore: { get: () => saveStore },
   $: { get: () => $ },
   accumulator: { get: () => accumulator, set: (v) => { accumulator = v; } },
   activeExpansionIndex: { get: () => activeExpansionIndex, set: (v) => { activeExpansionIndex = v; } },
@@ -990,6 +1001,46 @@ const $ = (id) => document.getElementById(id);
 const FIXED = 1 / 120;
 const PROGRESS_KEY = 'ashen-vow-progress-v1';
 const CHARACTER_KEY = 'ashen-vow-character-v1';
+
+// ── Save layer (Phase 1, v0.38.0) ──────────────────────────────────────
+// Every per-profile key goes through src/save.js: three slots, debounced
+// writes (at most one per key per 2 s, flushed on pagehide), slot 1 mirrored
+// to the pre-v0.38 keys for one release. Settings and voice stay global.
+const saveStorage = (() => {
+  try { const s = window.localStorage; s.getItem('ashen-vow-probe'); return s; } catch { return memoryStorage(); }
+})();
+const saveStore = createSaveStore(saveStorage, { mirrorLegacy: true });
+saveStore.migrateLegacy();
+
+// Import passes each area through its sanitizer; areas without one here are
+// repaired by their own loader when the profile boots.
+const saveSanitizers = {
+  progress: (raw) => sanitizeProgressPayload(migrateSave(raw)?.ok ? migrateSave(raw).progress : raw),
+  character: (raw) => sanitizeCharacter(raw),
+  hunter: (raw) => sanitizeHunterSave(raw),
+  secrets: (raw) => sanitizeSecretsSave(raw),
+  horror3d: (raw) => sanitize3DHorrorSave(raw),
+  archive: (raw) => sanitizeArchiveSave(raw),
+};
+
+function saveRead(key) {
+  const area = areaForLegacyKey(key);
+  if (area) return saveStore.read(area);
+  try { return saveStorage.getItem(key); } catch { return null; }
+}
+
+function saveWrite(key, value) {
+  const area = areaForLegacyKey(key);
+  if (area) { saveStore.write(area, value); return; }
+  const text = typeof value === 'function' ? value() : value;
+  try {
+    if (text === null || text === undefined) saveStorage.removeItem(key);
+    else saveStorage.setItem(key, String(text));
+  } catch { /* storage unavailable */ }
+}
+
+window.addEventListener('pagehide', () => saveStore.flush());
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') saveStore.flush(); });
 const clamp = (v, lo, hi) => (v < lo ? lo : v > hi ? hi : v);
 
 // ── Overdrive Hub state ───────────────────────────────────────────
@@ -1374,22 +1425,27 @@ function readProgressPayload(raw) {
 function loadProgress() {
   let parsed = null;
   try {
-    parsed = readProgressPayload(localStorage.getItem(PROGRESS_KEY));
+    parsed = readProgressPayload(saveRead(PROGRESS_KEY));
   } catch {
     parsed = null;
   }
   if (!parsed) {
     try {
-      parsed = readProgressPayload(localStorage.getItem(SAVE_KEYS.backup));
-      if (parsed) localStorage.setItem(SAVE_KEYS.backup, JSON.stringify(parsed));
+      parsed = readProgressPayload(saveRead(SAVE_KEYS.backup));
+      if (parsed) saveWrite(SAVE_KEYS.backup, JSON.stringify(parsed));
     } catch { /* storage unavailable */ }
   }
   const migration = parsed ? migrateSave(parsed) : null;
   if (migration?.ok) parsed = migration.progress;
   try {
-    const raw = localStorage.getItem(PROGRESS_KEY);
-    if (raw && (!migration || !migration.ok)) localStorage.setItem(SAVE_KEYS.quarantine, raw.slice(0, 200000));
+    const raw = saveRead(PROGRESS_KEY);
+    if (raw && (!migration || !migration.ok)) saveWrite(SAVE_KEYS.quarantine, raw.slice(0, 200000));
   } catch { /* storage unavailable */ }
+  return sanitizeProgressPayload(parsed);
+}
+
+/** Repair a parsed (and migrated) progress object; also used on import. */
+function sanitizeProgressPayload(parsed) {
   try {
     if (!parsed || typeof parsed !== 'object') return defaultProgress();
     const cleared = ROOMS.map((_, i) => !!parsed.cleared?.[i]);
@@ -1443,14 +1499,23 @@ function loadProgress() {
   }
 }
 
+let progressBackedUp = false;
+
 function saveProgress() {
   if (activeRunKind === 'hack' && hackSnapshot) return;
   try {
-    const previous = localStorage.getItem(PROGRESS_KEY);
-    if (previous) localStorage.setItem(SAVE_KEYS.backup, previous);
+    // The backup is the last save this session started from, taken once:
+    // copying it on every save doubled the storage cost of each write.
+    if (!progressBackedUp) {
+      const previous = saveRead(PROGRESS_KEY);
+      if (previous) {
+        progressBackedUp = true;
+        saveWrite(SAVE_KEYS.backup, previous);
+      }
+    }
     progress.version = 1;
     progress.schemaVersion = 2;
-    localStorage.setItem(PROGRESS_KEY, JSON.stringify(progress));
+    saveWrite(PROGRESS_KEY, () => JSON.stringify(progress));
   } catch {
     /* storage unavailable — keep in memory */
   }
@@ -1461,7 +1526,7 @@ let progress = loadProgress();
 // ── Hidden secrets ───────────────────────────────────────────────────────
 function loadSecretsSave() {
   try {
-    const raw = localStorage.getItem(SECRETS_SAVE_KEY);
+    const raw = saveRead(SECRETS_SAVE_KEY);
     return sanitizeSecretsSave(raw ? JSON.parse(raw) : defaultSecretsSave());
   } catch {
     return sanitizeSecretsSave(defaultSecretsSave());
@@ -1479,7 +1544,7 @@ let lastCreditAttempt = null;
 const creditArcLastAt = {};
 
 function saveSecretsState() {
-  try { localStorage.setItem(SECRETS_SAVE_KEY, JSON.stringify(secretsState)); } catch { /* storage unavailable */ }
+  try { saveWrite(SECRETS_SAVE_KEY, JSON.stringify(secretsState)); } catch { /* storage unavailable */ }
 }
 
 function currentSecretMode() {
@@ -1590,7 +1655,7 @@ function closeCreditScene() {
 // ── Update XVII: 3D Scary Mode save ──────────────────────────────────────
 function load3DHorrorSave() {
   try {
-    const raw = localStorage.getItem(HORROR3D_SAVE_KEY);
+    const raw = saveRead(HORROR3D_SAVE_KEY);
     return sanitize3DHorrorSave(raw ? JSON.parse(raw) : {});
   } catch {
     return default3DHorrorSave();
@@ -1601,7 +1666,7 @@ let horror3D = load3DHorrorSave();
 let horror3DSiteId = horror3D.lastSite || HORROR3D_SITES[0].id;
 
 function save3DHorrorState() {
-  try { localStorage.setItem(HORROR3D_SAVE_KEY, JSON.stringify(horror3D)); } catch { /* storage unavailable */ }
+  try { saveWrite(HORROR3D_SAVE_KEY, JSON.stringify(horror3D)); } catch { /* storage unavailable */ }
 }
 
 // ── Scary Mode 2.0 — The Nightmare Protocol (Update XI) ───────────────────
@@ -1609,7 +1674,7 @@ function save3DHorrorState() {
 // horror difficulty (enemy behaviour), scare presentation, and anti-jumpscare.
 function loadHorrorJournalState() {
   try {
-    const raw = localStorage.getItem(HORROR_SAVE_KEY);
+    const raw = saveRead(HORROR_SAVE_KEY);
     return new HorrorJournal(raw ? JSON.parse(raw) : {});
   } catch {
     return new HorrorJournal({});
@@ -1633,14 +1698,14 @@ function horrorSettings() {
 
 function saveHorrorState() {
   try {
-    localStorage.setItem(HORROR_SAVE_KEY, JSON.stringify(horrorJournal.toJSON()));
+    saveWrite(HORROR_SAVE_KEY, JSON.stringify(horrorJournal.toJSON()));
   } catch { /* storage unavailable */ }
 }
 
 // ── Update XIX: The Hunter's Kit ─────────────────────────────────────────
 function loadHunterState() {
   try {
-    const raw = localStorage.getItem(HUNTER_SAVE_KEY);
+    const raw = saveRead(HUNTER_SAVE_KEY);
     return sanitizeHunterSave(raw ? JSON.parse(raw) : defaultHunterSave());
   } catch {
     return sanitizeHunterSave(defaultHunterSave());
@@ -1651,7 +1716,7 @@ let hunterState = loadHunterState();
 let hunterShopOpen = false;
 
 function saveHunterState() {
-  try { localStorage.setItem(HUNTER_SAVE_KEY, JSON.stringify(hunterState)); } catch { /* storage unavailable */ }
+  try { saveWrite(HUNTER_SAVE_KEY, JSON.stringify(hunterState)); } catch { /* storage unavailable */ }
 }
 
 /** Persistent stock is copied into a run; spent stock is copied back out. */
@@ -2163,7 +2228,7 @@ function dreadSettings() {
 
 function loadDreadJournal() {
   try {
-    const raw = localStorage.getItem(DREAD_SAVE_KEY);
+    const raw = saveRead(DREAD_SAVE_KEY);
     return new DreadJournal(raw ? JSON.parse(raw) : {});
   } catch {
     return new DreadJournal({});
@@ -2172,7 +2237,7 @@ function loadDreadJournal() {
 
 function saveDreadState() {
   try {
-    localStorage.setItem(DREAD_SAVE_KEY, JSON.stringify(dreadJournal.toJSON()));
+    saveWrite(DREAD_SAVE_KEY, JSON.stringify(dreadJournal.toJSON()));
   } catch { /* storage unavailable */ }
 }
 
@@ -2604,9 +2669,9 @@ function veilSettings() {
 function ensureVeil() {
   if (veilController) return veilController;
   let raw = null;
-  try { raw = JSON.parse(localStorage.getItem(VEIL_SAVE_KEY) || 'null'); } catch { raw = null; }
+  try { raw = JSON.parse(saveRead(VEIL_SAVE_KEY) || 'null'); } catch { raw = null; }
   let legacyDread = null;
-  try { legacyDread = JSON.parse(localStorage.getItem(DREAD_SAVE_KEY) || 'null'); } catch { legacyDread = null; }
+  try { legacyDread = JSON.parse(saveRead(DREAD_SAVE_KEY) || 'null'); } catch { legacyDread = null; }
   veilController = new VeilController({ save: raw || {}, legacyDread, settings: veilSettings() });
   veilController.sanity.settings = veilSettings().sanity;
   return veilController;
@@ -2615,7 +2680,7 @@ function ensureVeil() {
 function saveVeilProfile() {
   if (!veilController) return false;
   try {
-    localStorage.setItem(VEIL_SAVE_KEY, JSON.stringify(veilController.toJSON()));
+    saveWrite(VEIL_SAVE_KEY, JSON.stringify(veilController.toJSON()));
     return true;
   } catch { return false; }
 }
@@ -3102,7 +3167,7 @@ function eternalSettings() {
 function ensureEternal() {
   if (eternalController) return eternalController;
   let raw = null;
-  try { raw = JSON.parse(localStorage.getItem(ETERNAL_SAVE_KEY) || 'null'); } catch { raw = null; }
+  try { raw = JSON.parse(saveRead(ETERNAL_SAVE_KEY) || 'null'); } catch { raw = null; }
   eternalController = new EternalController({ save: raw || {}, veil: ensureVeil(), settings: eternalSettings() });
   eternalController.settings = eternalSettings();
   if (raw && !eternalController.save.campaign.unlocked) {
@@ -3115,7 +3180,7 @@ function ensureEternal() {
 function saveEternalProfile() {
   if (!eternalController) return false;
   try {
-    localStorage.setItem(ETERNAL_SAVE_KEY, JSON.stringify(eternalController.toJSON()));
+    saveWrite(ETERNAL_SAVE_KEY, JSON.stringify(eternalController.toJSON()));
     saveVeilProfile();
     return true;
   } catch { return false; }
@@ -3500,7 +3565,7 @@ const ARCHIVE_STATE_LABEL = { undiscovered: 'UNDISCOVERED', rumored: 'RUMORED', 
 function ensureArchive() {
   if (archiveController) return archiveController;
   let raw = null;
-  try { raw = JSON.parse(localStorage.getItem(ARCHIVE_SAVE_KEY) || 'null'); } catch { raw = null; }
+  try { raw = JSON.parse(saveRead(ARCHIVE_SAVE_KEY) || 'null'); } catch { raw = null; }
   const veil = ensureVeil();
   const eternal = ensureEternal();
   archiveController = new ArchiveController({ save: sanitizeArchiveSave(raw || {}), veil, eternal, index: veil.index });
@@ -3509,7 +3574,7 @@ function ensureArchive() {
 
 function saveArchiveProfile() {
   if (!archiveController) return false;
-  try { localStorage.setItem(ARCHIVE_SAVE_KEY, JSON.stringify(archiveController.toJSON())); return true; } catch { return false; }
+  try { saveWrite(ARCHIVE_SAVE_KEY, JSON.stringify(archiveController.toJSON())); return true; } catch { return false; }
 }
 
 function archiveSelectedStage() {
@@ -4155,7 +4220,7 @@ function sanitizeCharacter(raw) {
 
 function loadCharacter() {
   try {
-    const raw = localStorage.getItem(CHARACTER_KEY);
+    const raw = saveRead(CHARACTER_KEY);
     if (!raw) return defaultCharacter();
     return sanitizeCharacter(JSON.parse(raw));
   } catch {
@@ -4425,7 +4490,7 @@ realmsUI.runDifficulty = 'normal';
 
 function saveCharacter() {
   try {
-    localStorage.setItem(CHARACTER_KEY, JSON.stringify(character));
+    saveWrite(CHARACTER_KEY, JSON.stringify(character));
   } catch {
     /* storage unavailable - keep in memory */
   }
@@ -10865,7 +10930,7 @@ window.addEventListener('keydown', (e) => {
     return;
   }
 
-  if (menuView === 'levels' || menuView === 'credits' || menuView === 'updates' || menuView === 'character' || menuView === 'expansion') {
+  if (menuView === 'levels' || menuView === 'credits' || menuView === 'updates' || menuView === 'character' || menuView === 'expansion' || menuView === 'slots') {
     if (e.code === 'Escape' || e.code === 'Backspace') showMenu();
     return;
   }
@@ -11020,7 +11085,7 @@ function labState() {
 
 function labCheckpointLoad() {
   try {
-    const raw = localStorage.getItem(LAB_CHECKPOINT_KEY);
+    const raw = saveRead(LAB_CHECKPOINT_KEY);
     return raw ? JSON.parse(raw) : null;
   } catch {
     return null;
@@ -11030,7 +11095,7 @@ function labCheckpointLoad() {
 function labCheckpointSave() {
   if (!labRun || labGuestMode || !canCheckpoint(labRun.cycle)) return;
   try {
-    localStorage.setItem(LAB_CHECKPOINT_KEY, JSON.stringify(serializeLabyrinthRun(labRun)));
+    saveWrite(LAB_CHECKPOINT_KEY, JSON.stringify(serializeLabyrinthRun(labRun)));
   } catch {
     /* storage unavailable */
   }
@@ -11038,7 +11103,7 @@ function labCheckpointSave() {
 
 function labCheckpointClear() {
   try {
-    localStorage.removeItem(LAB_CHECKPOINT_KEY);
+    saveWrite(LAB_CHECKPOINT_KEY, null);
   } catch {
     /* ignore */
   }
@@ -12381,6 +12446,7 @@ fetch('/api/admin/session', { credentials: 'same-origin' })
 $('btn-settings-menu').addEventListener('click', () => showSettings('graphics'));
 $('btn-difficulty-menu')?.addEventListener('click', () => showSettings('difficulty'));
 $('btn-credits').addEventListener('click', showCredits);
+$('btn-slots-menu')?.addEventListener('click', () => showSlots());
 $('btn-updates').addEventListener('click', showUpdates);
 $('btn-map-menu').addEventListener('click', openMap);
 $('btn-codex-menu').addEventListener('click', () => openCodex());
@@ -12863,6 +12929,7 @@ function syncScreens() {
   $('title-screen').classList.toggle('hidden', menuView !== 'title' || covered);
   $('levels-screen').classList.toggle('hidden', menuView !== 'levels' || covered);
   $('credits-screen').classList.toggle('hidden', menuView !== 'credits' || covered);
+  $('slots-screen')?.classList.toggle('hidden', menuView !== 'slots' || covered);
   $('updates-screen').classList.toggle('hidden', menuView !== 'updates' || covered);
   $('character-screen').classList.toggle('hidden', menuView !== 'character' || covered);
   $('scary-screen')?.classList.toggle('hidden', menuView !== 'scary' || covered);
@@ -14972,6 +15039,18 @@ window.__ashen = {
   // Phase 1 mode loader: ids, loaded set, and an awaitable loader.
   get lazyModes() { return Object.keys(MODE_LOADERS); },
   get loadedModes() { return Object.keys(MODES); },
+  // Phase 1 save layer: profile slots, debounced writes, export/import.
+  get saves() {
+    return { active: saveStore.activeSlot, count: SAVE_SLOT_COUNT, pending: saveStore.pendingCount, writes: saveStore.writeCount, slots: saveStore.slots(), areas: Object.keys(SAVE_AREAS) };
+  },
+  flushSaves() { saveStore.flush(); return saveStore.writeCount; },
+  saveProgress,
+  showSlots,
+  switchSlot,
+  exportSlot: exportSlotFile,
+  importSlot: importSlotFile,
+  deleteSlot: deleteSlotFile,
+  undoDeleteSlot,
   loadMode,
   get secrets() {
     return {
