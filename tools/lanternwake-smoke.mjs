@@ -138,6 +138,11 @@ try {
       if (a.game.boss && !a.game.boss.dying) a.game.hurtBoss(220, 90, 1, false);
       await new Promise((r) => setTimeout(r, 120));
     }
+    // The death animation and defeat dialogue still have to play out.
+    for (let i = 0; i < 80 && a.game.state !== 'victory'; i += 1) {
+      for (let line = 0; line < 4; line += 1) a.advanceDialogue();
+      await new Promise((r) => setTimeout(r, 150));
+    }
     await new Promise((r) => setTimeout(r, 400));
     return {
       spawned,

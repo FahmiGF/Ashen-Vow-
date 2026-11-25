@@ -73,6 +73,7 @@
         };
         window.__ashenBootReady = () => {
           boot.ready = true;
+          try { performance.mark('ashen-boot-ready'); } catch { /* old browser */ }
           boot.readyAt = Date.now();
           bar(100);
           const status = document.getElementById('boot-status');

@@ -240,9 +240,9 @@ async function main() {
     check('boss button is reachable', hub.bossButton.fitsWidth, true);
     check('stage button wraps under the card text', hub.cardStacked, true);
 
-    const updates = await evaluate(`(() => {
+    const updates = await evaluate(`(async () => {
       const A = window.__ashen;
-      A.showUpdates();
+      await A.showUpdates();
       const entries = [...document.querySelectorAll('.update-entry, .update-card, #update-log > *')];
       const firstText = document.getElementById('update-log')?.textContent || '';
       return {

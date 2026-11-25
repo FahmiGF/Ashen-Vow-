@@ -1,7 +1,7 @@
 // Ashen Vow — release history shown in the in-game Update Log.
 // Keep the newest entry first. `GAME_VERSION` is the single source of truth
 // for the version shown by the Update Log screen and the debug hooks.
-export const GAME_VERSION = '0.36.0';
+export { GAME_VERSION } from './version.js';
 
 export const UPDATE_LOG = [
   {

@@ -106,8 +106,10 @@ async function main() {
     await send('Log.enable');
     await send('Page.bringToFront');
     await boot();
-    const initial = await evaluate(`(() => {
+    const initial = await evaluate(`(async () => {
       const A = window.__ashen; A.clearProgress();
+      // Trial and puzzle progress are sanitized when their (lazy) mode opens.
+      await A.showTrials(); await A.showPuzzleAdventure(); A.showMenu();
       return { version: A.version, trials: !!A.progress.trials, puzzle: !!A.progress.puzzle };
     })()`);
     check('boot reports v0.36.0', initial.version, '0.36.0');
