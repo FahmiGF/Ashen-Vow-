@@ -19244,4 +19244,9 @@ Object.defineProperties(window.__ashen, {
 updateVoiceBadge();
 void refreshVoiceStatus();
 
+// Creating an AudioContext costs ~200 ms on Windows (device init). Do it while
+// the menu is idle so the first click or run start does not stall; the context
+// stays suspended until a gesture resumes it through audio.init().
+(window.requestIdleCallback || ((fn) => setTimeout(fn, 600)))(() => { try { audio.prewarm(); } catch { /* audio unavailable */ } }, { timeout: 2500 });
+
 window.__ashenBootReady?.();

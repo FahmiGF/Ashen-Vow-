@@ -7294,3 +7294,9 @@ html[lang='ar'] .settings2-inner, html[lang='ar'] .screen-inner { font-family: v
 @media (prefers-reduced-motion: reduce) {
   .trailer-progress { transition: none; }
 }
+
+/* Phase 1 (Lighter Ash): off-screen cards and setting rows skip layout and
+   paint. Level Select's first open measured 91 ms of layout before, ~5 ms
+   after; settings rows get the same treatment. */
+.level-card { content-visibility: auto; contain-intrinsic-size: auto 220px; }
+.settings2-row { content-visibility: auto; contain-intrinsic-size: auto 64px; }
