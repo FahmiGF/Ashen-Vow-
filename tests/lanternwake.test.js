@@ -34,8 +34,9 @@ test('the chapter is appended after the cistern without moving any room', () => 
   assert.equal(LANTERN_HALL_COUNT, 4);
   LANTERN_ROOMS.forEach((room, i) => assert.equal(room.id, LANTERN_ROOM_START + i));
   assert.equal(roomById(668).name, 'Gua Surut', 'the cistern still ends at 668');
-  assert.equal(ALL_ROOMS.length, 674);
-  assert.equal(ALL_ROOMS.at(-1).id, 673);
+  assert.equal(ALL_ROOMS.length, 774, 'the Frontier ladder follows the Lanternwake');
+  assert.equal(roomById(673).lanternwake, true, 'the Lanternwake still owns 669-673');
+  assert.equal(roomById(674).frontier, true, 'the next table entry is a Frontier room');
   for (const room of LANTERN_ROOMS) {
     assert.equal(room.zone, 'lanternwake');
     assert.ok(room.palette.glow && room.particle === 'embers');

@@ -39,7 +39,7 @@ test('Arc VIII registers six biomes, thirty exact standard levels and seven boss
   assert.equal(ECLIPSE_ROOMS[0].id, ECLIPSE_ROOM_START);
   assert.equal(ECLIPSE_ROOMS.at(-1).id, ECLIPSE_SECRET_ROOM_ID);
   assert.equal(GODFALL_ROOMS.length, 100);
-  assert.equal(ALL_ROOMS.length, 674);
+  assert.equal(ALL_ROOMS.length, 774);
   assert.deepEqual(validateEclipseRooms(), { ok: true, errors: [], count: 37, standard: 30 });
   for (const room of ECLIPSE_STANDARD_ROOMS) {
     assert.equal(room.enemies.length, 20, room.name);

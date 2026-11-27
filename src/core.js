@@ -70,6 +70,12 @@ import {
   LANTERN_BOSS_INFO,
 } from './lanternwake.js';
 import {
+  FRONTIER_ROOMS,
+  FRONTIER_ENEMY_INFO,
+  FRONTIER_ELITE_INFO,
+  FRONTIER_BOSS_INFO,
+} from './frontiers.js';
+import {
   FALLEN_ROOMS,
   FALLEN_ENEMY_INFO,
   FALLEN_BOSS_INFO,
@@ -1155,8 +1161,8 @@ SHOP_ITEMS.push(...ECLIPSE_SHOP_ITEMS);
 
 // Legacy rooms stay exactly as they were so old saves, map layout and tests keep
 // their meaning. The campaign is a second set of rooms appended at indices 14+.
-export const ALL_ROOMS = [...ROOMS, ...EXPANSION_ROOMS, ...ATLAS_ROOMS, ...COURT_ROOMS, ...FAIRY_ROOMS, ...FALLEN_ROOMS, ...CRUSADE_ROOMS, ...ASTRAL_ROOMS, ...ECLIPSE_ROOMS, ...GODFALL_ROOMS, ...CISTERN_ROOMS, ...LANTERN_ROOMS];
-export const ALL_ENEMY_INFO = { ...ENEMY_INFO, ...EXPANSION_ENEMY_INFO, ...ATLAS_ENEMY_INFO, ...COURT_ENEMY_INFO, ...FAIRY_ENEMY_INFO, ...FALLEN_ENEMY_INFO, ...CRUSADE_ENEMY_INFO, ...ASTRAL_ENEMY_INFO, ...ECLIPSE_ENEMY_INFO, ...CISTERN_ENEMY_INFO, ...LANTERN_ENEMY_INFO };
+export const ALL_ROOMS = [...ROOMS, ...EXPANSION_ROOMS, ...ATLAS_ROOMS, ...COURT_ROOMS, ...FAIRY_ROOMS, ...FALLEN_ROOMS, ...CRUSADE_ROOMS, ...ASTRAL_ROOMS, ...ECLIPSE_ROOMS, ...GODFALL_ROOMS, ...CISTERN_ROOMS, ...LANTERN_ROOMS, ...FRONTIER_ROOMS];
+export const ALL_ENEMY_INFO = { ...ENEMY_INFO, ...EXPANSION_ENEMY_INFO, ...ATLAS_ENEMY_INFO, ...COURT_ENEMY_INFO, ...FAIRY_ENEMY_INFO, ...FALLEN_ENEMY_INFO, ...CRUSADE_ENEMY_INFO, ...ASTRAL_ENEMY_INFO, ...ECLIPSE_ENEMY_INFO, ...CISTERN_ENEMY_INFO, ...LANTERN_ENEMY_INFO, ...FRONTIER_ENEMY_INFO, ...FRONTIER_ELITE_INFO };
 
 const BOSS_INFO = {
   warden: {
@@ -1328,7 +1334,7 @@ const BOSS_INFO = {
   },
 };
 
-export const ALL_BOSS_INFO = { ...BOSS_INFO, ...EXPANSION_BOSS_INFO, ...ATLAS_BOSS_INFO, ...COURT_BOSS_INFO, ...PACK_BOSS_INFO, ...FAIRY_BOSS_INFO, ...FALLEN_BOSS_INFO, ...CRUSADE_BOSS_INFO, ...ASTRAL_BOSS_INFO, ...ECLIPSE_BOSS_INFO, ...GODFALL_BOSS_INFO, ...CISTERN_BOSS_INFO, ...LANTERN_BOSS_INFO };
+export const ALL_BOSS_INFO = { ...BOSS_INFO, ...EXPANSION_BOSS_INFO, ...ATLAS_BOSS_INFO, ...COURT_BOSS_INFO, ...PACK_BOSS_INFO, ...FAIRY_BOSS_INFO, ...FALLEN_BOSS_INFO, ...CRUSADE_BOSS_INFO, ...ASTRAL_BOSS_INFO, ...ECLIPSE_BOSS_INFO, ...GODFALL_BOSS_INFO, ...CISTERN_BOSS_INFO, ...LANTERN_BOSS_INFO, ...FRONTIER_BOSS_INFO };
 export const EXPANSION_BOSS_IDS = Object.keys(EXPANSION_BOSS_INFO);
 
 export const CODEX = {
@@ -2008,6 +2014,9 @@ export class AshenGame {
       );
     }
     b._info = info;
+    // Custom stages can override what a boss grants without editing the shared
+    // boss table (a Map Editor boss must never end the run in victory).
+    b.rewardOverride = overrides && overrides.rewardOverride ? overrides.rewardOverride : null;
     b.dialogueData = info.dialogueData || null;
     this.boss = b;
     this.emit({ type: 'bossSpawn', name: info.name, title: info.title, kind });
@@ -3738,6 +3747,7 @@ export class AshenGame {
     ) {
       b.phase += 1;
       b.invuln = 0.4;
+      this.player.invuln = Math.max(this.player.invuln, this.campaignConfig?.phaseGrace ?? 0.1);
       // Some bosses change shape and drag the arena with them (Faewood's
       // heaven/hell forms). Apply before the dialogue so both agree.
       const form = ALL_BOSS_INFO[b.kind]?.forms?.[b.phase];
@@ -6992,12 +7002,13 @@ export class AshenGame {
       this.emit({ type: 'bossDown', room, kind: b.dreadBoss, name: b.name });
       return;
     }
-    if (info?.reward === 'victory') {
+    const bossReward = b.rewardOverride || info?.reward;
+    if (bossReward === 'victory') {
       this.state = 'victory';
       this.deathTimer = 0;
       this.emit({ type: 'victory' });
       if (room >= 14 && room < ATLAS_ROOM_START) this.emit({ type: 'campaignComplete', room, chapter: Math.floor((room - 14) / 10) });
-    } else if (info?.reward === 'flask') {
+    } else if (bossReward === 'flask') {
       const p = this.player;
       p.maxFlasks += 1;
       p.flasks = p.maxFlasks;
@@ -7019,7 +7030,7 @@ export class AshenGame {
       this.emit({ type: 'echoGain', amount: echoReward, total: this.echoes });
     }
     this.emit({
-      type: 'bossDown', room, kind: b.kind, name: b.name, next, reward: info?.reward,
+      type: 'bossDown', room, kind: b.kind, name: b.name, next, reward: bossReward,
       chapter: info?.chapter ?? null, mini: !!info?.mini, echoes: echoReward,
     });
     this.shake = 0.9;

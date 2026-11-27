@@ -76,6 +76,23 @@ export const ZONES = {
       fog: '#4a3216',
     },
   },
+  frontier: {
+    id: 'frontier',
+    name: 'Infinite Frontiers',
+    subtitle: 'Batas Tak Berujung',
+    color: '#8ec5fc',
+    mapColor: '#8ec5fc',
+    music: 'frontier',
+    bossMusic: 'frontierBoss',
+    particle: 'stars',
+    palette: {
+      top: '#08121f',
+      mid: '#102236',
+      low: '#1b3550',
+      glow: '#8ec5fc',
+      fog: '#2b4a6b',
+    },
+  },
   frostglass: {
     id: 'frostglass',
     name: 'Frostglass Cathedral',
