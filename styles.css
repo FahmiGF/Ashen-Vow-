@@ -7310,3 +7310,99 @@ html[lang='ar'] .settings2-inner, html[lang='ar'] .screen-inner { font-family: v
 @media (prefers-reduced-motion: reduce) {
   .trailer-progress { transition: none; }
 }
+
+.hud-settings-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+}
+
+.title-settings-corner {
+  position: absolute;
+  top: max(14px, env(safe-area-inset-top));
+  right: max(16px, env(safe-area-inset-right));
+  z-index: 25;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 6px 12px;
+  border: 1px solid var(--line-strong);
+  background: rgba(12, 9, 6, 0.86);
+  color: var(--gold-bright);
+  font-family: var(--font-display);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, transform 0.15s;
+}
+
+.title-settings-corner:hover {
+  background: rgba(34, 24, 14, 0.94);
+  border-color: var(--gold-bright);
+  transform: translateY(-1px);
+}
+
+@media (max-width: 520px) {
+  .title-settings-corner span {
+    display: none;
+  }
+  .title-settings-corner {
+    min-width: 40px;
+    min-height: 40px;
+    justify-content: center;
+    padding: 6px 10px;
+  }
+}
+
+/* ── PETA KISAH — storyline map (v0.41.0) ───────────────────────────── */
+.storymap-inner { max-width: 1080px; }
+.storymap-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 14px; margin-bottom: 10px; }
+.storymap-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 8px; margin-bottom: 12px; }
+.storymap-meta-cell { display: flex; flex-direction: column; gap: 2px; padding: 7px 9px; border: 1px solid var(--line); background: rgba(10, 8, 7, 0.6); }
+.storymap-meta-cell span { font-size: 8px; letter-spacing: 0.16em; color: #9b8a71; }
+.storymap-meta-cell strong { font-size: 13px; color: #e9d9bb; }
+.storymap-layout { display: grid; grid-template-columns: minmax(190px, 260px) minmax(0, 1fr); gap: 12px; align-items: start; }
+.storymap-rail { display: flex; flex-direction: column; gap: 6px; max-height: clamp(300px, 56vh, 620px); overflow-y: auto; padding-right: 4px; }
+.storymap-chip { position: relative; display: flex; flex-direction: column; gap: 2px; text-align: left; padding: 8px 10px 8px 14px; border: 1px solid var(--line); background: rgba(9, 7, 6, 0.72); color: #cdbfa4; cursor: pointer; transition: border-color 0.15s, background 0.15s, transform 0.15s; }
+.storymap-chip::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--arc-color, #d07a35); opacity: 0.75; }
+.storymap-chip:hover { border-color: var(--arc-color, #d07a35); transform: translateX(2px); }
+.storymap-chip.active { border-color: var(--arc-color, #d07a35); background: rgba(30, 22, 16, 0.9); box-shadow: inset 0 0 0 1px var(--arc-color, #d07a35); }
+.storymap-chip.locked { opacity: 0.55; }
+.storymap-chip-num { font-size: 9px; letter-spacing: 0.18em; color: var(--arc-color, #d9c39d); }
+.storymap-chip-title { font-size: 11px; letter-spacing: 0.06em; color: #f0e3c8; }
+.storymap-chip-meta { font-size: 8px; letter-spacing: 0.12em; color: #8d7d66; }
+.storymap-detail { position: relative; min-height: clamp(300px, 56vh, 620px); max-height: clamp(300px, 56vh, 620px); overflow-y: auto; padding: 14px 16px 18px; border: 1px solid var(--line-strong); background: linear-gradient(160deg, rgba(20, 15, 11, 0.92), rgba(8, 6, 5, 0.97)); }
+.storymap-detail::before { content: ''; position: absolute; inset: 0 auto 0 0; width: 3px; background: var(--arc-color, #d07a35); }
+.storymap-arc-head { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; border-bottom: 1px solid var(--line); padding-bottom: 10px; }
+.storymap-arc-num { display: flex; align-items: center; gap: 8px; margin: 0 0 4px; font-size: 9px; letter-spacing: 0.2em; color: var(--arc-color, #d07a35); }
+.storymap-arc-num i { font-style: normal; font-size: 8px; letter-spacing: 0.14em; color: #8d7d66; border: 1px solid var(--line); padding: 1px 5px; }
+.storymap-arc-head h3 { margin: 0; font-size: clamp(15px, 2.4vw, 21px); letter-spacing: 0.06em; color: #f4e8d0; }
+.storymap-arc-sub { margin: 5px 0 0; font-size: 11px; line-height: 1.5; color: #b7a486; }
+.storymap-badge { flex: 0 0 auto; font-size: 8px; letter-spacing: 0.16em; padding: 3px 7px; border: 1px solid var(--arc-color, #d07a35); color: var(--arc-color, #d07a35); }
+.storymap-badge.locked { border-color: #8a4c56; color: #c07a86; }
+.storymap-meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(92px, 1fr)); gap: 6px; margin: 10px 0; }
+.storymap-summary-text { margin: 0 0 12px; font-size: 11.5px; line-height: 1.65; color: #d6c6ab; }
+.storymap-heading { margin: 12px 0 6px; font-size: 9px; letter-spacing: 0.2em; color: #9b8a71; text-transform: uppercase; }
+.storymap-beats { display: flex; flex-direction: column; gap: 6px; margin: 0; padding-left: 18px; }
+.storymap-beats li { font-size: 11px; line-height: 1.55; color: #c8b89c; }
+.storymap-beats li::marker { color: var(--arc-color, #d07a35); }
+.storymap-cast { display: flex; flex-wrap: wrap; gap: 5px; }
+.storymap-cast span { font-size: 9px; letter-spacing: 0.1em; padding: 3px 7px; border: 1px solid var(--line); background: rgba(0, 0, 0, 0.35); color: #d9c8aa; }
+.storymap-note { margin: 12px 0 0; font-size: 10px; line-height: 1.6; color: #93826a; border-left: 2px solid var(--arc-color, #d07a35); padding-left: 9px; }
+.storymap-nav { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--line); }
+.storymap-nav span { font-size: 9px; letter-spacing: 0.16em; color: #8d7d66; }
+.storymap-nav .btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+@media (max-width: 860px) {
+  .storymap-layout { grid-template-columns: 1fr; }
+  .storymap-rail { flex-direction: row; overflow-x: auto; overflow-y: hidden; max-height: none; padding-bottom: 6px; }
+  .storymap-chip { min-width: 170px; flex: 0 0 auto; }
+  .storymap-detail { min-height: 0; max-height: none; }
+}
+
+@media (max-width: 520px) {
+  .storymap-head { flex-direction: column; }
+  .storymap-chip { min-width: 150px; }
+}

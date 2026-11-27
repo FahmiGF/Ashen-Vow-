@@ -256,9 +256,64 @@ test('Update XV remains documented after the Unwritten Wing expansion', () => {
   }
 });
 
-test('the latest update documents the Lanternwake, Vigil Tree and voice release', () => {
+test('the latest update documents the playable Infinite Frontiers ladder', () => {
   const latest = LATEST_UPDATE;
-  assert.equal(latest.version, '0.36.0');
+  assert.equal(latest.version, '0.42.0');
+  assert.equal(latest.version, GAME_VERSION);
+  const text = [latest.title, latest.summary, ...latest.highlights, ...(latest.fixes || [])].join(' ');
+  for (const pattern of [/Infinite Frontiers/i, /674–773/, /100 rus|seratus ruang|100 ruang/i, /10 bos|sepuluh bos/i, /Aethron/i, /lima fase|5 fase/i, /elite/i, /E2–E7/, /progress\.frontiers/, /ALL_ROOMS/, /774/, /frontierBoss/, /frontiers:<index>|frontiers:/i, /20 tubuh|20 musuh/i, /ashen-vow-progress-v1/]) {
+    assert.match(text, pattern);
+  }
+});
+
+test('the 0.41.0 entry documents takaran, the balance meter, elites and survival', () => {
+  const latest = UPDATE_LOG.find((item) => item.version === '0.41.0');
+  assert.ok(latest);
+  const text = [latest.title, latest.summary, ...latest.highlights, ...(latest.fixes || [])].join(' ');
+  for (const pattern of [/Takaran/i, /AUTO-SEIMBANG/, /keseimbangan|balance/i, /elite/i, /BERTAHAN|bertahan/i, /20–180/, /Abisal/i, /Ringan/i, /Brutal/i, /Pengepungan 60 Detik/, /ashen-vow-mapeditor-v1/, /skema 3|schema 3/i, /AVME1|Kode bagi/i, /berkah|blessing/i]) {
+    assert.match(text, pattern);
+  }
+});
+
+test('the 0.40.0 entry documents terrain, room chains and share codes', () => {
+  const latest = UPDATE_LOG.find((item) => item.version === '0.40.0');
+  assert.ok(latest);
+  const text = [latest.title, latest.summary, ...latest.highlights, ...(latest.fixes || [])].join(' ');
+  for (const pattern of [/Kanvas|terrain/i, /Pijakan|platform/i, /RANTAI|Rantai RUANG|rantai ruang/i, /enam ruang|6 ruang/i, /AVME1/, /base64url/i, /ashen-vow-mapeditor-v1/, /LANJUT KE PETA/, /RUANG 2\/3/, /clipboard|SALIN KODE/, /IMPOR/, /MAP_EDITOR_SCHEMA|skema 1|schema/i, /20 peta/i, /26 pijakan|26 PIJAKAN/, /Unicode/i]) {
+    assert.match(text, pattern);
+  }
+});
+
+test('the 0.39.0 entry still documents the original Campaign Map Editor', () => {
+  const entry = UPDATE_LOG.find((item) => item.version === '0.39.0');
+  assert.ok(entry);
+  const text = [entry.title, entry.summary, ...entry.highlights, ...(entry.fixes || [])].join(' ');
+  for (const pattern of [/Map Editor/i, /Peta Sumpah/i, /ashen-vow-mapeditor-v1/, /musuh/i, /bos/i, /latar/i, /musik/i, /pembuka/i, /kelas/i, /senjata/i, /ALL_ROOMS/, /loadArena/i, /20 peta/i, /28 musuh/i, /116 bos/i, /ashen-vow-progress-v1/]) {
+    assert.match(text, pattern);
+  }
+});
+
+test('the 0.38.0 entry still documents the Spiral Choir expansion', () => {
+  const latest = UPDATE_LOG.find((entry) => entry.version === '0.38.0');
+  assert.ok(latest);
+  const text = [latest.title, latest.summary, ...latest.highlights, ...(latest.fixes || [])].join(' ');
+  for (const pattern of [/Koor Lingkar/i, /Spiral Choir/i, /Jangkar Lingkar/i, /Jam Pasir Ketiga/i, /Rift Hopper/i, /Lantern Moth/i, /Grave Taxer/i, /ETERNAL/i, /20 menara/i, /31 entri/i, /rig/i, /Kronik Lingkar/i, /enam bab|6 bab/i, /sinematik/i, /18 detik/i, /11 detik/i, /spiralTrailer/i, /spiralBoss/i, /progress\.wavedefense\.infinitower/, /ashen-vow-progress-v1/]) {
+    assert.match(text, pattern);
+  }
+});
+
+test('the 0.37.0 entry still documents the original Infinitower release', () => {
+  const latest = UPDATE_LOG.find((entry) => entry.version === '0.37.0');
+  assert.ok(latest);
+  const text = [latest.title, latest.summary, ...latest.highlights, ...(latest.fixes || [])].join(' ');
+  for (const pattern of [/Infinitower/i, /ETERNAL SPIRAL/i, /lima|kelima/i, /delapan belas menara|18 menara/i, /Monolit Gema/i, /Lonceng Kubur/i, /Tempa Abu/i, /Mata Pengawas/i, /Mirror Thrall/i, /Obsidian Golem/i, /Spiral Tyrant/i, /Lantern Devourer/i, /progress\.wavedefense\.infinitower/, /999/, /ashen-vow-progress-v1/]) {
+    assert.match(text, pattern);
+  }
+});
+
+test('the 0.36.0 release entry still documents the Lanternwake, Vigil Tree and voice release', () => {
+  const latest = UPDATE_LOG.find((entry) => entry.version === '0.36.0');
+  assert.ok(latest);
   const text = [latest.title, latest.summary, ...latest.highlights, ...(latest.fixes || [])].join(' ');
   for (const pattern of [/Lanternwake/i, /669-673/, /ALL_ROOMS kini 674/i, /Orsella/i, /empat fase/i, /progress\.lanternwake/, /Pohon Vigil/i, /21 rank/i, /ElevenLabs/i, /ashen-vow-voice-v1/, /Trailer/i, /80 detik/i, /BOOT-01/, /asset-inventory/i, /Master Plan 3\.0/]) {
     assert.match(text, pattern);

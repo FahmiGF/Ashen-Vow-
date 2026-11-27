@@ -49,18 +49,24 @@ async function main() {
   if (SHOT_DIR) mkdirSync(SHOT_DIR, { recursive: true });
 
   const profile = mkdtempSync(join(tmpdir(), 'ashen-bossvoice-smoke-'));
-  const chrome = spawn(findBrowser(), [
-    '--headless=new',
-    `--remote-debugging-port=${CDP_PORT}`,
-    `--user-data-dir=${profile}`,
-    '--no-first-run',
-    '--no-default-browser-check',
-    '--no-sandbox',
-    '--mute-audio',
-    '--autoplay-policy=no-user-gesture-required',
-    '--window-size=1366,800',
-    URL,
-  ], { stdio: 'ignore' });
+  let browser;
+  try {
+    browser = spawn(findBrowser(), [
+      '--headless=new',
+      `--remote-debugging-port=${CDP_PORT}`,
+      `--user-data-dir=${profile}`,
+      '--no-first-run',
+      '--no-default-browser-check',
+      '--no-sandbox',
+      '--mute-audio',
+      '--autoplay-policy=no-user-gesture-required',
+      '--window-size=1366,800',
+      URL,
+    ], { stdio: 'ignore' });
+  } catch (err) {
+    throw new Error(`[BROWSER_LAUNCH] ${err.message}`);
+  }
+  const chrome = browser;
 
   let ws;
   const pageErrors = [];
@@ -137,19 +143,29 @@ async function main() {
     await send('Log.enable');
 
     await send('Page.reload');
-    const booted = await waitFor('typeof window.__ashen === "object" && document.readyState === "complete" && window.__ashen.menuView === "title"', 15000);
-    check('game boots to the title menu', booted, true);
+    const booted = await waitFor('typeof window.__ashen === "object" && document.readyState === "complete"', 15000);
+    if (!booted) throw new Error('[APP_BOOT] game did not boot before timeout');
+    const freshView = await evaluate('window.__ashen.menuView');
+    if (freshView === 'trailer') {
+      const trailerVisible = await evaluate('!document.getElementById("trailer-screen")?.classList.contains("hidden")');
+      check('fresh profile opens the in-engine trailer first', trailerVisible, true);
+      await evaluate('document.getElementById("btn-trailer-close")?.click()');
+      await sleep(150);
+    }
+    const onTitle = await waitFor('window.__ashen.menuView === "title"', 5000);
+    check('game reaches the title menu after trailer flow', onTitle, true);
     const initial = await evaluate(`(async () => {
       localStorage.removeItem('ashen-vow-bossvoice-v1');
       const A = window.__ashen;
+      const bv = await import('/src/boss_voice.js');
       A.setBossVoice({ mode: 'recorded-first', allowAi: false });
       await A.loadBossVoiceManifest();
-      return A.bossVoice;
+      return { voice: A.bossVoice, expected: bv.bossVoiceSummary() };
     })()`);
-    check('voice script covers 613 lines', initial.summary.lines, 613);
-    check('voice script covers all 116 bosses', initial.summary.bosses, 116);
-    check('AI voice is off by default', initial.settings.allowAi, false);
-    check('no recordings are bundled yet', initial.recorded, 0);
+    check('voice script covers every authored line', initial.voice.summary.lines, initial.expected.lines);
+    check('voice script covers all live bosses', initial.voice.summary.bosses, initial.expected.bosses);
+    check('AI voice is off by default', initial.voice.settings.allowAi, false);
+    check('no recordings are bundled yet', initial.voice.recorded, 0);
 
     // A real boss fight: the Warden's intro opens the dialogue and voices it.
     await evaluate('window.__ashen.enterRoom(2)');
@@ -233,7 +249,7 @@ async function main() {
     })()`);
     if (process.env.SMOKE_VERBOSE) console.log('sweep ms', sweep.ms, sweep.other.slice(0, 5));
     check('every boss voices its intro (and 20 bosses phase II + defeat)', sweep.stings, sweep.expected);
-    check('all 116 bosses were swept', sweep.expected, 116 + 40);
+    check('all live bosses were swept', sweep.expected, initial.expected.bosses + 40);
     check('no boss line fell through to another source', sweep.other.length, 0);
 
     const cycled = await evaluate(`(() => {

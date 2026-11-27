@@ -1,9 +1,9 @@
 {
   "name": "ashen-vow",
-  "version": "0.36.0",
+  "version": "0.42.0",
   "private": true,
   "type": "module",
-  "description": "Ashen Vow v0.36.0 — BAB X The Lanternwake with a four-phase Wickbearer, the Scary Mode Vigil Tree, ElevenLabs voice, an in-engine cinematic trailer and a startup guard",
+  "description": "Ashen Vow v0.42.0 - Update XXXII: Infinite Frontiers Lv 101-200 becomes 100 playable rooms with ten chapter bosses and E2-E7 elites",
   "scripts": {
     "start": "node server.js",
     "test": "node --test tests/*.test.js",
@@ -19,7 +19,11 @@
     "smoke:speedrun:mobile": "node tools/speedrun-mobile.mjs",
     "smoke:fishing": "node tools/fishing-smoke.mjs",
     "voice:script": "node tools/voice-script.mjs",
+    "voice:bake-trailer": "node tools/bake-trailer-voice.mjs",
     "smoke:bossvoice": "node tools/bossvoice-smoke.mjs",
+    "smoke:editor": "node tools/editor-smoke.mjs",
+    "smoke:storymap": "node tools/storymap-smoke.mjs",
+    "smoke:frontiers": "node tools/frontiers-smoke.mjs",
     "smoke:fallen": "node tools/fallen-smoke.mjs",
     "audit:gadgets": "node tools/gadget-audit.mjs",
     "smoke:crusade": "node tools/crusade-smoke.mjs",

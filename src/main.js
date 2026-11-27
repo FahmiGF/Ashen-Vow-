@@ -3,7 +3,10 @@ import {
   AshenGame,
   ROOMS,
   ALL_ROOMS,
+  ALL_ENEMY_INFO,
+  ALL_BOSS_INFO,
   WORLD_W,
+  FLOOR_Y,
   VIEW_W,
   WEAPONS,
   SHOP_ITEMS,
@@ -68,7 +71,7 @@ import {
   formatCode,
   gamepadActions,
 } from './settings.js';
-import { ZONE_LIST, zoneForRoom } from './zones.js';
+import { ZONE_LIST, ZONES, zoneForRoom } from './zones.js';
 import {
   MapView,
   LEGEND,
@@ -89,6 +92,8 @@ import {
   drawCutscene,
   cutsceneFor,
   cutsceneBeatAt,
+  SPIRAL_INTRO_CUTSCENE,
+  SPIRAL_BOSS_CUTSCENE,
 } from './cutscene.js';
 import {
   VOICE_SAVE_KEY,
@@ -131,6 +136,7 @@ import {
   creditSceneFor,
   isArcFinalBoss,
 } from './credits.js';
+
 import {
   SPEEDRUN_LIVES,
   SPEEDRUN_RULES,
@@ -168,7 +174,7 @@ import {
   reelZone,
   sanitizeFishingProgress,
 } from './fishing.js';
-import { UPDATE_LOG, GAME_VERSION } from './updates.js';
+import { GAME_VERSION } from './version.js';
 import {
   EXPANSION_NAME,
   EXPANSION_ROOM_START,
@@ -590,6 +596,29 @@ import {
   recordLanternRun,
 } from './lanternwake.js';
 import {
+  FRONTIERS_NAME,
+  FRONTIERS_LOCAL_NAME,
+  FRONTIER_ROOMS,
+  FRONTIER_CHAPTER_META,
+  FRONTIER_LEVEL_COUNT,
+  FRONTIER_ROOMS_PER_CHAPTER,
+  defaultFrontierCampaignProgress,
+  sanitizeFrontierCampaignProgress,
+  frontierCampaignUnlocked,
+  frontierCampaignSummary,
+  frontierChapterProgress,
+  frontierLevelUnlocked,
+  frontierLevelCleared,
+  frontierIndexForRoom,
+  frontierRoomForIndex,
+  frontierAshStipend,
+  frontierPlayerScale,
+  frontierVitalityScale,
+  frontierFlaskBonus,
+  recordFrontierLevel,
+  recordFrontierRun,
+} from './frontiers.js';
+import {
   FALLEN_NAME,
   FALLEN_LOCAL_NAME,
   FALLEN_SUBTITLE,
@@ -806,6 +835,10 @@ import {
   WAVE_DEFENSE_ENEMY_TYPES,
   WAVE_DEFENSE_BOSSES,
   WAVE_DEFENSE_TOTAL_WAVES,
+  WAVE_DEFENSE_INFINITOWER_TIER_WAVES,
+  SPIRAL_STORY,
+  spiralStoryForTier,
+  infinitowerTierFor,
   createWaveDefense,
   updateWaveDefense,
   waveDefenseBuild,
@@ -927,7 +960,32 @@ const mapView = new MapView($('map-canvas'));
 
 let started = false;
 let paused = false;
-let menuView = 'title'; // title | fallenMenu | fallen | levels | credits | updates | character | expansion | frontier | overdrive | mode3d | court | labyrinth | fairy | speedrun | fishing | baitShop | fishIndex | none
+let menuView = 'title'; // title | fallenMenu | fallen | levels | credits | updates | storymap | character | expansion | frontier | overdrive | mode3d | court | labyrinth | fairy | speedrun | fishing | baitShop | fishIndex | none
+const loadedStylesheets = new Map();
+function ensureStylesheet(href) {
+  if (typeof document === 'undefined') return Promise.resolve();
+  if (loadedStylesheets.has(href)) return loadedStylesheets.get(href);
+  const existing = [...document.querySelectorAll('link[rel="stylesheet"]')].find((el) => el.getAttribute('href') === href);
+  if (existing) {
+    const p = Promise.resolve(existing);
+    loadedStylesheets.set(href, p);
+    return p;
+  }
+  const promise = new Promise((resolve, reject) => {
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = href;
+    link.onload = () => resolve(link);
+    link.onerror = () => {
+      loadedStylesheets.delete(href);
+      link.remove();
+      reject(new Error(`Gagal memuat stylesheet: ${href}`));
+    };
+    document.head.appendChild(link);
+  });
+  loadedStylesheets.set(href, promise);
+  return promise;
+}
 let fishingReel = null;
 let fishingReelFrame = 0;
 let fishIndexTab = 0;
@@ -1011,6 +1069,9 @@ let wdRecorded = false;
 let wdMapId = 'ashen_keep';
 let wdDifficulty = 'knight';
 let wdEndless = false;
+let wdInfinitower = false;
+let wdIntroSeen = false;
+let wdBossCutsceneSeen = false;
 let wdSelectedTowerId = 'ballista';
 let wdUiTimer = 0;
 let wdRenderDirty = true;
@@ -1241,6 +1302,7 @@ function defaultProgress() {
     fairy: defaultFairyProgress(),
     cistern: defaultCisternProgress(),
     lanternwake: defaultLanternProgress(),
+    frontiers: defaultFrontierCampaignProgress(),
     speedrun: defaultSpeedrunProgress(),
     fishing: defaultFishingProgress(),
     fallen: defaultFallenProgress(),
@@ -1264,7 +1326,7 @@ function sanitizeStageTimes(raw) {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
   const result = {};
   for (const [key, value] of Object.entries(raw)) {
-    if (!/^(legacy|court|expansion|atlas|cistern|lanternwake):\d+$/.test(key) || !value || typeof value !== 'object') continue;
+    if (!/^(legacy|court|expansion|atlas|cistern|lanternwake|frontiers):\d+$/.test(key) || !value || typeof value !== 'object') continue;
     result[key] = {
       label: typeof value.label === 'string' ? value.label.slice(0, 80) : key,
       best: Math.max(0, Math.round((Number(value.best) || 0) * 10) / 10),
@@ -1314,7 +1376,7 @@ function loadProgress() {
         };
     // Keep every unknown top-level field. v0.3.0 adds `expansion` without
     // changing the storage key or discarding future/legacy save data.
-    const { version, schemaVersion: _schemaVersion, unlocked: _unlocked, cleared: _cleared, map: _map, expansion: _expansion, atlas: _atlas, labyrinth: _labyrinth, court: _court, skills: _skills, pack: _pack, fairy: _fairy, speedrun: _speedrun, fishing: _fishing, fallen: _fallen, crusade: _crusade, trials: _trials, puzzle: _puzzle, moba: _moba, wavedefense: _wavedefense, pirates: _pirates, astral: _astral, realms: _realms, eclipse: _eclipse, godfall: _godfall, guild: _guild, awakening: _awakening, cistern: _cistern, lanternwake: _lanternwake, stageTimes: _stageTimes, ...extras } = parsed;
+    const { version, schemaVersion: _schemaVersion, unlocked: _unlocked, cleared: _cleared, map: _map, expansion: _expansion, atlas: _atlas, labyrinth: _labyrinth, court: _court, skills: _skills, pack: _pack, fairy: _fairy, speedrun: _speedrun, fishing: _fishing, fallen: _fallen, crusade: _crusade, trials: _trials, puzzle: _puzzle, moba: _moba, wavedefense: _wavedefense, pirates: _pirates, astral: _astral, realms: _realms, eclipse: _eclipse, godfall: _godfall, guild: _guild, awakening: _awakening, cistern: _cistern, lanternwake: _lanternwake, frontiers: _frontiers, stageTimes: _stageTimes, ...extras } = parsed;
     return {
       ...extras,
       version: 1,
@@ -1331,6 +1393,7 @@ function loadProgress() {
       fairy: sanitizeFairyProgress(parsed.fairy),
       cistern: sanitizeCisternProgress(parsed.cistern),
       lanternwake: sanitizeLanternProgress(parsed.lanternwake),
+      frontiers: sanitizeFrontierCampaignProgress(parsed.frontiers),
       speedrun: sanitizeSpeedrunProgress(parsed.speedrun),
       fishing: sanitizeFishingProgress(parsed.fishing),
       fallen: sanitizeFallenProgress(parsed.fallen),
@@ -1353,7 +1416,13 @@ function loadProgress() {
   }
 }
 
-function saveProgress() {
+let _saveProgressTimer = 0;
+let _saveProgressLastMs = 0;
+function flushSaveProgress() {
+  if (_saveProgressTimer) {
+    clearTimeout(_saveProgressTimer);
+    _saveProgressTimer = 0;
+  }
   if (activeRunKind === 'hack' && hackSnapshot) return;
   try {
     const previous = localStorage.getItem(PROGRESS_KEY);
@@ -1361,9 +1430,28 @@ function saveProgress() {
     progress.version = 1;
     progress.schemaVersion = 2;
     localStorage.setItem(PROGRESS_KEY, JSON.stringify(progress));
+    _saveProgressLastMs = Date.now();
   } catch {
     /* storage unavailable — keep in memory */
   }
+}
+
+function saveProgress({ immediate = false } = {}) {
+  if (activeRunKind === 'hack' && hackSnapshot) return;
+  const now = Date.now();
+  if (immediate || now - _saveProgressLastMs >= 1200) {
+    flushSaveProgress();
+    return;
+  }
+  if (!_saveProgressTimer) {
+    _saveProgressTimer = setTimeout(() => flushSaveProgress(), 1200 - (now - _saveProgressLastMs));
+  }
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('pagehide', () => {
+    if (_saveProgressTimer) flushSaveProgress();
+  });
 }
 
 let progress = loadProgress();
@@ -5793,6 +5881,182 @@ function speedrunStamp(at) {
   return `${pad(date.getDate())}/${pad(date.getMonth() + 1)} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
+// ── Campaign Map Editor (lazy-loaded pilot mode) ────────────────────────
+let mapEditorCtrl = null;
+let mapEditorPromise = null;
+let editorOpenToken = 0;
+let customIntroCallback = null;
+let customBadgeCache = '';
+
+function clearShellOverlays() {
+  cancelPrologue();
+  shopOpen = false;
+  mapOpen = false;
+  codexOpen = false;
+  inventoryOpen = false;
+  settingsOpen = false;
+  closeDialogue(true);
+  spectating = false;
+  spectateGame = null;
+}
+
+function resetArenaStateForCustomRun() {
+  attempts = 1;
+  coopGuestMode = false;
+  coopGuestRoom = -1;
+  activeCourtTrial = null;
+  activeCourtRoom = null;
+  activePackIndex = -1;
+  activeFairyStage = -1;
+  activeFairyBoss = null;
+  speedrunRun = null;
+  speedrunSummaryOpen = false;
+  labRun = null;
+  labDirector = null;
+  labGuestMode = false;
+  labRewardsOpen = false;
+  labSummaryOpen = false;
+  activeExpansionIndex = null;
+  activeModeId = null;
+  activeTrialId = null;
+  cutsceneSeen = new Set();
+  postCreditTimer = -1;
+  horrorEventLayer = {};
+  horrorPresence = null;
+  horrorLastDone = null;
+}
+
+function ensureMapEditor() {
+  if (mapEditorCtrl) return Promise.resolve(mapEditorCtrl);
+  if (!mapEditorPromise) {
+    mapEditorPromise = Promise.all([
+      import('./mapeditor_ui.js'),
+      ensureStylesheet('./styles-mapeditor.css'),
+    ])
+      .then(([mod]) => {
+        if (!mapEditorCtrl) {
+          mapEditorCtrl = mod.createMapEditorController({
+            $,
+            esc,
+            game,
+            audio,
+            formatTime,
+            getMenuView: () => menuView,
+            setMenuView: (v) => { menuView = v; },
+            isStarted: () => started,
+            setStarted: (v) => { started = v; },
+            setPaused: (v) => { paused = v; },
+            getActiveRunKind: () => activeRunKind,
+            setActiveRunKind: (v) => { activeRunKind = v; },
+            clearShellOverlays,
+            resetArenaStateForCustomRun,
+            applyCustomPlayerLoadout: (bp) => {
+              game.applyCharacter(bp.classId);
+              game.applySkillBonuses(skillBonuses(progress.skills));
+              game.setAppearance({
+                race: character.race,
+                skin: character.skin,
+                outfit: character.outfit,
+                armor: character.armor,
+              });
+            },
+            applyCustomHunterItems: () => {
+              game.setHunterItems(hunterState.items);
+            },
+            beginCustomStageRecord: (bp, room) => {
+              lastGameState = 'playing';
+              accumulator = 0;
+              lastTime = performance.now();
+              activeStage = { key: `custom:${bp.id}`, index: room.index, label: bp.name, startedAt: game.time, recorded: false };
+            },
+            setCustomIntroCallback: (fn) => { customIntroCallback = fn; },
+            startPrologue,
+            openTrailer,
+            startCutscene,
+            syncScreens,
+            updateHud,
+            clearHeldKeys,
+            showBanner,
+            showToast,
+            showMenu,
+            unlockAudio: () => {
+              audio.init();
+              audioUnlocked = true;
+            },
+          });
+          mapEditorCtrl.bindDom();
+        }
+        return mapEditorCtrl;
+      })
+      .catch((err) => {
+        mapEditorPromise = null;
+        throw err;
+      });
+  }
+  return mapEditorPromise;
+}
+
+async function showEditor() {
+  const token = ++editorOpenToken;
+  clearShellOverlays();
+  started = false;
+  paused = false;
+  menuView = 'editor';
+  clearHeldKeys();
+  const form = $('editor-form');
+  const msg = $('editor-message');
+  if (!mapEditorCtrl) {
+    if (form) form.innerHTML = '<p class="editor-empty" role="status">Memuat Peta Sumpah…</p>';
+    if (msg) {
+      msg.textContent = 'Memuat modul Peta Sumpah…';
+      msg.className = 'editor-message';
+    }
+  }
+  syncScreens();
+  try {
+    const ctrl = await ensureMapEditor();
+    if (token !== editorOpenToken || menuView !== 'editor') return false;
+    return ctrl.open();
+  } catch (error) {
+    if (token !== editorOpenToken || menuView !== 'editor') return false;
+    if (form) {
+      form.innerHTML = `<p class="editor-empty">Gagal memuat Peta Sumpah: ${esc(error?.message || 'galat')}</p><button class="btn btn-ghost btn-compact" type="button" data-editor-retry="1">COBA LAGI</button>`;
+    }
+    if (msg) {
+      msg.textContent = 'Gagal memuat modul Peta Sumpah.';
+      msg.className = 'editor-message error';
+    }
+    return false;
+  }
+}
+
+function isCustomClearOpen() {
+  return Boolean(mapEditorCtrl?.isClearOpen());
+}
+
+function tickCustomStage(dt) {
+  mapEditorCtrl?.tick(dt);
+}
+
+function resetCustomRun() {
+  mapEditorCtrl?.resetActiveRun();
+}
+
+function startCustomStage(id) {
+  if (mapEditorCtrl) return mapEditorCtrl.startCustomStage(id);
+  return ensureMapEditor().then((ctrl) => ctrl.startCustomStage(id));
+}
+
+function retryCustomRun() {
+  if (mapEditorCtrl) return mapEditorCtrl.retryCustomStage();
+  return ensureMapEditor().then((ctrl) => ctrl.retryCustomStage());
+}
+
+function editorSyncOrAsync(fn) {
+  if (mapEditorCtrl) return fn(mapEditorCtrl);
+  return ensureMapEditor().then(fn);
+}
+
 function showSpeedrun() {
   cancelPrologue();
   started = false;
@@ -7832,6 +8096,10 @@ function startRun(index = 0) {
 }
 
 function retryRun() {
+  if (activeRunKind === 'custom') {
+    void retryCustomRun();
+    return;
+  }
   attempts += 1;
   if (activeRunKind === 'eternal') {
     const stageId = eternalController?.activeStage;
@@ -7892,6 +8160,13 @@ function retryRun() {
   }
   if (activeRunKind === 'lanternwake') {
     startLanternwakeStage(activeLanternStage >= 0 ? activeLanternStage : 0);
+    return;
+  }
+  if (activeRunKind === 'frontiers') {
+    const state = frontierState();
+    recordFrontierRun(state, 0, true);
+    saveProgress();
+    startFrontierLevel(activeFrontierIndex >= 0 ? activeFrontierIndex : 0);
     return;
   }
   if (activeRunKind === 'eclipse') {
@@ -7967,6 +8242,7 @@ function retryRun() {
 }
 
 function showMenu() {
+  resetCustomRun();
   hunterShopOpen = false;
   cancelPrologue();
   if (activeRunKind === 'hack' && hackSnapshot) progress = hackSnapshot;
@@ -8530,6 +8806,14 @@ function showWaveDefense() {
 function buildWaveDefenseScreen() {
   const state = waveDefenseState();
   const summary = waveDefenseSummary(state);
+  const storyEl = $('wd-story');
+  if (storyEl) {
+    storyEl.innerHTML = SPIRAL_STORY.map((chapter) => `<article class="wd-story-chapter">
+      <span>TINGKAT ${chapter.tier}</span>
+      <strong>${esc(chapter.title)}</strong>
+      <p>${esc(chapter.line)}</p>
+    </article>`).join('');
+  }
   const summaryEl = $('wd-summary');
   if (summaryEl) {
     summaryEl.innerHTML = `
@@ -8538,7 +8822,8 @@ function buildWaveDefenseScreen() {
       <div class="wd-stat"><span>GELOMBANG</span><strong>${summary.bestWave}/${WAVE_DEFENSE_TOTAL_WAVES}</strong><em>rekor tertinggi</em></div>
       <div class="wd-stat"><span>SKOR</span><strong>${summary.bestScore}</strong><em>rekor benteng</em></div>
       <div class="wd-stat"><span>TOTAL KILL</span><strong>${summary.totalKills}</strong><em>${summary.totalLeaks} bocor</em></div>
-      <div class="wd-stat"><span>MENARA</span><strong>${summary.towers}</strong><em>${summary.enemies} musuh · ${summary.bosses} bos</em></div>`;
+      <div class="wd-stat"><span>MENARA</span><strong>${summary.towers}</strong><em>${summary.enemies} musuh · ${summary.bosses} bos</em></div>
+      <div class="wd-stat"><span>INFINITOWER</span><strong>T${summary.infinitowerBest?.bestTier || 0}</strong><em>gel ${summary.infinitowerBest?.bestWave || 0} · ${summary.infinitowerBest?.bestKills || 0} kill</em></div>`;
   }
   if (!WAVE_DEFENSE_MAP_BY_ID[wdMapId]) wdMapId = WAVE_DEFENSE_MAPS[0].id;
   if (!WAVE_DEFENSE_DIFFICULTIES.some((entry) => entry.id === wdDifficulty)) wdDifficulty = 'knight';
@@ -8558,9 +8843,11 @@ function buildWaveDefenseScreen() {
   const modes = $('wd-modes');
   if (modes) {
     const best = summary.endlessBest || {};
+    const tower = summary.infinitowerBest || {};
     modes.innerHTML = `
-      <button class="${wdEndless ? '' : 'active'}" type="button" data-wd-mode="classic">KAMPANYE · 24 GELOMBANG<em>Rekor gel ${summary.bestWave}/${WAVE_DEFENSE_TOTAL_WAVES} · skor ${summary.bestScore}</em></button>
-      <button class="${wdEndless ? 'active' : ''}" type="button" data-wd-mode="endless">TANPA AKHIR<em>Rekor gel ${best.bestWave || 0} · ${best.bestKills || 0} kill · skor ${best.bestScore || 0}</em></button>`;
+      <button class="${!wdEndless && !wdInfinitower ? 'active' : ''}" type="button" data-wd-mode="classic">KAMPANYE · 24 GELOMBANG<em>Rekor gel ${summary.bestWave}/${WAVE_DEFENSE_TOTAL_WAVES} · skor ${summary.bestScore}</em></button>
+      <button class="${wdEndless && !wdInfinitower ? 'active' : ''}" type="button" data-wd-mode="endless">TANPA AKHIR<em>Rekor gel ${best.bestWave || 0} · ${best.bestKills || 0} kill · skor ${best.bestScore || 0}</em></button>
+      <button class="${wdInfinitower ? 'active' : ''}" type="button" data-wd-mode="infinitower">INFINITOWER · LINGKAR ABADI<em>Tingkat ${tower.bestTier || 0} · gel ${tower.bestWave || 0} · ${tower.bestKills || 0} kill</em></button>`;
   }
   const towers = $('wd-towers');
   if (towers) {
@@ -8574,7 +8861,7 @@ function buildWaveDefenseScreen() {
   const count = $('wd-tower-count');
   if (count) count.textContent = `${WAVE_DEFENSE_TOWERS.length} JENIS · ${WAVE_DEFENSE_ENEMY_TYPES.length} MUSUH · ${WAVE_DEFENSE_BOSSES.length} BOS`;
   const button = $('btn-wd-start');
-  if (button) button.innerHTML = `<span>${wdEndless ? 'MULAI TANPA AKHIR' : 'MULAI PERTAHANAN'}</span><em>${esc(WAVE_DEFENSE_MAP_BY_ID[wdMapId]?.name || 'ASHEN KEEP')} · ${WAVE_DEFENSE_TOWER_BY_ID[wdSelectedTowerId]?.name || 'BALLISTA'} · ${WAVE_DEFENSE_DIFFICULTIES.find((entry) => entry.id === wdDifficulty)?.name || 'KNIGHT'}${wdEndless ? ' · ∞' : ''}</em>`;
+  if (button) button.innerHTML = `<span>${wdInfinitower ? 'MULAI INFINITOWER' : wdEndless ? 'MULAI TANPA AKHIR' : 'MULAI PERTAHANAN'}</span><em>${esc((wdInfinitower ? WAVE_DEFENSE_MAP_BY_ID.eternal_spiral : WAVE_DEFENSE_MAP_BY_ID[wdMapId])?.name || 'ASHEN KEEP')} · ${WAVE_DEFENSE_TOWER_BY_ID[wdSelectedTowerId]?.name || 'BALLISTA'} · ${WAVE_DEFENSE_DIFFICULTIES.find((entry) => entry.id === wdDifficulty)?.name || 'KNIGHT'}${wdInfinitower ? ` · TINGKAT / ${WAVE_DEFENSE_INFINITOWER_TIER_WAVES} GEL` : wdEndless ? ' · ∞' : ''}</em>`;
 }
 
 function buildWaveDefensePalette() {
@@ -8594,10 +8881,12 @@ function startWaveDefenseBattle() {
     mapId: wdMapId,
     difficulty: wdDifficulty,
     endless: wdEndless,
+    infinitower: wdInfinitower,
     seed: (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0,
   });
   waveDefenseSelectTower(wdMatch, wdSelectedTowerId);
   wdActive = true;
+  wdBossCutsceneSeen = false;
   wdPaused = false;
   wdResult = null;
   wdRecorded = false;
@@ -8621,6 +8910,42 @@ function startWaveDefenseBattle() {
   const canvas = $('wd-canvas');
   const ctx = canvas?.getContext('2d');
   if (canvas && ctx) renderWaveDefense(ctx, wdMatch, { width: canvas.width, height: canvas.height, time: performance.now() / 1000 });
+}
+
+// ── Infinitower cinematics ─────────────────────────────────────────────────
+function playWaveDefenseCutscene(scene, onDone) {
+  if (!scene) return false;
+  startCutscene(scene, onDone);
+  return true;
+}
+
+function playWaveDefenseTrailer() {
+  audio.init();
+  audioUnlocked = true;
+  return playWaveDefenseCutscene(SPIRAL_INTRO_CUTSCENE);
+}
+
+function playWaveDefenseIntro() {
+  if (wdIntroSeen) return false;
+  wdIntroSeen = true;
+  if (wdActive) toggleWaveDefensePause(true);
+  return playWaveDefenseCutscene(SPIRAL_INTRO_CUTSCENE, () => { if (wdActive) toggleWaveDefensePause(false); });
+}
+
+// The first boss of a run gets a full portrait. Later bosses keep the fight
+// moving and announce themselves through the battle feed instead.
+function maybeWaveDefenseBossCutscene() {
+  if (!wdActive || !wdMatch || wdPaused || cutsceneActive || wdBossCutsceneSeen) return false;
+  if (!wdMatch.infinitower) return false;
+  if (!wdMatch.enemies.some((enemy) => enemy.boss && !enemy.dead)) return false;
+  wdBossCutsceneSeen = true;
+  toggleWaveDefensePause(true);
+  return playWaveDefenseCutscene(SPIRAL_BOSS_CUTSCENE, () => { if (wdActive) toggleWaveDefensePause(false); });
+}
+
+function startWaveDefenseFromHub() {
+  startWaveDefenseBattle();
+  if (wdInfinitower && wdActive && !wdIntroSeen) playWaveDefenseIntro();
 }
 
 function toggleWaveDefensePause(next = !wdPaused) {
@@ -8662,14 +8987,18 @@ function renderWaveDefenseResult() {
   const overlay = $('wd-result');
   if (!overlay || !wdResult) return;
   const r = wdResult;
+  const infinitower = !!r.infinitower || !!r.snapshot?.infinitower;
   const endless = !!r.endless || !!r.snapshot?.endless;
   const win = r.win || r.snapshot?.result === 'victory';
-  const title = endless ? 'PASANG TANPA AKHIR' : win ? 'MAHKOTA BERTAHAN' : 'GERBANG TERBELAH';
-  const body = endless
-    ? `Benteng jatuh pada gelombang ${r.snapshot?.wave || 0}. Rekor ${r.isRecord ? 'diperbarui' : 'tetap berdiri'}.`
-    : win ? 'Dua puluh empat gelombang hancur. Benteng terakhir masih berdiri.' : `Benteng jatuh pada gelombang ${r.snapshot?.wave || 0}. Bangun lebih awal dan tutup jalur dengan area damage.`;
+  const tier = r.tier || r.snapshot?.tier || 1;
+  const title = infinitower ? 'LINGKAR PADAM' : endless ? 'PASANG TANPA AKHIR' : win ? 'MAHKOTA BERTAHAN' : 'GERBANG TERBELAH';
+  const body = infinitower
+    ? `Infinitower runtuh pada gelombang ${r.snapshot?.wave || 0} — tingkat ${tier}. Rekor ${r.isRecord ? 'diperbarui' : 'tetap berdiri'}; lingkar berikutnya menunggu.`
+    : endless
+      ? `Benteng jatuh pada gelombang ${r.snapshot?.wave || 0}. Rekor ${r.isRecord ? 'diperbarui' : 'tetap berdiri'}.`
+      : win ? 'Dua puluh empat gelombang hancur. Benteng terakhir masih berdiri.' : `Benteng jatuh pada gelombang ${r.snapshot?.wave || 0}. Bangun lebih awal dan tutup jalur dengan area damage.`;
   overlay.innerHTML = `<div class="wd-modal wd-result-card ${endless || win ? 'victory' : 'defeat'}">
-    <p class="eyebrow">WAVE DEFENSE · ${esc(endless ? 'TANPA AKHIR' : r.mapName)} · ${formatPuzzleTime(r.snapshot?.time || 0)}</p>
+    <p class="eyebrow">WAVE DEFENSE · ${esc(infinitower ? `INFINITOWER · TINGKAT ${tier}` : endless ? 'TANPA AKHIR' : r.mapName)} · ${formatPuzzleTime(r.snapshot?.time || 0)}</p>
     <h3 class="wd-result-title">${title}</h3>
     <p>${body}</p>
     <div class="wd-result-stats">
@@ -8705,11 +9034,11 @@ function updateWaveDefenseHud(force = false) {
   if (fill) fill.style.width = `${hpRatio * 100}%`;
   const bar = $('wd-castle-bar');
   if (bar) bar.classList.toggle('low', hpRatio <= 0.3);
-  setText('wd-map-name', m.endless ? `${m.map.name} · TANPA AKHIR` : m.map.name);
-  setText('wd-wave', m.phase === 'prep' ? 'SIAP' : `GELOMBANG ${m.wave}`);
+  setText('wd-map-name', m.infinitower ? `${m.map.name} · INFINITOWER T${infinitowerTierFor(m.wave)}` : m.endless ? `${m.map.name} · TANPA AKHIR` : m.map.name);
+  setText('wd-wave', m.phase === 'prep' ? 'SIAP' : `${m.infinitower ? 'INFINITOWER' : 'GELOMBANG'} ${m.wave}`);
   setText('wd-phase', m.phase === 'prep'
-    ? `GELOMBANG ${m.wave + 1}${m.endless ? ' · TANPA AKHIR' : ` / ${m.totalWaves}`} DALAM ${Math.max(0, m.prepTimer).toFixed(1)}`
-    : m.phase === 'wave' ? `${m.enemies.length} MUSUH · ${m.stats.kills} KILL` : 'PERTAHANAN SELESAI');
+    ? `${m.infinitower ? `TINGKAT ${infinitowerTierFor(m.wave + 1)} · ` : ''}GELOMBANG ${m.wave + 1}${m.endless ? ' · TANPA AKHIR' : ` / ${m.totalWaves}`} DALAM ${Math.max(0, m.prepTimer).toFixed(1)}`
+    : m.phase === 'wave' ? `${m.enemies.length} MUSUH · ${m.stats.kills} KILL${m.infinitower ? ` · T${infinitowerTierFor(m.wave)}` : ''}` : 'PERTAHANAN SELESAI');
   setText('wd-gold', m.gold);
   setText('wd-score', m.score);
   setText('wd-kills', m.stats.kills);
@@ -10338,14 +10667,194 @@ function buildOverdriveScreen() {
   }
 }
 
+// ── Infinite Frontiers: the playable ladder (Lv 101–200) ────────────────
+// The hub keeps its data tabs; the campaign tab now runs real rooms at
+// ids 674–773 through the same engine as every other chapter.
+let activeFrontierIndex = -1;
+let frontierChapterView = 11;
+let frontierBadgeCache = '';
+
+function frontierState() {
+  if (!progress.frontiers) progress.frontiers = defaultFrontierCampaignProgress();
+  return progress.frontiers;
+}
+
+function frontierChapterMetaFor(number) {
+  return FRONTIER_CHAPTER_META.find((chapter) => chapter.number === Number(number)) || FRONTIER_CHAPTER_META[0];
+}
+
+function frontierLevelCard(room, state) {
+  const index = room.frontierIndex;
+  const locked = !frontierCampaignUnlocked(progress) || !frontierLevelUnlocked(state, index);
+  const cleared = frontierLevelCleared(state, index);
+  const boss = room.boss ? FRONTIER_CHAPTER_META.find((chapter) => chapter.bossId === room.boss) : null;
+  const elite = room.enemies.find((enemy) => enemy.elite);
+  const meta = boss
+    ? `BOSS · ${boss.bossPhases} FASE`
+    : `${room.enemies.length} MUSUH · ${elite?.eliteRank || 'E1'} ELITE`;
+  const badge = cleared ? 'TUNTAS' : locked ? 'TERKUNCI' : 'TERBUKA';
+  return `<article class="frontier-level${locked ? ' locked' : ''}${cleared ? ' cleared' : ''}${boss ? ' boss' : ''}" style="--accent:${room.accent}">
+    <header class="fl-head">
+      <span class="fl-num">LV ${room.frontierLevel}</span>
+      <span class="fl-state">${badge}</span>
+    </header>
+    <h4 class="fl-name">${esc(room.name)}</h4>
+    <p class="fl-meta">${esc(meta)}</p>
+    <div class="fl-actions">
+      ${locked ? '<span class="fl-lock">SELESAIKAN LEVEL SEBELUMNYA</span>' : `<button class="btn btn-primary btn-small" type="button" data-frontier-play="${index}">MAINKAN</button>`}
+    </div>
+  </article>`;
+}
+
+function buildFrontierCampaign(state) {
+  const meta = frontierChapterMetaFor(frontierChapterView);
+  const chapterState = frontierChapterProgress(state, meta.number) || { cleared: 0, total: FRONTIER_ROOMS_PER_CHAPTER, bossCleared: false };
+  const chapterRooms = FRONTIER_ROOMS.filter((room) => room.frontierChapter === meta.number);
+  const rail = FRONTIER_CHAPTER_META.map((chapter) => {
+    const chapterProgress = frontierChapterProgress(state, chapter.number) || { cleared: 0, total: 10, bossCleared: false };
+    const active = chapter.number === meta.number;
+    return `<button class="frontier-chip${active ? ' active' : ''}${chapterProgress.bossCleared ? ' clear' : ''}" type="button" data-frontier-chapter="${chapter.number}" style="--accent:${chapter.color}">
+      <strong>BAB ${chapter.number}</strong>
+      <span>${chapterProgress.cleared}/${chapterProgress.total}</span>
+    </button>`;
+  }).join('');
+  const body = `
+    <div class="frontier-ladder">
+      <div class="frontier-rail" role="tablist" aria-label="Bab Infinite Frontiers">${rail}</div>
+      <div class="frontier-chapter-head" style="--accent:${meta.color}">
+        <div>
+          <p class="eyebrow">BAB ${meta.number} · ${esc(meta.english.toUpperCase())}</p>
+          <h3>${esc(meta.name)}</h3>
+          <p class="micro">${esc(meta.mechanic)}</p>
+        </div>
+        <div class="frontier-chapter-side">
+          <span class="frontier-progress">${chapterState.cleared}/${chapterState.total} TAHAP</span>
+          <span class="micro">${esc(meta.bossName)} · ${meta.bossPhases} FASE${chapterState.bossCleared ? ' · PADAM' : ''}</span>
+        </div>
+      </div>
+      <div class="frontier-levels">${chapterRooms.map((room) => frontierLevelCard(room, state)).join('')}</div>
+    </div>`;
+  return body;
+}
+
+function startFrontierLevel(index) {
+  const room = frontierRoomForIndex(index);
+  if (!room) return;
+  if (!frontierCampaignUnlocked(progress)) {
+    showToast('Infinite Frontiers terbuka setelah The Oathbreaker gugur.', 2600);
+    return;
+  }
+  const state = frontierState();
+  if (!frontierLevelUnlocked(state, index)) {
+    showToast('Level itu masih tertutup. Selesaikan level sebelumnya dulu.', 2200);
+    return;
+  }
+  audio.init();
+  attempts = 1;
+  coopGuestMode = false;
+  coopGuestRoom = -1;
+  activeRunKind = 'frontiers';
+  activeFrontierIndex = Number(index);
+  frontierChapterView = room.frontierChapter;
+  activeLanternStage = -1;
+  activeCisternStage = -1;
+  activeFairyStage = -1;
+  activeFairyBoss = null;
+  activeCourtRoom = null;
+  activeCourtTrial = null;
+  activePackIndex = -1;
+  activeExpansionIndex = null;
+  activeModeId = null;
+  activeTrialId = null;
+  modeRunRewarded = false;
+  packRunActive = false;
+  labRun = null;
+  labDirector = null;
+  speedrunRun = null;
+  game.labyrinth = false;
+  game.reset();
+  applyCharacterToGame();
+  applySkinToGame();
+  game.enterRoom(room.id);
+  game.player.relic = true;
+  // The ladder has no character levels: the run carries the growth instead, so
+  // Lv 200 is not fought with Lv 101 damage. All of it is run-scoped.
+  game.player.damageMult *= frontierPlayerScale(index);
+  game.player.maxHp = Math.round(game.player.maxHp * frontierVitalityScale(index));
+  game.player.hp = game.player.maxHp;
+  game.player.maxFlasks += frontierFlaskBonus(index);
+  game.player.flasks = game.player.maxFlasks;
+  game.ash = Math.max(game.ash, frontierAshStipend(index));
+  state.discovered[index] = true;
+  if (state.discovered[index + 1] !== undefined) state.discovered[index + 1] = true;
+  recordFrontierRun(state, 0);
+  cutsceneSeen = new Set();
+  postCreditTimer = -1;
+  saveProgress();
+  game.events.length = 0;
+  started = true;
+  paused = false;
+  hunterShopOpen = false;
+  shopOpen = false;
+  mapOpen = false;
+  codexOpen = false;
+  inventoryOpen = false;
+  settingsOpen = false;
+  closeDialogue(true);
+  spectating = false;
+  spectateGame = null;
+  menuView = 'none';
+  lastGameState = 'playing';
+  accumulator = 0;
+  lastTime = performance.now();
+  clearHeldKeys();
+  beginStage(game.roomIndex, room.name);
+  showBanner(`LV ${room.frontierLevel} — ${room.name}`, room.subtitle);
+  syncScreens();
+  updateHud();
+  showToast(`${FRONTIERS_LOCAL_NAME} · BAB ${room.frontierChapter} · LV ${room.frontierLevel}${room.boss ? ' · BOSS' : ''}`, 2400);
+}
+
+function handleFrontierLevelClear(index) {
+  const safeIndex = Number(index);
+  if (!Number.isInteger(safeIndex) || safeIndex < 0) return null;
+  const state = frontierState();
+  const result = recordFrontierLevel(state, safeIndex);
+  if (!result.ok) return result;
+  if (result.firstClear) {
+    recordFrontierRun(state, game.time);
+    saveProgress();
+    const room = frontierRoomForIndex(safeIndex);
+    if (result.bossFirstClear) {
+      const chapter = frontierChapterMetaFor(result.chapter);
+      const boss = room?.boss ? FRONTIER_CHAPTER_META.find((meta) => meta.bossId === room.boss) : null;
+      showToast(`${boss?.bossName || 'PENJAGA'} PADAM — ${chapter.name} selesai.`, 3200);
+    } else if (result.complete) {
+      showToast('BATAS TERAKHIR TERLEWATI — Infinite Frontiers tuntas.', 3600);
+    } else {
+      showToast(`LV ${room?.frontierLevel ?? '?'} TUNTAS · ${chapterStateLabel(safeIndex)}`, 2000);
+    }
+    buildFrontierScreen();
+    updateMenuProgress();
+  }
+  return result;
+}
+
+function chapterStateLabel(index) {
+  const chapter = frontierChapterMetaFor(11 + Math.floor(index / FRONTIER_ROOMS_PER_CHAPTER));
+  return `BAB ${chapter.number} ${chapter.english.toUpperCase()}`;
+}
+
 function buildFrontierScreen() {
+  const fstate = frontierState();
+  const fsummary = frontierCampaignSummary(fstate);
   const summaryEl = $('frontier-summary');
   if (summaryEl) {
     summaryEl.innerHTML = `
       <div class="stat-card">
         <span class="stat-label">LEVEL KAMPANYE</span>
-        <strong class="stat-value">200 / 200</strong>
-        <em class="stat-sub">100 Asli · 100 Beyond the Veil</em>
+        <strong class="stat-value">${fsummary.levelsCleared} / ${FRONTIER_LEVEL_COUNT}</strong>
+        <em class="stat-sub">${fsummary.bossesCleared}/${FRONTIER_CHAPTER_META.length} BOS · ${fsummary.percent}%</em>
       </div>
       <div class="stat-card">
         <span class="stat-label">KELAS AKTIF</span>
@@ -10374,26 +10883,30 @@ function buildFrontierScreen() {
   if (!bodyEl) return;
 
   if (frontierTab === 'campaign200') {
+    const chapter = frontierChapterMetaFor(frontierChapterView);
     bodyEl.innerHTML = `
+      ${!frontierCampaignUnlocked(progress) ? '<p class="frontier-lock-note">Infinite Frontiers terbuka setelah The Oathbreaker gugur di Puncak Sumpah. Level terkunci tetap terlihat supaya jalannya jelas.</p>' : ''}
+      ${buildFrontierCampaign(fstate)}
       <div class="frontier-grid frontier-grid-2">
-        ${FRONTIER_CHAPTERS.map((ch) => `
-          <div class="frontier-card" style="border-left: 4px solid ${ch.color};">
-            <div class="frontier-card-head">
-              <strong style="color: ${ch.color}; font-size: 15px;">BAB ${ch.number}: ${ch.english}</strong>
-              <span class="frontier-badge frontier-badge-gold">Lv. ${ch.levelStart}–${ch.levelEnd}</span>
-            </div>
-            <div style="font-size: 12px; color: #b7a486;">${ch.name} — Kesulitan: <b style="color:#ff7043;">${ch.difficulty}</b></div>
-            <p style="font-size: 11.5px; color: #ced4da; margin: 4px 0;">${ch.lore}</p>
-            <div style="font-size: 11px; background: rgba(0,0,0,0.3); padding: 6px 10px; border-radius: 4px;">
-              <span style="color:#ffd166;">⚡ Mekanisme Wilayah:</span> ${ch.mechanic}
-            </div>
-            <div style="font-size: 11px; color:#a7c957;">
-              <b>👑 Bos Utama:</b> ${ch.bossName} (${ch.bossTitle})
-            </div>
+        <div class="frontier-card" style="border-left: 4px solid ${chapter.color};">
+          <div class="frontier-card-head">
+            <strong style="color: ${chapter.color}; font-size: 15px;">BAB ${chapter.number}: ${chapter.english}</strong>
+            <span class="frontier-badge frontier-badge-gold">Lv. ${chapter.firstLevel}–${chapter.lastLevel}</span>
           </div>
-        `).join('')}
+          <p style="font-size: 11.5px; color: #ced4da; margin: 4px 0;">${esc(chapter.mechanic)}</p>
+          <div style="font-size: 11px; color:#a7c957;"><b>👑 Bos Utama:</b> ${esc(chapter.bossName)} · ${chapter.bossPhases} fase</div>
+        </div>
       </div>
     `;
+    bodyEl.querySelectorAll('[data-frontier-chapter]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        frontierChapterView = Number(btn.dataset.frontierChapter) || 11;
+        buildFrontierScreen();
+      });
+    });
+    bodyEl.querySelectorAll('[data-frontier-play]').forEach((btn) => {
+      btn.addEventListener('click', () => startFrontierLevel(Number(btn.dataset.frontierPlay)));
+    });
   } else if (frontierTab === 'classes15') {
     bodyEl.innerHTML = `
       <div class="frontier-grid frontier-grid-3">
@@ -10594,11 +11107,18 @@ function showCredits() {
   syncScreens();
 }
 
-// ── update log ───────────────────────────────────────────────────────────
+// ── update log (lazy-loaded) ─────────────────────────────────────────────
+let updateLogCache = null;
+let updateLogError = '';
+let updateLogRequestToken = 0;
+
 function buildUpdateLog() {
+  const badge = $('updates-version');
+  if (badge) badge.textContent = `VERSI SAAT INI · v${GAME_VERSION}`;
   const wrap = $('update-log');
   if (!wrap) return;
-  wrap.innerHTML = UPDATE_LOG.map((entry, index) => `
+  if (updateLogCache) {
+    wrap.innerHTML = updateLogCache.map((entry, index) => `
     <article class="update-entry${index === 0 ? ' latest' : ''}">
       <header class="update-head">
         <div class="update-version-row">
@@ -10620,26 +11140,122 @@ function buildUpdateLog() {
         </div>` : ''}
     </article>
   `).join('');
-  const badge = $('updates-version');
-  if (badge) badge.textContent = `VERSI SAAT INI · v${GAME_VERSION}`;
+    return;
+  }
+  if (updateLogError) {
+    wrap.innerHTML = `<div class="update-entry"><p class="update-summary">Gagal memuat catatan pembaruan: ${esc(updateLogError)}</p><button class="btn btn-ghost btn-compact" type="button" data-updates-retry="1">COBA LAGI</button></div>`;
+    return;
+  }
+  wrap.innerHTML = '<p class="updates-loading" role="status">Memuat catatan pembaruan…</p>';
+}
+
+async function loadUpdateLog({ force = false } = {}) {
+  if (updateLogCache && !force) {
+    if (menuView === 'updates') buildUpdateLog();
+    return updateLogCache;
+  }
+  const token = ++updateLogRequestToken;
+  updateLogError = '';
+  if (menuView === 'updates') buildUpdateLog();
+  try {
+    const mod = await import('./updates.js');
+    if (token !== updateLogRequestToken) return null;
+    updateLogCache = mod.UPDATE_LOG;
+    if (menuView === 'updates') buildUpdateLog();
+    return updateLogCache;
+  } catch (error) {
+    if (token !== updateLogRequestToken) return null;
+    updateLogError = String(error?.message || 'galat jaringan');
+    if (menuView === 'updates') buildUpdateLog();
+    return null;
+  }
 }
 
 function showUpdates() {
-  cancelPrologue();
+  clearShellOverlays();
   started = false;
   paused = false;
-  shopOpen = false;
-  mapOpen = false;
-  codexOpen = false;
-  inventoryOpen = false;
-  settingsOpen = false;
-  closeDialogue(true);
-  spectating = false;
-  spectateGame = null;
   menuView = 'updates';
   clearHeldKeys();
   buildUpdateLog();
   syncScreens();
+  return loadUpdateLog();
+}
+
+// ── PETA KISAH — storyline map (lazy-loaded) ─────────────────────────────
+let storyMapCtrl = null;
+let storyMapPromise = null;
+let storyMapOpenToken = 0;
+
+function ensureStoryMap() {
+  if (storyMapCtrl) return Promise.resolve(storyMapCtrl);
+  if (!storyMapPromise) {
+    storyMapPromise = import('./storymap_ui.js')
+      .then((mod) => {
+        if (!storyMapCtrl) {
+          storyMapCtrl = mod.createStoryMapController({
+            $,
+            esc,
+            getMenuView: () => menuView,
+            setMenuView: (v) => { menuView = v; },
+            setStarted: (v) => { started = v; },
+            setPaused: (v) => { paused = v; },
+            clearShellOverlays,
+            clearHeldKeys,
+            syncScreens,
+            showMenu,
+          });
+          storyMapCtrl.bindDom();
+        }
+        return storyMapCtrl;
+      })
+      .catch((err) => {
+        storyMapPromise = null;
+        throw err;
+      });
+  }
+  return storyMapPromise;
+}
+
+async function showStoryMap(arcId) {
+  const token = ++storyMapOpenToken;
+  clearShellOverlays();
+  started = false;
+  paused = false;
+  menuView = 'storymap';
+  clearHeldKeys();
+  const detail = $('storymap-detail');
+  if (!storyMapCtrl && detail) {
+    detail.innerHTML = '<p class="storymap-summary-text" role="status">Memuat Peta Kisah…</p>';
+  }
+  syncScreens();
+  try {
+    const ctrl = await ensureStoryMap();
+    if (token !== storyMapOpenToken || menuView !== 'storymap') return false;
+    return ctrl.open(arcId);
+  } catch (error) {
+    if (token !== storyMapOpenToken || menuView !== 'storymap') return false;
+    if (detail) {
+      detail.innerHTML = `<p class="storymap-summary-text">Gagal memuat Peta Kisah: ${esc(error?.message || 'galat')}</p><button class="btn btn-ghost btn-small" type="button" data-story-retry="1">COBA LAGI</button>`;
+    }
+    return false;
+  }
+}
+
+function closeStoryMap() {
+  if (storyMapCtrl) {
+    storyMapCtrl.close();
+    return;
+  }
+  showMenu();
+}
+
+function selectStoryArc(id) {
+  if (storyMapCtrl) {
+    storyMapCtrl.selectStoryArc(id);
+    return true;
+  }
+  return showStoryMap(id);
 }
 
 // ── settings screen ──────────────────────────────────────────────────────
@@ -12744,7 +13360,7 @@ window.addEventListener('keydown', (e) => {
     return;
   }
 
-  if (menuView === 'levels' || menuView === 'credits' || menuView === 'updates' || menuView === 'character' || menuView === 'expansion') {
+  if (menuView === 'levels' || menuView === 'credits' || menuView === 'updates' || menuView === 'storymap' || menuView === 'character' || menuView === 'expansion') {
     if (e.code === 'Escape' || e.code === 'Backspace') showMenu();
     return;
   }
@@ -12757,6 +13373,7 @@ window.addEventListener('keydown', (e) => {
     else if (e.code === 'KeyP') showCharacter();
     else if (e.code === 'KeyC') showCredits();
     else if (e.code === 'KeyU') showUpdates();
+    else if (e.code === 'KeyV') showStoryMap();
     else if (e.code === 'KeyX') showExpansion();
     return;
   }
@@ -14524,6 +15141,13 @@ $('fallen-hud')?.addEventListener('click', (event) => {
   else if (action === 'cleanse') fallenCleanse();
 });
 $('btn-fishing-menu')?.addEventListener('click', () => showFishing());
+$('btn-editor-menu')?.addEventListener('click', () => { void showEditor(); });
+$('btn-editor-back')?.addEventListener('click', () => showMenu());
+$('editor-form')?.addEventListener('click', (event) => {
+  if (event.target.closest('[data-editor-retry]')) {
+    void showEditor();
+  }
+});
 $('btn-fishing-back')?.addEventListener('click', () => closeFishing());
 $('fishing-cast-start')?.addEventListener('click', () => beginFishingCast());
 $('fishing-shop-open')?.addEventListener('click', () => openBaitShop());
@@ -14626,7 +15250,8 @@ $('moba-result')?.addEventListener('click', (event) => {
 });
 $('btn-wd-menu')?.addEventListener('click', showWaveDefense);
 $('btn-wd-back')?.addEventListener('click', showMenu);
-$('btn-wd-start')?.addEventListener('click', startWaveDefenseBattle);
+$('btn-wd-start')?.addEventListener('click', startWaveDefenseFromHub);
+$('btn-wd-trailer')?.addEventListener('click', playWaveDefenseTrailer);
 $('btn-wd-pause')?.addEventListener('click', () => toggleWaveDefensePause(true));
 $('btn-wd-quit')?.addEventListener('click', leaveWaveDefense);
 $('btn-wd-resume')?.addEventListener('click', () => toggleWaveDefensePause(false));
@@ -14643,7 +15268,12 @@ $('wd-screen')?.addEventListener('click', (event) => {
   const difficulty = event.target.closest('[data-wd-difficulty]');
   if (difficulty) { wdDifficulty = difficulty.dataset.wdDifficulty; buildWaveDefenseScreen(); return; }
   const mode = event.target.closest('[data-wd-mode]');
-  if (mode) { wdEndless = mode.dataset.wdMode === 'endless'; buildWaveDefenseScreen(); return; }
+  if (mode) {
+    wdInfinitower = mode.dataset.wdMode === 'infinitower';
+    wdEndless = wdInfinitower || mode.dataset.wdMode === 'endless';
+    buildWaveDefenseScreen();
+    return;
+  }
   const tower = event.target.closest('[data-wd-tower]');
   if (tower) { wdSelectedTowerId = tower.dataset.wdTower; buildWaveDefenseScreen(); }
 });
@@ -14820,10 +15450,20 @@ fetch('/api/admin/session', { credentials: 'same-origin' })
   .then((response) => { if (response.ok) $('btn-admin-menu')?.classList.remove('hidden'); })
   .catch(() => {});
 $('btn-settings-menu').addEventListener('click', () => showSettings('graphics'));
+$('btn-settings-top')?.addEventListener('click', () => showSettings('graphics'));
+$('btn-hud-settings')?.addEventListener('click', () => showSettings('graphics'));
 $('btn-difficulty-menu')?.addEventListener('click', () => showSettings('difficulty'));
 $('btn-credits').addEventListener('click', showCredits);
-$('btn-updates').addEventListener('click', showUpdates);
+$('btn-updates').addEventListener('click', () => { void showUpdates(); });
+$('update-log')?.addEventListener('click', (event) => {
+  if (event.target.closest('[data-updates-retry]')) void loadUpdateLog({ force: true });
+});
 $('btn-map-menu').addEventListener('click', openMap);
+$('btn-storymap-menu')?.addEventListener('click', () => { void showStoryMap(); });
+$('btn-storymap-close')?.addEventListener('click', closeStoryMap);
+$('storymap-detail')?.addEventListener('click', (event) => {
+  if (event.target.closest('[data-story-retry]')) void showStoryMap();
+});
 $('btn-codex-menu').addEventListener('click', () => openCodex());
 $('btn-expansion-menu').addEventListener('click', () => showExpansion());
 $('btn-levels-back').addEventListener('click', showMenu);
@@ -15305,6 +15945,7 @@ function syncScreens() {
   $('levels-screen').classList.toggle('hidden', menuView !== 'levels' || covered);
   $('credits-screen').classList.toggle('hidden', menuView !== 'credits' || covered);
   $('updates-screen').classList.toggle('hidden', menuView !== 'updates' || covered);
+  $('storymap-screen')?.classList.toggle('hidden', menuView !== 'storymap' || covered);
   $('character-screen').classList.toggle('hidden', menuView !== 'character' || covered);
   $('scary-screen')?.classList.toggle('hidden', menuView !== 'scary' || covered);
   $('dread-screen')?.classList.toggle('hidden', menuView !== 'dread' || covered);
@@ -15331,10 +15972,12 @@ function syncScreens() {
   $('crusade-screen')?.classList.toggle('hidden', menuView !== 'crusade' || covered);
   $('crusade-clear-screen')?.classList.toggle('hidden', !(crusadeClearOpen && started));
   $('speedrun-screen')?.classList.toggle('hidden', menuView !== 'speedrun' || covered);
+  $('editor-screen')?.classList.toggle('hidden', menuView !== 'editor' || covered);
   $('fishing-screen')?.classList.toggle('hidden', menuView !== 'fishing' || covered);
   $('bait-shop-screen')?.classList.toggle('hidden', menuView !== 'baitShop' || covered);
   $('fish-index-screen')?.classList.toggle('hidden', menuView !== 'fishIndex' || covered);
   $('speedrun-summary-screen')?.classList.toggle('hidden', !speedrunSummaryOpen);
+  $('custom-clear-screen')?.classList.toggle('hidden', !isCustomClearOpen());
   $('lab-reward-screen')?.classList.toggle('hidden', !labRewardsOpen);
   $('lab-summary-screen')?.classList.toggle('hidden', !labSummaryOpen);
   if (!inRun || activeRunKind !== 'atlas') $('atlas-quickbar')?.classList.add('hidden');
@@ -15433,6 +16076,40 @@ function updateHud() {
     } else {
       speedBadgeCache = '';
       speedBadge.classList.add('hidden');
+    }
+  }
+
+  const customBadge = $('custom-badge');
+  if (customBadge) {
+    const info = activeRunKind === 'custom' && started ? mapEditorCtrl?.hudBadge() : null;
+    if (info) {
+      customBadge.classList.remove('hidden');
+      if (info.text !== customBadgeCache) {
+        customBadgeCache = info.text;
+        customBadge.textContent = info.text;
+      }
+      customBadge.classList.toggle('urgent', info.urgent);
+    } else {
+      customBadgeCache = '';
+      customBadge.classList.add('hidden');
+    }
+  }
+
+  const frontierBadge = $('frontier-badge');
+  if (frontierBadge) {
+    if (activeRunKind === 'frontiers' && started && activeFrontierIndex >= 0) {
+      const room = frontierRoomForIndex(activeFrontierIndex);
+      const text = room
+        ? `🜂 LV ${room.frontierLevel} · ${frontierChapterMetaFor(room.frontierChapter).english.toUpperCase()}`
+        : '';
+      frontierBadge.classList.remove('hidden');
+      if (text !== frontierBadgeCache) {
+        frontierBadgeCache = text;
+        frontierBadge.textContent = text;
+      }
+    } else {
+      frontierBadgeCache = '';
+      frontierBadge.classList.add('hidden');
     }
   }
 
@@ -15589,7 +16266,7 @@ function toggleAiDebug() {
 function drainEvents() {
   if (!game.events.length) return;    const events = game.events.splice(0, game.events.length);
     for (const ev of events) {
-      if (ev.type === 'bossDown') maybeCreditScene(ev);
+      if (ev.type === 'bossDown' && activeRunKind !== 'custom') maybeCreditScene(ev);
       if (ev.type === 'playerHurt') handlePlayerHurt(ev);
       if (ev.type === 'spiritDown') {
         hunterReward(hunterState, ev.marks, Date.now());
@@ -15603,9 +16280,9 @@ function drainEvents() {
         showToast(`JIMAT PENJAGA · damage roh −${ev.reduction}%`, 1300);
       }
       if (ev.type === 'gatePass') recordStageTime(ev.from, activeStage?.label);
-      else if (ev.type === 'bossDown') recordStageTime(ev.room, ev.name);
+      else if (ev.type === 'bossDown' && activeRunKind !== 'custom') recordStageTime(ev.room, ev.name);
       else if (ev.type === 'roomEnter') beginStage(ev.room, ev.name);
-      if (ev.type === 'bossDown' || ev.type === 'labyrinthBossDown') awardBossSkillPoints(ev.kind, ev.name);
+      if ((ev.type === 'bossDown' || ev.type === 'labyrinthBossDown') && activeRunKind !== 'custom') awardBossSkillPoints(ev.kind, ev.name);
       const activeRun = started && !spectating && menuView === 'none';
     if (activeRun && !paused) audio.play(ev);
     if (activeRun) {
@@ -15728,6 +16405,28 @@ function drainEvents() {
           if (stage) {
             activeLanternStage = stage.local;
             discoverLanternRoom(stage.local);
+          }
+        }
+      } else if (activeRunKind === 'frontiers') {
+        if (ev.type === 'gatePass') {
+          const from = frontierIndexForRoom(ev.from);
+          if (from >= 0) handleFrontierLevelClear(from);
+          const to = frontierIndexForRoom(ev.to);
+          if (to >= 0) {
+            activeFrontierIndex = to;
+            const state = frontierState();
+            state.discovered[to] = true;
+            saveProgress();
+          }
+          buildFrontierScreen();
+        } else if (ev.type === 'bossDown') {
+          const index = frontierIndexForRoom(ev.room);
+          if (index >= 0) handleFrontierLevelClear(index);
+        } else if (ev.type === 'roomEnter') {
+          const index = frontierIndexForRoom(ev.room);
+          if (index >= 0) {
+            activeFrontierIndex = index;
+            frontierState().discovered[index] = true;
           }
         }
       } else if (activeRunKind === 'trials') {
@@ -15934,6 +16633,7 @@ function drainEvents() {
 function desiredTrack() {
   if (prologueActive) return null;
   if (cutsceneActive) return cutsceneScene?.music || 'faewood';
+  if (menuView === 'wavedefense' || menuView === 'wavedefenseBattle') return wdActive && wdMatch?.enemies.some((enemy) => enemy.boss) ? 'spiralBoss' : 'spiral';
   if (menuView === 'court') return 'hearth';
   if (menuView === 'fairy') return 'faewood';
   if (menuView === 'fallenMenu') return 'forgotten';
@@ -15947,6 +16647,9 @@ function desiredTrack() {
     if (game.state === 'victory') {
       if (activeRunKind === 'fairy' && game.roomIndex >= FAIRY_ROOM_START) return 'celebration';
       return 'victory';
+    }
+    if (activeRunKind === 'custom' && mapEditorCtrl) {
+      return mapEditorCtrl.desiredTrack();
     }
     if (activeRunKind === 'labyrinth' && labRun) {
       if (game.boss) return 'boss';
@@ -16057,6 +16760,18 @@ function frame(now) {
     adaptResolution();
   }
 
+  // Battlefield modes return before the shared cutscene tick below, so their
+  // cinematics advance here instead.
+  if (cutsceneActive && cutsceneScene && (wdActive || pirateActive || mobaActive)) {
+    const dt = Math.min(raw, 0.1);
+    cutsceneTime += dt;
+    const pct = clamp(cutsceneTime / cutsceneScene.duration, 0, 1);
+    $('cutscene-progress').style.width = `${pct * 100}%`;
+    showCutsceneBeat();
+    paintCutscene();
+    if (cutsceneTime >= cutsceneScene.duration) finishCutscene(false);
+  }
+
   if (pirateActive) {
     if (pirateMatch && !piratePaused && pirateMatch.phase === 'sailing') {
       updatePirateVoyage(pirateMatch, Math.min(raw, 0.05));
@@ -16073,6 +16788,7 @@ function frame(now) {
   }
 
   if (wdActive) {
+    maybeWaveDefenseBossCutscene();
     if (wdMatch && !wdPaused && wdMatch.phase !== 'ended') {
       updateWaveDefense(wdMatch, Math.min(raw, 0.05));
     }
@@ -16148,7 +16864,7 @@ function frame(now) {
     if (peekDir !== 0) peekOffset = clamp(peekOffset + peekDir * 330 * raw, -WORLD_W, WORLD_W);
     renderer.render(spectateGame, { spectate: true, cameraX: spectateCamera() });
   } else {
-    if (started && !paused && !shopOpen && !hunterShopOpen && !mapOpen && !codexOpen && !inventoryOpen && !dialogueOpen && !settingsOpen && !prologueActive && !cutsceneActive && !labRewardsOpen && !labSummaryOpen && !labGuestMode && !coopGuestMode && menuView === 'none') {
+    if (started && !paused && !shopOpen && !hunterShopOpen && !mapOpen && !codexOpen && !inventoryOpen && !dialogueOpen && !settingsOpen && !prologueActive && !cutsceneActive && !labRewardsOpen && !labSummaryOpen && !labGuestMode && !coopGuestMode && !isCustomClearOpen() && menuView === 'none') {
       // Speedrun multiplies the clock, not the timestep: the simulation still
       // advances in 1/120 s slices, just more of them per rendered frame.
       const speedScale = activeRunKind === 'speedrun' && speedrunRun ? speedrunRun.multiplier : 1;
@@ -16162,6 +16878,7 @@ function frame(now) {
         if (activeRunKind === 'trials') tickTrials(FIXED);
         if (activeRunKind === 'fallen') tickFallen(FIXED);
         if (activeRunKind === 'crusade') tickCrusade(FIXED);
+        if (activeRunKind === 'custom') tickCustomStage(FIXED);
         accumulator -= FIXED;
         steps += 1;
         if (game.state !== 'playing') {
@@ -17570,6 +18287,42 @@ window.__ashen = {
     handleLanternwakeBoss();
     return lanternSummary(lanternState());
   },
+  get frontiers() {
+    const state = frontierState();
+    return {
+      summary: frontierCampaignSummary(state),
+      unlocked: frontierCampaignUnlocked(progress),
+      chapterView: frontierChapterView,
+      activeIndex: activeFrontierIndex,
+      runKind: activeRunKind,
+      level: game.room?.frontierLevel ?? null,
+      chapters: FRONTIER_CHAPTER_META.map((chapter) => ({
+        ...chapter,
+        progress: frontierChapterProgress(state, chapter.number),
+      })),
+    };
+  },
+  frontierStart(index) {
+    startFrontierLevel(index);
+    return {
+      runKind: activeRunKind,
+      index: activeFrontierIndex,
+      room: game.roomIndex,
+      level: game.room?.frontierLevel ?? null,
+      enemies: game.enemies.length,
+      boss: game.boss?.kind ?? null,
+    };
+  },
+  frontierClear(index) {
+    const result = handleFrontierLevelClear(index);
+    buildFrontierScreen();
+    return result;
+  },
+  frontierChapter(number) {
+    frontierChapterView = Math.trunc(Number(number)) || 11;
+    buildFrontierScreen();
+    return frontierChapterView;
+  },
   cisternBossDown() {
     handleCisternBoss({ kind: 'tidebound' });
     return cisternSummary(cisternState());
@@ -18278,6 +19031,10 @@ window.__ashen = {
   get menuView() {
     return menuView;
   },
+  get storyMap() {
+    if (storyMapCtrl) return storyMapCtrl.snapshot();
+    return { loaded: false, open: menuView === 'storymap', selected: 'arc11', summary: null, arcs: [], arc: null };
+  },
   get shopOpen() {
     return shopOpen;
   },
@@ -18384,6 +19141,9 @@ window.__ashen = {
   closeCodex,
   showUpdates,
   buildUpdateLog,
+  showStoryMap,
+  closeStoryMap,
+  selectStoryArc,
   openInventory,
   closeInventory,
   toggleInventory,
@@ -18497,6 +19257,58 @@ window.__ashen = {
   resetSkills,
   applySkills: applySkillsToGame,
   awardBossSkillPoints,
+  get editor() {
+    if (mapEditorCtrl) return mapEditorCtrl.snapshot();
+    return {
+      loaded: false,
+      save: null,
+      selectedId: null,
+      summary: null,
+      stage: null,
+      message: null,
+      activeStage: null,
+      chain: [],
+      chainIndex: 0,
+      activeRunKind,
+      clearOpen: false,
+      cleared: false,
+      engaged: false,
+      elapsed: 0,
+      selectedPlatform: -1,
+      shareMessage: '',
+      shareText: '',
+      gameState: game.state,
+      rating: null,
+      difficulty: null,
+      objective: null,
+      surviveLeft: 0,
+    };
+  },
+  editorRating: (stage) => editorSyncOrAsync((c) => c.editorRating(stage)),
+  autoBalanceEditor: () => editorSyncOrAsync((c) => c.autoBalanceEditor()),
+  lowerEditorDifficulty: () => editorSyncOrAsync((c) => c.lowerEditorDifficulty()),
+  toggleEditorElite: (index) => editorSyncOrAsync((c) => c.toggleEditorElite(index)),
+  newEditorFromPreset: (presetId) => editorSyncOrAsync((c) => c.newEditorFromPreset(presetId)),
+  showEditor,
+  buildEditorScreen: () => editorSyncOrAsync((c) => c.buildEditorScreen()),
+  saveEditorStage: () => editorSyncOrAsync((c) => c.saveEditorStage()),
+  newEditorStage: () => editorSyncOrAsync((c) => c.newEditorStage()),
+  duplicateEditorStage: () => editorSyncOrAsync((c) => c.duplicateEditorStage()),
+  deleteEditorStage: () => editorSyncOrAsync((c) => c.deleteEditorStage()),
+  startCustomStage,
+  finishCustomStage: () => editorSyncOrAsync((c) => c.finishCustomStage()),
+  addEditorPlatform: (kind) => editorSyncOrAsync((c) => c.addEditorPlatform(kind)),
+  deleteEditorPlatform: () => editorSyncOrAsync((c) => c.deleteEditorPlatform()),
+  resetEditorTerrain: () => editorSyncOrAsync((c) => c.resetEditorTerrain()),
+  paintEditorCanvas: () => editorSyncOrAsync((c) => c.paintEditorCanvas()),
+  copyEditorShare: () => editorSyncOrAsync((c) => c.copyEditorShare()),
+  importEditorShare: () => editorSyncOrAsync((c) => c.importEditorShare()),
+  editorChain: (id) => editorSyncOrAsync((c) => c.editorChain(id)),
+  editorShareCode: (id) => editorSyncOrAsync((c) => c.editorShareCode(id)),
+  importEditorCode: (code) => editorSyncOrAsync((c) => c.importEditorCode(code)),
+  decodeEditorCode: (code) => editorSyncOrAsync((c) => c.decodeEditorCode(code)),
+  validateEditorBlueprint: (stage) => editorSyncOrAsync((c) => c.validateEditorBlueprint(stage)),
+  editorBlueprintRoom: (stage) => editorSyncOrAsync((c) => c.editorBlueprintRoom(stage)),
   bossMusicFor(kind) {
     return bossTrackFor(kind);
   },
@@ -18578,6 +19390,7 @@ window.__ashen = {
       mapId: wdMapId,
       difficulty: wdDifficulty,
       endless: wdEndless,
+      infinitower: wdInfinitower,
       selectedTowerId: wdSelectedTowerId,
       snapshot: waveDefenseSnapshot(wdMatch),
       result: wdResult,
@@ -18661,6 +19474,11 @@ window.__ashen = {
   },
   showWaveDefense,
   buildWaveDefenseScreen,
+  waveDefenseStory: SPIRAL_STORY,
+  spiralStoryForTier,
+  playWaveDefenseIntro,
+  playWaveDefenseBossIntro: maybeWaveDefenseBossCutscene,
+  playWaveDefenseTrailer,
   startWaveDefenseBattle,
   leaveWaveDefense,
   setWaveDefenseMap(id) {
@@ -18676,14 +19494,22 @@ window.__ashen = {
     return true;
   },
   setWaveDefenseMode(mode) {
-    wdEndless = mode === 'endless';
+    wdInfinitower = mode === 'infinitower';
+    wdEndless = wdInfinitower || mode === 'endless';
     buildWaveDefenseScreen();
     return true;
   },
   setWaveDefenseEndless(on = true) {
     wdEndless = !!on;
+    wdInfinitower = false;
     buildWaveDefenseScreen();
     return wdEndless;
+  },
+  setWaveDefenseInfinitower(on = true) {
+    wdInfinitower = !!on;
+    wdEndless = wdInfinitower;
+    buildWaveDefenseScreen();
+    return wdInfinitower;
   },
   setWaveDefenseTower(id) {
     if (!WAVE_DEFENSE_TOWER_BY_ID[id]) return false;
@@ -18937,7 +19763,11 @@ window.__ashen = {
       if (activeRunKind === 'trials') tickTrials(FIXED);
       if (activeRunKind === 'fallen') tickFallen(FIXED);
       if (activeRunKind === 'crusade') tickCrusade(FIXED);
+      if (activeRunKind === 'custom') tickCustomStage(FIXED);
     }
+    // Drain the same events the render loop drains, so a stepped run records
+    // clears, bosses and chapter progress exactly like a played one.
+    drainEvents();
     syncScreens();
     updateHud();
   },
@@ -19058,6 +19888,8 @@ function readVoiceSave() {
 
 let voiceSave = readVoiceSave();
 let voiceStatus = { configured: false, model: VOICE_MODEL, online: true, checked: false, error: '' };
+let trailerBakedShots = new Set();
+let voiceStatusPromise = null;
 let voiceAudio = null;
 let voiceObjectUrl = null;
 let voiceSpeaking = false;
@@ -19091,21 +19923,29 @@ function saveVoiceSave() {
   updateVoiceBadge();
 }
 
-async function refreshVoiceStatus() {
-  try {
-    const response = await fetch('/api/voice', { headers: { Accept: 'application/json' } });
-    const status = await response.json();
-    voiceStatus = {
-      configured: !!status.configured,
-      model: status.model || VOICE_MODEL,
-      online: true,
-      checked: true,
-      error: '',
-    };
-  } catch {
-    voiceStatus = { configured: false, model: VOICE_MODEL, online: false, checked: true, error: 'server-unreachable' };
-  }
-  return updateVoiceBadge();
+function refreshVoiceStatus({ force = false } = {}) {
+  if (voiceStatusPromise && !force) return voiceStatusPromise;
+  voiceStatusPromise = (async () => {
+    try {
+      const response = await fetch('/api/voice', { headers: { Accept: 'application/json' } });
+      const status = await response.json();
+      trailerBakedShots = new Set(Array.isArray(status.trailerBaked) ? status.trailerBaked : []);
+      voiceStatus = {
+        configured: !!status.configured,
+        model: status.model || VOICE_MODEL,
+        online: true,
+        checked: true,
+        error: '',
+      };
+    } catch {
+      trailerBakedShots = new Set();
+      voiceStatus = { configured: false, model: VOICE_MODEL, online: false, checked: true, error: 'server-unreachable' };
+    }
+    return updateVoiceBadge();
+  })().finally(() => {
+    voiceStatusPromise = null;
+  });
+  return voiceStatusPromise;
 }
 
 function stopVoice() {
@@ -19123,19 +19963,22 @@ function stopVoice() {
   }
 }
 
-function speakBrowser(text, castId) {
+function speakBrowser(text, castId, { lang = '' } = {}) {
   if (!hasBrowserVoice()) return false;
   const member = castFor(castId);
+  const targetLang = lang || member.fallback.lang;
   try {
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = member.fallback.lang;
+    utterance.lang = targetLang;
     utterance.rate = member.fallback.rate;
     utterance.pitch = member.fallback.pitch;
     utterance.volume = voiceSave.volume / 100;
     const voices = window.speechSynthesis.getVoices ? window.speechSynthesis.getVoices() : [];
-    const indo = voices.find((v) => /^id([-_]|$)/i.test(v.lang)) || voices.find((v) => /indones/i.test(v.name));
-    if (indo) utterance.voice = indo;
+    const preferred = /^en/i.test(targetLang)
+      ? (voices.find((v) => /^en([-_]|$)/i.test(v.lang)) || voices.find((v) => /english/i.test(v.name)))
+      : (voices.find((v) => /^id([-_]|$)/i.test(v.lang)) || voices.find((v) => /indones/i.test(v.name)));
+    if (preferred) utterance.voice = preferred;
     window.speechSynthesis.speak(utterance);
     return true;
   } catch {
@@ -19143,11 +19986,32 @@ function speakBrowser(text, castId) {
   }
 }
 
+async function playAudioUrl(url) {
+  voiceAudio = new Audio(url);
+  voiceAudio.volume = voiceSave.volume / 100;
+  voiceAudio.addEventListener('ended', () => { voiceSpeaking = false; }, { once: true });
+  await voiceAudio.play();
+  voiceSpeaking = true;
+  voiceSave.linesPlayed += 1;
+  voiceSave.providerUsed = 'elevenlabs';
+  saveVoiceSave();
+  return 'elevenlabs';
+}
+
 // One entry point for every spoken line: boss dialogue, prologue and trailer.
 // Returns the provider that actually ran, which the smoke tests assert on.
-async function speakVoiceLine(text, castId = 'narrator') {
+async function speakVoiceLine(text, castId = 'narrator', { staticUrl = '', lang = '' } = {}) {
   const request = voiceRequestFor({ text, cast: castId, save: voiceSave });
   if (!request.ok) return 'none';
+  if (!voiceSave.enabled) return 'none';
+  stopVoice();
+  if (staticUrl && voiceSave.preferElevenLabs) {
+    try {
+      return await playAudioUrl(staticUrl);
+    } catch {
+      /* fall through to live API or browser voice */
+    }
+  }
   const provider = resolveVoiceProvider({
     save: voiceSave,
     configured: voiceStatus.configured,
@@ -19155,9 +20019,8 @@ async function speakVoiceLine(text, castId = 'narrator') {
     browserAvailable: hasBrowserVoice(),
   });
   if (provider === 'none') return 'none';
-  stopVoice();
   if (provider === 'browser') {
-    const played = speakBrowser(request.body.text, castId);
+    const played = speakBrowser(request.body.text, castId, { lang });
     voiceSave.linesPlayed += played ? 1 : 0;
     voiceSave.providerUsed = played ? 'browser' : 'none';
     saveVoiceSave();
@@ -19173,20 +20036,12 @@ async function speakVoiceLine(text, castId = 'narrator') {
     const blob = await response.blob();
     if (!blob.size) throw new Error('empty audio');
     voiceObjectUrl = URL.createObjectURL(blob);
-    voiceAudio = new Audio(voiceObjectUrl);
-    voiceAudio.volume = voiceSave.volume / 100;
-    voiceAudio.addEventListener('ended', () => { voiceSpeaking = false; }, { once: true });
-    await voiceAudio.play();
-    voiceSpeaking = true;
-    voiceSave.linesPlayed += 1;
-    voiceSave.providerUsed = 'elevenlabs';
-    saveVoiceSave();
-    return 'elevenlabs';
+    return await playAudioUrl(voiceObjectUrl);
   } catch (error) {
     // A missing key, a quota error or a blocked request all degrade to the
     // browser voice instead of failing the scene.
     voiceStatus = { ...voiceStatus, configured: false, error: String(error.message || error) };
-    const played = speakBrowser(request.body.text, castId);
+    const played = speakBrowser(request.body.text, castId, { lang });
     voiceSave.providerUsed = played ? 'browser' : 'none';
     voiceSave.linesPlayed += played ? 1 : 0;
     saveVoiceSave();
@@ -19223,7 +20078,17 @@ function paintTrailer() {
     if (eyebrow) eyebrow.textContent = info.shot.eyebrow;
     if (line) line.textContent = info.shot.narration;
     if (voiceSave.autoplayInTrailer && voiceSave.enabled) {
-      void speakVoiceLine(info.shot.narration, info.shot.cast);
+      const targetIndex = info.index;
+      const targetShot = info.shot;
+      const ready = voiceStatus.checked ? Promise.resolve() : refreshVoiceStatus();
+      void ready.then(() => {
+        if (!trailerActive || trailerIndex !== targetIndex) return;
+        const staticUrl = trailerBakedShots.has(targetShot.id) ? `./assets/voice/trailer/${targetShot.id}.mp3` : '';
+        void speakVoiceLine(targetShot.narration, targetShot.cast, {
+          staticUrl,
+          lang: 'en-US',
+        });
+      });
     }
   }
 }
@@ -19257,6 +20122,8 @@ function startTrailerPlayback() {
   trailerHandle = requestAnimationFrame(trailerLoop);
 }
 
+const TRAILER_SEEN_KEY = 'ashen-vow-trailer-seen-v1';
+
 function openTrailer() {
   menuView = 'trailer';
   audio.init();
@@ -19275,6 +20142,15 @@ function closeTrailer() {
   if (trailerHandle) cancelAnimationFrame(trailerHandle);
   trailerHandle = 0;
   stopVoice();
+  try { localStorage.setItem(TRAILER_SEEN_KEY, '1'); } catch { /* ignore */ }
+  // A custom stage may use the trailer as its opener: resume the run instead
+  // of dropping back to the title screen.
+  if (customIntroCallback) {
+    const resume = customIntroCallback;
+    customIntroCallback = null;
+    resume();
+    return;
+  }
   if (menuView === 'trailer') menuView = 'title';
   syncScreens();
 }
@@ -19421,3 +20297,8 @@ updateBossVoiceButton();
 void loadBossVoiceManifest();
 
 window.__ashenBootReady?.();
+try {
+  if (!navigator.webdriver && localStorage.getItem(TRAILER_SEEN_KEY) !== '1') {
+    openTrailer();
+  }
+} catch { /* ignore storage errors */ }
