@@ -2,9 +2,10 @@
 // Pure, deterministic castle-defense simulation. No DOM, canvas or audio here.
 // The browser shell owns rendering and persistence.
 
-export const WAVE_DEFENSE_VERSION = '0.1.0';
+export const WAVE_DEFENSE_VERSION = '0.4.0';
 export const WAVE_DEFENSE_TOTAL_WAVES = 24;
 export const WAVE_DEFENSE_ENDLESS_WAVES = 999;
+export const WAVE_DEFENSE_INFINITOWER_TIER_WAVES = 10;
 export const WAVE_DEFENSE_WORLD_W = 960;
 export const WAVE_DEFENSE_WORLD_H = 540;
 export const WAVE_DEFENSE_MAX_TOWER_LEVEL = 3;
@@ -43,12 +44,23 @@ export const WAVE_DEFENSE_ENEMY_TYPES = [
   { id: 'void_priest', name: 'Void Priest', glyph: '✧', hp: 158, speed: 31, bounty: 12, damage: 4, armor: 0.12, radius: 11, color: '#9b6bd6', desc: 'Memberi perlindungan gelap kepada gerombolan di dekatnya.' },
   { id: 'drowned_reaver', name: 'Drowned Reaver', glyph: '⚔', hp: 96, speed: 61, bounty: 8, damage: 4, armor: 0.16, radius: 10, color: '#6fa3a8', desc: 'Perampas dari jalur karam: cepat dan berlapis karat.' },
   { id: 'bone_herald', name: 'Bone Herald', glyph: '♞', hp: 210, speed: 28, bounty: 13, damage: 5, armor: 0.22, radius: 13, color: '#cbbf96', armorAura: 0.12, desc: 'Membagikan pelat tulang: musuh di dekatnya mendapat +12% armor.' },
+  { id: 'mirror_thrall', name: 'Mirror Thrall', glyph: '◫', hp: 74, speed: 52, bounty: 7, damage: 2, armor: 0.04, radius: 9, color: '#9fc8d8', split: 'ash_runner', splitCount: 2, unlockTier: 1, desc: 'Pecah menjadi dua Ash Runner saat gugur; menara area lebih berharga.' },
+  { id: 'cinder_wraith', name: 'Cinder Wraith', glyph: '❂', hp: 108, speed: 68, bounty: 9, damage: 3, armor: 0.1, radius: 9, color: '#ff9f6a', slowImmune: true, unlockTier: 2, desc: 'Tubuh bara yang menolak semua efek perlambatan.' },
+  { id: 'grave_chorister', name: 'Grave Chorister', glyph: '♫', hp: 132, speed: 30, bounty: 11, damage: 3, armor: 0.06, radius: 10, color: '#b6a6e0', hasteAura: 0.22, unlockTier: 2, desc: 'Nyanyian kubur mempercepat musuh di sekitarnya hingga +22%.' },
+  { id: 'tower_breaker', name: 'Tower Breaker', glyph: '⛏', hp: 186, speed: 36, bounty: 14, damage: 5, armor: 0.24, radius: 12, color: '#d98a5a', disabler: { radius: 96, cooldown: 3.6, duration: 2.4 }, unlockTier: 3, desc: 'Melumpuhkan menara terdekat selama 2,4 detik setiap 3,6 detik.' },
+  { id: 'obsidian_golem', name: 'Obsidian Golem', glyph: '⛰', hp: 640, speed: 20, bounty: 22, damage: 9, armor: 0.45, radius: 17, color: '#8f8fb0', regen: 16, unlockTier: 4, desc: 'Obsidian hidup: armor tebal dan memulihkan 16 HP setiap dua detik.' },
+  { id: 'rift_hopper', name: 'Rift Hopper', glyph: '⤳', hp: 66, speed: 62, bounty: 8, damage: 2, armor: 0, radius: 9, color: '#b39cff', blink: { interval: 3.6, distance: 34 }, unlockTier: 2, desc: 'Melompat ke depan sepanjang jalan setiap 3,6 detik; menara berjangkauan pendek kehilangan target.' },
+  { id: 'lantern_moth', name: 'Lantern Moth', glyph: '✺', hp: 58, speed: 74, bounty: 7, damage: 2, armor: 0.04, radius: 8, color: '#ffe19a', deathBlind: { radius: 100, duration: 1.6 }, unlockTier: 3, desc: 'Saat mati, sayapnya membutakan menara di sekitarnya selama 1,6 detik.' },
+  { id: 'grave_taxer', name: 'Grave Taxer', glyph: '¤', hp: 152, speed: 47, bounty: 10, damage: 4, armor: 0.12, radius: 11, color: '#c9d18a', toll: 14, unlockTier: 4, desc: 'Jika mencapai gerbang, ia merampas 14 emas selain merusak kastil.' },
   { id: 'bone_colossus', name: 'Bone Colossus', glyph: '♛', hp: 1900, speed: 18, bounty: 60, damage: 16, armor: 0.2, radius: 24, color: '#efe2bb', boss: true, desc: 'BOS · Rangka raksasa yang memimpin gelombang keempat.' },
   { id: 'ember_wyrm', name: 'Ember Wyrm', glyph: '♨', hp: 3100, speed: 20, bounty: 90, damage: 19, armor: 0.15, radius: 25, color: '#ff7a45', boss: true, desc: 'BOS · Sayap bara yang membakar jalan di belakangnya.' },
   { id: 'plague_matriarch', name: 'Plague Matriarch', glyph: '✹', hp: 4400, speed: 18, bounty: 115, damage: 21, armor: 0.12, radius: 26, color: '#8ccf66', boss: true, desc: 'BOS · Induk wabah yang memanggil kultus dari tanah.' },
   { id: 'iron_warden', name: 'Iron Warden', glyph: '⛨', hp: 6500, speed: 16, bounty: 150, damage: 26, armor: 0.38, radius: 27, color: '#aab7c8', boss: true, desc: 'BOS · Penjaga baja dengan perisai yang hampir tak tertembus.' },
   { id: 'frost_titan', name: 'Frost Titan', glyph: '✵', hp: 8800, speed: 15, bounty: 190, damage: 30, armor: 0.25, radius: 29, color: '#a6e6ff', boss: true, desc: 'BOS · Gunung es berjalan yang membekukan menara di sekitarnya.' },
   { id: 'ashen_sovereign', name: 'Ashen Sovereign', glyph: '♚', hp: 12500, speed: 14, bounty: 280, damage: 42, armor: 0.3, radius: 32, color: '#ffd166', boss: true, desc: 'BOS AKHIR · Raja abu yang datang untuk memadamkan sumpah terakhir.' },
+  { id: 'spiral_tyrant', name: 'Spiral Tyrant', glyph: '♜', hp: 15800, speed: 16, bounty: 320, damage: 46, armor: 0.32, radius: 30, color: '#c9a9ff', boss: true, hasteAura: 0.18, desc: 'BOS INFINITOWER · Tiran lingkar abadi yang mempercepat seluruh pasukannya.' },
+  { id: 'lantern_devourer', name: 'Lantern Devourer', glyph: '☄', hp: 21000, speed: 17, bounty: 380, damage: 52, armor: 0.26, radius: 31, color: '#ffcf7a', boss: true, slowImmune: true, regen: 55, desc: 'BOS INFINITOWER · Pelahap lentera yang pulih 55 HP tiap dua detik dan menolak perlambatan.' },
+  { id: 'spiral_choir', name: 'Spiral Choir', glyph: '❈', hp: 18500, speed: 15, bounty: 350, damage: 48, armor: 0.22, radius: 31, color: '#c8d4ff', boss: true, summon: { type: 'mirror_thrall', count: 2, cooldown: 7 }, desc: 'BOS INFINITOWER · Koor lingkar yang memanggil dua Mirror Thrall setiap tujuh detik dan menyanyikan gelombang yang sudah mati.' },
 ];
 
 export const WAVE_DEFENSE_ENEMY_BY_ID = Object.fromEntries(WAVE_DEFENSE_ENEMY_TYPES.map((enemy) => [enemy.id, enemy]));
@@ -70,6 +82,12 @@ export const WAVE_DEFENSE_TOWERS = [
   { id: 'rift_obelisk', name: 'Rift Obelisk', glyph: '◎', cost: 220, damage: 70, rate: 0.6, range: 188, splash: 32, projectileSpeed: 480, magic: true, slow: 0.82, slowTime: 1.1, color: '#b67bdf', shape: 'rift', desc: 'Ledakan dimensi yang memperlambat semua musuh di area.' },
   { id: 'vow_banner', name: 'Panji Sumpah', glyph: '⚑', cost: 190, damage: 0, rate: 0.1, range: 0, projectileSpeed: 0, support: true, aura: { radius: 136, damage: 0.2, rate: 0.12 }, color: '#e3c37c', shape: 'banner', desc: 'Tidak menembak. Menara lain dalam radius mendapat +20% damage dan +12% laju tembak per level.' },
   { id: 'spirit_lantern', name: 'Lentera Roh', glyph: '✶', cost: 165, damage: 18, rate: 0.9, range: 138, projectileSpeed: 640, magic: true, mark: 4, color: '#a9e6d6', shape: 'lantern', desc: 'Menandai musuh selama empat detik; target bertanda menerima 20% damage lebih banyak.' },
+  { id: 'echo_monolith', name: 'Monolit Gema', glyph: '◈', cost: 175, damage: 34, rate: 0.62, range: 170, projectileSpeed: 600, chain: 3, magic: true, color: '#b6a4ff', shape: 'monolith', desc: 'Gema melompat ke tiga musuh berurutan; damage sihir dengan jangkauan lebar.' },
+  { id: 'grave_bell', name: 'Lonceng Kubur', glyph: '♪', cost: 140, damage: 14, rate: 0.8, range: 132, splash: 34, projectileSpeed: 420, magic: true, stun: 0.9, color: '#d8c48a', shape: 'bell', desc: 'Gelombang bunyi menghentikan gerak musuh di area selama 0,9 detik.' },
+  { id: 'ash_forge', name: 'Tempa Abu', glyph: '⚒', cost: 130, damage: 20, rate: 0.9, range: 132, splash: 28, projectileSpeed: 480, shred: 0.2, shredTime: 5, color: '#e58a5c', shape: 'forge', desc: 'Menghancurkan armor target sebesar 20% selama lima detik; musuh berpelat jadi rapuh.' },
+  { id: 'watcher_eye', name: 'Mata Pengawas', glyph: '⊙', cost: 205, damage: 46, rate: 0.55, range: 224, projectileSpeed: 780, execute: 0.35, executeBonus: 2.4, color: '#f0a878', shape: 'eye', desc: 'Menembak jauh dan menghabisi musuh di bawah 35% HP dengan damage 2,4 kali.' },
+  { id: 'spiral_anchor', name: 'Jangkar Lingkar', glyph: '⚓', cost: 160, damage: 26, rate: 0.9, range: 150, splash: 40, projectileSpeed: 500, magic: true, slow: 0.62, slowTime: 2.4, color: '#8fb6ff', shape: 'anchor', desc: 'Jangkar sihir yang meledak di area dan memperlambat semua yang tertangkap hingga 62% selama 2,4 detik.' },
+  { id: 'hourglass', name: 'Jam Pasir Ketiga', glyph: '⧗', cost: 185, damage: 0, rate: 0.1, range: 0, projectileSpeed: 0, support: true, field: { radius: 148, slow: 0.24 }, color: '#d8c0ff', shape: 'hourglass', desc: 'Tidak menembak. Medan waktu di radius 148 memperlambat setiap musuh 24% selama menara ini berdiri.' },
 ];
 
 export const WAVE_DEFENSE_TOWER_BY_ID = Object.fromEntries(WAVE_DEFENSE_TOWERS.map((tower) => [tower.id, tower]));
@@ -78,9 +96,77 @@ export const WAVE_DEFENSE_DIFFICULTIES = [
   { id: 'squire', name: 'SQUIRE', hp: 0.82, speed: 0.92, gold: 320, castle: 140, desc: 'Gelombang lebih ringan dan kas kastil lebih longgar.' },
   { id: 'knight', name: 'KNIGHT', hp: 1, speed: 1, gold: 270, castle: 120, desc: 'Pengalaman standar: setiap gelombang menuntut menara baru.' },
   { id: 'warlord', name: 'WARLORD', hp: 1.35, speed: 1.1, gold: 225, castle: 100, desc: 'Musuh lebih tebal dan cepat; hanya ekonomi presisi yang bertahan.' },
+  { id: 'eternal', name: 'ETERNAL', hp: 1.75, speed: 1.22, gold: 195, castle: 80, desc: 'Tingkat terberat: musuh 75% lebih tebal, 22% lebih cepat, dan mahkota hanya 80 HP.' },
 ];
 
 export const WAVE_DEFENSE_DIFFICULTY_BY_ID = Object.fromEntries(WAVE_DEFENSE_DIFFICULTIES.map((entry) => [entry.id, entry]));
+
+// ── Procedural rigs ────────────────────────────────────────────────────────
+// Bodies are no longer single glyphs: each one is drawn from a small
+// articulated rig (legs, arms, head, body bob). The rig is pure data so the
+// pose can be unit-tested in Node without a canvas.
+export const WAVE_DEFENSE_RIGS = {
+  humanoid: { legs: 2, arms: 2, bob: 1.6, stride: 0.34, lean: 0.06, head: 0.55 },
+  hound: { legs: 4, arms: 0, bob: 1.1, stride: 0.42, lean: 0.12, head: 0.42 },
+  wraith: { legs: 0, arms: 2, bob: 2.4, stride: 0.1, lean: 0.04, head: 0.5, float: true },
+  brute: { legs: 2, arms: 2, bob: 1.2, stride: 0.2, lean: 0.09, head: 0.46 },
+  colossus: { legs: 2, arms: 2, bob: 0.9, stride: 0.16, lean: 0.05, head: 0.4 },
+};
+
+const RIG_FAMILY = {
+  ashen_ghoul: 'humanoid', ash_runner: 'humanoid', bone_shield: 'humanoid',
+  cinder_brute: 'brute', grave_bat: 'wraith', plague_cultist: 'humanoid',
+  iron_ogre: 'brute', frost_wraith: 'wraith', siege_ram: 'brute',
+  shadow_stalker: 'humanoid', ember_hound: 'hound', void_priest: 'humanoid',
+  drowned_reaver: 'humanoid', bone_herald: 'humanoid', mirror_thrall: 'wraith',
+  cinder_wraith: 'wraith', grave_chorister: 'humanoid', tower_breaker: 'brute',
+  obsidian_golem: 'colossus', rift_hopper: 'humanoid', lantern_moth: 'wraith',
+  grave_taxer: 'humanoid',
+  bone_colossus: 'colossus', ember_wyrm: 'brute', plague_matriarch: 'brute',
+  iron_warden: 'colossus', frost_titan: 'colossus', ashen_sovereign: 'colossus',
+  spiral_tyrant: 'colossus', lantern_devourer: 'brute', spiral_choir: 'wraith',
+};
+
+export function waveDefenseRigFor(kind) {
+  return WAVE_DEFENSE_RIGS[RIG_FAMILY[kind] || 'humanoid'];
+}
+
+// Deterministic pose: the same kind and time always returns the same rig frame,
+// so a capture or a test never sees a random walk cycle.
+export function rigPoseFor(kind, time = 0, { moving = true, boss = false } = {}) {
+  const rig = waveDefenseRigFor(kind);
+  const t = Math.max(0, Number(time) || 0);
+  const cadence = rig.float ? 1.2 : 6.2;
+  const phase = t * cadence;
+  const swing = moving ? Math.sin(phase) : Math.sin(phase) * 0.12;
+  return {
+    family: RIG_FAMILY[kind] || 'humanoid',
+    bob: Math.sin(phase * 2) * rig.bob * (moving ? 1 : 0.25) - (boss ? 1 : 0),
+    stride: swing * rig.stride,
+    arm: -swing * rig.stride * 0.8,
+    lean: rig.lean * (moving ? 1 : 0.4),
+    float: !!rig.float,
+    legs: rig.legs,
+    arms: rig.arms,
+  };
+}
+
+// ── The Spiral Chronicle ───────────────────────────────────────────────────
+// Infinitower is the only mode without a victory, so the story is told in
+// tiers instead of chapters: every new tier opens one line of the chronicle.
+export const SPIRAL_STORY = [
+  { tier: 1, title: 'Lingkar Pertama', line: 'Setiap menara yang kau dirikan menulis satu baris di dinding lingkar.', boss: null },
+  { tier: 2, title: 'Nyanyian di Bawah Lantai', line: 'Koor mulai bernyanyi, dan tubuh yang kau bunuh meminjam tubuh baru.', boss: 'spiral_tyrant' },
+  { tier: 3, title: 'Ngengat Membawa Lentera', line: 'Cahaya kecil membutakan penjaga; lingkar belajar memadamkan matamu.', boss: 'spiral_choir' },
+  { tier: 4, title: 'Pemungut dari Kubur', line: 'Mereka tidak hanya merusak gerbang — mereka menagih upah dari emasmu.', boss: 'lantern_devourer' },
+  { tier: 5, title: 'Tingkat Tanpa Nama', line: 'Peta berhenti berarti. Hanya jalan, menara, dan napas yang tersisa.', boss: 'spiral_tyrant' },
+  { tier: 6, title: 'Lingkar yang Menutup', line: 'Tidak ada puncak. Hanya kamu, malam, dan satu gelombang lagi.', boss: null },
+];
+
+export function spiralStoryForTier(tier) {
+  const index = Math.min(SPIRAL_STORY.length - 1, Math.max(0, Math.floor(Number(tier) || 1) - 1));
+  return SPIRAL_STORY[index];
+}
 
 // ── Maps and build sites ───────────────────────────────────────────────────
 function distPointSegment(px, py, ax, ay, bx, by) {
@@ -185,6 +271,19 @@ const MAP_BLUEPRINTS = [
       { x: 686, y: 402 }, { x: 826, y: 402 }, { x: 826, y: 270 }, { x: 852, y: 270 },
     ],
   },
+  {
+    id: 'eternal_spiral',
+    name: 'ETERNAL SPIRAL',
+    subtitle: 'Lingkar Tanpa Ujung',
+    lore: 'Jalan memutar ke dalam tanpa ujung. Setiap sepuluh gelombang lingkar menebal; tidak ada kemenangan, hanya seberapa lama mahkota bertahan.',
+    theme: { ground: '#0d0c15', earth: '#2a2340', path: '#4b3d66', edge: '#07060d', accent: '#c8a9ff', mist: '#77679f' },
+    castle: { x: 620, y: 260 },
+    path: [
+      { x: -30, y: 80 }, { x: 840, y: 80 }, { x: 840, y: 460 }, { x: 110, y: 460 },
+      { x: 110, y: 175 }, { x: 700, y: 175 }, { x: 700, y: 365 }, { x: 255, y: 365 },
+      { x: 255, y: 260 }, { x: 620, y: 260 },
+    ],
+  },
 ];
 
 export const WAVE_DEFENSE_MAPS = MAP_BLUEPRINTS.map((map) => ({
@@ -238,7 +337,33 @@ function endlessWaveDef(wave) {
   return { label: `Tanpa Akhir ${wave}`, groups };
 }
 
+// Infinitower: a spiral level with no victory state. Every ten waves is a new
+// "tingkat" (tier) that unlocks heavier bodies and scales HP, bounty and speed.
+export function infinitowerTierFor(wave) {
+  return 1 + Math.floor(Math.max(0, asNumber(wave, 1) - 1) / WAVE_DEFENSE_INFINITOWER_TIER_WAVES);
+}
+
+function infinitowerWaveDef(wave) {
+  const tier = infinitowerTierFor(wave);
+  const pool = WAVE_DEFENSE_ENEMY_TYPES.filter((enemy) => !enemy.boss && (enemy.unlockTier || 1) <= tier);
+  const groups = [];
+  const base = 9 + tier * 2 + Math.floor(wave / 2);
+  for (let i = 0; i < 3; i += 1) {
+    const type = pool[(wave * 5 + i * 3) % pool.length];
+    groups.push([type.id, Math.max(3, Math.round(base / (i + 1))), Math.max(0.3, 0.46 - tier * 0.02), i * 1.4]);
+  }
+  if (tier >= 3) {
+    const elite = pool[(wave * 7 + 1) % pool.length];
+    groups.push([elite.id, 1 + Math.floor(tier / 3), 1.1, 2.2]);
+  }
+  if (wave % 5 === 0) {
+    groups.unshift([WAVE_DEFENSE_BOSSES[(wave / 5) % WAVE_DEFENSE_BOSSES.length].id, 1, 1, 0.6]);
+  }
+  return { label: `Infinitower ${wave} · Tingkat ${tier}`, groups };
+}
+
 function waveDefFor(match) {
+  if (match.mode === 'infinitower') return infinitowerWaveDef(match.wave);
   return WAVE_DEFENSE_WAVES[match.wave - 1] || (match.endless ? endlessWaveDef(match.wave) : null);
 }
 
@@ -254,8 +379,11 @@ function buildWaveQueue(match) {
 }
 
 // ── Match lifecycle ────────────────────────────────────────────────────────
-export function createWaveDefense({ mapId = 'ashen_keep', difficulty = 'knight', seed = 1, endless = false } = {}) {
-  const map = WAVE_DEFENSE_MAP_BY_ID[mapId] || WAVE_DEFENSE_MAPS[0];
+export function createWaveDefense({ mapId = 'ashen_keep', difficulty = 'knight', seed = 1, endless = false, infinitower = false } = {}) {
+  const mode = infinitower ? 'infinitower' : (endless ? 'endless' : 'campaign');
+  const map = mode === 'infinitower'
+    ? WAVE_DEFENSE_MAP_BY_ID.eternal_spiral
+    : (WAVE_DEFENSE_MAP_BY_ID[mapId] || WAVE_DEFENSE_MAPS[0]);
   const diff = WAVE_DEFENSE_DIFFICULTY_BY_ID[difficulty] || WAVE_DEFENSE_DIFFICULTY_BY_ID.knight;
   const maxHp = Math.round(diff.castle);
   return {
@@ -268,14 +396,21 @@ export function createWaveDefense({ mapId = 'ashen_keep', difficulty = 'knight',
     time: 0,
     speed: 1,
     wave: 0,
-    endless: !!endless,
-    totalWaves: endless ? WAVE_DEFENSE_ENDLESS_WAVES : WAVE_DEFENSE_TOTAL_WAVES,
+    mode,
+    endless: mode !== 'campaign',
+    infinitower: mode === 'infinitower',
+    tier: 1,
+    storyTier: 1,
+    story: spiralStoryForTier(1),
+    storyLog: [],
+    totalWaves: mode === 'campaign' ? WAVE_DEFENSE_TOTAL_WAVES : WAVE_DEFENSE_ENDLESS_WAVES,
     auraTimer: 0,
     phase: 'prep',
     prepTimer: 12,
     waveTime: 0,
     spawnCursor: 0,
     spawnQueue: [],
+    splitQueue: [],
     castle: { x: map.castle.x, y: map.castle.y, hp: maxHp, maxHp, flash: 0 },
     gold: diff.gold,
     score: 0,
@@ -302,12 +437,14 @@ function updateScore(match) {
   match.score = Math.round(match.stats.kills * 10 + match.wave * 120 + match.castle.hp * 4 + match.stats.bossesDown * 250);
 }
 
-function spawnEnemy(match, typeId, traveled = 0) {
+function spawnEnemy(match, typeId, traveled = 0, { summoned = false } = {}) {
   const def = WAVE_DEFENSE_ENEMY_BY_ID[typeId];
   if (!def || match.enemies.length >= WAVE_DEFENSE_MAX_ENEMIES) return null;
   const diff = WAVE_DEFENSE_DIFFICULTY_BY_ID[match.difficulty];
+  const tier = match.mode === 'infinitower' ? infinitowerTierFor(match.wave) : 1;
+  const tierScale = 1 + (tier - 1) * 0.16;
   const waveScale = 1 + Math.max(0, match.wave - 1) * (def.boss ? 0.035 : 0.085);
-  const hp = Math.max(1, Math.round(def.hp * waveScale * diff.hp));
+  const hp = Math.max(1, Math.round(def.hp * waveScale * diff.hp * tierScale));
   const enemy = {
     id: match.nextId++,
     type: def.id,
@@ -320,19 +457,38 @@ function spawnEnemy(match, typeId, traveled = 0) {
     color: def.color,
     hp,
     maxHp: hp,
-    speed: def.speed * diff.speed * (1 + Math.min(0.2, match.wave * 0.004)),
-    bounty: def.bounty + Math.floor(match.wave / 6),
-    damage: def.damage + Math.floor(match.wave / 5),
+    speed: def.speed * diff.speed * (1 + Math.min(0.2, match.wave * 0.004) + Math.min(0.12, (tier - 1) * 0.02)),
+    bounty: def.bounty + Math.floor(match.wave / 6) + (tier - 1) * 2,
+    damage: def.damage + Math.floor(match.wave / 5) + (tier - 1),
     armor: def.armor || 0,
     armorAura: def.armorAura || 0,
     armorBonus: 0,
     markTimer: 0,
     healAura: def.healAura || 0,
     healTimer: 1.4,
+    hasteAura: def.hasteAura || 0,
+    hasteBonus: 0,
+    slowImmune: !!def.slowImmune,
     slowTimer: 0,
     slowFactor: 1,
     poisonTimer: 0,
     poisonDps: 0,
+    stunTimer: 0,
+    shred: 0,
+    shredTimer: 0,
+    regen: def.regen || 0,
+    regenTimer: 2,
+    disabler: def.disabler
+      ? { radius: def.disabler.radius, cooldown: def.disabler.cooldown, duration: def.disabler.duration, timer: def.disabler.cooldown * 0.6 }
+      : null,
+    fieldSlow: 0,
+    blink: def.blink || null,
+    blinkTimer: def.blink ? def.blink.interval * 0.6 : 0,
+    deathBlind: def.deathBlind || null,
+    toll: def.toll || 0,
+    summon: def.summon || null,
+    summonTimer: def.summon ? def.summon.cooldown : 0,
+    summoned: !!summoned,
     pathIndex: 1,
     traveled,
     dead: false,
@@ -381,8 +537,19 @@ export function waveDefenseNextWave(match) {
   match.spawnCursor = 0;
   match.spawnQueue = buildWaveQueue(match);
   match.prepTimer = 0;
+  if (match.mode === 'infinitower') {
+    match.tier = infinitowerTierFor(match.wave);
+    const chapter = spiralStoryForTier(match.tier);
+    if (chapter.tier !== match.storyTier) {
+      match.storyTier = chapter.tier;
+      match.story = chapter;
+      match.storyLog.push(chapter.tier);
+      pushText(match, `TINGKAT ${chapter.tier} — ${chapter.title}`, '#c8b4ff');
+    }
+  }
   const def = waveDefFor(match);
-  pushText(match, `${match.endless ? 'TANPA AKHIR' : 'GELOMBANG'} ${match.wave} — ${def?.label || '?'}`, '#ffd78d');
+  const prefix = match.mode === 'infinitower' ? `INFINITOWER ${match.wave}` : match.endless ? 'TANPA AKHIR' : 'GELOMBANG';
+  pushText(match, `${prefix} ${match.wave} — ${def?.label || '?'}`, '#ffd78d');
   return true;
 }
 
@@ -399,6 +566,7 @@ export function waveDefenseBuild(match, slotIndex, towerId = match?.buildTowerId
     y: slot.y,
     level: 1,
     cooldown: 0.15,
+    disabled: 0,
     invested: def.cost,
     shots: 0,
     angle: -Math.PI / 2,
@@ -511,18 +679,48 @@ export function waveDefenseRefreshAuras(match) {
   return match;
 }
 
+// Hourglass towers project a slow field instead of shooting. Recomputed from
+// the live tower list each tick, so selling or silencing one stops it at once.
+export function waveDefenseRefreshFields(match) {
+  if (!match) return match;
+  for (const enemy of match.enemies) enemy.fieldSlow = 0;
+  for (const tower of match.towers) {
+    if (tower.disabled > 0) continue;
+    const field = WAVE_DEFENSE_TOWER_BY_ID[tower.towerId]?.field;
+    if (!field) continue;
+    const radius2 = field.radius * field.radius;
+    const slow = Math.min(0.6, field.slow * tower.level);
+    for (const enemy of match.enemies) {
+      if (enemy.dead) continue;
+      const dx = enemy.x - tower.x;
+      const dy = enemy.y - tower.y;
+      if (dx * dx + dy * dy > radius2) continue;
+      enemy.fieldSlow = Math.max(enemy.fieldSlow, slow);
+    }
+  }
+  return match;
+}
+
 // The whole damage pipeline in one pure step: lantern mark bonus, then armour
-// (magic ignores three quarters of it) plus any herald armour aura.
+// (magic ignores three quarters of it, forge shred strips a flat chunk) plus any
+// herald armour aura.
 export function waveDefenseIncomingDamage(amount, enemy, { magic = false } = {}) {
   if (!enemy) return 0;
   const raw = Math.max(1, Number(amount) || 1) * (enemy.markTimer > 0 ? 1.2 : 1);
-  const base = magic ? (enemy.armor || 0) * 0.25 : (enemy.armor || 0);
-  const armor = Math.min(0.85, base + (enemy.armorBonus || 0) * (magic ? 0.5 : 1));
+  const shred = enemy.shredTimer > 0 ? (enemy.shred || 0) : 0;
+  const base = (magic ? (enemy.armor || 0) * 0.25 : (enemy.armor || 0)) - shred;
+  const armor = Math.min(0.85, Math.max(0, base) + (enemy.armorBonus || 0) * (magic ? 0.5 : 1));
   return Math.max(1, raw * (1 - armor));
 }
 
 export function waveDefenseTowerStats(tower) {
   return tower ? towerStats(tower) : null;
+}
+
+// Public wrapper so death-triggered mechanics (split, blind, bounty) can be
+// exercised directly in tests without running a whole wave.
+export function waveDefenseDamageEnemy(match, enemy, amount, options = {}) {
+  return damageEnemy(match, enemy, amount, options);
 }
 
 function nearestTarget(match, tower, range) {
@@ -558,6 +756,19 @@ function damageEnemy(match, enemy, amount, { magic = false, source = null } = {}
     match.gold += enemy.bounty;
     match.stats.goldEarned += enemy.bounty;
     match.stats.kills += 1;
+    const def = WAVE_DEFENSE_ENEMY_BY_ID[enemy.type];
+    if (def?.split && !enemy.summoned) {
+      for (let i = 0; i < (def.splitCount || 2); i += 1) {
+        match.splitQueue.push({ type: def.split, traveled: Math.max(0, enemy.traveled - 6 - i * 4) });
+      }
+    }
+    if (enemy.deathBlind) {
+      for (const tower of match.towers) {
+        if (Math.hypot(tower.x - enemy.x, tower.y - enemy.y) > enemy.deathBlind.radius) continue;
+        tower.disabled = Math.max(tower.disabled || 0, enemy.deathBlind.duration);
+      }
+      addEffect(match, enemy.x, enemy.y, enemy.deathBlind.radius, '#ffe19a', 0.4);
+    }
     if (enemy.boss) {
       match.stats.bossesDown += 1;
       pushText(match, `${enemy.name} gugur! +${enemy.bounty} emas`, '#ffd166');
@@ -575,11 +786,13 @@ function healCastle(match, amount) {
 function fireTower(match, tower, target, stats) {
   tower.angle = Math.atan2(target.y - tower.y, target.x - tower.x);
   tower.shots += 1;
+  tower.recoil = 1;
   let damage = stats.damage;
   if (stats.shape === 'sniper' && tower.shots % 4 === 0) damage *= 2.25;
+  if (stats.execute && target.hp / target.maxHp <= stats.execute) damage *= stats.executeBonus || 2;
   if (stats.healCastle) healCastle(match, stats.healCastle);
   if (match.projectiles.length >= WAVE_DEFENSE_MAX_PROJECTILES) {
-    impactProjectile(match, { target, damage, splash: stats.splash || 0, magic: stats.magic, slow: stats.slow, slowTime: stats.slowTime, poison: stats.poison, poisonTime: stats.poisonTime, mark: stats.mark || 0, chain: stats.chain || 0, x: target.x, y: target.y, color: stats.color });
+    impactProjectile(match, { target, damage, splash: stats.splash || 0, magic: stats.magic, slow: stats.slow, slowTime: stats.slowTime, poison: stats.poison, poisonTime: stats.poisonTime, mark: stats.mark || 0, stun: stats.stun || 0, shred: stats.shred || 0, shredTime: stats.shredTime || 0, chain: stats.chain || 0, x: target.x, y: target.y, color: stats.color });
     return;
   }
   match.projectiles.push({
@@ -597,6 +810,9 @@ function fireTower(match, tower, target, stats) {
     poison: stats.poison || 0,
     poisonTime: stats.poisonTime || 0,
     mark: stats.mark || 0,
+    stun: stats.stun || 0,
+    shred: stats.shred || 0,
+    shredTime: stats.shredTime || 0,
     chain: stats.chain || 0,
     color: stats.color,
     shape: stats.shape,
@@ -642,7 +858,7 @@ function impactProjectile(match, projectile) {
 
 function applyStatus(match, enemy, projectile) {
   if (!enemy || enemy.dead) return;
-  if (projectile.slow < 1) {
+  if (projectile.slow < 1 && !enemy.slowImmune) {
     enemy.slowTimer = Math.max(enemy.slowTimer, projectile.slowTime || 1.5);
     enemy.slowFactor = Math.min(enemy.slowFactor, projectile.slow);
   }
@@ -653,10 +869,22 @@ function applyStatus(match, enemy, projectile) {
   if (projectile.mark > 0) {
     enemy.markTimer = Math.max(enemy.markTimer || 0, projectile.mark);
   }
+  if (projectile.stun > 0) {
+    enemy.stunTimer = Math.max(enemy.stunTimer || 0, projectile.stun);
+  }
+  if (projectile.shred > 0) {
+    enemy.shred = Math.max(enemy.shred || 0, projectile.shred);
+    enemy.shredTimer = Math.max(enemy.shredTimer || 0, projectile.shredTime || 4);
+  }
 }
 
 function updateTowers(match, dt) {
   for (const tower of match.towers) {
+    tower.recoil = Math.max(0, (tower.recoil || 0) - dt * 4.5);
+    if (tower.disabled > 0) {
+      tower.disabled = Math.max(0, tower.disabled - dt);
+      continue;
+    }
     tower.cooldown -= dt;
     if (tower.cooldown > 0) continue;
     const def = WAVE_DEFENSE_TOWER_BY_ID[tower.towerId];
@@ -715,26 +943,29 @@ function completeWave(match) {
     return;
   }
   match.phase = 'prep';
-  match.prepTimer = 8.5;
+  match.prepTimer = match.mode === 'infinitower' ? Math.max(4, 8.5 - (match.tier || 1) * 0.4) : 8.5;
   pushText(match, `Gelombang ${match.wave} hancur. +${reward} emas.`, '#cfe8ad');
   updateScore(match);
 }
 
-// Herald armour is recomputed on a 0.5 s budget instead of every frame.
+// Herald armour and chorister haste are recomputed on a 0.5 s budget instead of
+// every frame.
 export function waveDefenseRefreshArmor(match) {
   if (!match) return match;
-  let herald = false;
+  let aura = false;
   for (const enemy of match.enemies) {
     enemy.armorBonus = 0;
-    if (!enemy.dead && enemy.armorAura > 0) herald = true;
+    enemy.hasteBonus = 0;
+    if (!enemy.dead && (enemy.armorAura > 0 || enemy.hasteAura > 0)) aura = true;
   }
-  if (!herald) return match;
+  if (!aura) return match;
   for (const source of match.enemies) {
-    if (source.dead || !(source.armorAura > 0)) continue;
+    if (source.dead || (!(source.armorAura > 0) && !(source.hasteAura > 0))) continue;
     for (const other of match.enemies) {
       if (other === source || other.dead) continue;
       if (Math.hypot(other.x - source.x, other.y - source.y) > 96) continue;
-      other.armorBonus = Math.max(other.armorBonus, source.armorAura);
+      if (source.armorAura > 0) other.armorBonus = Math.max(other.armorBonus, source.armorAura);
+      if (source.hasteAura > 0) other.hasteBonus = Math.max(other.hasteBonus, source.hasteAura);
     }
   }
   return match;
@@ -749,6 +980,7 @@ function refreshArmorAura(match, dt) {
 
 function updateEnemies(match, dt) {
   refreshArmorAura(match, dt);
+  waveDefenseRefreshFields(match);
   let write = 0;
   for (let read = 0; read < match.enemies.length; read += 1) {
     const enemy = match.enemies[read];
@@ -756,10 +988,39 @@ function updateEnemies(match, dt) {
     if (enemy.slowTimer > 0) enemy.slowTimer -= dt;
     else enemy.slowFactor = 1;
     if (enemy.markTimer > 0) enemy.markTimer = Math.max(0, enemy.markTimer - dt);
+    if (enemy.shredTimer > 0) {
+      enemy.shredTimer -= dt;
+      if (enemy.shredTimer <= 0) enemy.shred = 0;
+    }
+    if (enemy.regen > 0) {
+      enemy.regenTimer -= dt;
+      if (enemy.regenTimer <= 0) {
+        enemy.regenTimer = 2;
+        enemy.hp = Math.min(enemy.maxHp, enemy.hp + enemy.regen);
+      }
+    }
     if (enemy.poisonTimer > 0) {
       enemy.poisonTimer -= dt;
       damageEnemy(match, enemy, enemy.poisonDps * dt, { magic: true });
       if (enemy.dead) continue;
+    }
+    // Tower Breakers pick the closest live turret and silence it for a moment.
+    if (enemy.disabler) {
+      enemy.disabler.timer -= dt;
+      if (enemy.disabler.timer <= 0) {
+        enemy.disabler.timer = enemy.disabler.cooldown;
+        let victim = null;
+        let victimDist = enemy.disabler.radius;
+        for (const tower of match.towers) {
+          const d = Math.hypot(tower.x - enemy.x, tower.y - enemy.y);
+          if (d < victimDist) { victimDist = d; victim = tower; }
+        }
+        if (victim) {
+          victim.disabled = Math.max(victim.disabled || 0, enemy.disabler.duration);
+          addEffect(match, victim.x, victim.y, 26, '#ff9b6a', 0.4);
+          pushText(match, `${WAVE_DEFENSE_TOWER_BY_ID[victim.towerId]?.name || 'Menara'} dilumpuhkan!`, '#ff9b6a');
+        }
+      }
     }
     if (enemy.healAura > 0) {
       enemy.healTimer -= dt;
@@ -774,8 +1035,38 @@ function updateEnemies(match, dt) {
         addEffect(match, enemy.x, enemy.y, 48, '#87c56b', 0.32);
       }
     }
+    // The Spiral Choir sings dead bodies back onto the road.
+    if (enemy.summon) {
+      enemy.summonTimer -= dt;
+      if (enemy.summonTimer <= 0) {
+        enemy.summonTimer = enemy.summon.cooldown;
+        for (let i = 0; i < enemy.summon.count; i += 1) {
+          match.splitQueue.push({ type: enemy.summon.type, traveled: Math.max(0, enemy.traveled - 14 - i * 8) });
+        }
+        addEffect(match, enemy.x, enemy.y, 46, '#c8b4ff', 0.4);
+        pushText(match, `${enemy.name} memanggil bala bantuan.`, '#c8b4ff');
+      }
+    }
 
-    let step = enemy.speed * enemy.slowFactor * dt;
+    if (enemy.stunTimer > 0) {
+      enemy.stunTimer = Math.max(0, enemy.stunTimer - dt);
+      if (!enemy.dead) match.enemies[write++] = enemy;
+      continue;
+    }
+
+    // Rift Hoppers skip a chunk of the road, which punishes short-range nests.
+    if (enemy.blink && enemy.pathIndex < match.map.path.length - 1 && enemy.blinkTimer > 0) {
+      enemy.blinkTimer -= dt;
+      if (enemy.blinkTimer <= 0) {
+        enemy.blinkTimer = enemy.blink.interval;
+        enemy.traveled += enemy.blink.distance;
+        placeEnemyAt(match, enemy, enemy.traveled);
+        addEffect(match, enemy.x, enemy.y, 16, '#b39cff', 0.28);
+      }
+    }
+
+    const fieldFactor = 1 - Math.min(0.7, enemy.fieldSlow || 0);
+    let step = enemy.speed * (1 + (enemy.hasteBonus || 0)) * enemy.slowFactor * fieldFactor * dt;
     while (step > 0 && enemy.pathIndex < match.map.path.length) {
       const target = match.map.path[enemy.pathIndex];
       const dx = target.x - enemy.x;
@@ -806,6 +1097,11 @@ function updateEnemies(match, dt) {
       match.castle.hp = Math.max(0, match.castle.hp - enemy.damage);
       match.castle.flash = 0.5;
       addEffect(match, match.castle.x, match.castle.y, 32, '#ff7b62', 0.4);
+      if (enemy.toll > 0 && match.gold > 0) {
+        const stolen = Math.min(match.gold, enemy.toll);
+        match.gold -= stolen;
+        pushText(match, `${enemy.name} merampas ${stolen} emas!`, '#c9d18a');
+      }
       pushText(match, `${enemy.name} menabrak gerbang — ${enemy.damage} damage!`, '#ff8a72');
       if (match.castle.hp <= 0) endWaveDefense(match, 'defeat');
       continue;
@@ -855,8 +1151,14 @@ export function updateWaveDefense(match, dt, input = {}) {
       match.spawnCursor += 1;
     }
     updateEnemies(match, scaled);
+    if (match.phase !== 'ended' && match.splitQueue.length) {
+      const pending = match.splitQueue;
+      match.splitQueue = [];
+      for (const chunk of pending) spawnEnemy(match, chunk.type, chunk.traveled, { summoned: true });
+    }
     if (match.phase !== 'ended') {
       waveDefenseRefreshAuras(match);
+      waveDefenseRefreshFields(match);
       updateTowers(match, scaled);
     }
     if (match.phase !== 'ended') updateProjectiles(match, scaled);
@@ -887,6 +1189,7 @@ export function defaultWaveDefenseProgress() {
     towersBuilt: 0,
     maps: {},
     endless: { runs: 0, bestWave: 0, bestScore: 0, bestKills: 0, bestTime: 0 },
+    infinitower: { runs: 0, bestWave: 0, bestTier: 0, bestScore: 0, bestKills: 0, bestTime: 0 },
   };
 }
 
@@ -901,6 +1204,15 @@ export function sanitizeWaveDefenseProgress(raw) {
     bestScore: safe(endlessRaw.bestScore),
     bestKills: safe(endlessRaw.bestKills),
     bestTime: Math.max(0, Math.min(86400, asNumber(endlessRaw.bestTime, 0))),
+  };
+  const towerRaw = raw.infinitower && typeof raw.infinitower === 'object' && !Array.isArray(raw.infinitower) ? raw.infinitower : {};
+  const infinitower = {
+    runs: safe(towerRaw.runs),
+    bestWave: Math.min(WAVE_DEFENSE_ENDLESS_WAVES, safe(towerRaw.bestWave)),
+    bestTier: Math.min(Math.ceil(WAVE_DEFENSE_ENDLESS_WAVES / WAVE_DEFENSE_INFINITOWER_TIER_WAVES), safe(towerRaw.bestTier)),
+    bestScore: safe(towerRaw.bestScore),
+    bestKills: safe(towerRaw.bestKills),
+    bestTime: Math.max(0, Math.min(86400, asNumber(towerRaw.bestTime, 0))),
   };
   const maps = {};
   if (raw.maps && typeof raw.maps === 'object') {
@@ -930,12 +1242,27 @@ export function sanitizeWaveDefenseProgress(raw) {
     towersBuilt: safe(raw.towersBuilt),
     maps,
     endless,
+    infinitower,
   };
 }
 
 export function recordWaveDefense(progress, match) {
   const p = sanitizeWaveDefenseProgress(progress);
   if (!match) return { progress: p, isRecord: false };
+  if (match.mode === 'infinitower') {
+    const tier = infinitowerTierFor(match.wave);
+    const isRecord = match.wave > p.infinitower.bestWave || match.score > p.infinitower.bestScore;
+    p.infinitower.runs += 1;
+    p.infinitower.bestWave = Math.max(p.infinitower.bestWave, Math.min(WAVE_DEFENSE_ENDLESS_WAVES, match.wave));
+    p.infinitower.bestTier = Math.max(p.infinitower.bestTier, tier);
+    p.infinitower.bestScore = Math.max(p.infinitower.bestScore, match.score);
+    p.infinitower.bestKills = Math.max(p.infinitower.bestKills, match.stats.kills);
+    p.infinitower.bestTime = Math.max(p.infinitower.bestTime, Math.round(match.time * 10) / 10);
+    p.totalKills += match.stats.kills;
+    p.totalLeaks += match.stats.leaks;
+    p.towersBuilt += match.stats.towersBuilt;
+    return { progress: p, isRecord, win: false, infinitower: true, endless: true, wave: match.wave, tier, score: match.score };
+  }
   if (match.endless) {
     const isRecord = match.wave > p.endless.bestWave || match.score > p.endless.bestScore;
     p.endless.runs += 1;
@@ -986,6 +1313,7 @@ export function waveDefenseSummary(progress) {
     enemies: WAVE_DEFENSE_ENEMY_TYPES.length,
     bosses: WAVE_DEFENSE_BOSSES.length,
     endlessBest: { ...p.endless },
+    infinitowerBest: { ...p.infinitower },
   };
 }
 
@@ -998,7 +1326,11 @@ export function waveDefenseSnapshot(match) {
     difficulty: match.difficulty,
     wave: match.wave,
     totalWaves: match.totalWaves,
+    mode: match.mode || (match.endless ? 'endless' : 'campaign'),
     endless: !!match.endless,
+    infinitower: !!match.infinitower,
+    tier: match.mode === 'infinitower' ? infinitowerTierFor(match.wave) : 1,
+    story: match.story ? { tier: match.story.tier, title: match.story.title, line: match.story.line } : null,
     phase: match.phase,
     prepTimer: Math.max(0, match.prepTimer),
     time: match.time,
@@ -1159,6 +1491,7 @@ function drawTower(ctx, tower, def, selected) {
   const color = def.color;
   ctx.save();
   ctx.translate(tower.x, tower.y);
+  if (tower.recoil > 0) ctx.translate(0, tower.recoil * 2.6);
   ctx.fillStyle = 'rgba(0,0,0,0.42)';
   ctx.beginPath(); ctx.ellipse(0, 13, 19, 7, 0, 0, TAU); ctx.fill();
   ctx.fillStyle = '#22211d';
@@ -1211,11 +1544,73 @@ function drawTower(ctx, tower, def, selected) {
     ctx.beginPath();
     ctx.arc(0, -10, 3.4, 0, TAU);
     ctx.fill();
+  } else if (def.shape === 'monolith') {
+    ctx.fillRect(-8, -22, 16, 30);
+    ctx.fillStyle = 'rgba(255,255,255,0.35)';
+    ctx.fillRect(-8, -22, 16, 4);
+    ctx.beginPath(); ctx.arc(0, -6, 4.5, 0, TAU); ctx.fill();
+  } else if (def.shape === 'bell') {
+    ctx.beginPath();
+    ctx.moveTo(0, -26);
+    ctx.quadraticCurveTo(13, -12, 11, 4);
+    ctx.lineTo(-11, 4);
+    ctx.quadraticCurveTo(-13, -12, 0, -26);
+    ctx.fill();
+    ctx.fillRect(-3, 4, 6, 6);
+  } else if (def.shape === 'forge') {
+    ctx.fillRect(-10, -12, 20, 20);
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.beginPath();
+    ctx.moveTo(0, -24);
+    ctx.lineTo(7, -13);
+    ctx.lineTo(-7, -13);
+    ctx.closePath();
+    ctx.fill();
+  } else if (def.shape === 'eye') {
+    ctx.beginPath();
+    ctx.ellipse(0, -8, 14, 9, 0, 0, TAU);
+    ctx.fill();
+    ctx.fillStyle = '#241a13';
+    ctx.beginPath(); ctx.arc(0, -8, 4.5, 0, TAU); ctx.fill();
+    ctx.fillStyle = color;
+    ctx.fillRect(-2, -30, 4, 12);
+  } else if (def.shape === 'anchor') {
+    ctx.fillRect(-2.5, -30, 5, 32);
+    ctx.lineWidth = 3.4;
+    ctx.strokeStyle = color;
+    ctx.beginPath();
+    ctx.arc(0, 2, 12, 0.15 * Math.PI, 0.85 * Math.PI);
+    ctx.stroke();
+    ctx.fillRect(-10, -16, 20, 4);
+    ctx.fillStyle = 'rgba(255,255,255,0.55)';
+    ctx.beginPath(); ctx.arc(0, -27, 4, 0, TAU); ctx.fill();
+  } else if (def.shape === 'hourglass') {
+    ctx.fillStyle = 'rgba(255,255,255,0.16)';
+    ctx.beginPath();
+    ctx.moveTo(-12, -28); ctx.lineTo(12, -28); ctx.lineTo(0, -2); ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(-12, 8); ctx.lineTo(12, 8); ctx.lineTo(0, -2); ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = color;
+    ctx.beginPath(); ctx.arc(0, -2, 3, 0, TAU); ctx.fill();
   } else {
     ctx.fillRect(-4, -24, 8, 28);
     ctx.beginPath(); ctx.arc(0, 4, 9, 0, TAU); ctx.fill();
   }
   ctx.restore();
+
+  if (tower.disabled > 0) {
+    ctx.strokeStyle = 'rgba(255,120,90,0.8)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath(); ctx.arc(tower.x, tower.y, 20, 0, TAU); ctx.stroke();
+    ctx.setLineDash([]);
+  }
 
   if (selected) {
     ctx.strokeStyle = `rgba(255,226,155,0.75)`;
@@ -1230,25 +1625,78 @@ function drawTower(ctx, tower, def, selected) {
   }
 }
 
-function drawEnemy(ctx, enemy) {
+function drawEnemy(ctx, enemy, time = 0) {
   const scale = enemy.boss ? 1.35 : 1;
+  const r = enemy.radius;
+  const pose = rigPoseFor(enemy.type, time + enemy.id * 0.37, { moving: !(enemy.stunTimer > 0), boss: enemy.boss });
+  const x = enemy.x;
+  const y = enemy.y + pose.bob * 0.5;
+
   ctx.fillStyle = 'rgba(0,0,0,0.4)';
-  ctx.beginPath(); ctx.ellipse(enemy.x, enemy.y + 8, 10 * scale, 4 * scale, 0, 0, TAU); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(enemy.x, enemy.y + 8 * scale, 10 * scale, 4 * scale, 0, 0, TAU); ctx.fill();
+
+  // ── rig: legs / wisps, then arms, then the torso ────────────────────────
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.strokeStyle = enemy.color;
+  ctx.lineCap = 'round';
+  ctx.lineWidth = Math.max(1.3, r * 0.22);
+  if (pose.legs > 0) {
+    for (let i = 0; i < Math.min(4, pose.legs); i += 1) {
+      const side = i % 2 === 0 ? -1 : 1;
+      const back = i > 1 ? 0.55 : 1;
+      const swing = pose.stride * side * r * 1.7 * back;
+      ctx.globalAlpha = i > 1 ? 0.55 : 0.9;
+      ctx.beginPath();
+      ctx.moveTo(side * r * 0.36, r * 0.4);
+      ctx.lineTo(side * r * 0.36 + swing, r * (1.15 + back * 0.1));
+      ctx.stroke();
+    }
+  } else {
+    ctx.globalAlpha = 0.4;
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.5, r * 0.35);
+    ctx.quadraticCurveTo(0, r * 1.6 + Math.sin(time * 2) * 2, r * 0.5, r * 0.35);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+  if (pose.arms > 0) {
+    for (const side of [-1, 1]) {
+      const swing = pose.arm * side * r * 1.2;
+      ctx.globalAlpha = 0.75;
+      ctx.beginPath();
+      ctx.moveTo(side * r * 0.7, -r * 0.15);
+      ctx.lineTo(side * r * 0.95 + swing, r * 0.45);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  }
+
   ctx.fillStyle = enemy.color;
   ctx.strokeStyle = enemy.boss ? '#ffe6a0' : 'rgba(16,18,18,0.8)';
   ctx.lineWidth = enemy.boss ? 2.2 : 1;
   ctx.beginPath();
   if (enemy.boss) {
-    ctx.moveTo(enemy.x, enemy.y - enemy.radius - 2);
-    ctx.lineTo(enemy.x + enemy.radius, enemy.y);
-    ctx.lineTo(enemy.x, enemy.y + enemy.radius);
-    ctx.lineTo(enemy.x - enemy.radius, enemy.y);
+    ctx.moveTo(0, -r - 2);
+    ctx.lineTo(r, 0);
+    ctx.lineTo(0, r);
+    ctx.lineTo(-r, 0);
     ctx.closePath();
   } else {
-    ctx.arc(enemy.x, enemy.y, enemy.radius, 0, TAU);
+    ctx.arc(0, 0, r, 0, TAU);
   }
   ctx.fill();
   ctx.stroke();
+
+  // Head and a single lit eye make the facing direction readable.
+  const headX = Math.cos(enemy.angle) * r * 0.34;
+  const headY = -r * 0.78 + pose.bob * 0.25;
+  ctx.fillStyle = enemy.color;
+  ctx.beginPath(); ctx.arc(headX, headY, r * 0.42, 0, TAU); ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = enemy.boss ? '#fff4c8' : 'rgba(255,240,214,0.85)';
+  ctx.beginPath(); ctx.arc(headX + r * 0.18, headY - r * 0.05, Math.max(1.2, r * 0.12), 0, TAU); ctx.fill();
+  ctx.restore();
   if (enemy.slowTimer > 0) {
     ctx.strokeStyle = 'rgba(140,225,255,0.75)';
     ctx.beginPath(); ctx.arc(enemy.x, enemy.y, enemy.radius + 3, 0, TAU); ctx.stroke();
@@ -1334,9 +1782,22 @@ export function renderWaveDefense(ctx, match, { width = WAVE_DEFENSE_WORLD_W, he
     ctx.beginPath(); ctx.arc(p.x, p.y, p.splash ? 3 : 2, 0, TAU); ctx.fill();
   }
 
+  // Hourglass fields are drawn under the bodies so the slow zone is legible.
+  for (const tower of match.towers) {
+    const field = WAVE_DEFENSE_TOWER_BY_ID[tower.towerId]?.field;
+    if (!field || tower.disabled > 0) continue;
+    ctx.fillStyle = 'rgba(200,180,255,0.045)';
+    ctx.beginPath(); ctx.arc(tower.x, tower.y, field.radius, 0, TAU); ctx.fill();
+    ctx.strokeStyle = 'rgba(200,180,255,0.28)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([6, 8]);
+    ctx.beginPath(); ctx.arc(tower.x, tower.y, field.radius, 0, TAU); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
   for (const enemy of match.enemies) {
     if (enemy.dead) continue;
-    drawEnemy(ctx, enemy);
+    drawEnemy(ctx, enemy, time);
   }
 
   for (const effect of match.effects) {
@@ -1356,7 +1817,9 @@ export function renderWaveDefense(ctx, match, { width = WAVE_DEFENSE_WORLD_W, he
     ctx.textAlign = 'center';
     ctx.fillStyle = '#f4dfb6';
     ctx.font = '700 10px sans-serif';
-    ctx.fillText(match.endless ? `TANPA AKHIR · GELOMBANG ${match.wave + 1}` : `GELOMBANG ${match.wave + 1} / ${match.totalWaves}`, width / 2, 83);
+    ctx.fillText(match.infinitower
+      ? `INFINITOWER · GELOMBANG ${match.wave + 1} · T${infinitowerTierFor(match.wave + 1)}`
+      : match.endless ? `TANPA AKHIR · GELOMBANG ${match.wave + 1}` : `GELOMBANG ${match.wave + 1} / ${match.totalWaves}`, width / 2, 83);
     ctx.fillStyle = '#9fc5a3';
     ctx.font = '700 8px sans-serif';
     ctx.fillText(`MULAI DALAM ${Math.max(0, match.prepTimer).toFixed(1)} DETIK`, width / 2, 99);

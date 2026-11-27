@@ -56,9 +56,57 @@ export const POST_CREDIT = {
   finale: 'KERAJAAN OPUS BEBAS · TERIMA KASIH TELAH BERJALAN SEJAUH INI',
 };
 
+// ── Infinitower cinematics ─────────────────────────────────────────────────
+// The spiral has no ending, so its trailer sells the climb instead of a
+// finale, and the boss portrait is replayed before the first boss of a run.
+export const SPIRAL_INTRO_CUTSCENE = {
+  id: 'spiral_intro',
+  duration: 18,
+  music: 'spiralTrailer',
+  eyebrow: 'TRAILER · INFINITOWER · LINGKAR ABADI',
+  title: 'THE SPIRAL CHOIR',
+  palette: {
+    top: '#05040c',
+    mid: '#1b1034',
+    low: '#3d2262',
+    glow: '#c8b4ff',
+  },
+  beats: [
+    { at: 0, label: 'GERBANG LINGKAR', text: 'Tidak ada puncak di menara ini. Hanya jalan yang berputar ke dalam.' },
+    { at: 2.8, label: 'DINDING YANG BERNYANYI', text: 'Setiap batu mencatat nama penjaga yang jatuh sebelumnya.' },
+    { at: 5.6, label: 'DUA PULUH MENARA', text: 'Dua puluh bentuk pertahanan, satu mahkota, dan tidak ada kemenangan.' },
+    { at: 8.6, label: 'SESUATU MENGHITUNG', text: 'Di bawah lantai, koor mulai menghitung gelombangmu.' },
+    { at: 11.6, label: 'TINGKAT DEMI TINGKAT', text: 'Setiap sepuluh gelombang, lingkar menutup satu lapis lagi.' },
+    { at: 14.4, label: 'SATU-SATUNYA UNDANGAN', text: 'Bertahanlah selama kau bisa. Lingkar akan mengingat berapa lama.' },
+  ],
+  finale: 'INFINITOWER · TIDAK ADA KEMENANGAN, HANYA BERAPA LAMA',
+};
+
+export const SPIRAL_BOSS_CUTSCENE = {
+  id: 'spiral_boss',
+  duration: 11,
+  music: 'spiralBoss',
+  eyebrow: 'INFINITOWER · GERBANG BOS',
+  title: 'SPIRAL TYRANT',
+  palette: {
+    top: '#0a0408',
+    mid: '#2a1020',
+    low: '#5a2030',
+    glow: '#ffb45c',
+  },
+  beats: [
+    { at: 0, label: 'LINGKAR BERHENTI', text: 'Jalan berhenti berputar. Untuk pertama kalinya, sesuatu menunggu.' },
+    { at: 2.8, label: 'TIRAN LINGKAR', text: 'Spiral Tyrant keluar dari dinding, membawa seluruh pasukannya di punggung.' },
+    { at: 5.6, label: 'KOOR DI BELAKANGNYA', text: 'Dan di belakangnya, koor menyanyikan gelombang yang belum pernah kau lihat.' },
+    { at: 8.2, label: 'TIDAK ADA JALAN PULANG', text: 'Tidak ada gerbang keluar. Hanya menara, mahkota, dan satu gelombang lagi.' },
+  ],
+};
+
 export function cutsceneFor(id) {
   if (id === POST_CREDIT.id) return POST_CREDIT;
   if (id === BOSS_CUTSCENE.id) return BOSS_CUTSCENE;
+  if (id === SPIRAL_INTRO_CUTSCENE.id) return SPIRAL_INTRO_CUTSCENE;
+  if (id === SPIRAL_BOSS_CUTSCENE.id) return SPIRAL_BOSS_CUTSCENE;
   return null;
 }
 
@@ -307,6 +355,171 @@ function epilogue(ctx, w, h, t) {
   ctx.globalAlpha = 1;
 }
 
+// ── Spiral trailer / boss portrait art ─────────────────────────────────────
+// A stone spiral seen from above, a crown of towers, and an army walking the
+// road forever. The boss variant replaces the crown with the Choir.
+function spiralScene(ctx, w, h, t, scene) {
+  const pal = scene.palette || SPIRAL_INTRO_CUTSCENE.palette;
+  const boss = scene.id === SPIRAL_BOSS_CUTSCENE.id;
+  const g = ctx.createLinearGradient(0, 0, 0, h);
+  g.addColorStop(0, pal.top);
+  g.addColorStop(0.55, pal.mid);
+  g.addColorStop(1, pal.low);
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, w, h);
+
+  // Cold stars / drifting ash above the spire.
+  for (let i = 0; i < 70; i += 1) {
+    const seed = i * 91.7;
+    const x = (seed * 3.1 + w * 0.5) % w;
+    const y = (seed * 2.7 + h * 0.1) % (h * 0.65);
+    ctx.globalAlpha = 0.12 + 0.4 * Math.abs(Math.sin(t * 0.7 + i));
+    ctx.fillStyle = i % 7 === 0 ? pal.glow : '#dfe6ff';
+    ctx.beginPath();
+    ctx.arc(x, y, 0.8 + (i % 3) * 0.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  const cx = w * (boss ? 0.56 : 0.5);
+  const cy = h * 0.56;
+  const scale = Math.min(w, h) / 620;
+  const turn = t * (boss ? 0.12 : 0.2);
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.scale(scale, scale);
+
+  // Outer glow behind the spiral.
+  const halo = ctx.createRadialGradient(0, 0, 20, 0, 0, 300);
+  halo.addColorStop(0, 'rgba(200,180,255,0.20)');
+  halo.addColorStop(0.55, 'rgba(120,90,200,0.10)');
+  halo.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = halo;
+  ctx.beginPath();
+  ctx.arc(0, 0, 300, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Concentric rings.
+  for (let ring = 1; ring <= 4; ring += 1) {
+    const radius = 58 + ring * 52;
+    const spin = turn * (ring % 2 ? 1 : -1.3);
+    ctx.strokeStyle = ring % 2 ? 'rgba(200,180,255,0.34)' : 'rgba(120,100,190,0.26)';
+    ctx.lineWidth = 2.4;
+    ctx.setLineDash(ring % 2 ? [18, 12] : [6, 16]);
+    ctx.beginPath();
+    ctx.arc(0, 0, radius, spin, spin + Math.PI * 1.65);
+    ctx.stroke();
+  }
+  ctx.setLineDash([]);
+
+  // The road: an Archimedean spiral of stone.
+  ctx.strokeStyle = 'rgba(226,214,255,0.5)';
+  ctx.lineWidth = 3.2;
+  ctx.beginPath();
+  for (let i = 0; i <= 150; i += 1) {
+    const a = (i / 150) * Math.PI * 6 + turn;
+    const radius = 12 + (i / 150) * 232;
+    const x = Math.cos(a) * radius;
+    const y = Math.sin(a) * radius * 0.86;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+
+  // Crown of towers at the outer edge.
+  for (let i = 0; i < 18; i += 1) {
+    const a = (i / 18) * Math.PI * 2 + turn * 0.4;
+    const radius = 252;
+    const x = Math.cos(a) * radius;
+    const y = Math.sin(a) * radius * 0.86;
+    const height = 20 + (i % 4) * 7;
+    ctx.fillStyle = i % 5 === 0 ? pal.glow : 'rgba(16,12,28,0.95)';
+    ctx.globalAlpha = i % 5 === 0 ? 0.75 : 1;
+    ctx.fillRect(x - 5, y - height, 10, height);
+    ctx.beginPath();
+    ctx.moveTo(x - 8, y - height);
+    ctx.lineTo(x, y - height - 12);
+    ctx.lineTo(x + 8, y - height);
+    ctx.closePath();
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // Bodies walking the road inward.
+  for (let i = 0; i < 34; i += 1) {
+    const a = (i / 34) * Math.PI * 6 + turn + Math.sin(t * 0.8 + i) * 0.02;
+    const radius = 12 + (i / 34) * 226;
+    const x = Math.cos(a) * radius;
+    const y = Math.sin(a) * radius * 0.86;
+    ctx.fillStyle = i % 9 === 0 ? '#ffcf7a' : 'rgba(226,218,255,0.7)';
+    ctx.beginPath();
+    ctx.arc(x, y, i % 9 === 0 ? 4 : 2.4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // The spire at the centre, or the Choir looming over it.
+  if (boss) {
+    const pulse = 1 + Math.sin(t * 2.2) * 0.04;
+    ctx.scale(pulse, pulse);
+    ctx.fillStyle = 'rgba(12,6,10,0.96)';
+    ctx.strokeStyle = pal.glow;
+    ctx.lineWidth = 2.6;
+    ctx.beginPath();
+    ctx.moveTo(0, -118);
+    ctx.quadraticCurveTo(96, -46, 74, 42);
+    ctx.quadraticCurveTo(0, 102, -74, 42);
+    ctx.quadraticCurveTo(-96, -46, 0, -118);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    // Many eyes.
+    for (let i = 0; i < 9; i += 1) {
+      const a = (i / 9) * Math.PI * 2;
+      const ex = Math.cos(a) * 46;
+      const ey = Math.sin(a) * 34 - 12;
+      const blink = 0.5 + 0.5 * Math.abs(Math.sin(t * 1.6 + i * 1.7));
+      ctx.fillStyle = `rgba(255,206,122,${0.45 + blink * 0.5})`;
+      ctx.beginPath();
+      ctx.arc(ex, ey, 3.4 + (i % 3), 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // Ribs / arms reaching out of the shell.
+    ctx.strokeStyle = 'rgba(255,180,92,0.55)';
+    ctx.lineWidth = 2;
+    for (let i = 0; i < 12; i += 1) {
+      const a = (i / 12) * Math.PI * 2 + Math.sin(t * 1.1 + i) * 0.08;
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(a) * 58, Math.sin(a) * 44);
+      ctx.quadraticCurveTo(Math.cos(a) * 120, Math.sin(a) * 90, Math.cos(a) * 164, Math.sin(a) * 124);
+      ctx.stroke();
+    }
+  } else {
+    ctx.fillStyle = 'rgba(10,8,20,0.96)';
+    ctx.strokeStyle = pal.glow;
+    ctx.lineWidth = 2.4;
+    ctx.beginPath();
+    ctx.moveTo(0, -150);
+    ctx.lineTo(34, -20);
+    ctx.lineTo(0, 34);
+    ctx.lineTo(-34, -20);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(200,180,255,0.5)';
+    ctx.beginPath();
+    ctx.arc(0, -84, 9 + Math.sin(t * 2.4) * 1.6, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+
+  // Horizon haze.
+  const haze = ctx.createLinearGradient(0, h * 0.72, 0, h);
+  haze.addColorStop(0, 'rgba(0,0,0,0)');
+  haze.addColorStop(1, boss ? 'rgba(120,40,30,0.35)' : 'rgba(120,90,200,0.22)');
+  ctx.fillStyle = haze;
+  ctx.fillRect(0, h * 0.72, w, h * 0.28);
+}
+
 // Draws the scene for the given elapsed time. `w`/`h` are canvas pixels.
 export function drawCutscene(ctx, w, h, scene, time) {
   if (!ctx || !scene) return;
@@ -315,6 +528,8 @@ export function drawCutscene(ctx, w, h, scene, time) {
   const t = Math.max(0, time);
   if (scene.id === CUTSCENE_POST_CREDIT) {
     epilogue(ctx, w, h, t);
+  } else if (scene.id === SPIRAL_INTRO_CUTSCENE.id || scene.id === SPIRAL_BOSS_CUTSCENE.id) {
+    spiralScene(ctx, w, h, t, scene);
   } else {
     const pal = scene.palette || BOSS_CUTSCENE.palette;
     sky(ctx, w, h, pal.top, pal.mid, pal.low, t);
@@ -336,4 +551,4 @@ export function drawCutscene(ctx, w, h, scene, time) {
   ctx.restore();
 }
 
-export const CUTSCENES = [BOSS_CUTSCENE, POST_CREDIT];
+export const CUTSCENES = [BOSS_CUTSCENE, POST_CREDIT, SPIRAL_INTRO_CUTSCENE, SPIRAL_BOSS_CUTSCENE];
