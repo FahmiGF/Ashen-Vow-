@@ -1,0 +1,586 @@
+/* Ashen Vow — Campaign Map Editor (Update XXIX).
+   The editor hub, the blueprint form and the custom-stage clear card. */
+
+.editor-menu-btn span {
+  letter-spacing: 0.06em;
+}
+
+.editor-inner {
+  max-width: 1120px;
+}
+
+.editor-layout {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+  margin-top: 18px;
+}
+
+.editor-panel {
+  border: 1px solid rgba(208, 122, 53, 0.28);
+  border-radius: 14px;
+  background: linear-gradient(160deg, rgba(24, 17, 12, 0.94), rgba(12, 9, 7, 0.96));
+  padding: 16px;
+}
+
+.editor-panel h3 {
+  margin: 0 0 10px;
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  color: #e5b678;
+  text-transform: uppercase;
+}
+
+.editor-list {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+.editor-list button {
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(208, 122, 53, 0.22);
+  background: rgba(255, 255, 255, 0.02);
+  color: #f3e7d6;
+  cursor: pointer;
+  display: grid;
+  gap: 3px;
+  font: inherit;
+}
+
+.editor-list button b {
+  font-size: 13px;
+  letter-spacing: 0.04em;
+}
+
+.editor-list button em {
+  font-style: normal;
+  font-size: 10.5px;
+  color: #a99a89;
+  letter-spacing: 0.03em;
+}
+
+.editor-list li.active button {
+  border-color: #d07a35;
+  background: rgba(208, 122, 53, 0.16);
+  box-shadow: inset 0 0 0 1px rgba(208, 122, 53, 0.24);
+}
+
+.editor-list-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.editor-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr));
+  gap: 12px;
+}
+
+.editor-grid label,
+.editor-enemy-x {
+  display: grid;
+  gap: 5px;
+  font-size: 10.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #b9a894;
+}
+
+.editor-grid input,
+.editor-grid select,
+.editor-enemy-add select,
+.editor-enemy-x input {
+  width: 100%;
+  min-height: 36px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(208, 122, 53, 0.28);
+  background: rgba(8, 6, 5, 0.9);
+  color: #f6ecdd;
+  font: inherit;
+  font-size: 12.5px;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.editor-grid input:focus-visible,
+.editor-grid select:focus-visible,
+.editor-enemy-add select:focus-visible,
+.editor-enemy-x input:focus-visible,
+.editor-list button:focus-visible {
+  outline: 2px solid #e5b678;
+  outline-offset: 1px;
+}
+
+.editor-toggles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 12px;
+}
+
+.editor-toggles label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11.5px;
+  color: #d8c9b6;
+  letter-spacing: 0.03em;
+}
+
+.editor-toggles input {
+  width: 16px;
+  height: 16px;
+  accent-color: #d07a35;
+}
+
+.editor-section {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(208, 122, 53, 0.16);
+}
+
+.editor-weapons {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%), 1fr));
+  gap: 8px;
+}
+
+.editor-weapons label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(208, 122, 53, 0.18);
+  background: rgba(255, 255, 255, 0.02);
+  font-size: 11.5px;
+  color: #ded0bd;
+  cursor: pointer;
+}
+
+.editor-weapons input {
+  accent-color: #d07a35;
+}
+
+.editor-enemy-add {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.editor-enemies {
+  display: grid;
+  gap: 6px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.editor-enemy-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 36px 96px 34px;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(208, 122, 53, 0.12);
+}
+
+.editor-enemy-row.elite {
+  border-color: rgba(229, 182, 120, 0.55);
+  background: rgba(229, 182, 120, 0.09);
+}
+
+.editor-enemy-row .editor-elite-btn {
+  min-height: 32px;
+  border-radius: 8px;
+  border: 1px solid rgba(208, 122, 53, 0.28);
+  background: rgba(255, 255, 255, 0.03);
+  color: #a99a89;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.editor-enemy-row .editor-elite-btn.active {
+  border-color: #e5b678;
+  background: rgba(229, 182, 120, 0.22);
+  color: #f6d7a8;
+}
+
+.editor-list-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 4px;
+}
+
+.editor-list-tags .tag {
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  padding: 2px 6px;
+  border-radius: 999px;
+  border: 1px solid rgba(208, 122, 53, 0.3);
+  color: #d8c9b6;
+  background: rgba(208, 122, 53, 0.1);
+}
+
+.editor-list-tags .tag.warn {
+  border-color: rgba(229, 182, 120, 0.6);
+  color: #f6d7a8;
+}
+
+.editor-list-tags .tag.error {
+  border-color: rgba(214, 92, 74, 0.6);
+  color: #ffd2c9;
+  background: rgba(214, 92, 74, 0.14);
+}
+
+.editor-list-tags .tag.elite {
+  border-color: rgba(229, 182, 120, 0.6);
+  color: #f6d7a8;
+}
+
+.editor-list-tags .tag.survive {
+  border-color: rgba(140, 208, 216, 0.5);
+  color: #bfe9ee;
+  background: rgba(140, 208, 216, 0.1);
+}
+
+.editor-presets-title {
+  margin: 16px 0 8px;
+}
+
+.editor-presets {
+  display: grid;
+  gap: 6px;
+}
+
+.editor-presets button {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(208, 122, 53, 0.22);
+  background: rgba(255, 255, 255, 0.02);
+  color: #e8dccb;
+  font: inherit;
+  font-size: 11.5px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.editor-presets button:hover,
+.editor-presets button:focus-visible {
+  border-color: #d07a35;
+  background: rgba(208, 122, 53, 0.14);
+}
+
+.editor-balance {
+  display: grid;
+  gap: 10px;
+}
+
+.editor-balance-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.editor-balance-head strong {
+  font-size: 15px;
+  letter-spacing: 0.12em;
+  color: #f4d7b2;
+}
+
+.editor-balance.warn .editor-balance-head strong {
+  color: #f0b070;
+}
+
+.editor-balance.error .editor-balance-head strong {
+  color: #ff9d8a;
+}
+
+.editor-balance-head span {
+  font-size: 11px;
+  color: #a99a89;
+  letter-spacing: 0.04em;
+}
+
+.editor-balance-meter {
+  position: relative;
+  height: 12px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(122, 196, 122, 0.28), rgba(229, 182, 120, 0.28) 45%, rgba(214, 92, 74, 0.35));
+  border: 1px solid rgba(208, 122, 53, 0.3);
+  overflow: hidden;
+}
+
+.editor-balance-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: linear-gradient(90deg, #8fd8a0, #e5b678 55%, #d65c4a);
+  opacity: 0.85;
+}
+
+.editor-balance-mark {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  width: 2px;
+  background: #f6d7a8;
+  box-shadow: 0 0 6px rgba(246, 215, 168, 0.8);
+}
+
+.editor-balance-figures {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(120px, 100%), 1fr));
+  gap: 8px;
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #a99a89;
+}
+
+.editor-balance-figures b {
+  display: block;
+  font-size: 15px;
+  letter-spacing: 0.02em;
+  color: #f3e7d6;
+}
+
+.editor-balance-tips {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 4px;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: #cbbba7;
+}
+
+.custom-badge {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(229, 182, 120, 0.45);
+  background: rgba(24, 17, 12, 0.86);
+  color: #f0d9bd;
+  white-space: nowrap;
+}
+
+.custom-badge.urgent {
+  border-color: rgba(214, 92, 74, 0.8);
+  color: #ffd2c9;
+  animation: custom-badge-pulse 0.9s ease-in-out infinite;
+}
+
+@keyframes custom-badge-pulse {
+  50% { opacity: 0.55; }
+}
+
+.editor-enemy-row span {
+  font-size: 12px;
+  color: #efe3d2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.editor-enemy-x {
+  gap: 0;
+}
+
+.editor-enemy-row button {
+  min-height: 32px;
+  border-radius: 8px;
+  border: 1px solid rgba(208, 122, 53, 0.3);
+  background: rgba(208, 122, 53, 0.12);
+  color: #f0c9a2;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.editor-enemy-row button:hover {
+  background: rgba(208, 122, 53, 0.24);
+}
+
+.editor-canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 10px;
+  border: 1px solid rgba(208, 122, 53, 0.32);
+  background: #0a0806;
+  touch-action: none;
+  cursor: crosshair;
+}
+
+.editor-terrain-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 10px 0 8px;
+}
+
+.editor-terrain-actions .btn[disabled] {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.editor-share-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 8px;
+}
+
+.editor-share-input {
+  width: 100%;
+  min-height: 38px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(208, 122, 53, 0.28);
+  background: rgba(8, 6, 5, 0.9);
+  color: #f6ecdd;
+  font: inherit;
+  font-size: 12px;
+  letter-spacing: 0.02em;
+}
+
+.editor-share-input:focus-visible {
+  outline: 2px solid #e5b678;
+  outline-offset: 1px;
+}
+
+.editor-share-note {
+  margin: 8px 0 0;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: #a99a89;
+}
+
+.editor-share-note.error {
+  color: #ffd2c9;
+}
+
+.editor-share-note.ok {
+  color: #d6f0d2;
+}
+
+.editor-message {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 11.5px;
+  line-height: 1.5;
+  border: 1px solid rgba(208, 122, 53, 0.3);
+  background: rgba(208, 122, 53, 0.08);
+  color: #f0d9bd;
+}
+
+.editor-message.error {
+  border-color: rgba(214, 92, 74, 0.5);
+  background: rgba(214, 92, 74, 0.12);
+  color: #ffd2c9;
+}
+
+.editor-message.ok {
+  border-color: rgba(122, 196, 122, 0.45);
+  background: rgba(122, 196, 122, 0.1);
+  color: #d6f0d2;
+}
+
+.editor-message:empty {
+  display: none;
+}
+
+.editor-empty {
+  font-size: 11.5px;
+  color: #a99a89;
+  margin: 0;
+}
+
+.editor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.custom-clear-card {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(140px, 100%), 1fr));
+  gap: 12px;
+  margin: 18px 0;
+}
+
+.custom-clear-card .stat {
+  border: 1px solid rgba(208, 122, 53, 0.28);
+  border-radius: 12px;
+  padding: 12px;
+  background: rgba(20, 14, 10, 0.9);
+}
+
+.custom-clear-card .stat strong {
+  display: block;
+  font-size: 20px;
+  color: #f4d7b2;
+}
+
+.custom-clear-card .stat span {
+  font-size: 10.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #a99a89;
+}
+
+@media (max-width: 860px) {
+  .editor-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .editor-list {
+    max-height: 220px;
+  }
+}
+
+@media (max-width: 420px) {
+  .editor-panel {
+    padding: 12px;
+  }
+
+  .editor-enemy-row {
+    grid-template-columns: minmax(0, 1fr) 32px 70px 30px;
+    gap: 6px;
+  }
+
+  .editor-actions .btn {
+    width: 100%;
+  }
+
+  .editor-share-row {
+    grid-template-columns: minmax(0, 1fr) 1fr;
+  }
+
+  .editor-share-input {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .editor-list button,
+  .editor-enemy-row button {
+    transition: none;
+  }
+}
