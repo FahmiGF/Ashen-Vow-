@@ -575,14 +575,17 @@ export function waveDefenseSetSpeed(match, speed) {
   return true;
 }
 
-function towerStats(tower) {
-  const def = WAVE_DEFENSE_TOWER_BY_ID[tower.towerId];
+function towerRange(tower, def = WAVE_DEFENSE_TOWER_BY_ID[tower.towerId]) {
+  return def.range * (1 + (tower.level - 1) * 0.055);
+}
+
+function towerStats(tower, def = WAVE_DEFENSE_TOWER_BY_ID[tower.towerId], range = towerRange(tower, def)) {
   const level = tower.level - 1;
   return {
     ...def,
     damage: def.damage * Math.pow(1.48, level) * (1 + (tower.buffDamage || 0)),
     rate: def.rate * Math.pow(1.1, level) * (1 + (tower.buffRate || 0)),
-    range: def.range * (1 + level * 0.055),
+    range,
     splash: def.splash ? def.splash * (1 + level * 0.08) : 0,
   };
 }
@@ -821,9 +824,10 @@ function updateTowers(match, dt) {
     if (tower.cooldown > 0) continue;
     const def = WAVE_DEFENSE_TOWER_BY_ID[tower.towerId];
     if (def?.support) { tower.cooldown = 0.5; continue; }
-    const stats = towerStats(tower);
-    const target = nearestTarget(match, tower, stats.range);
+    const range = towerRange(tower, def);
+    const target = nearestTarget(match, tower, range);
     if (!target) { tower.cooldown = 0; continue; }
+    const stats = towerStats(tower, def, range);
     fireTower(match, tower, target, stats);
     tower.cooldown = 1 / stats.rate;
   }
@@ -1597,12 +1601,12 @@ export function renderWaveDefense(ctx, match, { width = WAVE_DEFENSE_WORLD_W, he
   const selected = match.slots[match.selectedSlot];
   const selectedTower = selected ? match.towers.find((tower) => tower.id === selected.towerId) : null;
   if (selectedTower) {
-    const stats = towerStats(selectedTower);
+    const range = towerRange(selectedTower);
     ctx.fillStyle = 'rgba(255,224,160,0.035)';
-    ctx.beginPath(); ctx.arc(selectedTower.x, selectedTower.y, stats.range, 0, TAU); ctx.fill();
+    ctx.beginPath(); ctx.arc(selectedTower.x, selectedTower.y, range, 0, TAU); ctx.fill();
     ctx.strokeStyle = 'rgba(255,224,160,0.34)';
     ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.arc(selectedTower.x, selectedTower.y, stats.range, 0, TAU); ctx.stroke();
+    ctx.beginPath(); ctx.arc(selectedTower.x, selectedTower.y, range, 0, TAU); ctx.stroke();
   }
 
   for (const slot of match.slots) {

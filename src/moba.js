@@ -588,30 +588,38 @@ function nearestTarget(match, source, range) {
 
 function nearestMinionTarget(match, minion, range) {
   const enemies = enemyTeam(minion.team);
+  const x = minion.x || 0;
+  const y = minion.y || 0;
   let best = null;
   let bestDistance = range;
-  const units = [
-    ...match.minions.filter((entry) => entry.team === enemies && !entry.dead),
-    ...match.heroes.filter((entry) => entry.team === enemies && !entry.dead),
-  ];
-  for (const unit of units) {
-    const dist = distance(minion, unit) - (unit.radius || 0);
-    if (dist < bestDistance) { best = unit; bestDistance = dist; }
+  // Keep minions ahead of heroes on ties. An axis alone can rule out
+  // a target without allocating a candidate list or measuring its diagonal.
+  for (const units of [match.minions, match.heroes]) {
+    for (const unit of units) {
+      if (unit.team !== enemies || unit.dead) continue;
+      const radius = unit.radius || 0;
+      const dx = x - (unit.x || 0);
+      if (Math.abs(dx) - radius >= bestDistance) continue;
+      const dy = y - (unit.y || 0);
+      if (Math.abs(dy) - radius >= bestDistance) continue;
+      const dist = Math.hypot(dx, dy) - radius;
+      if (dist < bestDistance) { best = unit; bestDistance = dist; }
+    }
   }
   if (best) return best;
   // A lane must be opened before minions may touch the nexus. Towers are
   // intentionally stickier than the path endpoint, otherwise a fast wave can
   // ghost through an inner tower and end the match in half a minute.
-  const laneTowers = match.towers.filter((tower) => tower.kind === 'tower' && tower.team === enemies && tower.lane === minion.lane && !tower.dead);
-  if (laneTowers.length) {
-    let towerTarget = null;
-    let towerDistance = 320;
-    for (const tower of laneTowers) {
-      const dist = distance(minion, tower) - (tower.radius || 0);
-      if (dist < towerDistance) { towerTarget = tower; towerDistance = dist; }
-    }
-    return towerTarget;
+  let laneBlocked = false;
+  let closestTower = null;
+  let towerDistance = 320;
+  for (const tower of match.towers) {
+    if (tower.kind !== 'tower' || tower.team !== enemies || tower.lane !== minion.lane || tower.dead) continue;
+    laneBlocked = true;
+    const dist = distance(minion, tower) - (tower.radius || 0);
+    if (dist < towerDistance) { closestTower = tower; towerDistance = dist; }
   }
+  if (laneBlocked) return closestTower;
   const core = match.towers.find((tower) => tower.kind === 'core' && tower.team === enemies && !tower.dead);
   return core && distance(minion, core) < range + core.radius ? core : null;
 }
