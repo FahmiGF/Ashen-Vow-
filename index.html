@@ -4,10 +4,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#0b0807" />
-    <title>Ashen Vow — v0.36.0</title>
+    <title>Ashen Vow — v0.41.0</title>
     <meta
       name="description"
-      content="Ashen Vow adalah metroidvania medieval 2D dengan combat pedang real-time, 426 ruang, 72 boss, mode Speedrun satu nyawa, 100 level ekspansi, Wave Defense dengan 24 gelombang dan 12 menara, Pirate Tide dengan laut terbuka dan meriam broadside, Riftwar MOBA 5v5 dengan 28 kelas, Thornveil Haven, peta, jam langsung, dan indeks sumpah."
+      content="Ashen Vow adalah metroidvania medieval 2D dengan combat pedang real-time, 426 ruang, 72 boss, mode Speedrun satu nyawa, 100 level ekspansi, Wave Defense dengan 24 gelombang, 18 menara dan Infinitower, Pirate Tide dengan laut terbuka dan meriam broadside, Riftwar MOBA 5v5 dengan 28 kelas, Thornveil Haven, peta, jam langsung, dan indeks sumpah."
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -23,8 +23,6 @@
     <link rel="stylesheet" href="./styles-fallen.css" />
     <link rel="stylesheet" href="./styles-crusade.css" />
     <link rel="stylesheet" href="./styles-moba.css" />
-    <link rel="stylesheet" href="./styles-wavedefense.css" />
-    <link rel="stylesheet" href="./styles-pirates.css" />
     <link rel="stylesheet" href="./styles-realms.css" />
     <link rel="stylesheet" href="./styles-eclipse.css" />
     <link rel="stylesheet" href="./styles-veil.css" />
@@ -227,12 +225,14 @@
             </div>
             <div class="hud-right">
               <div id="speedrun-badge" class="speedrun-badge hidden">⚡ 2× · 1 NYAWA</div>
+              <div id="custom-badge" class="custom-badge hidden">🎯 NORMAL · 1.8×</div>
               <div class="ash-badge" title="Abu — mata uang Warung Abu">
                 <span>✦</span>
                 <strong id="ash-count">0</strong>
                 <em>ABU</em>
               </div>
               <button id="sound-btn" class="sound-btn" type="button" title="Suara (M)" aria-label="Suara">♪</button>
+              <button id="btn-hud-settings" class="sound-btn hud-settings-btn" type="button" title="Settings" aria-label="Settings">⚙</button>
               <div class="room-plate">
                 <span id="room-sub" class="room-sub">THE ASHEN GATE</span>
                 <strong id="room-name" class="room-name">Gerbang Abu</strong>
@@ -337,8 +337,9 @@
 
         <!-- ══ MAIN MENU ══ -->
         <section id="title-screen" class="screen title-screen">
+          <button id="btn-settings-top" class="title-settings-corner" type="button" title="Settings" aria-label="Settings">⚙ <span>SETTINGS</span></button>
           <div class="screen-inner title-inner">
-            <p class="eyebrow">SEBUAH SUMPAH DI ANTARA ABU · v0.23.0</p>
+            <p class="eyebrow">SEBUAH SUMPAH DI ANTARA ABU · v0.41.0</p>
             <h1 class="game-title">ASHEN<span>VOW</span></h1>
             <div class="title-rule"><i></i><b>✦</b><i></i></div>
             <p class="lede">
@@ -459,6 +460,10 @@
                 <span>SPEEDRUN — SATU NYAWA</span>
                 <em>2× → 3× → 4× · tanpa checkpoint</em>
               </button>
+              <button id="btn-editor-menu" class="btn btn-ghost menu-btn editor-menu-btn" type="button">
+                <span>PETA SUMPAH — MAP EDITOR KAMPANYE</span>
+                <em>Buat stage sendiri · musuh · bos · latar · musik · pembuka · kelas · senjata</em>
+              </button>
               <button id="btn-fishing-menu" class="btn btn-ghost menu-btn fishing-menu-btn" type="button">
                 <span>PONDOK UMPAN — MEMANCING</span>
                 <em>9 umpan · 25/50/100 koin · indeks 25 ikan</em>
@@ -485,7 +490,7 @@
               </button>
               <button id="btn-updates" class="btn btn-ghost menu-btn" type="button">
                 <span>CATATAN UPDATE</span>
-                <em>Riwayat rilis · v0.36.0 · Api Sembilan Sumbu</em>
+                <em>Riwayat rilis · v0.40.0 · Peta Sumpah</em>
               </button>
             </nav>
 
@@ -608,7 +613,7 @@
             </div>
 
             <div id="credits-times" class="credits-times"></div>
-            <p class="credit-version">ASHEN VOW · v0.36.0 · 13 PENJAGA · 116 BOSS · 674 RUANG</p>
+            <p class="credit-version">ASHEN VOW · v0.40.0 · 18 KELAS · 116 BOSS · 674 RUANG · MAP EDITOR</p>
             <div class="screen-links">
               <button id="btn-credits-back" class="link-btn" type="button">← KEMBALI KE MENU</button>
             </div>
@@ -625,8 +630,8 @@
               Catatan ini ikut tersimpan di dalam game.
             </p>
             <div class="updates-meta">
-              <span id="updates-version">VERSI SAAT INI · v0.36.0</span>
-              <span>DIPERBARUI 15 NOVEMBER 2026</span>
+              <span id="updates-version">VERSI SAAT INI · v0.41.0</span>
+              <span id="updates-date"></span>
             </div>
             <div id="update-log" class="update-log"></div>
             <div class="screen-links">
@@ -665,78 +670,81 @@
         <!-- ══ 3D MODE SCREEN ══ -->
         <section id="mode3d-screen" class="screen hidden">
           <div class="screen-inner mode3d-inner">
-            <div class="mode3d-header">
-              <div>
-                <p class="eyebrow">ASHEN VOW 3D · METROIDVANIA ORANG KETIGA · UPDATE XXI · v0.36.0</p>
-                <h2 class="screen-title">THORNVEIL FOREST VERTICAL SLICE</h2>
-              </div>
-              <div class="mode3d-controls-bar">
-                <select id="select-3d-area" class="mode3d-select" aria-label="Pilih Area 3D">
-                  <option value="veilroot_approach">1 · Veilroot Approach</option>
-                  <option value="thornveil_heart">2 · Thornveil Heart</option>
-                  <option value="emberfall_gate">3 · Emberfall Gate</option>
-                  <option value="obsidian_forge">4 · Obsidian Forge</option>
-                  <option value="tidewreck_harbor">5 · Tidewreck Harbor</option>
-                  <option value="pale_court">6 · Pale Court</option>
-                  <option value="bellfall_abbey">7 · Bellfall Abbey</option>
-                  <option value="choral_spire">8 · Choral Spire</option>
-                  <option value="singing_deep">9 · Singing Deep</option>
-                  <option value="veil_edge">10 · Veil Edge</option>
-                  <option value="horror_blackveil_manor">H1 · Blackveil Manor</option>
-                  <option value="horror_saint_orra">H2 · Saint Orra Sanatorium</option>
-                  <option value="horror_drowned_chapel">H3 · The Drowned Chapel</option>
-                  <option value="horror_cinder_mill">H4 · Cinder Mill</option>
-                  <option value="horror_hollow_lighthouse">H5 · The Hollow Lighthouse</option>
-                </select>
-                <select id="select-3d-region" class="mode3d-select" aria-label="Pilih Region 3D">
-                  <option value="thornveil">Thornveil Forest</option>
-                  <option value="infernal">Infernal Fortress</option>
-                  <option value="drowned">Drowned Kingdom</option>
-                  <option value="gothic">Gothic Citadel</option>
-                  <option value="crystal">Crystal Caverns</option>
-                  <option value="astral">Astral Islands</option>
-                </select>
-                <select id="select-3d-submode" class="mode3d-select" aria-label="Pilih Sub-Mode 3D">
-                  <option value="campaign">3D Campaign (Thornveil)</option>
-                  <option value="exploration">3D Exploration (Santai)</option>
-                  <option value="boss_rush">3D Boss Rush (Yggvar)</option>
-                  <option value="training">3D Training Grounds</option>
-                  <option value="editor">3D Map Editor</option>
-                  <option value="scary">3D Scary Mode (Blackveil)</option>
-                </select>
-                <select id="select-3d-quality" class="mode3d-select" aria-label="Kualitas Grafis 3D">
-                  <option value="high">Preset: High (60 FPS)</option>
-                  <option value="ultra">Preset: Ultra</option>
-                  <option value="medium">Preset: Medium</option>
-                  <option value="low">Preset: Low</option>
-                </select>
-              </div>
-            </div>
-            <div class="canvas-3d-wrap">
-              <canvas id="canvas-3d" width="960" height="540"></canvas>
-            </div>
-            <section class="horror3d-panel" id="horror3d-panel">
-              <div class="horror3d-panel-head">
+            <div id="mode3d-load-status" class="hidden" role="status"></div>
+            <div id="mode3d-content" class="hidden">
+              <div class="mode3d-header">
                 <div>
-                  <p class="eyebrow">UPDATE XVII · FIRST-PERSON 3D HORROR</p>
-                  <h3>3D SCARY MODE: BLACKVEIL NIGHTFALL</h3>
-                  <p class="micro">Lima bangunan nyata di dunia WebGL/GLB. Tiga fase per situs: ambil tiga gema, lalu keluar hidup. The Unlit berburu setelah gema pertama.</p>
+                  <p class="eyebrow">ASHEN VOW 3D · METROIDVANIA ORANG KETIGA · UPDATE XXI · v0.38.0</p>
+                  <h2 class="screen-title">THORNVEIL FOREST VERTICAL SLICE</h2>
                 </div>
-                <div class="horror3d-controls">
-                  <select id="horror3d-select" class="mode3d-select" aria-label="Pilih situs 3D Scary Mode"></select>
-                  <select id="horror3d-intensity" class="mode3d-select" aria-label="Intensitas horor 3D">
-                    <option value="reduced">Intensitas: Reduced</option>
-                    <option value="full">Intensitas: Full</option>
-                    <option value="nightmare">Intensitas: Nightmare</option>
+                <div class="mode3d-controls-bar">
+                  <select id="select-3d-area" class="mode3d-select" aria-label="Pilih Area 3D">
+                    <option value="veilroot_approach">1 · Veilroot Approach</option>
+                    <option value="thornveil_heart">2 · Thornveil Heart</option>
+                    <option value="emberfall_gate">3 · Emberfall Gate</option>
+                    <option value="obsidian_forge">4 · Obsidian Forge</option>
+                    <option value="tidewreck_harbor">5 · Tidewreck Harbor</option>
+                    <option value="pale_court">6 · Pale Court</option>
+                    <option value="bellfall_abbey">7 · Bellfall Abbey</option>
+                    <option value="choral_spire">8 · Choral Spire</option>
+                    <option value="singing_deep">9 · Singing Deep</option>
+                    <option value="veil_edge">10 · Veil Edge</option>
+                    <option value="horror_blackveil_manor">H1 · Blackveil Manor</option>
+                    <option value="horror_saint_orra">H2 · Saint Orra Sanatorium</option>
+                    <option value="horror_drowned_chapel">H3 · The Drowned Chapel</option>
+                    <option value="horror_cinder_mill">H4 · Cinder Mill</option>
+                    <option value="horror_hollow_lighthouse">H5 · The Hollow Lighthouse</option>
                   </select>
-                  <label class="horror3d-anti"><input id="horror3d-anti" type="checkbox" /> Anti-jumpscare</label>
-                  <button id="btn-horror3d-start" class="btn btn-primary btn-compact" type="button">MASUK BANGUNAN</button>
+                  <select id="select-3d-region" class="mode3d-select" aria-label="Pilih Region 3D">
+                    <option value="thornveil">Thornveil Forest</option>
+                    <option value="infernal">Infernal Fortress</option>
+                    <option value="drowned">Drowned Kingdom</option>
+                    <option value="gothic">Gothic Citadel</option>
+                    <option value="crystal">Crystal Caverns</option>
+                    <option value="astral">Astral Islands</option>
+                  </select>
+                  <select id="select-3d-submode" class="mode3d-select" aria-label="Pilih Sub-Mode 3D">
+                    <option value="campaign">3D Campaign (Thornveil)</option>
+                    <option value="exploration">3D Exploration (Santai)</option>
+                    <option value="boss_rush">3D Boss Rush (Yggvar)</option>
+                    <option value="training">3D Training Grounds</option>
+                    <option value="editor">3D Map Editor</option>
+                    <option value="scary">3D Scary Mode (Blackveil)</option>
+                  </select>
+                  <select id="select-3d-quality" class="mode3d-select" aria-label="Kualitas Grafis 3D">
+                    <option value="high">Preset: High (60 FPS)</option>
+                    <option value="ultra">Preset: Ultra</option>
+                    <option value="medium">Preset: Medium</option>
+                    <option value="low">Preset: Low</option>
+                  </select>
                 </div>
               </div>
-              <div id="horror3d-sites" class="horror3d-sites"></div>
-              <p id="horror3d-summary" class="micro horror3d-summary">0/5 situs dibersihkan · 0 jumpscare</p>
-              <p class="micro">WASD bergerak · mouse drag melihat · <kbd>E</kbd> ambil gema / keluar · <kbd>SHIFT</kbd> lari · <kbd>J</kbd> memukul The Unlit (tidak bisa dibunuh) · <kbd>R</kbd> ulang setelah mati.</p>
-            </section>
+              <div class="canvas-3d-wrap">
+                <canvas id="canvas-3d" width="960" height="540"></canvas>
+              </div>
+              <section class="horror3d-panel" id="horror3d-panel">
+                <div class="horror3d-panel-head">
+                  <div>
+                    <p class="eyebrow">UPDATE XVII · FIRST-PERSON 3D HORROR</p>
+                    <h3>3D SCARY MODE: BLACKVEIL NIGHTFALL</h3>
+                    <p class="micro">Lima bangunan nyata di dunia WebGL/GLB. Tiga fase per situs: ambil tiga gema, lalu keluar hidup. The Unlit berburu setelah gema pertama.</p>
+                  </div>
+                  <div class="horror3d-controls">
+                    <select id="horror3d-select" class="mode3d-select" aria-label="Pilih situs 3D Scary Mode"></select>
+                    <select id="horror3d-intensity" class="mode3d-select" aria-label="Intensitas horor 3D">
+                      <option value="reduced">Intensitas: Reduced</option>
+                      <option value="full">Intensitas: Full</option>
+                      <option value="nightmare">Intensitas: Nightmare</option>
+                    </select>
+                    <label class="horror3d-anti"><input id="horror3d-anti" type="checkbox" /> Anti-jumpscare</label>
+                    <button id="btn-horror3d-start" class="btn btn-primary btn-compact" type="button">MASUK BANGUNAN</button>
+                  </div>
+                </div>
+                <div id="horror3d-sites" class="horror3d-sites"></div>
+                <p id="horror3d-summary" class="micro horror3d-summary">0/5 situs dibersihkan · 0 jumpscare</p>
+                <p class="micro">WASD bergerak · mouse drag melihat · <kbd>E</kbd> ambil gema / keluar · <kbd>SHIFT</kbd> lari · <kbd>J</kbd> memukul The Unlit (tidak bisa dibunuh) · <kbd>R</kbd> ulang setelah mati.</p>
+              </section>
+            </div>
             <div class="mode3d-footer">
               <p class="micro">
                 <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> Gerak · <kbd>SHIFT</kbd> Sprint · <kbd>SPACE</kbd> Lompat / Glider · <kbd>J</kbd> / Klik Serang · <kbd>L</kbd> Air Dash · <kbd>E</kbd> Bicara NPC · <kbd>Q</kbd> / <kbd>TAB</kbd> Lock-On · <kbd>ESC</kbd> Keluar
@@ -988,28 +996,36 @@
         <!-- ══ WAVE DEFENSE: THE LAST RAMPART ══ -->
         <section id="wd-screen" class="screen hidden">
           <div class="screen-inner wd-inner">
-            <p class="eyebrow">WAVE DEFENSE · 4 BENTENG · 24 GELOMBANG · 14 MENARA · TANPA AKHIR</p>
+            <p class="eyebrow">WAVE DEFENSE · 5 BENTENG · 20 MENARA · 31 MUSUH · 9 BOS · 4 KESULITAN · INFINITOWER</p>
             <h2 class="screen-title wd-title">THE LAST RAMPART</h2>
             <p class="screen-sub">
-              Musuh datang dari gerbang utara. Bangun Ballista, Catapult, Trebuchet, Mage Tower,
-              Cannon Tower, Panji Sumpah dan sembilan menara lain di sepanjang jalan, lalu pertahankan mahkota terakhir.
+              Musuh datang dari gerbang utara. Bangun Ballista, Catapult, Monolit Gema, Tempa Abu,
+              Jangkar Lingkar, Jam Pasir Ketiga dan lima belas menara lain di sepanjang jalan, lalu pertahankan mahkota terakhir —
+              atau masuk ke <b>INFINITOWER</b>, lingkar tanpa kemenangan di mana setiap sepuluh gelombang naik tingkat
+              dan koor di bawah lantai mulai menghitung namamu.
             </p>
-            <div id="wd-summary" class="wd-summary"></div>
-            <div class="wd-section-head"><h3>PILIH BENTENG</h3><span id="wd-map-count">4 MEDAN</span></div>
-            <div id="wd-maps" class="wd-maps"></div>
-            <div class="wd-section-head"><h3>MODE</h3><span>KAMPANYE ATAU TANPA AKHIR</span></div>
-            <div id="wd-modes" class="wd-choice-row"></div>
-            <div class="wd-section-head"><h3>KESULITAN</h3><span>GOLD &amp; HP KASTIL BERUBAH</span></div>
-            <div id="wd-difficulties" class="wd-choice-row"></div>
-            <div class="wd-section-head"><h3>MENARA PERTAHANAN</h3><span id="wd-tower-count">14 JENIS</span></div>
-            <div id="wd-towers" class="wd-tower-grid"></div>
-            <div class="wd-start-row">
-              <button id="btn-wd-start" class="btn btn-primary" type="button">
-                <span>MULAI PERTAHANAN</span>
-                <em>Bangun menara · kirim gelombang · jaga kastil</em>
-              </button>
+            <div id="wd-load-status" class="hidden" role="status"></div>
+            <div id="wd-content" class="hidden">
+              <div id="wd-summary" class="wd-summary"></div>
+              <div class="wd-section-head"><h3>KRONIK LINGKAR</h3><span>ENAM TINGKAT · TANPA KEMENANGAN</span></div>
+              <div id="wd-story" class="wd-story"></div>
+              <div class="wd-section-head"><h3>PILIH BENTENG</h3><span id="wd-map-count">5 MEDAN</span></div>
+              <div id="wd-maps" class="wd-maps"></div>
+              <div class="wd-section-head"><h3>MODE</h3><span>KAMPANYE · TANPA AKHIR · INFINITOWER</span></div>
+              <div id="wd-modes" class="wd-choice-row"></div>
+              <div class="wd-section-head"><h3>KESULITAN</h3><span>SQUIRE · KNIGHT · WARLORD · ETERNAL</span></div>
+              <div id="wd-difficulties" class="wd-choice-row"></div>
+              <div class="wd-section-head"><h3>MENARA PERTAHANAN</h3><span id="wd-tower-count">20 JENIS</span></div>
+              <div id="wd-towers" class="wd-tower-grid"></div>
+              <div class="wd-start-row">
+                <button id="btn-wd-start" class="btn btn-primary" type="button">
+                  <span>MULAI PERTAHANAN</span>
+                  <em>Bangun menara · kirim gelombang · jaga kastil</em>
+                </button>
+              </div>
             </div>
             <div class="screen-links">
+              <button id="btn-wd-trailer" class="link-btn wd-trailer-btn hidden" type="button">▶ PUTAR TRAILER LINGKAR</button>
               <button id="btn-wd-back" class="link-btn" type="button">← KEMBALI KE MENU</button>
             </div>
           </div>
@@ -1076,26 +1092,29 @@
               Satu laut tanpa layar pemuatan. Berlayar bebas di antara sepuluh pulau, tembakkan
               meriam port dan starboard, rampasi emas, lalu tenggelamkan kapten di setiap rute.
             </p>
-            <div id="pirate-summary" class="pirate-summary"></div>
-            <div class="pirate-section-head"><h3>RUTE KAPTEN</h3><span>10 STAGE · BERURUTAN</span></div>
-            <div id="pirate-stages" class="pirate-stages"></div>
-            <div class="pirate-section-head"><h3>PASANG TAK BERUJUNG</h3><span>MODE TANPA AKHIR</span></div>
-            <div id="pirate-endless" class="pirate-endless"></div>
-            <div class="pirate-section-head"><h3>LAUT TERBUKA</h3><span id="pirate-count">10 PULAU · 7 PELABUHAN</span></div>
-            <div id="pirate-world" class="pirate-world"></div>
-            <div class="pirate-guide">
-              <div><b>W / S</b><span>Gas &amp; mundur</span></div>
-              <div><b>A / D</b><span>Putar lambung</span></div>
-              <div><b>Q / E</b><span>Meriam port / starboard</span></div>
-              <div><b>SPACE</b><span>Tembak kedua sisi</span></div>
-              <div><b>F</b><span>Berlabuh &amp; reparasi</span></div>
-              <div><b>KLIK LAUT</b><span>Tembak sisi terdekat</span></div>
-            </div>
-            <div class="pirate-start-row">
-              <button id="btn-pirate-start" class="btn btn-primary" type="button">
-                <span>TAK LAYAR</span>
-                <em>Laut terbuka · meriam broadside · pelabuhan reparasi</em>
-              </button>
+            <div id="pirate-load-status" class="hidden" role="status"></div>
+            <div id="pirate-content" class="hidden">
+              <div id="pirate-summary" class="pirate-summary"></div>
+              <div class="pirate-section-head"><h3>RUTE KAPTEN</h3><span>10 STAGE · BERURUTAN</span></div>
+              <div id="pirate-stages" class="pirate-stages"></div>
+              <div class="pirate-section-head"><h3>PASANG TAK BERUJUNG</h3><span>MODE TANPA AKHIR</span></div>
+              <div id="pirate-endless" class="pirate-endless"></div>
+              <div class="pirate-section-head"><h3>LAUT TERBUKA</h3><span id="pirate-count">10 PULAU · 7 PELABUHAN</span></div>
+              <div id="pirate-world" class="pirate-world"></div>
+              <div class="pirate-guide">
+                <div><b>W / S</b><span>Gas &amp; mundur</span></div>
+                <div><b>A / D</b><span>Putar lambung</span></div>
+                <div><b>Q / E</b><span>Meriam port / starboard</span></div>
+                <div><b>SPACE</b><span>Tembak kedua sisi</span></div>
+                <div><b>F</b><span>Berlabuh &amp; reparasi</span></div>
+                <div><b>KLIK LAUT</b><span>Tembak sisi terdekat</span></div>
+              </div>
+              <div class="pirate-start-row">
+                <button id="btn-pirate-start" class="btn btn-primary" type="button">
+                  <span>TAK LAYAR</span>
+                  <em>Laut terbuka · meriam broadside · pelabuhan reparasi</em>
+                </button>
+              </div>
             </div>
             <div class="screen-links">
               <button id="btn-pirate-back" class="link-btn" type="button">← KEMBALI KE MENU</button>
@@ -1323,6 +1342,66 @@
         </section>
 
         <!-- ══ SPEEDRUN HUB ══ -->
+        <!-- ══ CAMPAIGN MAP EDITOR ══ -->
+        <section id="editor-screen" class="screen hidden">
+          <div class="screen-inner editor-inner">
+            <p class="eyebrow">PETA SUMPAH · MAP EDITOR KAMPANYE · MESIN YANG SAMA DENGAN KAMPANYE</p>
+            <h2 class="screen-title">BANGUN STAGEMU SENDIRI</h2>
+            <p class="screen-sub">
+              Gambar medan sendiri di kanvas, pilih latar zona, track musik, pembuka sinematik, kelas,
+              senjata, flask, dan abu awal. Tandai musuh sebagai elite, pilih objektif bersihkan atau
+              bertahan, atur takaran dari Mode Cerita sampai Abisal, lalu baca meter keseimbangan sebelum
+              memainkannya. Sambungkan sampai enam ruang jadi satu rantai, lalu bagikan petamu lewat kode.
+            </p>
+            <div id="editor-load-status" class="hidden" role="status"></div>
+            <div id="editor-content" class="hidden">
+              <div id="editor-summary" class="exp-summary editor-summary"></div>
+              <div class="editor-layout">
+                <aside class="editor-panel">
+                  <h3>DAFTAR PETA</h3>
+                  <ol id="editor-list" class="editor-list"></ol>
+                  <div class="editor-list-actions">
+                    <button id="editor-new" class="btn btn-ghost btn-compact" type="button">PETA BARU</button>
+                    <button id="editor-duplicate" class="btn btn-ghost btn-compact" type="button">DUPLIKAT</button>
+                    <button id="editor-delete" class="btn btn-ghost btn-compact" type="button">HAPUS</button>
+                    <button id="editor-save" class="btn btn-ghost btn-compact" type="button">SIMPAN</button>
+                  </div>
+                  <h3 class="editor-presets-title">MULAI DARI PRESET</h3>
+                  <div id="editor-presets" class="editor-presets">
+                    <button type="button" data-editor-preset="preset_hall">Aula Latihan</button>
+                    <button type="button" data-editor-preset="preset_duel">Duel Penjaga</button>
+                    <button type="button" data-editor-preset="preset_gauntlet">Gelombang Abu</button>
+                    <button type="button" data-editor-preset="preset_siege">Pengepungan 60 Detik</button>
+                  </div>
+                  <p class="editor-empty">Maksimal 20 peta, dan satu rantai boleh berisi sampai enam ruang. Empat preset sudah tersedia sebagai titik awal.</p>
+                </aside>
+                <div id="editor-form" class="editor-panel"></div>
+              </div>
+              <div id="editor-message" class="editor-message" role="status" aria-live="polite"></div>
+            </div>
+            <div class="screen-links">
+              <button id="editor-play" class="btn btn-primary hidden" type="button"><span>MAINKAN PETA</span></button>
+              <button id="btn-editor-back" class="link-btn" type="button">← KEMBALI KE MENU</button>
+            </div>
+            <p class="micro">Peta buatan tidak menyentuh progress kampanye, rekor arc, atau save key lain.</p>
+          </div>
+        </section>
+
+        <!-- ══ CUSTOM STAGE CLEAR ══ -->
+        <section id="custom-clear-screen" class="screen overlay-screen hidden">
+          <div class="screen-inner narrow">
+            <p class="eyebrow">PETA SUMPAH · TUNTAS</p>
+            <h2 id="custom-clear-title" class="screen-title">PETA BERSIH</h2>
+            <p id="custom-clear-sub" class="screen-sub">Semua abu di peta buatanmu sudah padam.</p>
+            <div id="custom-clear-body" class="custom-clear-card"></div>
+            <div class="screen-links">
+              <button id="custom-clear-again" class="btn btn-primary" type="button"><span>MAIN LAGI</span></button>
+              <button id="custom-clear-editor" class="btn btn-ghost" type="button"><span>KEMBALI KE EDITOR</span></button>
+              <button id="custom-clear-menu" class="link-btn" type="button">MENU UTAMA</button>
+            </div>
+          </div>
+        </section>
+
         <section id="speedrun-screen" class="screen hidden">
           <div class="screen-inner speedrun-inner">
             <p class="eyebrow">SPEEDRUN · SATU NYAWA · TANPA CHECKPOINT</p>
@@ -1837,7 +1916,7 @@
           <div class="screen-inner archive-inner">
             <div class="scary-head">
               <div>
-                <p class="eyebrow">STAGE ARCHIVE 2.0 · SCARY MODE UPDATE XXI · v0.36.0</p>
+                <p class="eyebrow">STAGE ARCHIVE 2.0 · SCARY MODE UPDATE XXI · v0.38.0</p>
                 <h2 class="screen-title">THE SUPERNATURAL ARCHIVE</h2>
                 <p class="screen-sub">Semua tahap Arc IX dan Arc X, Level Checker, Sneak Peek, Ghost Index 3.0, Jumpscare Index, dan persiapan peralatan investigasi.</p>
               </div>
@@ -2169,7 +2248,7 @@
       </div>
 
       <footer class="footer">
-          <span>ASHEN VOW · v0.36.0</span>
+          <span>ASHEN VOW · v0.40.0</span>
         <span class="dot">✦</span>
         <span>Metroidvania medieval 2D · 14 ruang · 6 boss · dibuat dengan Canvas</span>
       </footer>

@@ -18,6 +18,7 @@ if (!chromePath) throw new Error('Set CHROME_PATH to Chrome or Edge.');
 const profile = mkdtempSync(join(tmpdir(), 'ashen-trailer-'));
 const chrome = spawn(chromePath, [
   '--headless=new', `--remote-debugging-port=${PORT}`, `--user-data-dir=${profile}`,
+  ...(process.env.ASHEN_CHROME_NO_SANDBOX === '1' ? ['--no-sandbox'] : []),
   '--no-first-run', '--no-default-browser-check', '--enable-unsafe-swiftshader',
   '--use-angle=swiftshader', '--mute-audio', '--window-size=1400,900', BASE,
 ], { stdio: 'ignore' });
@@ -138,28 +139,47 @@ try {
       shot: a.trailer.shot.index,
       eyebrow: document.getElementById('trailer-eyebrow').textContent,
       line: document.getElementById('trailer-line').textContent,
+      expectedLine: a.trailer.shot.shot.narration,
       progress: document.getElementById('trailer-progress').style.width,
       clock: document.getElementById('trailer-time').textContent,
     };
   })()`);
   check(advanced.shot === 6, `seeking lands on the Faewood shot (${advanced.shot})`);
   check(advanced.eyebrow.includes('FAEWOOD'), `the shot title swaps with the cut (${advanced.eyebrow})`);
-  check(advanced.line.includes('Langit retak'), 'the narration swaps with the shot');
+  check(advanced.line === advanced.expectedLine && advanced.line !== opened.line, 'the narration swaps with the shot');
   check(parseFloat(advanced.progress) > 30, `progress follows the playhead (${advanced.progress})`);
   check(advanced.clock.startsWith('00:31'), `the clock follows the playhead (${advanced.clock})`);
 
   const paused = await evaluate(`(async () => {
     const a = window.__ashen;
     const before = a.trailer.time;
-    document.getElementById('btn-trailer-play').click();
-    await new Promise((r) => setTimeout(r, 260));
+    const button = document.getElementById('btn-trailer-play');
+    const ctx = document.getElementById('trailer-canvas').getContext('2d');
+    const clear = ctx.clearRect;
+    let pausedDraws = 0;
+    button.click();
+    ctx.clearRect = function (...args) {
+      pausedDraws += 1;
+      return clear.apply(this, args);
+    };
+    try {
+      await new Promise((r) => setTimeout(r, 260));
+    } finally {
+      ctx.clearRect = clear;
+    }
     const after = a.trailer.time;
-    const label = document.getElementById('btn-trailer-play').textContent;
-    document.getElementById('btn-trailer-play').click();
-    return { before, after, label, paused: a.trailer.paused };
+    const label = button.textContent;
+    button.click();
+    const deadline = performance.now() + 3000;
+    while (a.trailer.time <= after && performance.now() < deadline) {
+      await new Promise((resolve) => setTimeout(resolve, 30));
+    }
+    return { before, after, label, pausedDraws, resumed: a.trailer.time > after };
   })()`);
   check(Math.abs(paused.after - paused.before) < 0.02, 'pause freezes the playhead');
   check(paused.label === 'LANJUT', `pause relabels the button (${paused.label})`);
+  check(paused.pausedDraws === 0 && paused.resumed,
+    `paused playback skips drawing and resume starts the render loop (${paused.pausedDraws} draws, resumed ${paused.resumed})`);
 
   const voice = await evaluate(`(async () => {
     const a = window.__ashen;

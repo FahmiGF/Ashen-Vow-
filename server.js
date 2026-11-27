@@ -1,13 +1,16 @@
 import { createServer } from 'node:http';
-import { readFile, stat } from 'node:fs/promises';
-import { gzipSync } from 'node:zlib';
-import { extname, join, normalize, sep } from 'node:path';
+import { readFile, readdir, stat } from 'node:fs/promises';
+import { gzip } from 'node:zlib';
+import { promisify } from 'node:util';
+import { extname, isAbsolute, join, normalize, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
-import { GAME_VERSION } from './src/updates.js';
+import { GAME_VERSION } from './src/version.js';
 import { createAdminService } from './src/admin_server.js';
 
 const ROOT = fileURLToPath(new URL('.', import.meta.url));
+const releaseAssets = process.argv.includes('--release') ? await openReleaseAssets() : null;
+const ADMIN_DATA_DIR = resolve(process.env.ASHEN_ADMIN_DATA_DIR || join(ROOT, 'data'));
 const PORT = Number(process.env.PORT) || 4300;
 // Loopback by default. Set HOST=0.0.0.0 to let other machines on the LAN join
 // a co-op session; the WebSocket relay below is the only public surface.
@@ -29,9 +32,12 @@ const MIME = {
   '.m4a': 'audio/mp4',
 };
 
-// Small asset cache: avoids re-reading and re-compressing unchanged files on
-// every reload. Keyed by path + mtime + size, so editing a file invalidates it.
+// Cache both representations without retaining obsolete versions of a file.
+const ASSET_CACHE_MAX_BYTES = 16 * 1024 * 1024;
+const ASSET_CACHE_MAX_ENTRIES = 256;
 const assetCache = new Map();
+let assetCacheBytes = 0;
+const gzipAsset = promisify(gzip);
 const COMPRESSIBLE = new Set(['.html', '.css', '.js', '.mjs', '.json', '.svg']);
 const bootAt = Date.now();
 let requestCount = 0;
@@ -39,7 +45,7 @@ let requestErrors = 0;
 let latencyTotal = 0;
 let peakSockets = 0;
 const admin = createAdminService({
-  dataDir: join(ROOT, 'data'),
+  dataDir: ADMIN_DATA_DIR,
   metrics: () => {
     const sockets = [...rooms.values()].reduce((sum, room) => sum + room.sockets.size, 0);
     return {
@@ -60,22 +66,72 @@ const admin = createAdminService({
   },
 });
 
+function dropAsset(target) {
+  assetCacheBytes -= assetCache.get(target).bytes;
+  assetCache.delete(target);
+}
+
+function trimAssets() {
+  while (assetCache.size > ASSET_CACHE_MAX_ENTRIES || assetCacheBytes > ASSET_CACHE_MAX_BYTES) {
+    dropAsset(assetCache.keys().next().value);
+  }
+}
+
+async function openReleaseAssets() {
+  try {
+    const manifest = JSON.parse(await readFile(join(ROOT, '.release', 'assets.json'), 'utf8'));
+    if (manifest.version !== GAME_VERSION || !['index.html', 'src/main.js', 'styles.css']
+      .every((name) => typeof manifest.files?.[name] === 'string')) {
+      throw new Error('The release assets do not match this game version');
+    }
+    return new Map(Object.entries(manifest.files).map(([name, code]) => {
+      const raw = Buffer.from(code);
+      const etag = `W/"release-${createHash('sha256').update(raw).digest('hex').slice(0, 24)}"`;
+      return [name, { raw, etag }];
+    }));
+  } catch (error) {
+    throw new Error('Run npm run start:release to build and serve the Ashen Vow release.', { cause: error });
+  }
+}
+
 async function loadAsset(target, ext) {
-  const info = await stat(target);
-  if (!info.isFile()) throw new Error('not a file');
-  const key = `${target}|${info.mtimeMs}|${info.size}`;
-  const cached = assetCache.get(key);
-  if (cached) return cached;
-  const raw = await readFile(target);
-  const asset = {
-    raw,
-    gzip: COMPRESSIBLE.has(ext) && raw.length > 1024 ? gzipSync(raw, { level: 6 }) : null,
-    etag: `W/"${info.size.toString(16)}-${Math.round(info.mtimeMs).toString(16)}"`,
-    type: MIME[ext] || 'application/octet-stream',
-  };
-  assetCache.set(key, asset);
-  if (assetCache.size > 80) assetCache.delete(assetCache.keys().next().value);
-  return asset;
+  const release = releaseAssets?.get(relative(ROOT, target).split(sep).join('/'));
+  const info = release ? null : await stat(target);
+  if (info && !info.isFile()) throw new Error('not a file');
+  const fingerprint = release?.etag ?? `${info.mtimeMs}|${info.size}`;
+  const cached = assetCache.get(target);
+  if (cached?.fingerprint === fingerprint) {
+    assetCache.delete(target);
+    assetCache.set(target, cached);
+    return cached.promise;
+  }
+  if (cached) dropAsset(target);
+
+  const entry = { fingerprint, bytes: 0 };
+  entry.promise = (release ? Promise.resolve(release.raw) : readFile(target)).then(async (raw) => {
+    const compressed = COMPRESSIBLE.has(ext) && raw.length > 1024 ? await gzipAsset(raw, { level: 6 }) : null;
+    if (assetCache.get(target) === entry) {
+      entry.bytes = raw.length + (compressed?.length ?? 0);
+      if (entry.bytes > ASSET_CACHE_MAX_BYTES) {
+        assetCache.delete(target);
+      } else {
+        assetCacheBytes += entry.bytes;
+        trimAssets();
+      }
+    }
+    return {
+      raw,
+      gzip: compressed,
+      etag: release?.etag ?? `W/"${info.size.toString(16)}-${Math.round(info.mtimeMs).toString(16)}"`,
+      type: MIME[ext] || 'application/octet-stream',
+    };
+  }).catch((error) => {
+    if (assetCache.get(target) === entry) dropAsset(target);
+    throw error;
+  });
+  assetCache.set(target, entry);
+  trimAssets();
+  return entry.promise;
 }
 
 // ── ElevenLabs voice proxy (Update XXV) ───────────────────────────────────
@@ -139,6 +195,12 @@ function jsonResponse(res, status, value) {
 async function handleVoice(req, res, url) {
   if (url.pathname !== '/api/voice') return false;
   if (req.method === 'GET') {
+    const recordings = await readdir(join(ROOT, 'assets', 'voice', 'trailer'), { withFileTypes: true })
+      .catch(() => []);
+    const trailerClips = recordings
+      .filter((entry) => entry.isFile() && /^[a-z0-9_]+\.mp3$/.test(entry.name))
+      .map((entry) => entry.name.slice(0, -4))
+      .sort();
     jsonResponse(res, 200, {
       configured: voiceConfigured(),
       provider: 'elevenlabs',
@@ -146,6 +208,7 @@ async function handleVoice(req, res, url) {
       maxChars: VOICE_MAX_CHARS,
       cast: Object.keys(VOICE_CAST_IDS),
       cached: voiceCache.size,
+      trailerClips,
     });
     return true;
   }
@@ -233,7 +296,7 @@ const server = createServer(async (req, res) => {
     let pathname = decodeURIComponent(url.pathname);
     if (pathname === '/') pathname = '/index.html';
     if (pathname === '/admin' || pathname === '/admin/') pathname = '/admin.html';
-    if (pathname.startsWith('/data/') || pathname.startsWith('/.') || pathname.includes('/../')) {
+    if (pathname.startsWith('/data/') || pathname.startsWith('/work/') || pathname.split('/').some((part) => part.startsWith('.'))) {
       res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
       res.end('Not found');
       return;
@@ -244,6 +307,11 @@ const server = createServer(async (req, res) => {
     const target = normalize(join(ROOT, pathname));
     if (!target.startsWith(normalize(ROOT + sep))) {
       res.writeHead(403).end('Forbidden');
+      return;
+    }
+    const fromData = relative(ADMIN_DATA_DIR, target);
+    if (!fromData || (!isAbsolute(fromData) && fromData !== '..' && !fromData.startsWith(`..${sep}`))) {
+      res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' }).end('Not found');
       return;
     }
     const ext = extname(target).toLowerCase();

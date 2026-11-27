@@ -43,6 +43,7 @@ function findBrowser() {
 const profileDir = mkdtempSync(join(tmpdir(), 'ashen-render-'));
 const chrome = spawn(findBrowser(), [
   '--headless=new',
+  ...(process.env.ASHEN_CHROME_NO_SANDBOX === '1' ? ['--no-sandbox'] : []),
   `--remote-debugging-port=${PORT}`,
   `--user-data-dir=${profileDir}`,
   '--no-first-run',
@@ -106,6 +107,7 @@ try {
 
   const detail = await evaluate(`(() => {
     const A = window.__ashen;
+    if (A.menuView === 'trailer') A.closeTrailer();
     A.clearProgress();
     A.unlockCistern();
     A.cisternClear(0);
@@ -115,7 +117,7 @@ try {
   assert.equal(detail.room, ROOM, 'cistern room 663 loads');
   await sleep(400);
 
-  const probe = await evaluate(`(() => {
+  const probe = await evaluate(`(async () => {
     const A = window.__ashen;
     const R = A.renderer;
     const game = A.game;
@@ -137,7 +139,26 @@ try {
       time('platforms', (i) => R.drawPlatforms(ctx, room, pal, t + i * 0.016), ${ITER}),
       time('full render', (i) => R.render(game), 80),
     ];
-    return { layers };
+    const stroke = ctx.stroke;
+    let strokes = 0;
+    ctx.stroke = function (...args) {
+      strokes += 1;
+      return stroke.apply(this, args);
+    };
+    let pixels;
+    ctx.save();
+    try {
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+      R.drawCisternBackground(ctx, room, pal, 120, 4.25);
+      pixels = ctx.getImageData(0, 0, ctx.canvas.width, ctx.canvas.height).data;
+    } finally {
+      ctx.restore();
+      ctx.stroke = stroke;
+    }
+    const hash = new Uint8Array(await crypto.subtle.digest('SHA-256', pixels));
+    const pixelHash = Array.from(hash, (byte) => byte.toString(16).padStart(2, '0')).join('');
+    return { layers, strokes, pixelHash };
   })()`);
 
   console.log(`cistern room ${detail.room} — ${detail.name}`);

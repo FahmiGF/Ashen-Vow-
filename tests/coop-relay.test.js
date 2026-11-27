@@ -1,6 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { resolve } from 'node:path';
 
 const PORT = 4600 + (process.pid % 300);
 const URL = `http://127.0.0.1:${PORT}/`;
@@ -47,8 +50,9 @@ async function waitFor(client, predicate, label = 'message') {
 }
 
 test('WebSocket relay rejects spoofing, targets replies, caps rooms, survives bad JSON, and migrates host', async () => {
+  const dataDir = await mkdtemp(resolve(tmpdir(), 'ashen-coop-test-'));
   const server = spawn(process.execPath, ['server.js'], {
-    env: { ...process.env, PORT: String(PORT), HOST: '127.0.0.1' },
+    env: { ...process.env, PORT: String(PORT), HOST: '127.0.0.1', ASHEN_ADMIN_DATA_DIR: dataDir },
     stdio: 'ignore',
   });
   const clients = [];
@@ -118,5 +122,6 @@ test('WebSocket relay rejects spoofing, targets replies, caps rooms, survives ba
       }
     }
     server.kill();
+    await rm(dataDir, { recursive: true, force: true, maxRetries: 3 });
   }
 });

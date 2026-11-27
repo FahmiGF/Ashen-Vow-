@@ -33,7 +33,8 @@ const profileDir = mkdtempSync(join(tmpdir(), 'ashen-frames-'));
 const chrome = spawn(findBrowser(), [
   ...(process.env.HEADED === '1' ? [] : ['--headless=new']),
   `--remote-debugging-port=${PORT}`, `--user-data-dir=${profileDir}`,
-  '--no-first-run', '--no-default-browser-check', '--mute-audio',
+  '--no-first-run',
+  ...(process.env.ASHEN_CHROME_NO_SANDBOX === '1' ? ['--no-sandbox'] : []), '--no-default-browser-check', '--mute-audio',
   '--window-size=1280,900', URL,
 ], { stdio: 'ignore' });
 
@@ -79,6 +80,7 @@ try {
   await send('Page.enable');
   await send('Page.bringToFront');
   for (let i = 0; i < 120 && !(await evaluate('typeof window.__ashen === "object"')); i += 1) await sleep(100);
+  await evaluate('if (window.__ashen?.menuView === "trailer") window.__ashen.closeTrailer()');
 
   // LoAF is the browser's own record of what made a frame late (scripts,
   // rendering, style/layout). rAF gaps give the honest end-to-end cadence.
@@ -146,17 +148,18 @@ try {
       A.enterRoom(3);
       return A.snap().room;
     })()`,
-    pirates: `(() => {
+    pirates: `(async () => {
       const A = window.__ashen;
-      A.showPirates();
+      await A.showPirates();
       A.setPirateStage('first_tide');
       A.startPirateVoyage();
       A.pirateSetKills(4);
       A.pirateStep(0.2);
       return A.pirates.snapshot.enemies.length;
     })()`,
-    pirateEndless: `(() => {
+    pirateEndless: `(async () => {
       const A = window.__ashen;
+      await A.showPirates();
       A.startPirateEndless();
       for (let i = 0; i < 21; i += 1) A.pirateNextSurge();
       A.pirateStep(0.2);
@@ -170,10 +173,10 @@ try {
       A.startCisternStage(1);
       return A.snap().room;
     })()`,
-    wave: `(() => {
+    wave: `(async () => {
       const A = window.__ashen;
       A.leavePirates();
-      A.showWaveDefense();
+      await A.showWaveDefense();
       A.setWaveDefenseMap('sunken_causeway');
       A.setWaveDefenseMode('classic');
       A.startWaveDefenseBattle();
@@ -184,10 +187,11 @@ try {
       A.waveDefenseStep(7);
       return A.waveDefense.snapshot.wave;
     })()`,
-    waveEndless: `(() => {
+    waveEndless: `(async () => {
       const A = window.__ashen;
+      if (A.pirates?.active) A.leavePirates();
       A.leaveWaveDefense();
-      A.showWaveDefense();
+      await A.showWaveDefense();
       A.setWaveDefenseMode('endless');
       A.startWaveDefenseBattle();
       A.waveDefenseGold(5000);
@@ -195,6 +199,21 @@ try {
       A.waveDefenseSetWave(26);
       A.waveDefenseNextWave();
       A.waveDefenseStep(7);
+      return A.waveDefense.snapshot.wave;
+    })()`,
+    infinitower: `(async () => {
+      const A = window.__ashen;
+      if (A.pirates?.active) A.leavePirates();
+      await A.showWaveDefense();
+      A.setWaveDefenseMode('infinitower');
+      A.startWaveDefenseBattle();
+      A.waveDefenseGold(7000);
+      for (let slot = 0; slot < 19; slot += 1) {
+        A.waveDefenseBuild(slot, slot % 3 === 0 ? 'spiral_anchor' : 'sniper_nest');
+      }
+      A.waveDefenseSetWave(34);
+      A.waveDefenseNextWave();
+      A.waveDefenseStep(5);
       return A.waveDefense.snapshot.wave;
     })()`,
   };
@@ -211,7 +230,7 @@ try {
       for (let i = 0; i < 60; i += 1) { A.renderer.render(A.game); flush(); }
       return +((performance.now() - t0) / 60).toFixed(2);
     })()`,
-    pirates: `(() => {
+    pirates: `(async () => {
       const A = window.__ashen;
       const canvas = document.getElementById('pirate-canvas');
       const flush = () => canvas.getContext('2d').getImageData(0, 0, 1, 1);
@@ -220,7 +239,7 @@ try {
       for (let i = 0; i < 50; i += 1) { A.renderPirateFrame(); flush(); }
       return +((performance.now() - t0) / 50).toFixed(2);
     })()`,
-    wave: `(() => {
+    wave: `(async () => {
       const A = window.__ashen;
       const canvas = document.getElementById('wd-canvas');
       const flush = () => canvas.getContext('2d').getImageData(0, 0, 1, 1);
@@ -241,6 +260,7 @@ try {
   })()`;
   directMeasure.pirateEndless = directMeasure.pirates;
   directMeasure.waveEndless = directMeasure.wave;
+  directMeasure.infinitower = directMeasure.wave;
 
   // CPU sampling attributes the real loop cost per function instead of
   // guessing from canvas readback, which includes a GPU sync.

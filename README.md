@@ -1,4 +1,68 @@
-# Ashen Vow — v0.36.0
+# Ashen Vow — v0.41.0
+
+## v0.41.0 — Update XXXI · Peta Sumpah · Takaran, Elite & Bertahan
+
+Peta Sumpah adds six per-map difficulty settings, elite enemies, and timed survival objectives from 20 to 180 seconds. The pressure meter compares the encounter with the selected player's loadout. **AUTO-SEIMBANG** can adjust flasks, enemy count, and difficulty and reports each adjustment.
+
+Save data still uses `ashen-vow-mapeditor-v1`. Schema 3 adds difficulty, objective, timer and elite flags. Share codes keep the `AVME1.` prefix and accept schema 2 maps from v0.40.0. The [roadmap toward v1.0](MASTERPLAN.md) tracks release verification and performance work.
+
+### Optimized release build
+
+Run `npm ci` once, then start the optimized server with `npm run start:release`. It serves minified modules at the same URLs, combines the local startup stylesheets, and loads optional game modes on demand. Use `npm start` for source development. Save data remains available when both servers are opened at the same browser origin.
+
+## v0.40.0 — Update XXX: Peta Sumpah — Kanvas Medan, Rantai Ruang & Kode Bagi
+
+The Map Editor stops being a form over four fixed layouts. You now draw the terrain yourself, link rooms into a chain that plays as one run, and hand a map to someone else as a single line of text.
+
+- **Free-form terrain**: drag on the live preview canvas to paint a platform (snapped to a 20 px grid), click one to select it, then delete it. `+ LANTAI PENUH`, `+ PIJAKAN`, `HAPUS TERPILIH` and `RESET TATA LETAK` cover the rest. Up to 26 platforms per room, saved with the map.
+- **The preview is the room**: `drawEditorPreview` paints the exact geometry the engine loads — zone palette, 100-unit grid, the selected platform, the green spawn point, the exit gate, the Warung Abu, the relic, one dot per enemy sized by its real HP, and a diamond for the boss.
+- **Room chains**: every map has a `LANJUT KE PETA` link, so up to **six rooms** run back to back. Clearing a room loads the next one with your HP, flasks, arrows, weapons, relic and ash intact; the banner reads `RUANG 2/3`, and the clear is recorded once for the whole chain against its first room. The validator rejects self-links, missing targets, cycles and chains longer than six, and a chain is validated room by room before the run starts.
+- **Share codes**: `SALIN KODE` packs the selected map or its whole chain into an `AVME1.` base64url string; `IMPOR` accepts someone else's code, gives the rooms fresh ids, re-links them among themselves and respects the 20-map cap. Unicode names survive the round trip.
+- **Save**: still **`ashen-vow-mapeditor-v1`**, now schema 2. A v0.39.0 map with no terrain of its own loads with its old layout's platforms, so nothing is lost.
+- **Verification**: `npm test` **806/806** and `npm run smoke:editor` **51/51** real-browser checks, with `tests/mapeditor.test.js` (14) covering terrain clamping and grounding, chain order/cycles/limits, share-code round trips (Unicode, version mismatch, six-room cap), the preview renderer, and a live two-room chain where ash and HP carry over.
+
+Honest limits: terrain is rectangles on a 20 px grid — no slopes and no destructible ground; chains are linear, one next room per map; share codes are pasted by hand, so there is no gallery or server-side verification beyond the sanitizer.
+
+## v0.39.0 — Update XXIX: Peta Sumpah — Map Editor Kampanye
+
+Build your own campaign stage out of the same parts the campaign uses: mobs, a boss, a zone background, a music track, an opening cinematic, a class and starting weapons. Maps live in their own save key, so no campaign room, progress array or arc ledger moves.
+
+- **What you set**: name and subtitle, zone (background palette, particles and default music), stage layout (**Aula Datar**, **Teras Bertingkat**, **Jurang Tengah**, **Menara Gantung**), normal and boss music, opener (none / 60 s prologue / 80 s trailer / 18 s Lingkar trailer), class, up to five starting weapons, arrows, flasks, starting ash, an optional relic and an optional Warung Abu.
+- **Who you fight**: up to 28 enemies chosen from all 262 engine enemy types, each placed on its own X coordinate, plus one boss from all 116 bosses. A Map Editor boss always grants a blessing, so it can never fire the campaign victory screen or mark a campaign room cleared.
+- **How it runs**: the blueprint is converted by `src/mapeditor.js` into a synthetic room and loaded with `game.loadArena()`. The room uses `index: -1` and a decorative exit (`gate.next: -1`), so walking into the gate can never load a campaign room; the shell ends the stage when the roster and the boss are gone and opens the clear card with time, kills, map record and clear count.
+- **Validation**: errors block a run (empty name, unknown zone/music/class/boss/enemy/weapon, more than 28 enemies, a spawn point that is not on a platform); warnings do not (empty map, arrows without a bow, zero starting ash, ordinary and boss music identical). Invalid maps are still saved so work is never lost.
+- **Save**: the whole editor lives in **`ashen-vow-mapeditor-v1`** — up to 20 maps, plus plays and best time per map. Campaign progress stays in `ashen-vow-progress-v1` and is never written by a custom run; `awardBossSkillPoints` and the credit scene explicitly skip custom runs.
+- **Entry**: main menu → **PETA SUMPAH — MAP EDITOR KAMPANYE**. Three presets (Aula Latihan, Duel Penjaga, Gelombang Abu) are the starting point.
+- **Verification**: `npm test` **806/806**, including `tests/mapeditor.test.js` (sanitizer clamps, validation blockers, layout grounding, room conversion, a live `AshenGame` load where the exit never leaves the custom room, and a real boss death that lands on a blessing).
+
+Honest limits: layouts come from four authored platform templates rather than free-form terrain painting; a map is a single stage, not a multi-room campaign chain; music and openers are limited to the shipped procedural tracks and three cutscenes; there is no share/import string, because the save stays browser-local like every other mode key.
+
+## v0.38.0 — Update XXVIII: Infinitower — Koor Lingkar
+
+The spiral gets a voice. Infinitower now has a boss of its own, a fourth difficulty, two towers that fight with time and space, new bodies that punish lazy layouts, articulated rigs for every enemy, a six-chapter chronicle that opens tier by tier, two cinematics, and three new procedural tracks. Everything stays inside the existing save key.
+
+- **Two new towers (20 total)**: **Jangkar Lingkar** (`spiral_anchor`) is an area magic blast that slows everything it catches by 62% for 2.4 s. **Jam Pasir Ketiga** (`hourglass`) never fires; it projects a 148-radius time field that slows every enemy inside by 24% per level, recomputed from live towers so selling or silencing it stops the field immediately.
+- **Three new bodies (31 entries / 9 bosses)**: **Rift Hopper** blinks 34 units down the road every 3.6 s, **Lantern Moth** blinds towers within 100 units for 1.6 s when it dies, and **Grave Taxer** steals 14 gold from the war chest if it reaches the gate. The new boss, **Spiral Choir** (18,500 HP, 22% armour), sings two Mirror Thralls onto the road every seven seconds through the existing split queue, so summons never pay bounty twice.
+- **ETERNAL difficulty**: 175% enemy HP, 122% speed, 195 starting gold and an 80 HP crown — the fourth tier beside SQUIRE, KNIGHT and WARLORD.
+- **Procedural rigging**: every body is drawn from an articulated rig — two or four legs, two arms, a head and a body bob — across five families (humanoid, hound, wraith, brute, colossus). `rigPoseFor(kind, time)` is pure and deterministic, so it is Node-tested. Towers recoil when they fire, and the hourglass field is painted on the ground.
+- **The Spiral Chronicle**: six chapters unlock as tiers rise (Lingkar Pertama → Lingkar yang Menutup). Each tier writes a line into the battle feed and into the new KRONIK LINGKAR panel in the hub, and the match snapshot exposes the active chapter.
+- **Two cinematics**: an 18-second **trailer** (six beats) that plays from the hub or once on the first Infinitower start, and an 11-second **boss portrait** (four beats) that pauses the battle when the first boss appears. Both are drawn procedurally in the engine (stone spiral, tower crown, many-eyed Choir) and both open with new music.
+- **Three new tracks**: `spiral` (88 BPM, sawtooth arena), `spiralBoss` (104 BPM, square, open filter) and `spiralTrailer` (64 BPM slow build). The hub and the battle use `spiral`; the moment a boss enters, music switches to `spiralBoss`.
+- **No new save key**: records stay in `progress.wavedefense.infinitower` inside `ashen-vow-progress-v1`, with the same wave-999 / tier-100 clamps.
+
+Verification: `npm test` **790/790**; `npm run smoke:wavedefense` **83 browser checks** in real Chrome. Honest limits: the rigs are procedural 2D limbs rather than skeletal GLB animation, and the trailer is an in-engine cutscene rather than a video file.
+
+## v0.37.0 — Update XXVII: Wave Defense Infinitower
+
+Wave Defense gains a fifth arena and a mode that cannot be won. **ETERNAL SPIRAL** is a 24-slot spiral lane and the longest road in the mode. **INFINITOWER** runs that spiral forever: every ten waves raises a tier that thickens enemy HP (+16% per tier), raises speed, bounty and damage, opens heavier roster entries and adds an elite group from tier three, with a boss every fifth wave and a shorter build pause as the tiers climb.
+
+- **Four new tower concepts (18 total)**: Monolit Gema (magic chain to three targets), Lonceng Kubur (area sound wave that stuns for 0.9 s), Tempa Abu (20% armour shred for five seconds) and Mata Pengawas (long-range execute at 2.4× below 35% HP).
+- **Seven new bodies (27 entries / 8 bosses)**: Mirror Thrall splits into two Ash Runners on death, Cinder Wraith ignores slows, Grave Chorister grants +22% haste, Tower Breaker disables the nearest turret for 2.4 s every 3.6 s, Obsidian Golem carries 45% armour and regenerates, and Spiral Tyrant / Lantern Devourer join the boss pool.
+- **Mechanics are wired, not labels**: stun skips movement, shred expires and lowers flat armour in the damage pipeline, regen ticks, haste joins the aura refresh, and disabled towers draw a red dashed ring while they skip firing.
+- **Separate ledger**: `progress.wavedefense.infinitower` (runs, bestWave, bestTier, bestScore, bestKills, bestTime) inside the existing `ashen-vow-progress-v1`. Infinitower never writes campaign runs, wins or losses, and the sanitizer clamps the record to wave 999 / tier 100.
+- **Hub and HUD**: a third mode button with its own purple active state, a seven-cell summary, tier readouts (`INFINITOWER T3`) and a `LINGKAR PADAM` result card.
+
+Verification: `npm test` **786/786**; `npm run smoke:wavedefense` **73 browser checks** in real Chrome. The campaign's 24 waves, six bosses and save key are unchanged.
 
 ## v0.36.0 — Updates XXV & XXVI released
 

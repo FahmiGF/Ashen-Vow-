@@ -94,7 +94,7 @@ test('six difficulty profiles change actual enemy, boss, and incoming-damage beh
   assert.ok(easyEnemy.maxHp < base.maxHp);
   assert.ok(hardEnemy.maxHp > base.maxHp);
   assert.equal(hardEnemy.aggroMul, 1.4);
-  assert.equal(hardEnemy.attackRate, 1.46);
+  assert.equal(hardEnemy.attackRate, 1.38);
   const story = new AshenGame();
   story.setDifficulty('story');
   story.player.invuln = 0;
@@ -104,7 +104,7 @@ test('six difficulty profiles change actual enemy, boss, and incoming-damage beh
   hard.setDifficulty('abyssal');
   hard.player.invuln = 0;
   hard.damagePlayer(20, 0);
-  assert.equal(hard.player.hp, hard.player.maxHp - 37);
+  assert.equal(hard.player.hp, hard.player.maxHp - 32);
   normal.reset();
   assert.equal(normal.campaignDifficulty, 'normal');
 });

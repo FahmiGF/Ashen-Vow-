@@ -5,6 +5,7 @@ import { spawn } from 'node:child_process';
 import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { GAME_VERSION } from '../src/version.js';
 
 const URL = process.env.ASHEN_URL || 'http://127.0.0.1:4300/';
 const CDP_PORT = Number(process.env.CDP_PORT) || 9264;
@@ -36,6 +37,7 @@ async function main() {
   const profile = mkdtempSync(join(tmpdir(), 'ashen-pirates-'));
   const chrome = spawn(findBrowser(), [
     '--headless=new', `--remote-debugging-port=${CDP_PORT}`, `--user-data-dir=${profile}`,
+    ...(process.env.ASHEN_CHROME_NO_SANDBOX === '1' ? ['--no-sandbox'] : []),
     '--no-first-run', '--no-default-browser-check', '--disable-gpu', '--mute-audio',
     '--window-size=1280,900', URL,
   ], { stdio: 'ignore' });
@@ -105,20 +107,25 @@ async function main() {
     await boot();
 
     const bootState = await evaluate(`(() => ({
-      version: window.__ashen.gameVersion || document.querySelector('#updates-version')?.textContent || '',
+      version: window.__ashen.version,
       title: document.title,
       hasPirate: !!document.getElementById('btn-pirate-menu'),
       hasScreen: !!document.getElementById('pirate-screen'),
       hasBattle: !!document.getElementById('pirate-battle'),
     }))()`);
     check(bootState.hasPirate && bootState.hasScreen && bootState.hasBattle, 'Pirate Tide screens exist');
-    check(/0\.36\./.test(`${bootState.version} ${bootState.title}`), `boots v0.36.0 (${bootState.title})`);
+    check(bootState.version === GAME_VERSION && bootState.title.includes(`v${GAME_VERSION}`), `boots v${GAME_VERSION}`);
 
-    const hub = await evaluate(`(() => {
+    const hub = await evaluate(`(async () => {
       const A = window.__ashen;
+      if (A.menuView === 'trailer') A.closeTrailer();
       A.clearProgress();
-      A.showPirates();
+      const requests = () => performance.getEntriesByType('resource').filter(entry =>
+        /\\/(pirates\\.js|styles-pirates\\.css)$/.test(new URL(entry.name).pathname)).length;
+      const before = requests();
+      const started = await A.showPirates();
       return {
+        started, before, after: requests(),
         view: A.menuView,
         cards: document.querySelectorAll('[data-pirate-stage]').length,
         unlocked: document.querySelectorAll('[data-pirate-stage]:not([disabled])').length,
@@ -132,6 +139,7 @@ async function main() {
         finaleLocked: !!document.querySelector('[data-pirate-stage="first_vow"]')?.disabled,
       };
     })()`);
+    check(hub.started && hub.before === 0 && hub.after === 2, 'Pirate Tide JS and CSS load on demand');
     check(hub.view === 'pirates', 'the Pirate Tide hub opens from the menu');
     check(hub.cards === 10, 'ten captain routes render');
     check(hub.unlocked === 1, 'only the first route starts unlocked');
@@ -140,7 +148,7 @@ async function main() {
     check(hub.actTwoLocked, 'act two routes stay locked behind the first five');
     check(!hub.active, 'the hub does not start a voyage by itself');
 
-    const start = await evaluate(`(() => {
+    const start = await evaluate(`(async () => {
       const A = window.__ashen;
       A.setPirateStage('first_tide');
       A.startPirateVoyage();
@@ -165,7 +173,7 @@ async function main() {
     check(start.target === 4 && start.port !== null, 'the route has a bounty and open-sea ports');
 
     await sleep(900);
-    const canvas = await evaluate(`(() => {
+    const canvas = await evaluate(`(async () => {
       const c = document.getElementById('pirate-canvas');
       const ctx = c.getContext('2d');
       const data = ctx.getImageData(0, 0, c.width, c.height).data;
@@ -179,7 +187,7 @@ async function main() {
     })()`);
     check(canvas.lit > canvas.total * 0.2, `the open sea renders live frames (${canvas.lit}/${canvas.total})`);
 
-    const moved = await evaluate(`(() => {
+    const moved = await evaluate(`(async () => {
       const A = window.__ashen;
       const before = A.pirates.snapshot.player;
       A.pirateSetControls(1, 0);
@@ -190,7 +198,7 @@ async function main() {
     check(moved.distance > 20, 'WASD throttle moves the ship through the open world');
     check(moved.phase === 'sailing' && moved.hp > 0, 'sailing does not end by itself');
 
-    const guns = await evaluate(`(() => {
+    const guns = await evaluate(`(async () => {
       const A = window.__ashen;
       A.pirateSetControls(0, 0);
       const first = A.pirateFire(1);
@@ -203,7 +211,7 @@ async function main() {
     check(guns.second === false && guns.reload > 0, 'the same broadside must reload');
     check(guns.hull > 0, 'the ship survives the test volley');
 
-    const boss = await evaluate(`(() => {
+    const boss = await evaluate(`(async () => {
       const A = window.__ashen;
       A.pirateSetKills(4);
       const spawned = A.pirates.snapshot.bossSpawned;
@@ -224,9 +232,9 @@ async function main() {
     check(boss.card, 'the victory overlay renders');
     check(boss.cleared && boss.wins === 1, 'route progress is saved to the main progress object');
 
-    const next = await evaluate(`(() => {
+    const next = await evaluate(`(async () => {
       const A = window.__ashen;
-      A.showPirates();
+      await A.showPirates();
       A.setPirateStage('bell_below');
       return {
         stage: A.pirates.stageId,
@@ -249,7 +257,7 @@ async function main() {
     check(mobile.overflow <= 1, `phone layout has no horizontal overflow (${mobile.overflow}px)`);
     check(mobile.cards === 10 && mobile.visible, 'the hub remains usable at 390x844');
 
-    const mobileBattle = await evaluate(`(() => {
+    const mobileBattle = await evaluate(`(async () => {
       const A = window.__ashen;
       A.setPirateStage('first_tide');
       A.startPirateVoyage();
@@ -290,9 +298,9 @@ async function main() {
 
     await send('Page.reload');
     await boot();
-    const reload = await evaluate(`(() => {
+    const reload = await evaluate(`(async () => {
       const A = window.__ashen;
-      A.showPirates();
+      await A.showPirates();
       return {
         cleared: !!A.progress.pirates.stages.first_tide?.cleared,
         unlocked: !document.querySelector('[data-pirate-stage="bell_below"]')?.disabled,
@@ -302,13 +310,13 @@ async function main() {
     check(reload.cleared && reload.unlocked && reload.wins === 1, 'route clears survive a full page reload');
 
     // Act two: open the first five routes, then run the mist hunt end to end.
-    const actTwo = await evaluate(`(() => {
+    const actTwo = await evaluate(`(async () => {
       const A = window.__ashen;
       const stages = A.pirates.stages;
       for (let i = 0; i < 5; i += 1) {
         A.progress.pirates.stages[stages[i].id] = { runs: 1, cleared: true, bestScore: 100, bestTime: 60 };
       }
-      A.showPirates();
+      await A.showPirates();
       const unlocked = !document.querySelector('[data-pirate-stage="mist_hunt"]')?.disabled;
       A.setPirateStage('mist_hunt');
       A.startPirateVoyage();
@@ -316,7 +324,7 @@ async function main() {
       const bossName = A.pirates.snapshot.bossName;
       const routeName = A.pirates.snapshot.stageName;
       const sunk = A.pirateSinkBoss();
-      A.showPirates();
+      await A.showPirates();
       return {
         unlocked,
         routeName,
@@ -332,9 +340,9 @@ async function main() {
     check(actTwo.nextUnlocked, 'the act two chain advances to Pasang Kosong');
 
     // Endless tide: surges grow the fleet, captains are bounties, not a finish.
-    const endless = await evaluate(`(() => {
+    const endless = await evaluate(`(async () => {
       const A = window.__ashen;
-      A.showPirates();
+      await A.showPirates();
       const winsBefore = A.progress.pirates.wins;
       const clearedBefore = A.pirates.summary.cleared;
       document.querySelector('[data-pirate-endless]').click();

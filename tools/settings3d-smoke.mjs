@@ -4,6 +4,7 @@ import { spawn } from 'node:child_process';
 import { existsSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { GAME_VERSION } from '../src/version.js';
 
 const URL = process.env.ASHEN_URL || 'http://127.0.0.1:4300/';
 const PORT = Number(process.env.CDP_PORT) || 9335;
@@ -16,6 +17,7 @@ if (!chromePath) throw new Error('Set CHROME_PATH to Chrome or Edge.');
 const profile = mkdtempSync(join(tmpdir(), 'ashen-settings3d-'));
 const chrome = spawn(chromePath, [
   '--headless=new', `--remote-debugging-port=${PORT}`, `--user-data-dir=${profile}`,
+  ...(process.env.ASHEN_CHROME_NO_SANDBOX === '1' ? ['--no-sandbox'] : []),
   '--no-first-run', '--no-default-browser-check', '--enable-unsafe-swiftshader',
   '--use-angle=swiftshader', '--mute-audio',
   '--window-size=1440,960', URL,
@@ -70,7 +72,7 @@ try {
   await waitFor(() => evaluate('typeof window.__ashen === "object"'), 20000, 'game boot');
 
   const boot = await evaluate(`({ version: window.__ashen.version, difficulty: window.__ashen.difficulty, categories: window.__ashen.settings && Object.keys(window.__ashen.settings).length })`);
-  check(boot.version === '0.36.0', `version is 0.36.0 (got ${boot.version})`);
+  check(boot.version === GAME_VERSION, `version is ${GAME_VERSION} (got ${boot.version})`);
   check(boot.difficulty.engine === 'normal' && boot.difficulty.active === 'normal', 'normal difficulty is active in the engine');
   check(boot.categories >= 10, 'versioned settings expose all groups');
 
@@ -167,14 +169,20 @@ try {
   })()`);
   check(hud.visible && hud.stage && hud.drags === 5, 'HUD Layout Editor opens with draggable panels');
 
+  await evaluate("document.getElementById('btn-mode3d-menu').click()");
+  await waitFor(() => evaluate('Boolean(window.__ashen.game3D)'), 20000, '3D mode entry');
   const mode3d = await evaluate(`(async () => {
-    document.getElementById('btn-mode3d-menu').click();
-    await new Promise((r) => setTimeout(r, 500));
     const select = document.getElementById('select-3d-region');
     const regions = select.options.length;
     select.value = 'astral';
     select.dispatchEvent(new Event('change', { bubbles: true }));
-    await new Promise((r) => setTimeout(r, 600));
+    return { regions, mode: window.__ashen.mode3D, hidden: document.getElementById('mode3d-screen').classList.contains('hidden') };
+  })()`);
+  check(mode3d.regions === 6, '3D Mode exposes six illustrated regions');
+  check(mode3d.mode?.region === 'astral' && !mode3d.hidden, 'Astral Islands loads in the live 3D scene');
+
+  const shaded = await waitFor(async () => {
+    const rendered = await evaluate(`(() => {
     const canvas = document.getElementById('canvas-3d');
     const ctx = canvas.getContext('2d');
     const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
@@ -183,11 +191,11 @@ try {
       const key = data[i] + ',' + data[i+1] + ',' + data[i+2];
       colors.add(key); if (data[i] + data[i+1] + data[i+2] > 24) lit += 1;
     }
-    return { regions, mode: window.__ashen.mode3D, colors: colors.size, lit, hidden: document.getElementById('mode3d-screen').classList.contains('hidden') };
-  })()`);
-  check(mode3d.regions === 6, '3D Mode exposes six illustrated regions');
-  check(mode3d.mode?.region === 'astral' && !mode3d.hidden, 'Astral Islands loads in the live 3D scene');
-  check(mode3d.colors > 120 && mode3d.lit > 100, `3D canvas has a genuinely shaded scene (${mode3d.colors} colors)`);
+    return { colors: colors.size, lit };
+    })()`);
+    return rendered.colors > 120 && rendered.lit > 100 ? rendered : null;
+  }, 20000, '3D scene paint');
+  check(shaded.colors > 120, `3D canvas has a genuinely shaded scene (${shaded.colors} colors)`);
 
   // ── WebGL2 + GLB asset pipeline ──
   const gfx = await (async () => {

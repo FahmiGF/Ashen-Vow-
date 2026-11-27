@@ -18,6 +18,7 @@ if (!chromePath) throw new Error('Set CHROME_PATH to Chrome or Edge.');
 const profile = mkdtempSync(join(tmpdir(), 'ashen-horror3d-'));
 const chrome = spawn(chromePath, [
   '--headless=new', `--remote-debugging-port=${PORT}`, `--user-data-dir=${profile}`,
+  ...(process.env.ASHEN_CHROME_NO_SANDBOX === '1' ? ['--no-sandbox'] : []),
   '--no-first-run', '--no-default-browser-check', '--enable-unsafe-swiftshader',
   '--use-angle=swiftshader', '--mute-audio', '--window-size=1440,1000', BASE,
 ], { stdio: 'ignore' });
@@ -105,7 +106,7 @@ try {
   check(boot.choices === 5, `site selector lists five buildings (got ${boot.choices})`);
 
   await evaluate(`document.getElementById('btn-horror3d-menu').click()`);
-  await sleep(500);
+  await waitFor(() => evaluate('Boolean(window.__ashen.game3D && window.__ashen.horror3DSnapshot?.active)'), 20000, '3D horror entry');
   const opened = await evaluate(`(() => {
     const g = window.__ashen.game3D;
     const s = window.__ashen.horror3D;

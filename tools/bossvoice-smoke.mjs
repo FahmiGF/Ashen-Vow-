@@ -13,7 +13,7 @@
 
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -103,8 +103,9 @@ async function main() {
       } else if (message.method === 'Runtime.consoleAPICalled' && message.params.type === 'error') {
         pageErrors.push(message.params.args.map((a) => a.value ?? a.description).join(' '));
       } else if (message.method === 'Log.entryAdded' && message.params.entry.level === 'error') {
-        if (!/favicon|ERR_NETWORK_ACCESS_DENIED|429|Too Many Requests|fonts\.g/i.test(message.params.entry.text || '')) {
-          pageErrors.push(message.params.entry.text);
+        const entry = message.params.entry;
+        if (!/favicon|ERR_NETWORK_ACCESS_DENIED|429|Too Many Requests|fonts\.g/i.test(`${entry.url || ''} ${entry.text || ''}`)) {
+          pageErrors.push(`${entry.url || ''} ${entry.text}`);
         }
       }
     });
@@ -136,8 +137,15 @@ async function main() {
     await send('Page.enable');
     await send('Log.enable');
 
+    // Exercise the player first-run path. The application normally skips auto-play for test browsers.
+    await send('Page.addScriptToEvaluateOnNewDocument', {
+      source: 'Object.defineProperty(navigator, "webdriver", { get: () => false });',
+    });
     await send('Page.reload');
-    const booted = await waitFor('typeof window.__ashen === "object" && document.readyState === "complete" && window.__ashen.menuView === "title"', 15000);
+    const firstRun = await waitFor('window.__ashen?.menuView === "trailer"', 15000);
+    check('a fresh profile opens the trailer', firstRun, true);
+    await evaluate('document.getElementById("btn-trailer-close").click()');
+    const booted = await waitFor('document.readyState === "complete" && window.__ashen.menuView === "title"', 15000);
     check('game boots to the title menu', booted, true);
     const initial = await evaluate(`(async () => {
       localStorage.removeItem('ashen-vow-bossvoice-v1');
@@ -191,8 +199,11 @@ async function main() {
     wav.writeUInt32LE(rate * 2, 28); wav.writeUInt16LE(2, 32); wav.writeUInt16LE(16, 34); wav.write('data', 36); wav.writeUInt32LE(n * 2, 40);
     for (let i = 0; i < n; i += 1) wav.writeInt16LE(Math.round(Math.sin((i / rate) * 2 * Math.PI * 180) * 8000 * Math.min(1, (n - i) / 2000)), 44 + i * 2);
     const take = join(dir, 'intro-1.wav');
-    writeFileSync(take, wav);
+    const manifest = join('assets', 'voice', 'manifest.json');
+    const script = join('docs', 'voice-script.md');
+    const outputFiles = new Map([take, manifest, script].map((path) => [path, existsSync(path) ? readFileSync(path) : null]));
     try {
+      writeFileSync(take, wav);
       execFileSync(process.execPath, ['tools/voice-script.mjs'], { stdio: 'ignore' });
       const rec = await evaluate(`(async () => {
         const A = window.__ashen;
@@ -205,9 +216,10 @@ async function main() {
       check('a recorded take plays as a recording', rec.src, 'recorded');
       check('the recording plays through the effects chain', rec.active >= 1 && !rec.last.error, true);
     } finally {
-      rmSync(take, { force: true });
-      rmSync(join('assets', 'voice', 'boss'), { recursive: true, force: true });
-      execFileSync(process.execPath, ['tools/voice-script.mjs'], { stdio: 'ignore' });
+      for (const [path, original] of outputFiles) {
+        if (original) writeFileSync(path, original);
+        else rmSync(path, { force: true });
+      }
       await evaluate('window.__ashen.loadBossVoiceManifest()');
     }
 
@@ -246,8 +258,8 @@ async function main() {
     check('the voice mode persists under its own key', cycled.saved, cycled.seen[3]);
     await evaluate("window.__ashen.setBossVoice({ mode: 'recorded-first', allowAi: false })");
 
-    check('no console errors', pageErrors.length, 0);
     if (pageErrors.length) console.error(pageErrors.join('\n'));
+    check('no console errors', pageErrors.length, 0);
     console.log(`\nBOSS VOICE SMOKE PASS — ${checks.length} checks`);
   } finally {
     try {

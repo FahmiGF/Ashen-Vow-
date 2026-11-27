@@ -839,14 +839,18 @@ export class Renderer {
    * between frames with the same timestamp.
    */
   /** Reuse a gradient object across frames: the geometry only depends on the palette. */
-  cisternGradient(key, build) {
-    if (!this._cisternGrads) this._cisternGrads = new Map();
-    const cached = this._cisternGrads.get(key);
+  cachedGradient(key, build) {
+    if (!this._gradCache) this._gradCache = new Map();
+    const cached = this._gradCache.get(key);
     if (cached) return cached;
-    if (this._cisternGrads.size > 6) this._cisternGrads.clear();
+    if (this._gradCache.size > 64) this._gradCache.clear();
     const made = build(this.ctx);
-    this._cisternGrads.set(key, made);
+    this._gradCache.set(key, made);
     return made;
+  }
+
+  cisternGradient(key, build) {
+    return this.cachedGradient(`cistern:${key}`, build);
   }
 
   drawCisternBackground(ctx, room, pal, camX, t) {
@@ -958,16 +962,18 @@ export class Renderer {
   }
 
   drawMycelialBackground(ctx, room, pal, camX, t) {
-    // A huge luminous spore sac deep in the hollow.
+    // A huge luminous spore sac deep in the hollow (cached at native size).
     const glowX = 720 - camX * 0.1;
     const glowY = 150;
-    const halo = ctx.createRadialGradient(glowX, glowY, 10, glowX, glowY, 260);
-    halo.addColorStop(0, this.alpha(pal.glow, 0.36));
-    halo.addColorStop(0.45, this.alpha(pal.glow, 0.1));
-    halo.addColorStop(1, this.alpha(pal.glow, 0));
-    ctx.fillStyle = halo;
-    // Fill only the halo's bounding box; the rest of the screen is transparent.
-    ctx.fillRect(glowX - 260, glowY - 260, 520, 520);
+    const haloLayer = this.layer(`mycelialHalo:${pal.glow}`, 520, 520, (c, w, h) => {
+      const halo = c.createRadialGradient(w / 2, h / 2, 10, w / 2, h / 2, 260);
+      halo.addColorStop(0, this.alpha(pal.glow, 0.36));
+      halo.addColorStop(0.45, this.alpha(pal.glow, 0.1));
+      halo.addColorStop(1, this.alpha(pal.glow, 0));
+      c.fillStyle = halo;
+      c.fillRect(0, 0, w, h);
+    });
+    if (haloLayer) ctx.drawImage(haloLayer, glowX - 260, glowY - 260);
 
     // Distant mushroom silhouettes.
     ctx.save();
@@ -1033,15 +1039,21 @@ export class Renderer {
     }
     ctx.restore();
 
-    // Fog bands.
+    // Fog bands (cached gradient per palette).
+    const fg = this.cachedGradient(`mycelialFog:${pal.fog}`, (c) => {
+      const g = c.createLinearGradient(0, 0, 0, 80);
+      g.addColorStop(0, this.alpha(pal.fog, 0));
+      g.addColorStop(0.5, this.alpha(pal.fog, 0.14));
+      g.addColorStop(1, this.alpha(pal.fog, 0));
+      return g;
+    });
     for (let i = 0; i < 3; i++) {
       const y = 300 + i * 70;
-      const fg = ctx.createLinearGradient(0, y, 0, y + 80);
-      fg.addColorStop(0, this.alpha(pal.fog, 0));
-      fg.addColorStop(0.5, this.alpha(pal.fog, 0.14));
-      fg.addColorStop(1, this.alpha(pal.fog, 0));
+      ctx.save();
+      ctx.translate(0, y);
       ctx.fillStyle = fg;
-      ctx.fillRect(0, y, VIEW_W, 80);
+      ctx.fillRect(0, 0, VIEW_W, 80);
+      ctx.restore();
     }
 
     // Drifting spores replace the ash.
@@ -1065,12 +1077,15 @@ export class Renderer {
     const style = room.parallax;
     const glow = pal.glow;
     const moonX = 760 - camX * 0.1;
-    const halo = ctx.createRadialGradient(moonX, 108, 6, moonX, 108, 220);
-    halo.addColorStop(0, this.alpha(glow, 0.3));
-    halo.addColorStop(0.45, this.alpha(glow, 0.08));
-    halo.addColorStop(1, this.alpha(glow, 0));
-    ctx.fillStyle = halo;
-    ctx.fillRect(moonX - 220, 108 - 220, 440, 440);
+    const haloLayer = this.layer(`biomeHalo:${glow}`, 440, 440, (c, w, h) => {
+      const halo = c.createRadialGradient(w / 2, h / 2, 6, w / 2, h / 2, 220);
+      halo.addColorStop(0, this.alpha(glow, 0.3));
+      halo.addColorStop(0.45, this.alpha(glow, 0.08));
+      halo.addColorStop(1, this.alpha(glow, 0));
+      c.fillStyle = halo;
+      c.fillRect(0, 0, w, h);
+    });
+    if (haloLayer) ctx.drawImage(haloLayer, moonX - 220, 108 - 220);
     ctx.beginPath();
     ctx.arc(moonX, 108, style === 'throne' ? 62 : 44, 0, Math.PI * 2);
     ctx.fillStyle = this.alpha('#f0d9a8', 0.18);
@@ -1352,25 +1367,34 @@ export class Renderer {
       ctx.globalAlpha = 1;
     }
 
-    // common mist bands
+    // common mist bands (cached gradient per palette)
+    const fg = this.cachedGradient(`biomeFog:${pal.fog}`, (c) => {
+      const g = c.createLinearGradient(0, 0, 0, 90);
+      g.addColorStop(0, this.alpha(pal.fog, 0));
+      g.addColorStop(0.5, this.alpha(pal.fog, 0.12));
+      g.addColorStop(1, this.alpha(pal.fog, 0));
+      return g;
+    });
     for (let i = 0; i < 3; i++) {
       const y = 300 + i * 66;
-      const fg = ctx.createLinearGradient(0, y, 0, y + 90);
-      fg.addColorStop(0, this.alpha(pal.fog, 0));
-      fg.addColorStop(0.5, this.alpha(pal.fog, 0.12));
-      fg.addColorStop(1, this.alpha(pal.fog, 0));
+      ctx.save();
+      ctx.translate(0, y);
       ctx.fillStyle = fg;
-      ctx.fillRect(0, y, VIEW_W, 90);
+      ctx.fillRect(0, 0, VIEW_W, 90);
+      ctx.restore();
     }
   }
 
   drawBiomePlatforms(ctx, room, pal, t) {
     for (const plat of room.platforms) {
       const isFloor = plat.h > 40;
-      const g = ctx.createLinearGradient(0, plat.y, 0, plat.y + plat.h);
-      g.addColorStop(0, pal.mid);
-      g.addColorStop(0.14, pal.low);
-      g.addColorStop(1, pal.top);
+      const g = this.cachedGradient(`plat:${pal.mid}:${pal.low}:${pal.top}:${plat.y}:${plat.h}`, (c) => {
+        const grad = c.createLinearGradient(0, plat.y, 0, plat.y + plat.h);
+        grad.addColorStop(0, pal.mid);
+        grad.addColorStop(0.14, pal.low);
+        grad.addColorStop(1, pal.top);
+        return grad;
+      });
       ctx.fillStyle = g;
       ctx.fillRect(plat.x, plat.y, plat.w, plat.h);
 
@@ -1417,10 +1441,13 @@ export class Renderer {
       const a = floorSlabs[i];
       const b = floorSlabs[i + 1];
       if (b.x <= a.x + a.w + 10) continue;
-      const g = ctx.createLinearGradient(0, FLOOR_Y, 0, VIEW_H + 120);
-      g.addColorStop(0, this.alpha(pal.top, 0.95));
-      g.addColorStop(0.6, this.alpha(pal.low, 0.9));
-      g.addColorStop(1, this.alpha(pal.glow, 0.22));
+      const g = this.cachedGradient(`gap:${pal.top}:${pal.low}:${pal.glow}`, (c) => {
+        const grad = c.createLinearGradient(0, FLOOR_Y, 0, VIEW_H + 120);
+        grad.addColorStop(0, this.alpha(pal.top, 0.95));
+        grad.addColorStop(0.6, this.alpha(pal.low, 0.9));
+        grad.addColorStop(1, this.alpha(pal.glow, 0.22));
+        return grad;
+      });
       ctx.fillStyle = g;
       ctx.fillRect(a.x + a.w, FLOOR_Y, b.x - (a.x + a.w), VIEW_H + 140 - FLOOR_Y);
     }

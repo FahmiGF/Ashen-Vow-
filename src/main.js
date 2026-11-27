@@ -3,7 +3,10 @@ import {
   AshenGame,
   ROOMS,
   ALL_ROOMS,
+  ALL_ENEMY_INFO,
+  ALL_BOSS_INFO,
   WORLD_W,
+  FLOOR_Y,
   VIEW_W,
   WEAPONS,
   SHOP_ITEMS,
@@ -68,7 +71,7 @@ import {
   formatCode,
   gamepadActions,
 } from './settings.js';
-import { ZONE_LIST, zoneForRoom } from './zones.js';
+import { ZONE_LIST, ZONES, zoneForRoom } from './zones.js';
 import {
   MapView,
   LEGEND,
@@ -89,6 +92,8 @@ import {
   drawCutscene,
   cutsceneFor,
   cutsceneBeatAt,
+  SPIRAL_INTRO_CUTSCENE,
+  SPIRAL_BOSS_CUTSCENE,
 } from './cutscene.js';
 import {
   VOICE_SAVE_KEY,
@@ -168,7 +173,7 @@ import {
   reelZone,
   sanitizeFishingProgress,
 } from './fishing.js';
-import { UPDATE_LOG, GAME_VERSION } from './updates.js';
+import { GAME_VERSION } from './version.js';
 import {
   EXPANSION_NAME,
   EXPANSION_ROOM_START,
@@ -243,7 +248,7 @@ import {
   defaultFrontierProgress,
   sanitizeFrontierProgress,
 } from './frontier.js';
-import { Ashen3DGame, render3D, MODE3D_REGIONS, MODE3D_REGION_LIST, configure3D, gfx3DStatus, content3DSummary } from './mode3d.js';
+import { contentSummary } from './mode3d_content.js';
 import {
   HORROR3D_SAVE_KEY,
   HORROR3D_SITES,
@@ -798,62 +803,14 @@ import {
   recordMobaMatch,
 } from './moba.js';
 import {
-  WAVE_DEFENSE_MAPS,
-  WAVE_DEFENSE_MAP_BY_ID,
-  WAVE_DEFENSE_TOWERS,
-  WAVE_DEFENSE_TOWER_BY_ID,
-  WAVE_DEFENSE_DIFFICULTIES,
-  WAVE_DEFENSE_ENEMY_TYPES,
-  WAVE_DEFENSE_BOSSES,
   WAVE_DEFENSE_TOTAL_WAVES,
-  createWaveDefense,
-  updateWaveDefense,
-  waveDefenseBuild,
-  waveDefenseUpgrade,
-  waveDefenseUpgradeCost,
-  waveDefenseSell,
-  waveDefenseSellValue,
-  waveDefenseSelect,
-  waveDefenseSelectTower,
-  waveDefenseNextWave,
-  waveDefenseSetSpeed,
-  waveDefenseSnapshot,
-  waveDefenseSummary,
+  WAVE_DEFENSE_INFINITOWER_TIER_WAVES,
+  SPIRAL_STORY,
+  spiralStoryForTier,
   defaultWaveDefenseProgress,
   sanitizeWaveDefenseProgress,
-  recordWaveDefense,
-  endWaveDefense,
-  renderWaveDefense,
-} from './wavedefense.js';
-import {
-  PIRATE_STAGES,
-  PIRATE_STAGE_BY_ID,
-  PIRATE_ISLANDS,
-  PIRATE_PORTS,
-  PIRATE_SHIP_TYPES,
-  PIRATE_BOSS_TYPES,
-  PIRATE_DOCK_COST,
-  createPirateVoyage,
-  updatePirateVoyage,
-  setPirateControls,
-  pirateFire,
-  pirateFireAt,
-  pirateDamageShip,
-  pirateDock,
-  pirateNearPort,
-  pirateSnapshot,
-  pirateScreenToWorld,
-  pirateStageUnlocked,
-  pirateSummary,
-  defaultPirateProgress,
-  sanitizePirateProgress,
-  recordPirateVoyage,
-  recordPirateEndless,
-  createPirateEndless,
-  pirateEndlessSurge,
-  PIRATE_ENDLESS_STAGE,
-  renderPirateVoyage,
-} from './pirates.js';
+} from './wavedefense-progress.js';
+import { PIRATE_STAGES, PIRATE_STAGE_BY_ID, defaultPirateProgress, sanitizePirateProgress } from './pirate-progress.js';
 import { RealmsUI } from './realms_ui.js';
 import { EclipseUI } from './eclipse_ui.js';
 import {
@@ -899,6 +856,55 @@ import {
 } from './coop.js';
 
 const $ = (id) => document.getElementById(id);
+
+function lazyModule(path) {
+  let request = null;
+  let attempts = 0;
+  return () => {
+    if (request) return request;
+    const url = new URL(path, import.meta.url);
+    // The module map can retain a failed request. A retry uses a fresh URL.
+    if (attempts) url.searchParams.set('retry', String(attempts));
+    attempts += 1;
+    request = import(url.href).catch((error) => {
+      request = null;
+      throw error;
+    });
+    return request;
+  };
+}
+
+function lazyStylesheet(path) {
+  let request = null;
+  return () => {
+    request ??= new Promise((resolve, reject) => {
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = new URL(path, import.meta.url).href;
+      link.addEventListener('load', resolve, { once: true });
+      link.addEventListener('error', () => {
+        link.remove();
+        reject(new Error(`Could not load ${path}`));
+      }, { once: true });
+      document.head.append(link);
+    }).catch((error) => {
+      request = null;
+      throw error;
+    });
+    return request;
+  };
+}
+
+function showModeLoadError(status, message, retryAction) {
+  status.textContent = `${message} `;
+  const retry = document.createElement('button');
+  retry.type = 'button';
+  retry.className = 'btn btn-ghost btn-compact';
+  retry.textContent = 'COBA LAGI';
+  retry.addEventListener('click', retryAction, { once: true });
+  status.append(retry);
+}
+
 const FIXED = 1 / 120;
 const PROGRESS_KEY = 'ashen-vow-progress-v1';
 const CHARACTER_KEY = 'ashen-vow-character-v1';
@@ -1011,6 +1017,9 @@ let wdRecorded = false;
 let wdMapId = 'ashen_keep';
 let wdDifficulty = 'knight';
 let wdEndless = false;
+let wdInfinitower = false;
+let wdIntroSeen = false;
+let wdBossCutsceneSeen = false;
 let wdSelectedTowerId = 'ballista';
 let wdUiTimer = 0;
 let wdRenderDirty = true;
@@ -1353,7 +1362,13 @@ function loadProgress() {
   }
 }
 
-function saveProgress() {
+let _saveProgressTimer = 0;
+let _saveProgressLastMs = 0;
+function flushSaveProgress() {
+  if (_saveProgressTimer) {
+    clearTimeout(_saveProgressTimer);
+    _saveProgressTimer = 0;
+  }
   if (activeRunKind === 'hack' && hackSnapshot) return;
   try {
     const previous = localStorage.getItem(PROGRESS_KEY);
@@ -1361,9 +1376,28 @@ function saveProgress() {
     progress.version = 1;
     progress.schemaVersion = 2;
     localStorage.setItem(PROGRESS_KEY, JSON.stringify(progress));
+    _saveProgressLastMs = Date.now();
   } catch {
     /* storage unavailable — keep in memory */
   }
+}
+
+function saveProgress({ immediate = false } = {}) {
+  if (activeRunKind === 'hack' && hackSnapshot) return;
+  const now = Date.now();
+  if (immediate || now - _saveProgressLastMs >= 1200) {
+    flushSaveProgress();
+    return;
+  }
+  if (!_saveProgressTimer) {
+    _saveProgressTimer = setTimeout(() => flushSaveProgress(), 1200 - (now - _saveProgressLastMs));
+  }
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('pagehide', () => {
+    if (_saveProgressTimer) flushSaveProgress();
+  });
 }
 
 let progress = loadProgress();
@@ -5793,6 +5827,1006 @@ function speedrunStamp(at) {
   return `${pad(date.getDate())}/${pad(date.getMonth() + 1)} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
+// ── Campaign Map Editor (Update XXIX) ───────────────────────────────────
+// A blueprint is stored in its own localStorage key and loaded through
+// `game.loadArena()`, so a custom stage never touches ALL_ROOMS, campaign
+// progress or any arc ledger.
+const loadMapEditorModule = lazyModule('./mapeditor.js');
+const loadEditorStyles = lazyStylesheet('../styles-mapeditor.css');
+let mapEditor = null;
+let editorOpenId = 0;
+let editorSave = null;
+let editorSelectedId = null;
+let editorMessage = null;
+let editorMessageKind = '';
+
+let customStage = null;
+let customChain = [];
+let customChainIndex = 0;
+let customStageCleared = false;
+let customStageEngaged = false;
+let customStageElapsed = 0;
+let customClearOpen = false;
+let customIntroCallback = null;
+
+let editorSelectedPlatform = -1;
+let editorDrag = null;
+let editorPaintFrame = 0;
+let editorShareMessage = '';
+let editorShareKind = '';
+let editorShareText = '';
+
+let customSurviveLeft = 0;
+let customBadgeCache = '';
+let customClearBadge = '';
+
+function loadEditorSave() {
+  try {
+    const raw = localStorage.getItem(mapEditor.MAP_EDITOR_SAVE_KEY);
+    return mapEditor.sanitizeEditorSave(raw ? JSON.parse(raw) : null);
+  } catch {
+    return mapEditor.defaultEditorSave();
+  }
+}
+
+function saveEditorSave() {
+  try {
+    localStorage.setItem(mapEditor.MAP_EDITOR_SAVE_KEY, JSON.stringify(editorSave));
+  } catch {
+    /* storage unavailable — keep the in-memory copy */
+  }
+}
+
+function currentEditorStage() {
+  return editorSave?.stages.find((stage) => stage.id === editorSelectedId) || editorSave?.stages[0] || null;
+}
+
+function editorAttr(value) {
+  return esc(String(value ?? '')).replace(/"/g, '&quot;');
+}
+
+function editorOptions(list, selected) {
+  return list
+    .map((option) => `<option value="${editorAttr(option.id)}"${option.id === selected ? ' selected' : ''}>${esc(option.name)}</option>`)
+    .join('');
+}
+
+async function showEditor() {
+  const openId = ++editorOpenId;
+  cancelPrologue();
+  started = false;
+  paused = false;
+  shopOpen = false;
+  mapOpen = false;
+  codexOpen = false;
+  inventoryOpen = false;
+  settingsOpen = false;
+  closeDialogue(true);
+  spectating = false;
+  spectateGame = null;
+  customClearOpen = false;
+  menuView = 'editor';
+  clearHeldKeys();
+  syncScreens();
+
+  const status = $('editor-load-status');
+  const content = $('editor-content');
+  const play = $('editor-play');
+  if (!mapEditor) {
+    status.textContent = 'Memuat Peta Sumpah…';
+    status.classList.remove('hidden');
+    try {
+      const [model] = await Promise.all([loadMapEditorModule(), loadEditorStyles()]);
+      if (openId !== editorOpenId || menuView !== 'editor') return false;
+      mapEditor = model;
+    } catch {
+      if (openId !== editorOpenId || menuView !== 'editor') return false;
+      showModeLoadError(status, 'Peta Sumpah belum bisa dimuat.', showEditor);
+      return false;
+    }
+  }
+
+  editorSave = loadEditorSave();
+  editorSelectedPlatform = -1;
+  editorDrag = null;
+  editorShareMessage = '';
+  editorShareKind = '';
+  if (!editorSave.stages.some((stage) => stage.id === editorSelectedId)) {
+    editorSelectedId = editorSave.selectedId || editorSave.stages[0]?.id || null;
+  }
+  buildEditorScreen();
+  status.classList.add('hidden');
+  content.classList.remove('hidden');
+  play.classList.remove('hidden');
+  return true;
+}
+
+function buildEditorScreen() {
+  if (!editorSave) return;
+  const summary = mapEditor.editorSummary(editorSave);
+  const box = $('editor-summary');
+  if (box) {
+    box.innerHTML = `
+      <div class="stat"><strong>${summary.stages}</strong><span>Peta Tersimpan</span></div>
+      <div class="stat"><strong>${summary.platforms}</strong><span>Pijakan</span></div>
+      <div class="stat"><strong>${summary.enemies}</strong><span>Total Musuh</span></div>
+      <div class="stat"><strong>${summary.elites}</strong><span>Musuh Elite</span></div>
+      <div class="stat"><strong>${summary.bosses}</strong><span>Peta Berbos</span></div>
+      <div class="stat"><strong>${summary.survive}</strong><span>Peta Bertahan</span></div>
+      <div class="stat"><strong>${summary.chained}</strong><span>Ruangan Berantai</span></div>
+      <div class="stat"><strong>${summary.plays}</strong><span>Kali Dimainkan</span></div>`;
+  }
+  renderEditorList();
+  renderEditorForm();
+  renderEditorMessage();
+}
+
+function renderEditorList() {
+  const list = $('editor-list');
+  if (!list) return;
+  list.innerHTML = editorSave.stages
+    .map((stage) => {
+      const boss = stage.boss ? ALL_BOSS_INFO[stage.boss]?.name || stage.boss : null;
+      const plays = editorSave.plays[stage.id] || 0;
+      const rooms = editorChainLength(stage.id);
+      const rating = mapEditor.threatRating(stage);
+      const scale = mapEditor.mapDifficultyScale(stage.difficulty);
+      return `<li class="${stage.id === editorSelectedId ? 'active' : ''}">
+        <button type="button" data-editor-select="${editorAttr(stage.id)}">
+          <b>${esc(stage.name)}</b>
+          <em>${esc(stage.subtitle)} · ${stage.enemies.length} musuh${boss ? ` · ${esc(boss)}` : ''}${rooms > 1 ? ` · ${rooms} ruang` : ''}${plays ? ` · ${plays}× main` : ''}</em>
+          <em class="editor-list-tags"><span class="tag ${rating.tone}">${esc(scale.name.toUpperCase())} · ${esc(rating.label.toUpperCase())}</span>${stage.objective === 'survive' ? `<span class="tag survive">BERTAHAN ${stage.surviveSeconds} DTK</span>` : ''}${rating.elites ? `<span class="tag elite">${rating.elites} ELITE</span>` : ''}</em>
+        </button>
+      </li>`;
+    })
+    .join('');
+}
+
+function editorChainLength(id) {
+  const seen = new Set();
+  let length = 0;
+  let current = editorSave.stages.find((stage) => stage.id === id) || null;
+  while (current && !seen.has(current.id) && length < mapEditor.MAP_EDITOR_MAX_CHAIN) {
+    seen.add(current.id);
+    length += 1;
+    current = current.nextStageId
+      ? editorSave.stages.find((stage) => stage.id === current.nextStageId) || null
+      : null;
+  }
+  return length;
+}
+
+function renderEditorForm() {
+  const host = $('editor-form');
+  if (!host) return;
+  const stage = currentEditorStage();
+  if (!stage) {
+    host.innerHTML = '<p class="editor-empty">Belum ada peta. Tekan PETA BARU.</p>';
+    return;
+  }
+  const zone = ZONES[stage.zone] || ZONES.ashen;
+  const layout = mapEditor.layoutFor(stage.layout);
+  const scale = mapEditor.mapDifficultyScale(stage.difficulty);
+  const objectiveOptions = mapEditor.MAP_EDITOR_OBJECTIVES.map((entry) => ({ id: entry.id, name: entry.label }));
+  const bossOptions = [{ id: '', name: '— tanpa bos —' }, ...mapEditor.MAP_EDITOR_BOSS_OPTIONS];
+  const nextOptions = [
+    { id: '', name: '— tamat di ruang ini —' },
+    ...editorSave.stages.filter((entry) => entry.id !== stage.id).map((entry) => ({ id: entry.id, name: entry.name })),
+  ];
+  const chain = mapEditor.chainFor(editorSave, stage.id);
+  host.innerHTML = `
+    <h3>IDENTITAS &amp; DUNIA</h3>
+    <div class="editor-grid">
+      <label>NAMA<input data-editor-field="name" maxlength="${mapEditor.MAP_EDITOR_NAME_MAX}" value="${editorAttr(stage.name)}" /></label>
+      <label>SUBJUDUL<input data-editor-field="subtitle" maxlength="${mapEditor.MAP_EDITOR_SUBTITLE_MAX}" value="${editorAttr(stage.subtitle)}" /></label>
+      <label>LATAR ZONA<select data-editor-field="zone">${editorOptions(mapEditor.MAP_EDITOR_ZONE_OPTIONS, stage.zone)}</select></label>
+      <label>TATA LETAK<select data-editor-field="layout">${editorOptions(mapEditor.MAP_EDITOR_LAYOUTS, stage.layout)}</select></label>
+      <label>MUSIK<select data-editor-field="music">${editorOptions(mapEditor.MAP_EDITOR_MUSIC_OPTIONS, stage.music)}</select></label>
+      <label>MUSIK BOS<select data-editor-field="bossMusic">${editorOptions(mapEditor.MAP_EDITOR_MUSIC_OPTIONS, stage.bossMusic)}</select></label>
+      <label>PEMBUKA<select data-editor-field="intro">${editorOptions(mapEditor.MAP_EDITOR_INTROS, stage.intro)}</select></label>
+      <label>KELAS<select data-editor-field="classId">${editorOptions(mapEditor.MAP_EDITOR_CLASS_OPTIONS, stage.classId)}</select></label>
+      <label>TAKARAN<select data-editor-field="difficulty">${editorOptions(mapEditor.MAP_EDITOR_DIFFICULTY_OPTIONS, stage.difficulty)}</select></label>
+      <label>OBJEKTIF<select data-editor-field="objective">${editorOptions(objectiveOptions, stage.objective)}</select></label>
+      <label>WAKTU BERTAHAN (DTK)<input type="number" min="${mapEditor.MAP_EDITOR_SURVIVE_MIN}" max="${mapEditor.MAP_EDITOR_SURVIVE_MAX}" step="5" data-editor-field="surviveSeconds" value="${stage.surviveSeconds}"${stage.objective === 'survive' ? '' : ' disabled'} /></label>
+      <label>ANAK PANAH<input type="number" min="0" max="${mapEditor.MAP_EDITOR_MAX_ARROWS}" data-editor-field="arrows" value="${stage.arrows}" /></label>
+      <label>FLASK<input type="number" min="1" max="${mapEditor.MAP_EDITOR_MAX_FLASKS}" data-editor-field="flasks" value="${stage.flasks}" /></label>
+      <label>ABU AWAL<input type="number" min="0" max="${mapEditor.MAP_EDITOR_MAX_ASH}" data-editor-field="ash" value="${stage.ash}" /></label>
+      <label>BOS<select data-editor-field="boss">${editorOptions(bossOptions, stage.boss || '')}</select></label>
+      <label>LANJUT KE PETA<select data-editor-field="nextStageId">${editorOptions(nextOptions, stage.nextStageId || '')}</select></label>
+    </div>
+    <div class="editor-toggles">
+      <label><input type="checkbox" data-editor-field="relic"${stage.relic ? ' checked' : ''} /> Relik di ujung peta</label>
+      <label><input type="checkbox" data-editor-field="checkpoint"${stage.checkpoint ? ' checked' : ''} /> Warung Abu di pintu masuk</label>
+    </div>
+    <p class="editor-empty">${esc(layout.note)} · ${esc(zone.name)} · partikel ${esc(zone.particle || 'ash')} · ${esc(scale.note)}</p>
+
+    <div class="editor-section">
+      <h3>TAKARAN &amp; KESEIMBANGAN</h3>
+      <div id="editor-balance-panel">${editorBalanceHtml(stage)}</div>
+    </div>
+
+    <div class="editor-section">
+      <h3>KANVAS MEDAN · ${stage.platforms.length}/${mapEditor.MAP_EDITOR_MAX_PLATFORMS} PIJAKAN · ${mapEditor.isTemplateTerrain(stage) ? esc(layout.label) : 'KANVAS BEBAS'}</h3>
+      <canvas id="editor-canvas" class="editor-canvas" width="700" height="270" aria-label="Pratinjau medan peta"></canvas>
+      <div class="editor-terrain-actions">
+        <button class="btn btn-ghost btn-compact" type="button" data-editor-terrain="floor">+ LANTAI PENUH</button>
+        <button class="btn btn-ghost btn-compact" type="button" data-editor-terrain="ledge">+ PIJAKAN</button>
+        <button class="btn btn-ghost btn-compact" type="button" data-editor-terrain="delete"${editorSelectedPlatform < 0 ? ' disabled' : ''}>HAPUS TERPILIH</button>
+        <button class="btn btn-ghost btn-compact" type="button" data-editor-terrain="reset">RESET TATA LETAK</button>
+      </div>
+      <p class="editor-empty">Seret di kanvas untuk menggambar pijakan. Klik pijakan untuk memilihnya, lalu HAPUS. Titik awal (hijau) harus tetap beralas.</p>
+    </div>
+
+    <div class="editor-section">
+      <h3>SENJATA AWAL · ${stage.weapons.length}/${mapEditor.MAP_EDITOR_MAX_WEAPONS}</h3>
+      <div class="editor-weapons">
+        ${mapEditor.MAP_EDITOR_WEAPON_OPTIONS.map((weapon) => `<label><input type="checkbox" data-editor-weapon="${editorAttr(weapon.id)}"${stage.weapons.includes(weapon.id) ? ' checked' : ''} /> ${esc(weapon.name)}</label>`).join('')}
+      </div>
+    </div>
+
+    <div class="editor-section">
+      <h3>MUSUH · ${stage.enemies.length}/${mapEditor.MAP_EDITOR_MAX_ENEMIES} · ${stage.enemies.filter((enemy) => enemy.elite).length}/${mapEditor.MAP_EDITOR_MAX_ELITES} ELITE</h3>
+      <div class="editor-enemy-add">
+        <select id="editor-enemy-select" aria-label="Jenis musuh">${editorOptions(mapEditor.MAP_EDITOR_ENEMY_OPTIONS, '')}</select>
+        <button class="btn btn-ghost btn-compact" type="button" data-editor-add-enemy="1">+ TAMBAH</button>
+      </div>
+      <div class="editor-enemies">
+        ${stage.enemies.length
+          ? stage.enemies.map((enemy, index) => `
+          <div class="editor-enemy-row${enemy.elite ? ' elite' : ''}">
+            <span>${esc(ALL_ENEMY_INFO[enemy.type]?.name || enemy.type)}</span>
+            <button type="button" class="editor-elite-btn${enemy.elite ? ' active' : ''}" data-editor-elite="${index}" aria-pressed="${!!enemy.elite}" title="Tandai musuh ini sebagai elite">⚔</button>
+            <label class="editor-enemy-x">X<input type="number" min="60" max="${WORLD_W - 60}" step="10" data-editor-enemy-x="${index}" value="${enemy.x}" /></label>
+            <button type="button" data-editor-remove-enemy="${index}" aria-label="Hapus musuh">×</button>
+          </div>`).join('')
+          : '<p class="editor-empty">Belum ada musuh. Peta bisa tetap dimainkan tanpa musuh.</p>'}
+      </div>
+    </div>
+
+    <div class="editor-section">
+      <h3>KODE BAGI · RANTAI ${chain.length} RUANG</h3>
+      <div class="editor-share-row">
+        <input id="editor-share-input" class="editor-share-input" type="text" spellcheck="false" autocomplete="off" placeholder="AVME1.…" value="${editorAttr(editorShareText)}" />
+        <button class="btn btn-ghost btn-compact" type="button" data-editor-share="copy">SALIN KODE</button>
+        <button class="btn btn-ghost btn-compact" type="button" data-editor-share="import">IMPOR</button>
+      </div>
+      <p class="editor-share-note ${editorShareKind}">${editorShareMessage ? esc(editorShareMessage) : 'Salin kode rantai untuk dibagikan, atau tempel kode peta orang lain lalu tekan IMPOR.'}</p>
+    </div>
+  `;
+  paintEditorCanvas();
+}
+
+function editorBalanceHtml(stage) {
+  const rating = mapEditor.threatRating(stage);
+  const pct = Math.max(4, Math.min(100, (rating.ratio / 4) * 100));
+  const mark = Math.max(0, Math.min(100, (mapEditor.MAP_EDITOR_BALANCE_TARGET / 4) * 100));
+  const tips = rating.tips.length
+    ? rating.tips.map((tip) => `<li>${esc(tip)}</li>`).join('')
+    : '<li>Takaran ini sudah di titik seimbang.</li>';
+  return `
+    <div class="editor-balance ${rating.tone}">
+      <div class="editor-balance-head">
+        <strong>${esc(rating.label.toUpperCase())}</strong>
+        <span>${rating.ratio}× tekanan · ${esc(rating.difficultyName)}</span>
+      </div>
+      <div class="editor-balance-meter" role="img" aria-label="Tekanan ${rating.ratio} kali kekuatan pemain">
+        <span class="editor-balance-fill" style="width:${pct.toFixed(1)}%"></span>
+        <i class="editor-balance-mark" style="left:${mark.toFixed(1)}%" title="Target seimbang"></i>
+      </div>
+      <div class="editor-balance-figures">
+        <span><b>${rating.score}</b> beban ruang</span>
+        <span><b>${rating.power}</b> kekuatan pemain</span>
+        <span><b>${rating.elites}</b> elite</span>
+        <span><b>${mapEditor.MAP_EDITOR_BALANCE_TARGET}×</b> target</span>
+      </div>
+      <ul class="editor-balance-tips">${tips}</ul>
+      <div class="editor-terrain-actions">
+        <button class="btn btn-ghost btn-compact" type="button" data-editor-balance="auto">AUTO-SEIMBANG</button>
+        <button class="btn btn-ghost btn-compact" type="button" data-editor-balance="lighter">TAKARAN LEBIH RINGAN</button>
+      </div>
+    </div>`;
+}
+
+function renderEditorBalance() {
+  const panel = $('editor-balance-panel');
+  const stage = currentEditorStage();
+  if (!panel || !stage) return;
+  panel.innerHTML = editorBalanceHtml(stage);
+}
+
+function toggleEditorElite(index) {
+  const stage = currentEditorStage();
+  if (!stage || !stage.enemies[index]) return false;
+  stage.enemies[index].elite = !stage.enemies[index].elite;
+  stage.updatedAt = Date.now();
+  saveEditorSave();
+  renderEditorList();
+  renderEditorForm();
+  return stage.enemies[index].elite;
+}
+
+/** Rewrite the map toward the balance target, reporting every step it took. */
+function autoBalanceEditor() {
+  const stage = currentEditorStage();
+  if (!stage) return null;
+  const result = mapEditor.autoBalanceBlueprint(stage);
+  editorSave = mapEditor.upsertBlueprint(editorSave, result.blueprint);
+  editorSelectedId = editorSave.selectedId;
+  saveEditorSave();
+  editorMessage = result.steps.length
+    ? `Diseimbangkan (${result.steps.join(', ')}) · tekanan ${result.rating.ratio}× — ${result.rating.label}.`
+    : `Sudah di titik seimbang: tekanan ${result.rating.ratio}× — ${result.rating.label}.`;
+  editorMessageKind = result.rating.band === 'brutal' ? 'error' : 'ok';
+  buildEditorScreen();
+  return result.rating;
+}
+
+function lowerEditorDifficulty() {
+  const stage = currentEditorStage();
+  if (!stage) return null;
+  const order = mapEditor.MAP_EDITOR_DIFFICULTY_OPTIONS.map((entry) => entry.id);
+  const index = order.indexOf(stage.difficulty);
+  if (index <= 0) {
+    editorMessage = 'Takaran sudah yang paling ringan (Mode Cerita).';
+    editorMessageKind = 'ok';
+    renderEditorMessage();
+    return null;
+  }
+  stage.difficulty = order[index - 1];
+  stage.updatedAt = Date.now();
+  saveEditorSave();
+  editorMessage = `Takaran diturunkan ke ${mapEditor.mapDifficultyScale(stage.difficulty).name} · tekanan ${mapEditor.threatRating(stage).ratio}×.`;
+  editorMessageKind = 'ok';
+  buildEditorScreen();
+  return stage.difficulty;
+}
+
+function newEditorFromPreset(presetId) {
+  if (editorSave.stages.length >= mapEditor.MAP_EDITOR_MAX_STAGES) {
+    editorMessage = `Maksimal ${mapEditor.MAP_EDITOR_MAX_STAGES} peta tersimpan.`;
+    editorMessageKind = 'error';
+    renderEditorMessage();
+    return false;
+  }
+  const blueprint = mapEditor.blueprintFromPreset(presetId, editorSave, editorSave.stages.length);
+  editorSave = mapEditor.upsertBlueprint(editorSave, blueprint);
+  editorSelectedId = editorSave.selectedId;
+  editorSelectedPlatform = -1;
+  saveEditorSave();
+  editorMessage = `"${blueprint.name}" dibuat dari preset · ${mapEditor.threatRating(blueprint).label}.`;
+  editorMessageKind = 'ok';
+  buildEditorScreen();
+  return true;
+}
+
+function renderEditorMessage() {
+  const box = $('editor-message');
+  if (!box) return;
+  box.textContent = editorMessage || '';
+  box.className = editorMessage ? `editor-message ${editorMessageKind}`.trim() : 'editor-message';
+}
+
+function paintEditorCanvas() {
+  const canvas = $('editor-canvas');
+  if (!canvas || !canvas.getContext) return;
+  const ctx = canvas.getContext('2d');
+  const stage = currentEditorStage();
+  if (!ctx || !stage) return;
+  mapEditor.drawEditorPreview(ctx, stage, canvas.width, canvas.height, {
+    selected: editorSelectedPlatform,
+    pending: editorDrag && editorDrag.mode === 'paint' ? editorDrag.preview : null,
+  });
+}
+
+function editorCanvasPoint(event) {
+  const canvas = $('editor-canvas');
+  if (!canvas || !canvas.getBoundingClientRect) return null;
+  const rect = canvas.getBoundingClientRect();
+  if (!rect.width || !rect.height) return null;
+  return {
+    x: ((event.clientX - rect.left) / rect.width) * WORLD_W,
+    y: ((event.clientY - rect.top) / rect.height) * mapEditor.MAP_EDITOR_WORLD_H,
+  };
+}
+
+const editorSnap = (value, min, max) =>
+  Math.max(min, Math.min(max, Math.round(value / mapEditor.MAP_EDITOR_GRID) * mapEditor.MAP_EDITOR_GRID));
+
+function editorPointerDown(event) {
+  if (menuView !== 'editor') return;
+  const stage = currentEditorStage();
+  const point = editorCanvasPoint(event);
+  if (!stage || !point) return;
+  event.preventDefault();
+  const hit = stage.platforms.findIndex(
+    (platform) => point.x >= platform.x && point.x <= platform.x + platform.w
+      && point.y >= platform.y - 10 && point.y <= platform.y + platform.h + 10,
+  );
+  if (hit >= 0) {
+    editorSelectedPlatform = hit;
+    editorDrag = { mode: 'select' };
+    paintEditorCanvas();
+    return;
+  }
+  editorSelectedPlatform = -1;
+  const x = editorSnap(point.x, 0, WORLD_W - 40);
+  const y = editorSnap(point.y, 140, FLOOR_Y);
+  editorDrag = { mode: 'paint', startX: x, startY: y, x1: x, preview: null };
+  paintEditorCanvas();
+}
+
+function editorPointerMove(event) {
+  if (menuView !== 'editor' || editorDrag?.mode !== 'paint') return;
+  const point = editorCanvasPoint(event);
+  if (!point) return;
+  const x = editorSnap(point.x, 0, WORLD_W);
+  if (editorDrag.preview && editorDrag.x1 === x) return;
+  editorDrag.x1 = x;
+  const left = Math.min(editorDrag.startX, editorDrag.x1);
+  const spread = Math.abs(editorDrag.x1 - editorDrag.startX);
+  editorDrag.preview = {
+    x: left,
+    y: editorDrag.startY,
+    w: Math.max(mapEditor.MAP_EDITOR_GRID * 2, Math.min(WORLD_W - left, spread < mapEditor.MAP_EDITOR_GRID ? 160 : spread)),
+    h: 18,
+  };
+  if (editorPaintFrame) return;
+  editorPaintFrame = requestAnimationFrame(() => {
+    editorPaintFrame = 0;
+    if (menuView === 'editor' && editorDrag?.mode === 'paint') paintEditorCanvas();
+  });
+}
+
+function editorPointerUp(event) {
+  const drag = editorDrag;
+  editorDrag = null;
+  if (editorPaintFrame) cancelAnimationFrame(editorPaintFrame);
+  editorPaintFrame = 0;
+  if (!drag || menuView !== 'editor') return;
+  if (drag.mode !== 'paint' || event.type === 'pointercancel') {
+    paintEditorCanvas();
+    return;
+  }
+  const stage = currentEditorStage();
+  if (!stage) return;
+  if (stage.platforms.length >= mapEditor.MAP_EDITOR_MAX_PLATFORMS) {
+    editorMessage = `Maksimal ${mapEditor.MAP_EDITOR_MAX_PLATFORMS} pijakan per peta.`;
+    editorMessageKind = 'error';
+    renderEditorMessage();
+    paintEditorCanvas();
+    return;
+  }
+  const left = Math.min(drag.startX, drag.x1);
+  const spread = Math.abs(drag.x1 - drag.startX);
+  const width = Math.max(mapEditor.MAP_EDITOR_GRID * 2, Math.min(WORLD_W - left, spread < mapEditor.MAP_EDITOR_GRID ? 160 : spread));
+  stage.platforms.push({ x: left, y: drag.startY, w: width, h: 18 });
+  editorSelectedPlatform = stage.platforms.length - 1;
+  stage.updatedAt = Date.now();
+  editorMessage = null;
+  renderEditorList();
+  renderEditorForm();
+  renderEditorMessage();
+}
+
+function addEditorPlatform(kind) {
+  const stage = currentEditorStage();
+  if (!stage) return false;
+  if (stage.platforms.length >= mapEditor.MAP_EDITOR_MAX_PLATFORMS) {
+    editorMessage = `Maksimal ${mapEditor.MAP_EDITOR_MAX_PLATFORMS} pijakan per peta.`;
+    editorMessageKind = 'error';
+    renderEditorMessage();
+    return false;
+  }
+  const platform = kind === 'floor'
+    ? { x: 0, y: FLOOR_Y, w: WORLD_W, h: 70 }
+    : { x: 420, y: 340, w: 240, h: 18 };
+  stage.platforms.push(platform);
+  editorSelectedPlatform = stage.platforms.length - 1;
+  stage.updatedAt = Date.now();
+  editorMessage = null;
+  renderEditorList();
+  renderEditorForm();
+  return true;
+}
+
+function deleteEditorPlatform() {
+  const stage = currentEditorStage();
+  if (!stage || editorSelectedPlatform < 0 || !stage.platforms[editorSelectedPlatform]) return false;
+  stage.platforms.splice(editorSelectedPlatform, 1);
+  editorSelectedPlatform = -1;
+  if (!mapEditor.supportsSpawn(stage.platforms)) {
+    stage.platforms.push({ x: 0, y: FLOOR_Y, w: WORLD_W, h: 70 });
+    editorMessage = 'Lantai penuh ditambahkan agar titik awal tetap beralas.';
+    editorMessageKind = 'ok';
+  }
+  stage.updatedAt = Date.now();
+  renderEditorList();
+  renderEditorForm();
+  renderEditorMessage();
+  return true;
+}
+
+function resetEditorTerrain() {
+  const stage = currentEditorStage();
+  if (!stage) return false;
+  stage.platforms = mapEditor.terrainFromLayout(stage.layout);
+  editorSelectedPlatform = -1;
+  stage.updatedAt = Date.now();
+  editorMessage = `Medan dikembalikan ke ${mapEditor.layoutFor(stage.layout).label}.`;
+  editorMessageKind = 'ok';
+  renderEditorList();
+  renderEditorForm();
+  renderEditorMessage();
+  return true;
+}
+
+function copyEditorShare() {
+  const stages = mapEditor.chainFor(editorSave, editorSelectedId);
+  const code = mapEditor.encodeShareCode(stages);
+  if (!code) {
+    editorShareMessage = 'Peta ini belum bisa dibagikan.';
+    editorShareKind = 'error';
+    renderEditorForm();
+    return '';
+  }
+  editorShareText = code;
+  editorShareMessage = `Kode ${stages.length} ruang siap dibagikan (${code.length} karakter).`;
+  editorShareKind = 'ok';
+  renderEditorForm();
+  const input = $('editor-share-input');
+  if (input) {
+    input.focus();
+    input.select();
+  }
+  if (navigator.clipboard?.writeText) navigator.clipboard.writeText(code).catch(() => {});
+  return code;
+}
+
+function importEditorShare() {
+  const report = mapEditor.decodeShareCode(editorShareText);
+  if (!report.ok) {
+    editorShareMessage = report.error;
+    editorShareKind = 'error';
+    renderEditorForm();
+    return false;
+  }
+  const room = mapEditor.MAP_EDITOR_MAX_STAGES - editorSave.stages.length;
+  if (room <= 0) {
+    editorShareMessage = `Maksimal ${mapEditor.MAP_EDITOR_MAX_STAGES} peta tersimpan.`;
+    editorShareKind = 'error';
+    renderEditorForm();
+    return false;
+  }
+  const accepted = report.stages.slice(0, room);
+  const idMap = new Map();
+  let state = editorSave;
+  for (const stage of accepted) {
+    const id = mapEditor.newBlueprintId(state);
+    idMap.set(stage.id, id);
+    state = mapEditor.upsertBlueprint(state, { ...stage, id, nextStageId: null, createdAt: Date.now(), updatedAt: Date.now() });
+  }
+  // Re-link the imported rooms among themselves only; a link to a room that
+  // did not fit in the save is dropped rather than pointing at a stranger.
+  for (const stage of accepted) {
+    const id = idMap.get(stage.id);
+    const next = stage.nextStageId ? idMap.get(stage.nextStageId) || null : null;
+    if (!next) continue;
+    const saved = state.stages.find((entry) => entry.id === id);
+    if (saved) state = mapEditor.upsertBlueprint(state, { ...saved, nextStageId: next });
+  }
+  editorSave = state;
+  editorSelectedId = idMap.get(accepted[0].id) || editorSave.stages[0].id;
+  editorSave.selectedId = editorSelectedId;
+  saveEditorSave();
+  editorShareText = '';
+  editorMessage = `${accepted.length} peta diimpor${accepted.length < report.stages.length ? ' (sisanya tidak muat)' : ''}.`;
+  editorMessageKind = 'ok';
+  editorShareMessage = editorMessage;
+  editorShareKind = 'ok';
+  buildEditorScreen();
+  return true;
+}
+
+function updateEditorField(field, value) {
+  const stage = currentEditorStage();
+  if (!stage) return;
+  if (field === 'arrows') stage.arrows = Math.max(0, Math.min(mapEditor.MAP_EDITOR_MAX_ARROWS, Math.round(Number(value) || 0)));
+  else if (field === 'flasks') stage.flasks = Math.max(1, Math.min(mapEditor.MAP_EDITOR_MAX_FLASKS, Math.round(Number(value) || 1)));
+  else if (field === 'ash') stage.ash = Math.max(0, Math.min(mapEditor.MAP_EDITOR_MAX_ASH, Math.round(Number(value) || 0)));
+  else if (field === 'relic' || field === 'checkpoint') stage[field] = !!value;
+  else if (field === 'boss') stage.boss = ALL_BOSS_INFO[value] ? value : null;
+  else if (field === 'nextStageId') {
+    stage.nextStageId = editorSave.stages.some((entry) => entry.id === value && entry.id !== stage.id)
+      ? value
+      : null;
+  } else if (field === 'layout') {
+    stage.layout = mapEditor.layoutFor(value).id;
+    stage.platforms = mapEditor.terrainFromLayout(stage.layout);
+    editorSelectedPlatform = -1;
+  } else if (field === 'difficulty') {
+    stage.difficulty = mapEditor.MAP_EDITOR_DIFFICULTY_OPTIONS.some((entry) => entry.id === value) ? value : 'normal';
+  } else if (field === 'objective') {
+    stage.objective = value === 'survive' ? 'survive' : 'clear';
+  } else if (field === 'surviveSeconds') {
+    stage.surviveSeconds = Math.max(
+      mapEditor.MAP_EDITOR_SURVIVE_MIN,
+      Math.min(mapEditor.MAP_EDITOR_SURVIVE_MAX, Math.round(Number(value) || mapEditor.MAP_EDITOR_SURVIVE_MIN)),
+    );
+  } else stage[field] = value;
+  stage.updatedAt = Date.now();
+  editorMessage = null;
+  renderEditorList();
+  renderEditorBalance();
+  renderEditorMessage();
+}
+
+function toggleEditorWeapon(id, on) {
+  const stage = currentEditorStage();
+  if (!stage) return;
+  if (on) {
+    if (!stage.weapons.includes(id) && stage.weapons.length < mapEditor.MAP_EDITOR_MAX_WEAPONS) stage.weapons.push(id);
+  } else {
+    stage.weapons = stage.weapons.filter((weapon) => weapon !== id);
+    if (!stage.weapons.length) stage.weapons = ['sword'];
+  }
+  stage.updatedAt = Date.now();
+  renderEditorList();
+  renderEditorForm();
+}
+
+function addEditorEnemy() {
+  const stage = currentEditorStage();
+  if (!stage) return;
+  if (stage.enemies.length >= mapEditor.MAP_EDITOR_MAX_ENEMIES) {
+    editorMessage = `Maksimal ${mapEditor.MAP_EDITOR_MAX_ENEMIES} musuh per peta.`;
+    editorMessageKind = 'error';
+    renderEditorMessage();
+    return;
+  }
+  const type = $('editor-enemy-select')?.value;
+  if (!type || !ALL_ENEMY_INFO[type]) return;
+  stage.enemies.push({ type, x: Math.min(WORLD_W - 80, 260 + stage.enemies.length * 84) });
+  stage.updatedAt = Date.now();
+  editorMessage = null;
+  renderEditorList();
+  renderEditorForm();
+}
+
+function removeEditorEnemy(index) {
+  const stage = currentEditorStage();
+  if (!stage || !Number.isInteger(index) || index < 0 || index >= stage.enemies.length) return;
+  stage.enemies.splice(index, 1);
+  stage.updatedAt = Date.now();
+  renderEditorList();
+  renderEditorForm();
+}
+
+function setEditorEnemyX(index, value) {
+  const stage = currentEditorStage();
+  if (!stage || !stage.enemies[index]) return;
+  stage.enemies[index].x = Math.max(60, Math.min(WORLD_W - 60, Math.round(Number(value) || 60)));
+  stage.updatedAt = Date.now();
+}
+
+function newEditorStage() {
+  if (editorSave.stages.length >= mapEditor.MAP_EDITOR_MAX_STAGES) {
+    editorMessage = `Maksimal ${mapEditor.MAP_EDITOR_MAX_STAGES} peta tersimpan.`;
+    editorMessageKind = 'error';
+    renderEditorMessage();
+    return;
+  }
+  const blueprint = mapEditor.blueprintFromPreset('preset_hall', editorSave, editorSave.stages.length);
+  blueprint.name = `Peta ${editorSave.stages.length + 1}`;
+  editorSave = mapEditor.upsertBlueprint(editorSave, blueprint);
+  editorSelectedId = editorSave.selectedId;
+  editorSelectedPlatform = -1;
+  saveEditorSave();
+  editorMessage = 'Peta baru dibuat. Ubah isinya lalu tekan SIMPAN.';
+  editorMessageKind = 'ok';
+  buildEditorScreen();
+}
+
+function duplicateEditorStage() {
+  const stage = currentEditorStage();
+  if (!stage) return;
+  if (editorSave.stages.length >= mapEditor.MAP_EDITOR_MAX_STAGES) {
+    editorMessage = `Maksimal ${mapEditor.MAP_EDITOR_MAX_STAGES} peta tersimpan.`;
+    editorMessageKind = 'error';
+    renderEditorMessage();
+    return;
+  }
+  const copy = mapEditor.sanitizeBlueprint(
+    {
+      ...stage,
+      id: mapEditor.newBlueprintId(editorSave),
+      name: `${stage.name} II`.slice(0, mapEditor.MAP_EDITOR_NAME_MAX),
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    },
+    editorSave.stages.length,
+  );
+  editorSave = mapEditor.upsertBlueprint(editorSave, copy);
+  editorSelectedId = editorSave.selectedId;
+  editorSelectedPlatform = -1;
+  saveEditorSave();
+  editorMessage = 'Peta diduplikasi.';
+  editorMessageKind = 'ok';
+  buildEditorScreen();
+}
+
+function deleteEditorStage() {
+  const stage = currentEditorStage();
+  if (!stage) return;
+  if (editorSave.stages.length <= 1) {
+    editorMessage = 'Minimal satu peta harus tersisa.';
+    editorMessageKind = 'error';
+    renderEditorMessage();
+    return;
+  }
+  const name = stage.name;
+  editorSave = mapEditor.removeBlueprint(editorSave, stage.id);
+  editorSelectedId = editorSave.selectedId;
+  editorSelectedPlatform = -1;
+  saveEditorSave();
+  editorMessage = `"${name}" dihapus.`;
+  editorMessageKind = 'ok';
+  buildEditorScreen();
+}
+
+function saveEditorStage() {
+  const stage = currentEditorStage();
+  if (!stage) return false;
+  const report = mapEditor.validateBlueprint(stage, editorSave);
+  editorSave = mapEditor.upsertBlueprint(editorSave, stage);
+  editorSelectedId = editorSave.selectedId;
+  saveEditorSave();
+  if (!report.ok) {
+    editorMessage = `Tersimpan, tetapi belum bisa dimainkan: ${report.errors.join(' ')}`;
+    editorMessageKind = 'error';
+  } else if (report.warnings.length) {
+    editorMessage = `Tersimpan. Catatan: ${report.warnings.join(' ')}`;
+    editorMessageKind = 'ok';
+  } else {
+    editorMessage = `"${stage.name}" tersimpan dan siap dimainkan.`;
+    editorMessageKind = 'ok';
+  }
+  buildEditorScreen();
+  return report.ok;
+}
+
+function startCustomStage(id = editorSelectedId) {
+  if (!editorSave) return false;
+  const stage = editorSave.stages.find((entry) => entry.id === id) || currentEditorStage();
+  if (!stage) return false;
+  const report = mapEditor.validateBlueprint(stage, editorSave);
+  if (!report.ok) {
+    editorMessage = report.errors.join(' ');
+    editorMessageKind = 'error';
+    if (menuView === 'editor') buildEditorScreen();
+    return false;
+  }
+  const blueprint = mapEditor.sanitizeBlueprint(stage, 0);
+  // Every room of the chain must be playable, not only the entry room.
+  const broken = mapEditor.chainFor(editorSave, blueprint.id)
+    .filter((entry) => !mapEditor.validateBlueprint(entry, editorSave).ok)
+    .map((entry) => entry.name);
+  if (broken.length) {
+    editorMessage = `Ruang lanjutan belum valid: ${broken.join(', ')}.`;
+    editorMessageKind = 'error';
+    if (menuView === 'editor') buildEditorScreen();
+    return false;
+  }
+  editorSelectedId = blueprint.id;
+  editorSave = mapEditor.recordEditorPlay(editorSave, blueprint.id);
+  editorSave.selectedId = blueprint.id;
+  saveEditorSave();
+  customStage = blueprint;
+  const run = () => beginCustomStage(blueprint);
+  if (blueprint.intro === 'prologue') {
+    startPrologue(run);
+    return true;
+  }
+  if (blueprint.intro === 'trailer') {
+    customIntroCallback = run;
+    openTrailer();
+    return true;
+  }
+  if (blueprint.intro === 'spiral') {
+    startCutscene(SPIRAL_INTRO_CUTSCENE, run);
+    return true;
+  }
+  run();
+  return true;
+}
+
+function beginCustomStage(bp) {
+  audio.init();
+  audioUnlocked = true;
+  attempts = 1;
+  coopGuestMode = false;
+  coopGuestRoom = -1;
+  activeRunKind = 'custom';
+  activeCourtTrial = null;
+  activeCourtRoom = null;
+  activePackIndex = -1;
+  activeFairyStage = -1;
+  activeFairyBoss = null;
+  speedrunRun = null;
+  speedrunSummaryOpen = false;
+  labRun = null;
+  labDirector = null;
+  labGuestMode = false;
+  labRewardsOpen = false;
+  labSummaryOpen = false;
+  activeExpansionIndex = null;
+  activeModeId = null;
+  activeTrialId = null;
+  modalityCleanupForCustomStage();
+  customChain = mapEditor.chainFor(editorSave, bp.id);
+  if (!customChain.length) customChain = [bp];
+  customChainIndex = 0;
+  customStageCleared = false;
+  customStageEngaged = false;
+  customStageElapsed = 0;
+  customClearOpen = false;
+  const room = loadCustomRoom(customChain[0], { fresh: true });
+  started = true;
+  paused = false;
+  shopOpen = false;
+  mapOpen = false;
+  codexOpen = false;
+  inventoryOpen = false;
+  settingsOpen = false;
+  closeDialogue(true);
+  spectating = false;
+  spectateGame = null;
+  menuView = 'none';
+  lastGameState = 'playing';
+  accumulator = 0;
+  lastTime = performance.now();
+  clearHeldKeys();
+  activeStage = { key: `custom:${bp.id}`, index: room.index, label: bp.name, startedAt: game.time, recorded: false };
+  showBanner(bp.name, bp.subtitle);
+  showToast(
+    customChain.length > 1 ? `PETA SUMPAH · ${bp.name} · 1/${customChain.length} RUANG` : `PETA SUMPAH · ${bp.name}`,
+    2200,
+  );
+  syncScreens();
+  updateHud();
+}
+
+/** Load one room of a custom run. `fresh` resets class/loadout; a chain
+ * advance keeps HP, flasks, ammo, weapons and ash so the rooms play as one run. */
+function loadCustomRoom(bp, options = {}) {
+  const fresh = options.fresh === true;
+  const room = mapEditor.customRoomFromBlueprint(bp);
+  customStage = bp;
+  customClearBadge = bp.objective === 'survive' ? ''
+    : `🎯 ${mapEditor.mapDifficultyScale(bp.difficulty).name.toUpperCase()} · ${mapEditor.threatRating(bp).ratio}×`;
+  customStageEngaged = false;
+  if (fresh) {
+    game.reset();
+    game.applyCharacter(bp.classId);
+    game.applySkillBonuses(skillBonuses(progress.skills));
+    game.setAppearance({
+      race: character.race,
+      skin: character.skin,
+      outfit: character.outfit,
+      armor: character.armor,
+    });
+  }
+  game.labyrinth = false;
+  game.loadArena(room);
+  delete game.bossDefeated[room.index];
+  const p = game.player;
+  if (fresh) {
+    p.weapons = [...bp.weapons];
+    p.weapon = bp.weapons[0];
+    p.arrows = bp.arrows;
+    p.maxFlasks = bp.flasks;
+    p.flasks = bp.flasks;
+    p.relic = false;
+    game.ash = bp.ash;
+  } else {
+    p.invuln = Math.max(p.invuln, 1);
+  }
+  game.setHunterItems(hunterState.items);
+  if (bp.checkpoint) {
+    game.checkpoint = { ...room.checkpoint, active: true };
+    game.checkpointRoom = room.index;
+  }
+  for (const def of room.enemies) game.spawnEnemy(def);
+  if (bp.boss) game.spawnBoss(bp.boss, mapEditor.customBossOverrides(bp));
+  customSurviveLeft = bp.objective === 'survive' ? bp.surviveSeconds : 0;
+  game.events.length = 0;
+  return room;
+}
+
+function advanceCustomStage() {
+  if (!customChain.length) return false;
+  customChainIndex += 1;
+  const next = customChain[customChainIndex];
+  if (!next) {
+    finishCustomStage();
+    return false;
+  }
+  loadCustomRoom(next, { fresh: false });
+  customClearOpen = false;
+  const label = `RUANG ${customChainIndex + 1}/${customChain.length}`;
+  showBanner(label, next.name);
+  showToast(`${next.name} · ${label}`, 2000);
+  return true;
+}
+
+function modalityCleanupForCustomStage() {
+  cutsceneSeen = new Set();
+  postCreditTimer = -1;
+  horrorEventLayer = {};
+  horrorPresence = null;
+  horrorLastDone = null;
+}
+
+function tickCustomStage(dt) {
+  if (customClearOpen || !customStage) return;
+  customStageElapsed += dt;
+  if (!customStageEngaged) {
+    if (game.boss || game.enemies.length) customStageEngaged = true;
+    else if (customStageElapsed > 0.6) customStageEngaged = true;
+    return;
+  }
+  if (game.state !== 'playing') return;
+  // Survival rooms end on the clock, not on an empty screen. The enemies stay
+  // alive on purpose: the objective is staying alive, not clearing the roster.
+  if (customStage.objective === 'survive') {
+    customSurviveLeft = Math.max(0, customSurviveLeft - dt);
+    if (customSurviveLeft > 0) return;
+    if (customChainIndex < customChain.length - 1) advanceCustomStage();
+    else finishCustomStage();
+    return;
+  }
+  if (game.boss) return;
+  if (game.enemies.some((enemy) => !enemy.dead && enemy.hp > 0)) return;
+  if (customChainIndex < customChain.length - 1) {
+    advanceCustomStage();
+    return;
+  }
+  finishCustomStage();
+}
+
+function finishCustomStage() {
+  if (customStageCleared || !customStage) return false;
+  customStageCleared = true;
+  customClearOpen = true;
+  const seconds = Math.round(customStageElapsed * 10) / 10;
+  const root = customChain[0] || customStage;
+  const rooms = customChain.length || 1;
+  editorSave = mapEditor.recordEditorClear(editorSave, root.id, seconds);
+  saveEditorSave();
+  const title = $('custom-clear-title');
+  if (title) title.textContent = root.name;
+  const sub = $('custom-clear-sub');
+  if (sub) {
+    const mode = root.objective === 'survive' ? ` · BERTAHAN ${root.surviveSeconds} DTK` : '';
+    sub.textContent = `${root.subtitle} · ${mapEditor.layoutFor(root.layout).label}${rooms > 1 ? ` · ${rooms} ruang` : ''}${mode}`;
+  }
+  const body = $('custom-clear-body');
+  if (body) {
+    const record = editorSave.clears[root.id];
+    const rating = mapEditor.threatRating(root);
+    body.innerHTML = `
+      <div class="stat"><strong>${formatTime(seconds)}</strong><span>Waktu</span></div>
+      <div class="stat"><strong>${game.kills || 0}</strong><span>Musuh Gugur</span></div>
+      <div class="stat"><strong>${rooms}</strong><span>Ruang</span></div>
+      <div class="stat"><strong>${esc(mapEditor.mapDifficultyScale(root.difficulty).name)}</strong><span>Takaran</span></div>
+      <div class="stat"><strong>${esc(rating.label)}</strong><span>Tekanan ${rating.ratio}×</span></div>
+      <div class="stat"><strong>${record?.best ? formatTime(record.best) : '—'}</strong><span>Rekor Peta</span></div>
+      <div class="stat"><strong>${record?.count || 0}×</strong><span>Tuntas</span></div>`;
+  }
+  audio.play({ type: 'bossDown' });
+  syncScreens();
+  return true;
+}
+
 function showSpeedrun() {
   cancelPrologue();
   started = false;
@@ -7832,6 +8866,11 @@ function startRun(index = 0) {
 }
 
 function retryRun() {
+  if (activeRunKind === 'custom') {
+    customClearOpen = false;
+    startCustomStage(customChain[0]?.id || customStage?.id);
+    return;
+  }
   attempts += 1;
   if (activeRunKind === 'eternal') {
     const stageId = eternalController?.activeStage;
@@ -7967,6 +9006,10 @@ function retryRun() {
 }
 
 function showMenu() {
+  customClearOpen = false;
+  customStage = null;
+  customChain = [];
+  customChainIndex = 0;
   hunterShopOpen = false;
   cancelPrologue();
   if (activeRunKind === 'hack' && hackSnapshot) progress = hackSnapshot;
@@ -8080,7 +9123,19 @@ function showExpansion(tab = 'campaign') {
   syncScreens();
 }
 
-function showMode3D(subMode = 'campaign', options = {}) {
+const loadMode3D = lazyModule('./mode3d.js');
+let mode3D = null;
+let mode3DOpenId = 0;
+
+function gfx3DStatus() {
+  return mode3D?.gfx3DStatus() || {
+    state: 'idle', available: false, reason: null, hdr: null, msaa: 0, anisotropic: 1,
+    upscaler: null, models: 0, props: 0, internalWidth: 0, stats: null,
+  };
+}
+
+async function showMode3D(subMode = 'campaign', options = {}) {
+  const openId = ++mode3DOpenId;
   cancelPrologue();
   started = false;
   paused = false;
@@ -8093,10 +9148,29 @@ function showMode3D(subMode = 'campaign', options = {}) {
   spectating = false;
   spectateGame = null;
   menuView = 'mode3d';
+  clearHeldKeys();
+  syncScreens();
+  if (!mode3D) {
+    const status = $('mode3d-load-status');
+    status.textContent = 'Memuat dunia 3D…';
+    status.classList.remove('hidden');
+    try {
+      const engine = await loadMode3D();
+      if (openId !== mode3DOpenId || menuView !== 'mode3d') return false;
+      mode3D = engine;
+      status.classList.add('hidden');
+      $('mode3d-content').classList.remove('hidden');
+    } catch {
+      if (openId === mode3DOpenId && menuView === 'mode3d') {
+        showModeLoadError(status, 'Dunia 3D belum bisa dimuat.', () => showMode3D(subMode, options));
+      }
+      return false;
+    }
+  }
   const region = $('select-3d-region')?.value || 'thornveil';
   const area = $('select-3d-area')?.value || '';
   if (!game3D) {
-    game3D = new Ashen3DGame({
+    game3D = new mode3D.Ashen3DGame({
       viewW: 960,
       viewH: 540,
       subMode,
@@ -8117,8 +9191,8 @@ function showMode3D(subMode = 'campaign', options = {}) {
   } else {
     buildHorror3DPanel();
   }
-  clearHeldKeys();
   syncScreens();
+  return true;
 }
 
 function start3DHorrorRun(siteId, options = {}) {
@@ -8141,8 +9215,7 @@ function start3DHorrorRun(siteId, options = {}) {
 
 function start3DHorror(siteId = horror3DSiteId, options = {}) {
   if (menuView !== 'mode3d' || !game3D) {
-    showMode3D('scary', { siteId, ...options });
-    return game3D?.horrorSnapshot() || null;
+    return showMode3D('scary', { siteId, ...options }).then((opened) => opened ? game3D.horrorSnapshot() : null);
   }
   return start3DHorrorRun(siteId, options);
 }
@@ -8503,7 +9576,13 @@ function waveDefenseState() {
   return progress.wavedefense;
 }
 
-function showWaveDefense() {
+const loadWaveDefense = lazyModule('./wavedefense.js');
+const loadWaveDefenseStyle = lazyStylesheet('../styles-wavedefense.css');
+let waveMode = null;
+let waveDefenseOpenId = 0;
+
+async function showWaveDefense() {
+  const openId = ++waveDefenseOpenId;
   cancelPrologue();
   started = false;
   paused = false;
@@ -8523,13 +9602,41 @@ function showWaveDefense() {
   wdRenderDirty = true;
   menuView = 'wavedefense';
   clearHeldKeys();
-  buildWaveDefenseScreen();
   syncScreens();
+  if (!waveMode) {
+    const status = $('wd-load-status');
+    status.textContent = 'Memuat Wave Defense…';
+    status.classList.remove('hidden');
+    try {
+      const [mode] = await Promise.all([loadWaveDefense(), loadWaveDefenseStyle()]);
+      if (openId !== waveDefenseOpenId || menuView !== 'wavedefense') return false;
+      waveMode = mode;
+      status.classList.add('hidden');
+      $('wd-content').classList.remove('hidden');
+      $('btn-wd-trailer').classList.remove('hidden');
+    } catch {
+      if (openId === waveDefenseOpenId && menuView === 'wavedefense') {
+        showModeLoadError(status, 'Wave Defense belum bisa dimuat.', showWaveDefense);
+      }
+      return false;
+    }
+  }
+  buildWaveDefenseScreen();
+  return true;
 }
 
 function buildWaveDefenseScreen() {
+  if (!waveMode) return;
   const state = waveDefenseState();
-  const summary = waveDefenseSummary(state);
+  const summary = waveMode.waveDefenseSummary(state);
+  const storyEl = $('wd-story');
+  if (storyEl) {
+    storyEl.innerHTML = SPIRAL_STORY.map((chapter) => `<article class="wd-story-chapter">
+      <span>TINGKAT ${chapter.tier}</span>
+      <strong>${esc(chapter.title)}</strong>
+      <p>${esc(chapter.line)}</p>
+    </article>`).join('');
+  }
   const summaryEl = $('wd-summary');
   if (summaryEl) {
     summaryEl.innerHTML = `
@@ -8538,14 +9645,15 @@ function buildWaveDefenseScreen() {
       <div class="wd-stat"><span>GELOMBANG</span><strong>${summary.bestWave}/${WAVE_DEFENSE_TOTAL_WAVES}</strong><em>rekor tertinggi</em></div>
       <div class="wd-stat"><span>SKOR</span><strong>${summary.bestScore}</strong><em>rekor benteng</em></div>
       <div class="wd-stat"><span>TOTAL KILL</span><strong>${summary.totalKills}</strong><em>${summary.totalLeaks} bocor</em></div>
-      <div class="wd-stat"><span>MENARA</span><strong>${summary.towers}</strong><em>${summary.enemies} musuh · ${summary.bosses} bos</em></div>`;
+      <div class="wd-stat"><span>MENARA</span><strong>${summary.towers}</strong><em>${summary.enemies} musuh · ${summary.bosses} bos</em></div>
+      <div class="wd-stat"><span>INFINITOWER</span><strong>T${summary.infinitowerBest?.bestTier || 0}</strong><em>gel ${summary.infinitowerBest?.bestWave || 0} · ${summary.infinitowerBest?.bestKills || 0} kill</em></div>`;
   }
-  if (!WAVE_DEFENSE_MAP_BY_ID[wdMapId]) wdMapId = WAVE_DEFENSE_MAPS[0].id;
-  if (!WAVE_DEFENSE_DIFFICULTIES.some((entry) => entry.id === wdDifficulty)) wdDifficulty = 'knight';
-  if (!WAVE_DEFENSE_TOWER_BY_ID[wdSelectedTowerId]) wdSelectedTowerId = WAVE_DEFENSE_TOWERS[0].id;
+  if (!waveMode.WAVE_DEFENSE_MAP_BY_ID[wdMapId]) wdMapId = waveMode.WAVE_DEFENSE_MAPS[0].id;
+  if (!waveMode.WAVE_DEFENSE_DIFFICULTIES.some((entry) => entry.id === wdDifficulty)) wdDifficulty = 'knight';
+  if (!waveMode.WAVE_DEFENSE_TOWER_BY_ID[wdSelectedTowerId]) wdSelectedTowerId = waveMode.WAVE_DEFENSE_TOWERS[0].id;
   const maps = $('wd-maps');
   if (maps) {
-    maps.innerHTML = WAVE_DEFENSE_MAPS.map((map) => {
+    maps.innerHTML = waveMode.WAVE_DEFENSE_MAPS.map((map) => {
       const record = state.maps?.[map.id] || {};
       return `<button class="wd-map-card${map.id === wdMapId ? ' active' : ''}" type="button" data-wd-map="${map.id}">
         <strong>${esc(map.name)}</strong><em>${esc(map.subtitle)}</em><span>${esc(map.lore)}</span>
@@ -8554,17 +9662,19 @@ function buildWaveDefenseScreen() {
     }).join('');
   }
   const diffs = $('wd-difficulties');
-  if (diffs) diffs.innerHTML = WAVE_DEFENSE_DIFFICULTIES.map((entry) => `<button class="${entry.id === wdDifficulty ? 'active' : ''}" type="button" data-wd-difficulty="${entry.id}" title="${esc(entry.desc)}">${entry.name} · ${entry.castle} HP</button>`).join('');
+  if (diffs) diffs.innerHTML = waveMode.WAVE_DEFENSE_DIFFICULTIES.map((entry) => `<button class="${entry.id === wdDifficulty ? 'active' : ''}" type="button" data-wd-difficulty="${entry.id}" title="${esc(entry.desc)}">${entry.name} · ${entry.castle} HP</button>`).join('');
   const modes = $('wd-modes');
   if (modes) {
     const best = summary.endlessBest || {};
+    const tower = summary.infinitowerBest || {};
     modes.innerHTML = `
-      <button class="${wdEndless ? '' : 'active'}" type="button" data-wd-mode="classic">KAMPANYE · 24 GELOMBANG<em>Rekor gel ${summary.bestWave}/${WAVE_DEFENSE_TOTAL_WAVES} · skor ${summary.bestScore}</em></button>
-      <button class="${wdEndless ? 'active' : ''}" type="button" data-wd-mode="endless">TANPA AKHIR<em>Rekor gel ${best.bestWave || 0} · ${best.bestKills || 0} kill · skor ${best.bestScore || 0}</em></button>`;
+      <button class="${!wdEndless && !wdInfinitower ? 'active' : ''}" type="button" data-wd-mode="classic">KAMPANYE · 24 GELOMBANG<em>Rekor gel ${summary.bestWave}/${WAVE_DEFENSE_TOTAL_WAVES} · skor ${summary.bestScore}</em></button>
+      <button class="${wdEndless && !wdInfinitower ? 'active' : ''}" type="button" data-wd-mode="endless">TANPA AKHIR<em>Rekor gel ${best.bestWave || 0} · ${best.bestKills || 0} kill · skor ${best.bestScore || 0}</em></button>
+      <button class="${wdInfinitower ? 'active' : ''}" type="button" data-wd-mode="infinitower">INFINITOWER · LINGKAR ABADI<em>Tingkat ${tower.bestTier || 0} · gel ${tower.bestWave || 0} · ${tower.bestKills || 0} kill</em></button>`;
   }
   const towers = $('wd-towers');
   if (towers) {
-    towers.innerHTML = WAVE_DEFENSE_TOWERS.map((tower) => `<button class="wd-tower-card${tower.id === wdSelectedTowerId ? ' active' : ''}" type="button" data-wd-tower="${tower.id}" style="--tower-color:${tower.color}">
+    towers.innerHTML = waveMode.WAVE_DEFENSE_TOWERS.map((tower) => `<button class="wd-tower-card${tower.id === wdSelectedTowerId ? ' active' : ''}" type="button" data-wd-tower="${tower.id}" style="--tower-color:${tower.color}">
       <span class="wt-top"><span class="wt-glyph">${tower.glyph}</span><strong>${esc(tower.name)}</strong></span>
       <em>${tower.cost} EMAS</em>
       <span>${esc(tower.desc)}</span>
@@ -8572,15 +9682,15 @@ function buildWaveDefenseScreen() {
     </button>`).join('');
   }
   const count = $('wd-tower-count');
-  if (count) count.textContent = `${WAVE_DEFENSE_TOWERS.length} JENIS · ${WAVE_DEFENSE_ENEMY_TYPES.length} MUSUH · ${WAVE_DEFENSE_BOSSES.length} BOS`;
+  if (count) count.textContent = `${waveMode.WAVE_DEFENSE_TOWERS.length} JENIS · ${waveMode.WAVE_DEFENSE_ENEMY_TYPES.length} MUSUH · ${waveMode.WAVE_DEFENSE_BOSSES.length} BOS`;
   const button = $('btn-wd-start');
-  if (button) button.innerHTML = `<span>${wdEndless ? 'MULAI TANPA AKHIR' : 'MULAI PERTAHANAN'}</span><em>${esc(WAVE_DEFENSE_MAP_BY_ID[wdMapId]?.name || 'ASHEN KEEP')} · ${WAVE_DEFENSE_TOWER_BY_ID[wdSelectedTowerId]?.name || 'BALLISTA'} · ${WAVE_DEFENSE_DIFFICULTIES.find((entry) => entry.id === wdDifficulty)?.name || 'KNIGHT'}${wdEndless ? ' · ∞' : ''}</em>`;
+  if (button) button.innerHTML = `<span>${wdInfinitower ? 'MULAI INFINITOWER' : wdEndless ? 'MULAI TANPA AKHIR' : 'MULAI PERTAHANAN'}</span><em>${esc((wdInfinitower ? waveMode.WAVE_DEFENSE_MAP_BY_ID.eternal_spiral : waveMode.WAVE_DEFENSE_MAP_BY_ID[wdMapId])?.name || 'ASHEN KEEP')} · ${waveMode.WAVE_DEFENSE_TOWER_BY_ID[wdSelectedTowerId]?.name || 'BALLISTA'} · ${waveMode.WAVE_DEFENSE_DIFFICULTIES.find((entry) => entry.id === wdDifficulty)?.name || 'KNIGHT'}${wdInfinitower ? ` · TINGKAT / ${WAVE_DEFENSE_INFINITOWER_TIER_WAVES} GEL` : wdEndless ? ' · ∞' : ''}</em>`;
 }
 
 function buildWaveDefensePalette() {
   const palette = $('wd-palette');
   if (!palette) return;
-  palette.innerHTML = WAVE_DEFENSE_TOWERS.map((tower) => `<button type="button" data-wd-tower="${tower.id}" style="--tower-color:${tower.color}">
+  palette.innerHTML = waveMode.WAVE_DEFENSE_TOWERS.map((tower) => `<button type="button" data-wd-tower="${tower.id}" style="--tower-color:${tower.color}">
     <span class="wp-glyph">${tower.glyph}</span><span class="wp-name">${esc(tower.name)}</span><span class="wp-cost">${tower.cost}</span>
   </button>`).join('');
   wdSelectionKey = '';
@@ -8588,16 +9698,19 @@ function buildWaveDefensePalette() {
 }
 
 function startWaveDefenseBattle() {
-  if (!WAVE_DEFENSE_MAP_BY_ID[wdMapId]) wdMapId = WAVE_DEFENSE_MAPS[0].id;
-  if (!WAVE_DEFENSE_TOWER_BY_ID[wdSelectedTowerId]) wdSelectedTowerId = WAVE_DEFENSE_TOWERS[0].id;
-  wdMatch = createWaveDefense({
+  if (!waveMode) return false;
+  if (!waveMode.WAVE_DEFENSE_MAP_BY_ID[wdMapId]) wdMapId = waveMode.WAVE_DEFENSE_MAPS[0].id;
+  if (!waveMode.WAVE_DEFENSE_TOWER_BY_ID[wdSelectedTowerId]) wdSelectedTowerId = waveMode.WAVE_DEFENSE_TOWERS[0].id;
+  wdMatch = waveMode.createWaveDefense({
     mapId: wdMapId,
     difficulty: wdDifficulty,
     endless: wdEndless,
+    infinitower: wdInfinitower,
     seed: (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0,
   });
-  waveDefenseSelectTower(wdMatch, wdSelectedTowerId);
+  waveMode.waveDefenseSelectTower(wdMatch, wdSelectedTowerId);
   wdActive = true;
+  wdBossCutsceneSeen = false;
   wdPaused = false;
   wdResult = null;
   wdRecorded = false;
@@ -8620,7 +9733,43 @@ function startWaveDefenseBattle() {
   syncScreens();
   const canvas = $('wd-canvas');
   const ctx = canvas?.getContext('2d');
-  if (canvas && ctx) renderWaveDefense(ctx, wdMatch, { width: canvas.width, height: canvas.height, time: performance.now() / 1000 });
+  if (canvas && ctx) waveMode.renderWaveDefense(ctx, wdMatch, { width: canvas.width, height: canvas.height, time: performance.now() / 1000 });
+}
+
+// ── Infinitower cinematics ─────────────────────────────────────────────────
+function playWaveDefenseCutscene(scene, onDone) {
+  if (!scene) return false;
+  startCutscene(scene, onDone);
+  return true;
+}
+
+function playWaveDefenseTrailer() {
+  audio.init();
+  audioUnlocked = true;
+  return playWaveDefenseCutscene(SPIRAL_INTRO_CUTSCENE);
+}
+
+function playWaveDefenseIntro() {
+  if (wdIntroSeen) return false;
+  wdIntroSeen = true;
+  if (wdActive) toggleWaveDefensePause(true);
+  return playWaveDefenseCutscene(SPIRAL_INTRO_CUTSCENE, () => { if (wdActive) toggleWaveDefensePause(false); });
+}
+
+// The first boss of a run gets a full portrait. Later bosses keep the fight
+// moving and announce themselves through the battle feed instead.
+function maybeWaveDefenseBossCutscene() {
+  if (!wdActive || !wdMatch || wdPaused || cutsceneActive || wdBossCutsceneSeen) return false;
+  if (!wdMatch.infinitower) return false;
+  if (!wdMatch.enemies.some((enemy) => enemy.boss && !enemy.dead)) return false;
+  wdBossCutsceneSeen = true;
+  toggleWaveDefensePause(true);
+  return playWaveDefenseCutscene(SPIRAL_BOSS_CUTSCENE, () => { if (wdActive) toggleWaveDefensePause(false); });
+}
+
+function startWaveDefenseFromHub() {
+  startWaveDefenseBattle();
+  if (wdInfinitower && wdActive && !wdIntroSeen) playWaveDefenseIntro();
 }
 
 function toggleWaveDefensePause(next = !wdPaused) {
@@ -8645,14 +9794,14 @@ function leaveWaveDefense() {
 function completeWaveDefense() {
   if (!wdMatch || wdMatch.phase !== 'ended' || wdRecorded) return;
   wdRecorded = true;
-  const saved = recordWaveDefense(waveDefenseState(), wdMatch);
+  const saved = waveMode.recordWaveDefense(waveDefenseState(), wdMatch);
   progress.wavedefense = saved.progress;
   saveProgress();
   wdResult = {
     ...saved,
     mapName: wdMatch.map.name,
-    difficultyName: WAVE_DEFENSE_DIFFICULTIES.find((entry) => entry.id === wdMatch.difficulty)?.name || 'KNIGHT',
-    snapshot: waveDefenseSnapshot(wdMatch),
+    difficultyName: waveMode.WAVE_DEFENSE_DIFFICULTIES.find((entry) => entry.id === wdMatch.difficulty)?.name || 'KNIGHT',
+    snapshot: waveMode.waveDefenseSnapshot(wdMatch),
   };
   renderWaveDefenseResult();
   updateWaveDefenseHud(true);
@@ -8662,14 +9811,18 @@ function renderWaveDefenseResult() {
   const overlay = $('wd-result');
   if (!overlay || !wdResult) return;
   const r = wdResult;
+  const infinitower = !!r.infinitower || !!r.snapshot?.infinitower;
   const endless = !!r.endless || !!r.snapshot?.endless;
   const win = r.win || r.snapshot?.result === 'victory';
-  const title = endless ? 'PASANG TANPA AKHIR' : win ? 'MAHKOTA BERTAHAN' : 'GERBANG TERBELAH';
-  const body = endless
-    ? `Benteng jatuh pada gelombang ${r.snapshot?.wave || 0}. Rekor ${r.isRecord ? 'diperbarui' : 'tetap berdiri'}.`
-    : win ? 'Dua puluh empat gelombang hancur. Benteng terakhir masih berdiri.' : `Benteng jatuh pada gelombang ${r.snapshot?.wave || 0}. Bangun lebih awal dan tutup jalur dengan area damage.`;
+  const tier = r.tier || r.snapshot?.tier || 1;
+  const title = infinitower ? 'LINGKAR PADAM' : endless ? 'PASANG TANPA AKHIR' : win ? 'MAHKOTA BERTAHAN' : 'GERBANG TERBELAH';
+  const body = infinitower
+    ? `Infinitower runtuh pada gelombang ${r.snapshot?.wave || 0} — tingkat ${tier}. Rekor ${r.isRecord ? 'diperbarui' : 'tetap berdiri'}; lingkar berikutnya menunggu.`
+    : endless
+      ? `Benteng jatuh pada gelombang ${r.snapshot?.wave || 0}. Rekor ${r.isRecord ? 'diperbarui' : 'tetap berdiri'}.`
+      : win ? 'Dua puluh empat gelombang hancur. Benteng terakhir masih berdiri.' : `Benteng jatuh pada gelombang ${r.snapshot?.wave || 0}. Bangun lebih awal dan tutup jalur dengan area damage.`;
   overlay.innerHTML = `<div class="wd-modal wd-result-card ${endless || win ? 'victory' : 'defeat'}">
-    <p class="eyebrow">WAVE DEFENSE · ${esc(endless ? 'TANPA AKHIR' : r.mapName)} · ${formatPuzzleTime(r.snapshot?.time || 0)}</p>
+    <p class="eyebrow">WAVE DEFENSE · ${esc(infinitower ? `INFINITOWER · TINGKAT ${tier}` : endless ? 'TANPA AKHIR' : r.mapName)} · ${formatPuzzleTime(r.snapshot?.time || 0)}</p>
     <h3 class="wd-result-title">${title}</h3>
     <p>${body}</p>
     <div class="wd-result-stats">
@@ -8689,7 +9842,7 @@ function renderWaveDefenseResult() {
 function waveDefenseSelectionKey() {
   if (!wdMatch) return '';
   const tower = wdMatch.selectedSlot >= 0 ? wdMatch.towers.find((entry) => entry.slot === wdMatch.selectedSlot) : null;
-  return tower ? `${tower.id}:${tower.level}:${wdMatch.gold >= waveDefenseUpgradeCost(tower)}` : `slot:${wdMatch.selectedSlot}:${wdMatch.gold}`;
+  return tower ? `${tower.id}:${tower.level}:${wdMatch.gold >= waveMode.waveDefenseUpgradeCost(tower)}` : `slot:${wdMatch.selectedSlot}:${wdMatch.gold}`;
 }
 
 function updateWaveDefenseHud(force = false) {
@@ -8705,11 +9858,11 @@ function updateWaveDefenseHud(force = false) {
   if (fill) fill.style.width = `${hpRatio * 100}%`;
   const bar = $('wd-castle-bar');
   if (bar) bar.classList.toggle('low', hpRatio <= 0.3);
-  setText('wd-map-name', m.endless ? `${m.map.name} · TANPA AKHIR` : m.map.name);
-  setText('wd-wave', m.phase === 'prep' ? 'SIAP' : `GELOMBANG ${m.wave}`);
+  setText('wd-map-name', m.infinitower ? `${m.map.name} · INFINITOWER T${waveMode.infinitowerTierFor(m.wave)}` : m.endless ? `${m.map.name} · TANPA AKHIR` : m.map.name);
+  setText('wd-wave', m.phase === 'prep' ? 'SIAP' : `${m.infinitower ? 'INFINITOWER' : 'GELOMBANG'} ${m.wave}`);
   setText('wd-phase', m.phase === 'prep'
-    ? `GELOMBANG ${m.wave + 1}${m.endless ? ' · TANPA AKHIR' : ` / ${m.totalWaves}`} DALAM ${Math.max(0, m.prepTimer).toFixed(1)}`
-    : m.phase === 'wave' ? `${m.enemies.length} MUSUH · ${m.stats.kills} KILL` : 'PERTAHANAN SELESAI');
+    ? `${m.infinitower ? `TINGKAT ${waveMode.infinitowerTierFor(m.wave + 1)} · ` : ''}GELOMBANG ${m.wave + 1}${m.endless ? ' · TANPA AKHIR' : ` / ${m.totalWaves}`} DALAM ${Math.max(0, m.prepTimer).toFixed(1)}`
+    : m.phase === 'wave' ? `${m.enemies.length} MUSUH · ${m.stats.kills} KILL${m.infinitower ? ` · T${waveMode.infinitowerTierFor(m.wave)}` : ''}` : 'PERTAHANAN SELESAI');
   setText('wd-gold', m.gold);
   setText('wd-score', m.score);
   setText('wd-kills', m.stats.kills);
@@ -8721,7 +9874,7 @@ function updateWaveDefenseHud(force = false) {
   }
   document.querySelectorAll('#wd-speed [data-wd-speed]').forEach((button) => button.classList.toggle('active', Number(button.dataset.wdSpeed) === m.speed));
   document.querySelectorAll('#wd-palette [data-wd-tower]').forEach((button) => {
-    const def = WAVE_DEFENSE_TOWER_BY_ID[button.dataset.wdTower];
+    const def = waveMode.WAVE_DEFENSE_TOWER_BY_ID[button.dataset.wdTower];
     button.classList.toggle('active', button.dataset.wdTower === m.buildTowerId);
     button.classList.toggle('disabled', !def || m.gold < def.cost);
   });
@@ -8743,17 +9896,17 @@ function updateWaveDefenseHud(force = false) {
     wdSelectionKey = key;
     const tower = m.selectedSlot >= 0 ? m.towers.find((entry) => entry.slot === m.selectedSlot) : null;
     if (tower) {
-      const def = WAVE_DEFENSE_TOWER_BY_ID[tower.towerId];
-      const cost = waveDefenseUpgradeCost(tower);
+      const def = waveMode.WAVE_DEFENSE_TOWER_BY_ID[tower.towerId];
+      const cost = waveMode.waveDefenseUpgradeCost(tower);
       const maxed = tower.level >= 3;
       selection.innerHTML = `<div class="ws-line"><strong>${esc(def.name)} · POS ${tower.slot + 1}</strong><span>LEVEL ${tower.level}/3</span><em>${def.cost} emas</em></div>
         <p>${esc(def.desc)}</p>
         <div class="wd-selection-actions">
           <button type="button" data-wd-action="upgrade" ${maxed || m.gold < cost ? 'disabled' : ''}>${maxed ? 'LEVEL MAKSIMUM' : `TINGKATKAN · ${cost} EMAS`}</button>
-          <button type="button" data-wd-action="sell">JUAL +${waveDefenseSellValue(tower)}</button>
+          <button type="button" data-wd-action="sell">JUAL +${waveMode.waveDefenseSellValue(tower)}</button>
         </div>`;
     } else {
-      const def = WAVE_DEFENSE_TOWER_BY_ID[m.buildTowerId];
+      const def = waveMode.WAVE_DEFENSE_TOWER_BY_ID[m.buildTowerId];
       selection.innerHTML = `<div class="ws-line"><strong>POS ${m.selectedSlot >= 0 ? m.selectedSlot + 1 : '—'}</strong><span>${def?.name || 'PILIH MENARA'}</span><em>${def?.cost || 0} emas</em></div>
         <p>Klik pos kosong untuk membangun. Pilih menara di panel kiri, lalu klik pos di sepanjang jalan.</p>
         <div class="wd-selection-actions"><button type="button" data-wd-action="hint" disabled>MENUNGGU POS</button></div>`;
@@ -8796,11 +9949,11 @@ function handleWaveDefenseSlot(index) {
   const slot = wdMatch.slots[index];
   if (!slot) return;
   if (slot.towerId === null) {
-    const def = WAVE_DEFENSE_TOWER_BY_ID[wdMatch.buildTowerId];
-    if (def && wdMatch.gold >= def.cost) waveDefenseBuild(wdMatch, index, wdMatch.buildTowerId);
-    else waveDefenseSelect(wdMatch, index);
+    const def = waveMode.WAVE_DEFENSE_TOWER_BY_ID[wdMatch.buildTowerId];
+    if (def && wdMatch.gold >= def.cost) waveMode.waveDefenseBuild(wdMatch, index, wdMatch.buildTowerId);
+    else waveMode.waveDefenseSelect(wdMatch, index);
   } else {
-    waveDefenseSelect(wdMatch, index);
+    waveMode.waveDefenseSelect(wdMatch, index);
   }
   wdRenderDirty = true;
   updateWaveDefenseHud(true);
@@ -8812,7 +9965,13 @@ function pirateState() {
   return progress.pirates;
 }
 
-function showPirates() {
+const loadPirateMode = lazyModule('./pirates.js');
+const loadPirateStyle = lazyStylesheet('../styles-pirates.css');
+let pirateMode = null;
+let pirateOpenId = 0;
+
+async function showPirates() {
+  const openId = ++pirateOpenId;
   cancelPrologue();
   started = false;
   paused = false;
@@ -8832,14 +9991,33 @@ function showPirates() {
   pirateLastSnapshot = null;
   pirateHeld.clear();
   menuView = 'pirates';
-  if (!pirateStageUnlocked(pirateState(), pirateStageId)) pirateStageId = PIRATE_STAGES[0].id;
-  buildPirateScreen();
   syncScreens();
+  if (!pirateMode) {
+    const status = $('pirate-load-status');
+    status.textContent = 'Memuat Pirate Tide…';
+    status.classList.remove('hidden');
+    try {
+      const [mode] = await Promise.all([loadPirateMode(), loadPirateStyle()]);
+      if (openId !== pirateOpenId || menuView !== 'pirates') return false;
+      pirateMode = mode;
+      status.classList.add('hidden');
+      $('pirate-content').classList.remove('hidden');
+    } catch {
+      if (openId === pirateOpenId && menuView === 'pirates') {
+        showModeLoadError(status, 'Pirate Tide belum bisa dimuat.', showPirates);
+      }
+      return false;
+    }
+  }
+  if (!pirateMode.pirateStageUnlocked(pirateState(), pirateStageId)) pirateStageId = PIRATE_STAGES[0].id;
+  buildPirateScreen();
+  return true;
 }
 
 function buildPirateScreen() {
+  if (!pirateMode) return;
   const state = pirateState();
-  const summary = pirateSummary(state);
+  const summary = pirateMode.pirateSummary(state);
   const summaryEl = $('pirate-summary');
   if (summaryEl) {
     summaryEl.innerHTML = `
@@ -8853,7 +10031,7 @@ function buildPirateScreen() {
   const stages = $('pirate-stages');
   if (stages) {
     stages.innerHTML = PIRATE_STAGES.map((stage) => {
-      const unlocked = pirateStageUnlocked(state, stage.id);
+      const unlocked = pirateMode.pirateStageUnlocked(state, stage.id);
       const record = state.stages?.[stage.id] || {};
       return `<button class="pirate-stage-card${stage.id === pirateStageId ? ' active' : ''}${unlocked ? '' : ' locked'}" type="button" data-pirate-stage="${stage.id}" ${unlocked ? '' : 'disabled'}>
         <span class="ps-index">${String(stage.index + 1).padStart(2, '0')}</span>
@@ -8866,7 +10044,7 @@ function buildPirateScreen() {
   }
   const world = $('pirate-world');
   if (world) {
-    world.innerHTML = PIRATE_ISLANDS.map((island) => `<div class="pirate-island${island.port ? ' port' : ''}">
+    world.innerHTML = pirateMode.PIRATE_ISLANDS.map((island) => `<div class="pirate-island${island.port ? ' port' : ''}">
       <strong>${esc(island.name)}</strong><span>${island.port ? 'PELABUHAN · REPARASI' : 'PERAIRAN TERBUKA'}</span>
     </div>`).join('');
   }
@@ -8883,11 +10061,11 @@ function buildPirateScreen() {
     </div>`;
   }
   const count = $('pirate-count');
-  if (count) count.textContent = `${PIRATE_SHIP_TYPES.length} JENIS KAPAL · ${PIRATE_BOSS_TYPES.length} KAPTEN · ${PIRATE_PORTS.length} PELABUHAN`;
+  if (count) count.textContent = `${pirateMode.PIRATE_SHIP_TYPES.length} JENIS KAPAL · ${pirateMode.PIRATE_BOSS_TYPES.length} KAPTEN · ${pirateMode.PIRATE_PORTS.length} PELABUHAN`;
   const button = $('btn-pirate-start');
   if (button) {
     const stage = PIRATE_STAGE_BY_ID[pirateStageId] || PIRATE_STAGES[0];
-    button.innerHTML = `<span>TAK LAYAR</span><em>${esc(stage.name)} · ${stage.targetKills} kapal · ${esc(PIRATE_BOSS_TYPES.find((boss) => boss.id === stage.bossId)?.name || 'KAPTEN')}</em>`;
+    button.innerHTML = `<span>TAK LAYAR</span><em>${esc(stage.name)} · ${stage.targetKills} kapal · ${esc(pirateMode.PIRATE_BOSS_TYPES.find((boss) => boss.id === stage.bossId)?.name || 'KAPTEN')}</em>`;
   }
   const controls = $('pirate-controls');
   if (controls) controls.classList.add('hidden');
@@ -8935,21 +10113,23 @@ function beginPirateMatch(match) {
   syncScreens();
   const canvas = syncPirateCanvasSize();
   const ctx = canvas?.getContext('2d');
-  if (canvas && ctx) renderPirateVoyage(ctx, pirateMatch, { width: canvas.width, height: canvas.height, time: performance.now() / 1000 });
+  if (canvas && ctx) pirateMode.renderPirateVoyage(ctx, pirateMatch, { width: canvas.width, height: canvas.height, time: performance.now() / 1000 });
   return true;
 }
 
 function startPirateVoyage() {
+  if (!pirateMode) return false;
   const stage = PIRATE_STAGE_BY_ID[pirateStageId] || PIRATE_STAGES[0];
-  if (!pirateStageUnlocked(pirateState(), stage.id)) return false;
-  return beginPirateMatch(createPirateVoyage({
+  if (!pirateMode.pirateStageUnlocked(pirateState(), stage.id)) return false;
+  return beginPirateMatch(pirateMode.createPirateVoyage({
     stageId: stage.id,
     seed: (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0,
   }));
 }
 
 function startPirateEndless() {
-  return beginPirateMatch(createPirateEndless({
+  if (!pirateMode) return false;
+  return beginPirateMatch(pirateMode.createPirateEndless({
     seed: (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0,
   }));
 }
@@ -8958,7 +10138,7 @@ function togglePiratePause(next = !piratePaused) {
   if (!pirateActive || !pirateMatch || pirateMatch.phase !== 'sailing') return;
   piratePaused = !!next;
   pirateHeld.clear();
-  setPirateControls(pirateMatch, { throttle: 0, turn: 0 });
+  pirateMode.setPirateControls(pirateMatch, { throttle: 0, turn: 0 });
   lastTime = performance.now();
   syncScreens();
   updatePirateHud(true);
@@ -8980,15 +10160,15 @@ function completePirateVoyage() {
   if (pirateMatch.phase !== 'cleared' && pirateMatch.phase !== 'sunk') return;
   pirateRecorded = true;
   const saved = pirateMatch.endless
-    ? recordPirateEndless(pirateState(), pirateMatch)
-    : recordPirateVoyage(pirateState(), pirateMatch);
+    ? pirateMode.recordPirateEndless(pirateState(), pirateMatch)
+    : pirateMode.recordPirateVoyage(pirateState(), pirateMatch);
   progress.pirates = saved.progress;
   saveProgress();
   pirateResult = {
     ...saved,
-    snapshot: pirateSnapshot(pirateMatch),
+    snapshot: pirateMode.pirateSnapshot(pirateMatch),
     endless: !!pirateMatch.endless,
-    bossName: PIRATE_BOSS_TYPES.find((boss) => boss.id === pirateMatch.stage.bossId)?.name || '',
+    bossName: pirateMode.PIRATE_BOSS_TYPES.find((boss) => boss.id === pirateMatch.stage.bossId)?.name || '',
   };
   buildPirateScreen();
   renderPirateResult();
@@ -9031,7 +10211,7 @@ function updatePirateHud(force = false) {
   if ((pirateMatch.phase === 'cleared' || pirateMatch.phase === 'sunk') && !pirateRecorded) completePirateVoyage();
   if (!force && pirateUiTimer < 1 / 8) return;
   pirateUiTimer = 0;
-  const snapshot = pirateSnapshot(pirateMatch);
+  const snapshot = pirateMode.pirateSnapshot(pirateMatch);
   pirateLastSnapshot = snapshot;
   const setText = (id, value) => { const node = $(id); if (node) node.textContent = value; };
   const p = snapshot.player;
@@ -9048,11 +10228,11 @@ function updatePirateHud(force = false) {
   setText('pirate-kills', snapshot.endless ? snapshot.kills : `${snapshot.kills}/${snapshot.targetKills}`);
   setText('pirate-score', snapshot.score);
   setText('pirate-speed', `${Math.round(Math.abs(pirateMatch.player.speed))} KN`);
-  setText('pirate-port-text', snapshot.nearPort?.inRange ? `BERLABUH · ${PIRATE_DOCK_COST} EMAS` : (snapshot.nearPort?.name || 'PELABUHAN'));
+  setText('pirate-port-text', snapshot.nearPort?.inRange ? `BERLABUH · ${pirateMode.PIRATE_DOCK_COST} EMAS` : (snapshot.nearPort?.name || 'PELABUHAN'));
   const portButton = $('btn-pirate-dock');
   if (portButton) {
-    portButton.disabled = !snapshot.nearPort?.inRange || snapshot.gold < PIRATE_DOCK_COST || p.hp >= p.maxHp || snapshot.phase !== 'sailing';
-    portButton.classList.toggle('ready', snapshot.nearPort?.inRange && snapshot.gold >= PIRATE_DOCK_COST && p.hp < p.maxHp);
+    portButton.disabled = !snapshot.nearPort?.inRange || snapshot.gold < pirateMode.PIRATE_DOCK_COST || p.hp >= p.maxHp || snapshot.phase !== 'sailing';
+    portButton.classList.toggle('ready', snapshot.nearPort?.inRange && snapshot.gold >= pirateMode.PIRATE_DOCK_COST && p.hp < p.maxHp);
   }
   const portPanel = $('pirate-port');
   if (portPanel) portPanel.classList.toggle('hidden', !snapshot.nearPort?.inRange);
@@ -9083,7 +10263,7 @@ function piratePointerWorld(event) {
   const rect = canvas.getBoundingClientRect();
   const x = ((event.clientX - rect.left) / Math.max(1, rect.width)) * canvas.width;
   const y = ((event.clientY - rect.top) / Math.max(1, rect.height)) * canvas.height;
-  return pirateScreenToWorld(pirateMatch, x, y, canvas.width, canvas.height);
+  return pirateMode.pirateScreenToWorld(pirateMatch, x, y, canvas.width, canvas.height);
 }
 
 const pirateHeld = new Set();
@@ -9094,19 +10274,19 @@ function setPirateControlKey(code, down) {
   if (!pirateMatch) return;
   const throttle = (pirateHeld.has('KeyW') || pirateHeld.has('ArrowUp') ? 1 : 0) - (pirateHeld.has('KeyS') || pirateHeld.has('ArrowDown') ? 1 : 0);
   const turn = (pirateHeld.has('KeyD') || pirateHeld.has('ArrowRight') ? 1 : 0) - (pirateHeld.has('KeyA') || pirateHeld.has('ArrowLeft') ? 1 : 0);
-  setPirateControls(pirateMatch, { throttle, turn });
+  pirateMode.setPirateControls(pirateMatch, { throttle, turn });
 }
 
 function firePirateSide(side) {
   if (!pirateActive || piratePaused || !pirateMatch) return false;
-  const fired = pirateFire(pirateMatch, side);
+  const fired = pirateMode.pirateFire(pirateMatch, side);
   if (fired) updatePirateHud(true);
   return fired;
 }
 
 function dockPirate() {
   if (!pirateActive || piratePaused || !pirateMatch) return;
-  const result = pirateDock(pirateMatch);
+  const result = pirateMode.pirateDock(pirateMatch);
   if (!result.ok) showToast(result.reason, 1800);
   else showToast(`Lambung dipulihkan +${Math.round(result.healed)}.`, 1600);
   updatePirateHud(true);
@@ -10595,10 +11775,10 @@ function showCredits() {
 }
 
 // ── update log ───────────────────────────────────────────────────────────
-function buildUpdateLog() {
-  const wrap = $('update-log');
-  if (!wrap) return;
-  wrap.innerHTML = UPDATE_LOG.map((entry, index) => `
+const loadUpdateLog = lazyModule('./updates.js');
+
+function renderUpdateLog(wrap, entries) {
+  wrap.innerHTML = entries.map((entry, index) => `
     <article class="update-entry${index === 0 ? ' latest' : ''}">
       <header class="update-head">
         <div class="update-version-row">
@@ -10620,8 +11800,28 @@ function buildUpdateLog() {
         </div>` : ''}
     </article>
   `).join('');
-  const badge = $('updates-version');
-  if (badge) badge.textContent = `VERSI SAAT INI · v${GAME_VERSION}`;
+  const date = $('updates-date');
+  if (date && entries[0]) date.textContent = `DIPERBARUI ${entries[0].date.toLocaleUpperCase('id-ID')}`;
+  wrap.dataset.ready = 'true';
+}
+
+async function buildUpdateLog() {
+  const wrap = $('update-log');
+  if (!wrap || wrap.dataset.ready) return;
+  wrap.innerHTML = '<p role="status">Memuat catatan update…</p>';
+  try {
+    const { UPDATE_LOG } = await loadUpdateLog();
+    if (menuView === 'updates' && !wrap.dataset.ready) renderUpdateLog(wrap, UPDATE_LOG);
+  } catch {
+    if (menuView !== 'updates') return;
+    wrap.innerHTML = '<p role="status">Catatan update belum bisa dimuat.</p>';
+    const retry = document.createElement('button');
+    retry.type = 'button';
+    retry.className = 'btn btn-ghost btn-compact';
+    retry.textContent = 'COBA LAGI';
+    retry.addEventListener('click', buildUpdateLog, { once: true });
+    wrap.append(retry);
+  }
 }
 
 function showUpdates() {
@@ -10638,8 +11838,8 @@ function showUpdates() {
   spectateGame = null;
   menuView = 'updates';
   clearHeldKeys();
-  buildUpdateLog();
   syncScreens();
+  return buildUpdateLog();
 }
 
 // ── settings screen ──────────────────────────────────────────────────────
@@ -11679,7 +12879,7 @@ function applySettings({ persist = true } = {}) {
   // Spatial audio is a real WebAudio listener/panner mode, not a label.
   audio.setSpatial(settings.audio.spatial);
   // Push the graphics controls that the WebGL2 pipeline actually consumes.
-  configure3D({
+  mode3D?.configure3D({
     renderScale: settings.graphics.renderScale,
     upscaling: settings.graphics.upscaling,
     upscaler: settings.graphics.upscaling,
@@ -11777,7 +12977,7 @@ function applySettings({ persist = true } = {}) {
     game3D.visualSettings = settings.graphics;
     game3D.hudSettings = settings.hud;
     game3D.cameraSensitivity = settings.controls.cameraSensitivity / 100;
-    game3D.region = MODE3D_REGIONS[game3D.region] ? game3D.region : 'thornveil';
+    game3D.region = mode3D.MODE3D_REGIONS[game3D.region] ? game3D.region : 'thornveil';
   }
   applyLanguage();
   const btn = $('sound-btn');
@@ -12539,7 +13739,7 @@ window.addEventListener('keydown', (e) => {
     }
     if (wdPaused) return;
     if (e.code === 'Space') {
-      if (waveDefenseNextWave(wdMatch)) {
+      if (waveMode.waveDefenseNextWave(wdMatch)) {
         wdRenderDirty = true;
         updateWaveDefenseHud(true);
       }
@@ -12547,8 +13747,8 @@ window.addEventListener('keydown', (e) => {
     }
     const towerIndex = Number(e.code.replace('Digit', '')) - 1;
     if (Number.isInteger(towerIndex) && towerIndex >= 0 && towerIndex < 9) {
-      wdSelectedTowerId = WAVE_DEFENSE_TOWERS[towerIndex].id;
-      waveDefenseSelectTower(wdMatch, wdSelectedTowerId);
+      wdSelectedTowerId = waveMode.WAVE_DEFENSE_TOWERS[towerIndex].id;
+      waveMode.waveDefenseSelectTower(wdMatch, wdSelectedTowerId);
       wdRenderDirty = true;
       updateWaveDefenseHud(true);
     }
@@ -14524,6 +15724,111 @@ $('fallen-hud')?.addEventListener('click', (event) => {
   else if (action === 'cleanse') fallenCleanse();
 });
 $('btn-fishing-menu')?.addEventListener('click', () => showFishing());
+$('btn-editor-menu')?.addEventListener('click', () => showEditor());
+$('btn-editor-back')?.addEventListener('click', () => showMenu());
+$('editor-new')?.addEventListener('click', () => newEditorStage());
+$('editor-duplicate')?.addEventListener('click', () => duplicateEditorStage());
+$('editor-delete')?.addEventListener('click', () => deleteEditorStage());
+$('editor-save')?.addEventListener('click', () => saveEditorStage());
+$('editor-play')?.addEventListener('click', () => startCustomStage());
+$('custom-clear-again')?.addEventListener('click', () => {
+  const id = customStage?.id;
+  customClearOpen = false;
+  startCustomStage(id);
+});
+$('custom-clear-editor')?.addEventListener('click', () => {
+  customClearOpen = false;
+  showEditor();
+});
+$('custom-clear-menu')?.addEventListener('click', () => {
+  customClearOpen = false;
+  customStage = null;
+  showMenu();
+});
+$('editor-presets')?.addEventListener('click', (event) => {
+  const button = event.target.closest('[data-editor-preset]');
+  if (button) newEditorFromPreset(button.dataset.editorPreset);
+});
+$('editor-list')?.addEventListener('click', (event) => {
+  const button = event.target.closest('[data-editor-select]');
+  if (!button) return;
+  editorSelectedId = button.dataset.editorSelect;
+  editorSave.selectedId = editorSelectedId;
+  editorSelectedPlatform = -1;
+  saveEditorSave();
+  editorMessage = null;
+  buildEditorScreen();
+});
+$('editor-form')?.addEventListener('click', (event) => {
+  if (event.target.closest('[data-editor-add-enemy]')) {
+    addEditorEnemy();
+    return;
+  }
+  const elite = event.target.closest('[data-editor-elite]');
+  if (elite) {
+    toggleEditorElite(Number(elite.dataset.editorElite));
+    return;
+  }
+  const balance = event.target.closest('[data-editor-balance]');
+  if (balance) {
+    if (balance.dataset.editorBalance === 'auto') autoBalanceEditor();
+    else lowerEditorDifficulty();
+    return;
+  }
+  const remove = event.target.closest('[data-editor-remove-enemy]');
+  if (remove) {
+    removeEditorEnemy(Number(remove.dataset.editorRemoveEnemy));
+    return;
+  }
+  const terrain = event.target.closest('[data-editor-terrain]');
+  if (terrain) {
+    const action = terrain.dataset.editorTerrain;
+    if (action === 'floor' || action === 'ledge') addEditorPlatform(action);
+    else if (action === 'delete') deleteEditorPlatform();
+    else if (action === 'reset') resetEditorTerrain();
+    return;
+  }
+  const share = event.target.closest('[data-editor-share]');
+  if (share) {
+    if (share.dataset.editorShare === 'copy') copyEditorShare();
+    else importEditorShare();
+  }
+});
+$('editor-form')?.addEventListener('pointerdown', (event) => {
+  if (event.target?.id === 'editor-canvas') editorPointerDown(event);
+});
+window.addEventListener('pointermove', (event) => {
+  if (editorDrag) editorPointerMove(event);
+});
+window.addEventListener('pointerup', editorPointerUp);
+window.addEventListener('pointercancel', editorPointerUp);
+$('editor-form')?.addEventListener('change', (event) => {
+  const target = event.target;
+  if (target.dataset?.editorField) {
+    updateEditorField(target.dataset.editorField, target.type === 'checkbox' ? target.checked : target.value);
+    if (target.tagName === 'SELECT') renderEditorForm();
+    return;
+  }
+  if (target.dataset?.editorWeapon) {
+    toggleEditorWeapon(target.dataset.editorWeapon, target.checked);
+    return;
+  }
+  if (target.dataset?.editorEnemyX != null) {
+    setEditorEnemyX(Number(target.dataset.editorEnemyX), target.value);
+  }
+});
+$('editor-form')?.addEventListener('input', (event) => {
+  const target = event.target;
+  if (target.id === 'editor-share-input') {
+    editorShareText = target.value;
+    return;
+  }
+  if (target.dataset?.editorField && target.tagName !== 'SELECT' && target.type !== 'checkbox') {
+    updateEditorField(target.dataset.editorField, target.value);
+  } else if (target.dataset?.editorEnemyX != null) {
+    setEditorEnemyX(Number(target.dataset.editorEnemyX), target.value);
+  }
+});
 $('btn-fishing-back')?.addEventListener('click', () => closeFishing());
 $('fishing-cast-start')?.addEventListener('click', () => beginFishingCast());
 $('fishing-shop-open')?.addEventListener('click', () => openBaitShop());
@@ -14626,13 +15931,14 @@ $('moba-result')?.addEventListener('click', (event) => {
 });
 $('btn-wd-menu')?.addEventListener('click', showWaveDefense);
 $('btn-wd-back')?.addEventListener('click', showMenu);
-$('btn-wd-start')?.addEventListener('click', startWaveDefenseBattle);
+$('btn-wd-start')?.addEventListener('click', startWaveDefenseFromHub);
+$('btn-wd-trailer')?.addEventListener('click', playWaveDefenseTrailer);
 $('btn-wd-pause')?.addEventListener('click', () => toggleWaveDefensePause(true));
 $('btn-wd-quit')?.addEventListener('click', leaveWaveDefense);
 $('btn-wd-resume')?.addEventListener('click', () => toggleWaveDefensePause(false));
 $('btn-wd-pause-leave')?.addEventListener('click', leaveWaveDefense);
 $('btn-wd-next')?.addEventListener('click', () => {
-  if (waveDefenseNextWave(wdMatch)) {
+  if (waveMode.waveDefenseNextWave(wdMatch)) {
     wdRenderDirty = true;
     updateWaveDefenseHud(true);
   }
@@ -14643,7 +15949,12 @@ $('wd-screen')?.addEventListener('click', (event) => {
   const difficulty = event.target.closest('[data-wd-difficulty]');
   if (difficulty) { wdDifficulty = difficulty.dataset.wdDifficulty; buildWaveDefenseScreen(); return; }
   const mode = event.target.closest('[data-wd-mode]');
-  if (mode) { wdEndless = mode.dataset.wdMode === 'endless'; buildWaveDefenseScreen(); return; }
+  if (mode) {
+    wdInfinitower = mode.dataset.wdMode === 'infinitower';
+    wdEndless = wdInfinitower || mode.dataset.wdMode === 'endless';
+    buildWaveDefenseScreen();
+    return;
+  }
   const tower = event.target.closest('[data-wd-tower]');
   if (tower) { wdSelectedTowerId = tower.dataset.wdTower; buildWaveDefenseScreen(); }
 });
@@ -14651,21 +15962,21 @@ $('wd-battle')?.addEventListener('click', (event) => {
   const tower = event.target.closest('[data-wd-tower]');
   if (tower && wdMatch) {
     wdSelectedTowerId = tower.dataset.wdTower;
-    waveDefenseSelectTower(wdMatch, wdSelectedTowerId);
+    waveMode.waveDefenseSelectTower(wdMatch, wdSelectedTowerId);
     wdRenderDirty = true;
     updateWaveDefenseHud(true);
     return;
   }
   const speed = event.target.closest('[data-wd-speed]');
   if (speed && wdMatch) {
-    waveDefenseSetSpeed(wdMatch, Number(speed.dataset.wdSpeed));
+    waveMode.waveDefenseSetSpeed(wdMatch, Number(speed.dataset.wdSpeed));
     updateWaveDefenseHud(true);
   }
 });
 $('wd-selection')?.addEventListener('click', (event) => {
   const action = event.target.closest('[data-wd-action]')?.dataset.wdAction;
-  if (action === 'upgrade') waveDefenseUpgrade(wdMatch);
-  else if (action === 'sell') waveDefenseSell(wdMatch);
+  if (action === 'upgrade') waveMode.waveDefenseUpgrade(wdMatch);
+  else if (action === 'sell') waveMode.waveDefenseSell(wdMatch);
   wdRenderDirty = true;
   updateWaveDefenseHud(true);
 });
@@ -14704,7 +16015,7 @@ $('pirate-canvas')?.addEventListener('pointerdown', (event) => {
   if (!pirateActive || piratePaused || pirateMatch?.phase !== 'sailing') return;
   const point = piratePointerWorld(event);
   if (!point) return;
-  pirateFireAt(pirateMatch, point.x, point.y);
+  pirateMode.pirateFireAt(pirateMatch, point.x, point.y);
   updatePirateHud(true);
 });
 $('pirate-controls')?.addEventListener('pointerdown', (event) => {
@@ -14820,6 +16131,8 @@ fetch('/api/admin/session', { credentials: 'same-origin' })
   .then((response) => { if (response.ok) $('btn-admin-menu')?.classList.remove('hidden'); })
   .catch(() => {});
 $('btn-settings-menu').addEventListener('click', () => showSettings('graphics'));
+$('btn-settings-top')?.addEventListener('click', () => showSettings('graphics'));
+$('btn-hud-settings')?.addEventListener('click', () => showSettings('graphics'));
 $('btn-difficulty-menu')?.addEventListener('click', () => showSettings('difficulty'));
 $('btn-credits').addEventListener('click', showCredits);
 $('btn-updates').addEventListener('click', showUpdates);
@@ -14916,7 +16229,7 @@ $('select-3d-area')?.addEventListener('change', (e) => {
 $('select-3d-region')?.addEventListener('change', (e) => {
   if (!game3D) return;
   game3D.setRegion(e.target.value);
-  showToast(`3D region: ${MODE3D_REGIONS[e.target.value]?.name || e.target.value}`, 1800);
+  showToast(`3D region: ${mode3D?.MODE3D_REGIONS[e.target.value]?.name || e.target.value}`, 1800);
 });
 $('select-3d-submode')?.addEventListener('change', (e) => {
   if (game3D) game3D.subMode = e.target.value;
@@ -15331,10 +16644,12 @@ function syncScreens() {
   $('crusade-screen')?.classList.toggle('hidden', menuView !== 'crusade' || covered);
   $('crusade-clear-screen')?.classList.toggle('hidden', !(crusadeClearOpen && started));
   $('speedrun-screen')?.classList.toggle('hidden', menuView !== 'speedrun' || covered);
+  $('editor-screen')?.classList.toggle('hidden', menuView !== 'editor' || covered);
   $('fishing-screen')?.classList.toggle('hidden', menuView !== 'fishing' || covered);
   $('bait-shop-screen')?.classList.toggle('hidden', menuView !== 'baitShop' || covered);
   $('fish-index-screen')?.classList.toggle('hidden', menuView !== 'fishIndex' || covered);
   $('speedrun-summary-screen')?.classList.toggle('hidden', !speedrunSummaryOpen);
+  $('custom-clear-screen')?.classList.toggle('hidden', !customClearOpen);
   $('lab-reward-screen')?.classList.toggle('hidden', !labRewardsOpen);
   $('lab-summary-screen')?.classList.toggle('hidden', !labSummaryOpen);
   if (!inRun || activeRunKind !== 'atlas') $('atlas-quickbar')?.classList.add('hidden');
@@ -15433,6 +16748,24 @@ function updateHud() {
     } else {
       speedBadgeCache = '';
       speedBadge.classList.add('hidden');
+    }
+  }
+
+  const customBadge = $('custom-badge');
+  if (customBadge) {
+    if (activeRunKind === 'custom' && started && customStage) {
+      customBadge.classList.remove('hidden');
+      const text = customStage.objective === 'survive'
+        ? `⏳ ${Math.max(0, Math.ceil(customSurviveLeft))} DTK · BERTAHAN`
+        : customClearBadge;
+      if (text !== customBadgeCache) {
+        customBadgeCache = text;
+        customBadge.textContent = text;
+      }
+      customBadge.classList.toggle('urgent', customStage.objective === 'survive' && customSurviveLeft <= 10);
+    } else {
+      customBadgeCache = '';
+      customBadge.classList.add('hidden');
     }
   }
 
@@ -15589,7 +16922,7 @@ function toggleAiDebug() {
 function drainEvents() {
   if (!game.events.length) return;    const events = game.events.splice(0, game.events.length);
     for (const ev of events) {
-      if (ev.type === 'bossDown') maybeCreditScene(ev);
+      if (ev.type === 'bossDown' && activeRunKind !== 'custom') maybeCreditScene(ev);
       if (ev.type === 'playerHurt') handlePlayerHurt(ev);
       if (ev.type === 'spiritDown') {
         hunterReward(hunterState, ev.marks, Date.now());
@@ -15603,9 +16936,9 @@ function drainEvents() {
         showToast(`JIMAT PENJAGA · damage roh −${ev.reduction}%`, 1300);
       }
       if (ev.type === 'gatePass') recordStageTime(ev.from, activeStage?.label);
-      else if (ev.type === 'bossDown') recordStageTime(ev.room, ev.name);
+      else if (ev.type === 'bossDown' && activeRunKind !== 'custom') recordStageTime(ev.room, ev.name);
       else if (ev.type === 'roomEnter') beginStage(ev.room, ev.name);
-      if (ev.type === 'bossDown' || ev.type === 'labyrinthBossDown') awardBossSkillPoints(ev.kind, ev.name);
+      if ((ev.type === 'bossDown' || ev.type === 'labyrinthBossDown') && activeRunKind !== 'custom') awardBossSkillPoints(ev.kind, ev.name);
       const activeRun = started && !spectating && menuView === 'none';
     if (activeRun && !paused) audio.play(ev);
     if (activeRun) {
@@ -15934,6 +17267,7 @@ function drainEvents() {
 function desiredTrack() {
   if (prologueActive) return null;
   if (cutsceneActive) return cutsceneScene?.music || 'faewood';
+  if (menuView === 'wavedefense' || menuView === 'wavedefenseBattle') return wdActive && wdMatch?.enemies.some((enemy) => enemy.boss) ? 'spiralBoss' : 'spiral';
   if (menuView === 'court') return 'hearth';
   if (menuView === 'fairy') return 'faewood';
   if (menuView === 'fallenMenu') return 'forgotten';
@@ -15947,6 +17281,10 @@ function desiredTrack() {
     if (game.state === 'victory') {
       if (activeRunKind === 'fairy' && game.roomIndex >= FAIRY_ROOM_START) return 'celebration';
       return 'victory';
+    }
+    if (activeRunKind === 'custom' && customStage) {
+      if (game.boss && game.state === 'playing') return bossTrackFor(game.boss.kind, customStage.bossMusic || 'boss');
+      return customStage.music || 'ashen';
     }
     if (activeRunKind === 'labyrinth' && labRun) {
       if (game.boss) return 'boss';
@@ -16057,14 +17395,26 @@ function frame(now) {
     adaptResolution();
   }
 
+  // Battlefield modes return before the shared cutscene tick below, so their
+  // cinematics advance here instead.
+  if (cutsceneActive && cutsceneScene && (wdActive || pirateActive || mobaActive)) {
+    const dt = Math.min(raw, 0.1);
+    cutsceneTime += dt;
+    const pct = clamp(cutsceneTime / cutsceneScene.duration, 0, 1);
+    $('cutscene-progress').style.width = `${pct * 100}%`;
+    showCutsceneBeat();
+    paintCutscene();
+    if (cutsceneTime >= cutsceneScene.duration) finishCutscene(false);
+  }
+
   if (pirateActive) {
     if (pirateMatch && !piratePaused && pirateMatch.phase === 'sailing') {
-      updatePirateVoyage(pirateMatch, Math.min(raw, 0.05));
+      pirateMode.updatePirateVoyage(pirateMatch, Math.min(raw, 0.05));
     }
     if (pirateMatch) {
       const canvas = $('pirate-canvas');
       const ctx = canvas?.getContext('2d');
-      if (canvas && ctx) renderPirateVoyage(ctx, pirateMatch, { width: canvas.width, height: canvas.height, time: now / 1000 });
+      if (canvas && ctx) pirateMode.renderPirateVoyage(ctx, pirateMatch, { width: canvas.width, height: canvas.height, time: now / 1000 });
     }
     if (pirateMatch?.phase === 'cleared' || pirateMatch?.phase === 'sunk') completePirateVoyage();
     pirateUiTimer += raw;
@@ -16073,13 +17423,14 @@ function frame(now) {
   }
 
   if (wdActive) {
+    maybeWaveDefenseBossCutscene();
     if (wdMatch && !wdPaused && wdMatch.phase !== 'ended') {
-      updateWaveDefense(wdMatch, Math.min(raw, 0.05));
+      waveMode.updateWaveDefense(wdMatch, Math.min(raw, 0.05));
     }
     if (wdMatch && (!wdPaused || wdRenderDirty)) {
       const canvas = $('wd-canvas');
       const ctx = canvas?.getContext('2d');
-      if (canvas && ctx) renderWaveDefense(ctx, wdMatch, { width: canvas.width, height: canvas.height, time: now / 1000 });
+      if (canvas && ctx) waveMode.renderWaveDefense(ctx, wdMatch, { width: canvas.width, height: canvas.height, time: now / 1000 });
     }
     wdRenderDirty = false;
     if (wdMatch?.phase === 'ended') completeWaveDefense();
@@ -16148,7 +17499,7 @@ function frame(now) {
     if (peekDir !== 0) peekOffset = clamp(peekOffset + peekDir * 330 * raw, -WORLD_W, WORLD_W);
     renderer.render(spectateGame, { spectate: true, cameraX: spectateCamera() });
   } else {
-    if (started && !paused && !shopOpen && !hunterShopOpen && !mapOpen && !codexOpen && !inventoryOpen && !dialogueOpen && !settingsOpen && !prologueActive && !cutsceneActive && !labRewardsOpen && !labSummaryOpen && !labGuestMode && !coopGuestMode && menuView === 'none') {
+    if (started && !paused && !shopOpen && !hunterShopOpen && !mapOpen && !codexOpen && !inventoryOpen && !dialogueOpen && !settingsOpen && !prologueActive && !cutsceneActive && !labRewardsOpen && !labSummaryOpen && !labGuestMode && !coopGuestMode && !customClearOpen && menuView === 'none') {
       // Speedrun multiplies the clock, not the timestep: the simulation still
       // advances in 1/120 s slices, just more of them per rendered frame.
       const speedScale = activeRunKind === 'speedrun' && speedrunRun ? speedrunRun.multiplier : 1;
@@ -16162,6 +17513,7 @@ function frame(now) {
         if (activeRunKind === 'trials') tickTrials(FIXED);
         if (activeRunKind === 'fallen') tickFallen(FIXED);
         if (activeRunKind === 'crusade') tickCrusade(FIXED);
+        if (activeRunKind === 'custom') tickCustomStage(FIXED);
         accumulator -= FIXED;
         steps += 1;
         if (game.state !== 'playing') {
@@ -16214,7 +17566,7 @@ function frame(now) {
       if (canvas3D) {
         const ctx3D = canvas3D.getContext('2d');
         if (ctx3D) {
-          render3D(ctx3D, game3D);
+          mode3D.render3D(ctx3D, game3D);
           // Scary Mode presents in 3D too: same effect data, camera-aware layer.
           const horror3D = horrorRenderLayer();
           if (horror3D) renderer.drawHorrorAtmosphere(ctx3D, horror3D, canvas3D.width, canvas3D.height);
@@ -17838,7 +19190,7 @@ window.__ashen = {
     return gfx3DStatus();
   },
   get mode3dContent() {
-    return content3DSummary();
+    return contentSummary();
   },
   get horror3D() {
     return {
@@ -17878,7 +19230,7 @@ window.__ashen = {
     const canvas = $('canvas-3d');
     const ctx = canvas?.getContext('2d');
     if (!ctx || !game3D) return null;
-    render3D(ctx, game3D);
+    mode3D.render3D(ctx, game3D);
     return gfx3DStatus();
   },
   start3DHorror,
@@ -18497,6 +19849,60 @@ window.__ashen = {
   resetSkills,
   applySkills: applySkillsToGame,
   awardBossSkillPoints,
+  get editor() {
+    if (!editorSave) return null;
+    return {
+      save: editorSave,
+      selectedId: editorSelectedId,
+      summary: mapEditor.editorSummary(editorSave),
+      stage: currentEditorStage(),
+      message: editorMessage,
+      activeStage: customStage,
+      chain: customChain.map((stage) => stage.id),
+      chainIndex: customChainIndex,
+      activeRunKind,
+      clearOpen: customClearOpen,
+      cleared: customStageCleared,
+      engaged: customStageEngaged,
+      elapsed: customStageElapsed,
+      selectedPlatform: editorSelectedPlatform,
+      shareMessage: editorShareMessage,
+      shareText: editorShareText,
+      gameState: game.state,
+      rating: currentEditorStage() ? mapEditor.threatRating(currentEditorStage()) : null,
+      difficulty: customStage?.difficulty || null,
+      objective: customStage?.objective || null,
+      surviveLeft: customSurviveLeft,
+    };
+  },
+  editorRating: (stage) => mapEditor.threatRating(stage || currentEditorStage()),
+  autoBalanceEditor,
+  lowerEditorDifficulty,
+  toggleEditorElite,
+  newEditorFromPreset,
+  showEditor,
+  buildEditorScreen,
+  saveEditorStage,
+  newEditorStage,
+  duplicateEditorStage,
+  deleteEditorStage,
+  startCustomStage,
+  finishCustomStage,
+  addEditorPlatform,
+  deleteEditorPlatform,
+  resetEditorTerrain,
+  paintEditorCanvas,
+  copyEditorShare,
+  importEditorShare,
+  editorChain: (id) => mapEditor.chainFor(editorSave, id || editorSelectedId).map((stage) => stage.id),
+  editorShareCode: (id) => mapEditor.encodeShareCode(mapEditor.chainFor(editorSave, id || editorSelectedId)),
+  importEditorCode: (code) => {
+    editorShareText = String(code ?? '');
+    return importEditorShare();
+  },
+  decodeEditorCode: (code) => mapEditor.decodeShareCode(code),
+  validateEditorBlueprint: (stage) => mapEditor.validateBlueprint(stage || currentEditorStage(), editorSave),
+  editorBlueprintRoom: (stage) => mapEditor.customRoomFromBlueprint(stage || currentEditorStage()),
   bossMusicFor(kind) {
     return bossTrackFor(kind);
   },
@@ -18570,34 +19976,37 @@ window.__ashen = {
     };
   },
   get waveDefense() {
+    if (!waveMode) return null;
     return {
       progress: waveDefenseState(),
-      summary: waveDefenseSummary(waveDefenseState()),
+      summary: waveMode.waveDefenseSummary(waveDefenseState()),
       active: wdActive,
       paused: wdPaused,
       mapId: wdMapId,
       difficulty: wdDifficulty,
       endless: wdEndless,
+      infinitower: wdInfinitower,
       selectedTowerId: wdSelectedTowerId,
-      snapshot: waveDefenseSnapshot(wdMatch),
+      snapshot: waveMode.waveDefenseSnapshot(wdMatch),
       result: wdResult,
     };
   },
   get pirates() {
+    if (!pirateMode) return null;
     return {
       progress: pirateState(),
-      summary: pirateSummary(pirateState()),
+      summary: pirateMode.pirateSummary(pirateState()),
       active: pirateActive,
       paused: piratePaused,
       stageId: pirateStageId,
       mode: pirateMatch?.mode || 'route',
       endless: pirateState().endless,
-      snapshot: pirateSnapshot(pirateMatch),
+      snapshot: pirateMode.pirateSnapshot(pirateMatch),
       result: pirateResult,
       stages: PIRATE_STAGES,
-      islands: PIRATE_ISLANDS,
-      shipTypes: PIRATE_SHIP_TYPES,
-      bosses: PIRATE_BOSS_TYPES,
+      islands: pirateMode.PIRATE_ISLANDS,
+      shipTypes: pirateMode.PIRATE_SHIP_TYPES,
+      bosses: pirateMode.PIRATE_BOSS_TYPES,
     };
   },
   showPirates,
@@ -18605,7 +20014,7 @@ window.__ashen = {
   startPirateVoyage,
   startPirateEndless,
   pirateNextSurge() {
-    const ok = pirateEndlessSurge(pirateMatch);
+    const ok = pirateMode.pirateEndlessSurge(pirateMatch);
     updatePirateHud(true);
     return ok;
   },
@@ -18618,27 +20027,28 @@ window.__ashen = {
   },
   togglePiratePause,
   pirateFire(side) { return firePirateSide(side); },
-  pirateDock,
+  pirateDock(...args) { return pirateMode?.pirateDock(...args); },
   pirateStep(seconds = 1) {
     if (!pirateMatch) return null;
     const frames = Math.max(1, Math.round(Number(seconds) * 60));
-    for (let i = 0; i < frames && pirateMatch.phase === 'sailing'; i += 1) updatePirateVoyage(pirateMatch, 1 / 60);
+    for (let i = 0; i < frames && pirateMatch.phase === 'sailing'; i += 1) pirateMode.updatePirateVoyage(pirateMatch, 1 / 60);
     if (pirateMatch.phase === 'cleared' || pirateMatch.phase === 'sunk') completePirateVoyage();
     updatePirateHud(true);
-    return pirateSnapshot(pirateMatch);
+    return pirateMode.pirateSnapshot(pirateMatch);
   },
   pirateSetControls(throttle, turn) {
-    return setPirateControls(pirateMatch, { throttle, turn });
+    return pirateMode.setPirateControls(pirateMatch, { throttle, turn });
   },
   pirateSetKills(kills = 0) {
     if (!pirateMatch) return null;
     pirateMatch.kills = Math.max(0, Math.floor(Number(kills) || 0));
-    if (pirateMatch.kills >= pirateMatch.stage.targetKills) updatePirateVoyage(pirateMatch, 1 / 60);
+    if (pirateMatch.kills >= pirateMatch.stage.targetKills) pirateMode.updatePirateVoyage(pirateMatch, 1 / 60);
     updatePirateHud(true);
-    return pirateSnapshot(pirateMatch);
+    return pirateMode.pirateSnapshot(pirateMatch);
   },
   pirateDamageShip(id, amount = 9999) {
-    const ok = pirateDamageShip(pirateMatch, id, amount);
+    if (!pirateMatch) return false;
+    const ok = pirateMode.pirateDamageShip(pirateMatch, id, amount);
     if (pirateMatch?.phase === 'cleared' || pirateMatch?.phase === 'sunk') completePirateVoyage();
     updatePirateHud(true);
     return ok;
@@ -18646,7 +20056,7 @@ window.__ashen = {
   pirateSinkBoss() {
     const boss = pirateMatch?.enemies.find((enemy) => enemy.type.boss);
     if (!boss) return false;
-    pirateDamageShip(pirateMatch, boss.id, 99999);
+    pirateMode.pirateDamageShip(pirateMatch, boss.id, 99999);
     completePirateVoyage();
     updatePirateHud(true);
     return true;
@@ -18656,45 +20066,58 @@ window.__ashen = {
     const canvas = $('pirate-canvas');
     const ctx = canvas?.getContext('2d');
     if (!canvas || !ctx) return false;
-    renderPirateVoyage(ctx, pirateMatch, { width: canvas.width, height: canvas.height, time: performance.now() / 1000 });
+    pirateMode.renderPirateVoyage(ctx, pirateMatch, { width: canvas.width, height: canvas.height, time: performance.now() / 1000 });
     return true;
   },
   showWaveDefense,
   buildWaveDefenseScreen,
+  waveDefenseStory: SPIRAL_STORY,
+  spiralStoryForTier,
+  playWaveDefenseIntro,
+  playWaveDefenseBossIntro: maybeWaveDefenseBossCutscene,
+  playWaveDefenseTrailer,
   startWaveDefenseBattle,
   leaveWaveDefense,
   setWaveDefenseMap(id) {
-    if (!WAVE_DEFENSE_MAP_BY_ID[id]) return false;
+    if (!waveMode?.WAVE_DEFENSE_MAP_BY_ID[id]) return false;
     wdMapId = id;
     buildWaveDefenseScreen();
     return true;
   },
   setWaveDefenseDifficulty(id) {
-    if (!WAVE_DEFENSE_DIFFICULTIES.some((entry) => entry.id === id)) return false;
+    if (!waveMode?.WAVE_DEFENSE_DIFFICULTIES.some((entry) => entry.id === id)) return false;
     wdDifficulty = id;
     buildWaveDefenseScreen();
     return true;
   },
   setWaveDefenseMode(mode) {
-    wdEndless = mode === 'endless';
+    wdInfinitower = mode === 'infinitower';
+    wdEndless = wdInfinitower || mode === 'endless';
     buildWaveDefenseScreen();
     return true;
   },
   setWaveDefenseEndless(on = true) {
     wdEndless = !!on;
+    wdInfinitower = false;
     buildWaveDefenseScreen();
     return wdEndless;
   },
+  setWaveDefenseInfinitower(on = true) {
+    wdInfinitower = !!on;
+    wdEndless = wdInfinitower;
+    buildWaveDefenseScreen();
+    return wdInfinitower;
+  },
   setWaveDefenseTower(id) {
-    if (!WAVE_DEFENSE_TOWER_BY_ID[id]) return false;
+    if (!waveMode?.WAVE_DEFENSE_TOWER_BY_ID[id]) return false;
     wdSelectedTowerId = id;
-    if (wdMatch) waveDefenseSelectTower(wdMatch, id);
+    if (wdMatch) waveMode.waveDefenseSelectTower(wdMatch, id);
     buildWaveDefenseScreen();
     updateWaveDefenseHud(true);
     return true;
   },
   waveDefenseBuild(slot, towerId = wdMatch?.buildTowerId) {
-    return waveDefenseBuild(wdMatch, slot, towerId);
+    return waveMode.waveDefenseBuild(wdMatch, slot, towerId);
   },
   waveDefenseGold(amount = 100) {
     if (!wdMatch) return 0;
@@ -18707,17 +20130,17 @@ window.__ashen = {
     const canvas = $('wd-canvas');
     const ctx = canvas?.getContext('2d');
     if (!canvas || !ctx) return false;
-    renderWaveDefense(ctx, wdMatch, { width: canvas.width, height: canvas.height, time: performance.now() / 1000 });
+    waveMode.renderWaveDefense(ctx, wdMatch, { width: canvas.width, height: canvas.height, time: performance.now() / 1000 });
     return true;
   },
   waveDefenseUpgrade() {
-    return waveDefenseUpgrade(wdMatch);
+    return waveMode.waveDefenseUpgrade(wdMatch);
   },
   waveDefenseSell() {
-    return waveDefenseSell(wdMatch);
+    return waveMode.waveDefenseSell(wdMatch);
   },
   waveDefenseNextWave() {
-    const ok = waveDefenseNextWave(wdMatch);
+    const ok = waveMode.waveDefenseNextWave(wdMatch);
     updateWaveDefenseHud(true);
     return ok;
   },
@@ -18732,20 +20155,20 @@ window.__ashen = {
     wdMatch.projectiles = [];
     wdRenderDirty = true;
     updateWaveDefenseHud(true);
-    return waveDefenseSnapshot(wdMatch);
+    return waveMode.waveDefenseSnapshot(wdMatch);
   },
   waveDefenseStep(seconds = 1) {
     if (!wdMatch) return null;
     const frames = Math.max(1, Math.round(Number(seconds) * 60));
-    for (let i = 0; i < frames && wdMatch.phase !== 'ended'; i += 1) updateWaveDefense(wdMatch, 1 / 60);
+    for (let i = 0; i < frames && wdMatch.phase !== 'ended'; i += 1) waveMode.updateWaveDefense(wdMatch, 1 / 60);
     if (wdMatch.phase === 'ended') completeWaveDefense();
     wdRenderDirty = true;
     updateWaveDefenseHud(true);
-    return waveDefenseSnapshot(wdMatch);
+    return waveMode.waveDefenseSnapshot(wdMatch);
   },
   waveDefenseWin() {
     if (!wdMatch) return false;
-    endWaveDefense(wdMatch, 'victory');
+    waveMode.endWaveDefense(wdMatch, 'victory');
     completeWaveDefense();
     wdRenderDirty = true;
     updateWaveDefenseHud(true);
@@ -18756,7 +20179,7 @@ window.__ashen = {
     wdMatch.castle.hp = Math.max(0, wdMatch.castle.hp - Math.max(1, Number(amount) || 1));
     wdMatch.castle.flash = 0.5;
     if (wdMatch.castle.hp <= 0) {
-      endWaveDefense(wdMatch, 'defeat');
+      waveMode.endWaveDefense(wdMatch, 'defeat');
       completeWaveDefense();
     }
     wdRenderDirty = true;
@@ -18937,6 +20360,7 @@ window.__ashen = {
       if (activeRunKind === 'trials') tickTrials(FIXED);
       if (activeRunKind === 'fallen') tickFallen(FIXED);
       if (activeRunKind === 'crusade') tickCrusade(FIXED);
+      if (activeRunKind === 'custom') tickCustomStage(FIXED);
     }
     syncScreens();
     updateHud();
@@ -19058,9 +20482,12 @@ function readVoiceSave() {
 
 let voiceSave = readVoiceSave();
 let voiceStatus = { configured: false, model: VOICE_MODEL, online: true, checked: false, error: '' };
+let voiceStatusRequest = null;
+let trailerVoiceClips = new Set();
 let voiceAudio = null;
 let voiceObjectUrl = null;
 let voiceSpeaking = false;
+let voicePlaybackId = 0;
 
 function hasBrowserVoice() {
   return typeof window !== 'undefined'
@@ -19091,10 +20518,20 @@ function saveVoiceSave() {
   updateVoiceBadge();
 }
 
-async function refreshVoiceStatus() {
+function refreshVoiceStatus() {
+  voiceStatusRequest ??= fetchVoiceStatus().finally(() => { voiceStatusRequest = null; });
+  return voiceStatusRequest;
+}
+
+async function fetchVoiceStatus() {
   try {
-    const response = await fetch('/api/voice', { headers: { Accept: 'application/json' } });
+    const response = await fetch('/api/voice', {
+      headers: { Accept: 'application/json' },
+      signal: AbortSignal.timeout(2500),
+    });
+    if (!response.ok) throw new Error(`voice status HTTP ${response.status}`);
     const status = await response.json();
+    trailerVoiceClips = new Set(Array.isArray(status.trailerClips) ? status.trailerClips : []);
     voiceStatus = {
       configured: !!status.configured,
       model: status.model || VOICE_MODEL,
@@ -19103,12 +20540,14 @@ async function refreshVoiceStatus() {
       error: '',
     };
   } catch {
+    trailerVoiceClips.clear();
     voiceStatus = { configured: false, model: VOICE_MODEL, online: false, checked: true, error: 'server-unreachable' };
   }
   return updateVoiceBadge();
 }
 
 function stopVoice() {
+  voicePlaybackId += 1;
   voiceSpeaking = false;
   if (voiceAudio) {
     try { voiceAudio.pause(); } catch { /* already stopped */ }
@@ -19123,19 +20562,22 @@ function stopVoice() {
   }
 }
 
-function speakBrowser(text, castId) {
+function speakBrowser(text, castId, { lang = '' } = {}) {
   if (!hasBrowserVoice()) return false;
   const member = castFor(castId);
+  const targetLang = lang || member.fallback.lang;
   try {
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = member.fallback.lang;
+    utterance.lang = targetLang;
     utterance.rate = member.fallback.rate;
     utterance.pitch = member.fallback.pitch;
     utterance.volume = voiceSave.volume / 100;
     const voices = window.speechSynthesis.getVoices ? window.speechSynthesis.getVoices() : [];
-    const indo = voices.find((v) => /^id([-_]|$)/i.test(v.lang)) || voices.find((v) => /indones/i.test(v.name));
-    if (indo) utterance.voice = indo;
+    const preferred = /^en/i.test(targetLang)
+      ? (voices.find((v) => /^en([-_]|$)/i.test(v.lang)) || voices.find((v) => /english/i.test(v.name)))
+      : (voices.find((v) => /^id([-_]|$)/i.test(v.lang)) || voices.find((v) => /indones/i.test(v.name)));
+    if (preferred) utterance.voice = preferred;
     window.speechSynthesis.speak(utterance);
     return true;
   } catch {
@@ -19143,11 +20585,38 @@ function speakBrowser(text, castId) {
   }
 }
 
+async function playAudioUrl(url) {
+  const audio = new Audio(url);
+  voiceAudio = audio;
+  audio.volume = voiceSave.volume / 100;
+  audio.addEventListener('ended', () => {
+    if (voiceAudio === audio) voiceSpeaking = false;
+  }, { once: true });
+  await audio.play();
+  if (voiceAudio !== audio) return 'none';
+  voiceSpeaking = true;
+  voiceSave.linesPlayed += 1;
+  voiceSave.providerUsed = 'elevenlabs';
+  saveVoiceSave();
+  return 'elevenlabs';
+}
+
 // One entry point for every spoken line: boss dialogue, prologue and trailer.
 // Returns the provider that actually ran, which the smoke tests assert on.
-async function speakVoiceLine(text, castId = 'narrator') {
+async function speakVoiceLine(text, castId = 'narrator', { staticUrl = '', lang = '' } = {}) {
   const request = voiceRequestFor({ text, cast: castId, save: voiceSave });
   if (!request.ok) return 'none';
+  if (!voiceSave.enabled) return 'none';
+  stopVoice();
+  const playbackId = voicePlaybackId;
+  if (staticUrl && voiceSave.preferElevenLabs) {
+    try {
+      return await playAudioUrl(staticUrl);
+    } catch {
+      /* fall through to live API or browser voice */
+    }
+  }
+  if (playbackId !== voicePlaybackId) return 'none';
   const provider = resolveVoiceProvider({
     save: voiceSave,
     configured: voiceStatus.configured,
@@ -19155,9 +20624,8 @@ async function speakVoiceLine(text, castId = 'narrator') {
     browserAvailable: hasBrowserVoice(),
   });
   if (provider === 'none') return 'none';
-  stopVoice();
   if (provider === 'browser') {
-    const played = speakBrowser(request.body.text, castId);
+    const played = speakBrowser(request.body.text, castId, { lang });
     voiceSave.linesPlayed += played ? 1 : 0;
     voiceSave.providerUsed = played ? 'browser' : 'none';
     saveVoiceSave();
@@ -19171,22 +20639,16 @@ async function speakVoiceLine(text, castId = 'narrator') {
     });
     if (!response.ok) throw new Error(`voice HTTP ${response.status}`);
     const blob = await response.blob();
+    if (playbackId !== voicePlaybackId) return 'none';
     if (!blob.size) throw new Error('empty audio');
     voiceObjectUrl = URL.createObjectURL(blob);
-    voiceAudio = new Audio(voiceObjectUrl);
-    voiceAudio.volume = voiceSave.volume / 100;
-    voiceAudio.addEventListener('ended', () => { voiceSpeaking = false; }, { once: true });
-    await voiceAudio.play();
-    voiceSpeaking = true;
-    voiceSave.linesPlayed += 1;
-    voiceSave.providerUsed = 'elevenlabs';
-    saveVoiceSave();
-    return 'elevenlabs';
+    return await playAudioUrl(voiceObjectUrl);
   } catch (error) {
+    if (playbackId !== voicePlaybackId) return 'none';
     // A missing key, a quota error or a blocked request all degrade to the
     // browser voice instead of failing the scene.
     voiceStatus = { ...voiceStatus, configured: false, error: String(error.message || error) };
-    const played = speakBrowser(request.body.text, castId);
+    const played = speakBrowser(request.body.text, castId, { lang });
     voiceSave.providerUsed = played ? 'browser' : 'none';
     voiceSave.linesPlayed += played ? 1 : 0;
     saveVoiceSave();
@@ -19201,8 +20663,17 @@ let trailerTime = 0;
 let trailerStamp = 0;
 let trailerHandle = 0;
 let trailerIndex = -1;
+let trailerNarrationId = 0;
 
 const trailerClock = (seconds) => `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`;
+
+async function narrateTrailerShot(shot) {
+  const narrationId = ++trailerNarrationId;
+  if (!voiceStatus.checked || voiceStatusRequest) await refreshVoiceStatus();
+  if (!trailerActive || !voiceSave.enabled || narrationId !== trailerNarrationId) return;
+  const staticUrl = trailerVoiceClips.has(shot.id) ? `./assets/voice/trailer/${shot.id}.mp3` : '';
+  return speakVoiceLine(shot.narration, shot.cast, { staticUrl, lang: 'en-US' });
+}
 
 function paintTrailer() {
   const canvas = $('trailer-canvas');
@@ -19223,39 +20694,51 @@ function paintTrailer() {
     if (eyebrow) eyebrow.textContent = info.shot.eyebrow;
     if (line) line.textContent = info.shot.narration;
     if (voiceSave.autoplayInTrailer && voiceSave.enabled) {
-      void speakVoiceLine(info.shot.narration, info.shot.cast);
+      void narrateTrailerShot(info.shot);
     }
   }
 }
 
+function scheduleTrailerFrame() {
+  if (trailerActive && !trailerPaused && !trailerHandle) {
+    trailerHandle = requestAnimationFrame(trailerLoop);
+  }
+}
+
+function stopTrailerFrames() {
+  if (trailerHandle) cancelAnimationFrame(trailerHandle);
+  trailerHandle = 0;
+  trailerStamp = 0;
+}
+
 function trailerLoop(now) {
-  if (!trailerActive) return;
+  trailerHandle = 0;
+  if (!trailerActive || trailerPaused) return;
   const delta = trailerStamp ? Math.min(0.12, (now - trailerStamp) / 1000) : 0;
   trailerStamp = now;
-  if (!trailerPaused) {
-    trailerTime += delta;
-    if (trailerTime >= trailerDuration()) {
-      trailerTime = trailerDuration();
-      trailerPaused = true;
-      const play = $('btn-trailer-play');
-      if (play) play.textContent = 'ULANG';
-      stopVoice();
-    }
+  trailerTime += delta;
+  if (trailerTime >= trailerDuration()) {
+    trailerTime = trailerDuration();
+    trailerPaused = true;
+    const play = $('btn-trailer-play');
+    if (play) play.textContent = 'ULANG';
+    stopVoice();
   }
   paintTrailer();
-  trailerHandle = requestAnimationFrame(trailerLoop);
+  scheduleTrailerFrame();
 }
 
 function startTrailerPlayback() {
   trailerTime = 0;
   trailerIndex = -1;
   trailerPaused = false;
-  trailerStamp = 0;
   const play = $('btn-trailer-play');
   if (play) play.textContent = 'JEDA';
-  cancelAnimationFrame(trailerHandle);
-  trailerHandle = requestAnimationFrame(trailerLoop);
+  stopTrailerFrames();
+  scheduleTrailerFrame();
 }
+
+const TRAILER_SEEN_KEY = 'ashen-vow-trailer-seen-v1';
 
 function openTrailer() {
   menuView = 'trailer';
@@ -19265,16 +20748,25 @@ function openTrailer() {
   stopVoice();
   trailerActive = true;
   syncScreens();
-  paintTrailer();
   void refreshVoiceStatus();
   startTrailerPlayback();
+  paintTrailer();
 }
 
 function closeTrailer() {
   trailerActive = false;
-  if (trailerHandle) cancelAnimationFrame(trailerHandle);
-  trailerHandle = 0;
+  trailerNarrationId += 1;
+  stopTrailerFrames();
   stopVoice();
+  try { localStorage.setItem(TRAILER_SEEN_KEY, '1'); } catch { /* ignore */ }
+  // A custom stage may use the trailer as its opener: resume the run instead
+  // of dropping back to the title screen.
+  if (customIntroCallback) {
+    const resume = customIntroCallback;
+    customIntroCallback = null;
+    resume();
+    return;
+  }
   if (menuView === 'trailer') menuView = 'title';
   syncScreens();
 }
@@ -19288,6 +20780,8 @@ function toggleTrailerPause() {
   } else {
     trailerPaused = !trailerPaused;
   }
+  if (trailerPaused) stopTrailerFrames();
+  else scheduleTrailerFrame();
   const play = $('btn-trailer-play');
   if (play) play.textContent = trailerPaused ? 'LANJUT' : 'JEDA';
 }
@@ -19295,6 +20789,7 @@ function toggleTrailerPause() {
 function seekTrailer(seconds) {
   trailerTime = Math.max(0, Math.min(trailerDuration(), trailerTime + seconds));
   trailerPaused = true;
+  stopTrailerFrames();
   trailerIndex = -1;
   const play = $('btn-trailer-play');
   if (play) play.textContent = 'LANJUT';
@@ -19316,7 +20811,7 @@ $('btn-trailer-voice')?.addEventListener('click', () => {
   voiceSave.enabled = !voiceSave.enabled;
   saveVoiceSave();
   if (!voiceSave.enabled) stopVoice();
-  else if (trailerActive) void speakVoiceLine(trailerShotAt(trailerTime).shot.narration, trailerShotAt(trailerTime).shot.cast);
+  else if (trailerActive) void narrateTrailerShot(trailerShotAt(trailerTime).shot);
 });
 
 window.addEventListener('keydown', (event) => {
@@ -19421,3 +20916,8 @@ updateBossVoiceButton();
 void loadBossVoiceManifest();
 
 window.__ashenBootReady?.();
+try {
+  if (!navigator.webdriver && localStorage.getItem(TRAILER_SEEN_KEY) !== '1') {
+    openTrailer();
+  }
+} catch { /* ignore storage errors */ }

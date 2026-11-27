@@ -17,6 +17,7 @@ if (!chromePath) throw new Error('Set CHROME_PATH to Chrome or Edge.');
 const profile = mkdtempSync(join(tmpdir(), 'ashen-bench3d-'));
 const chrome = spawn(chromePath, [
   '--headless=new', `--remote-debugging-port=${PORT}`, `--user-data-dir=${profile}`,
+  ...(process.env.ASHEN_CHROME_NO_SANDBOX === '1' ? ['--no-sandbox'] : []),
   '--no-first-run', '--no-default-browser-check', '--enable-unsafe-swiftshader',
   '--use-angle=swiftshader', '--mute-audio', '--window-size=1440,960', URL,
 ], { stdio: 'ignore' });

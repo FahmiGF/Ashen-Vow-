@@ -16,7 +16,7 @@ import { spawn } from 'node:child_process';
 import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { GAME_VERSION } from '../src/updates.js';
+import { GAME_VERSION } from '../src/version.js';
 
 const URL = process.env.ASHEN_URL || 'http://127.0.0.1:4300/';
 const CDP_PORT = Number(process.env.CDP_PORT) || 9223;
@@ -72,6 +72,7 @@ await ensureServer();
 const profile = mkdtempSync(join(tmpdir(), 'ashen-chrome-'));
 const chrome = spawn(browserPath, [
   '--headless=new',
+  ...(process.env.ASHEN_CHROME_NO_SANDBOX === '1' ? ['--no-sandbox'] : []),
   `--remote-debugging-port=${CDP_PORT}`,
   `--user-data-dir=${profile}`,
   '--no-first-run',
@@ -105,6 +106,8 @@ let ws;
 let nextId = 0;
 const pending = new Map();
 const pageErrors = [];
+const updateLogUrl = new globalThis.URL('src/updates.js', URL).href;
+let deliberatelyBlockedUpdate = false;
 
 function send(method, params = {}) {
   return new Promise((resolve, reject) => {
@@ -160,7 +163,9 @@ try {
     } else if (message.method === 'Runtime.consoleAPICalled' && message.params.type === 'error') {
       pageErrors.push(message.params.args.map((arg) => arg.value ?? arg.description).join(' '));
     } else if (message.method === 'Log.entryAdded' && message.params.entry.level === 'error') {
-      const text = message.params.entry.text || '';
+      const entry = message.params.entry;
+      if (deliberatelyBlockedUpdate && entry.url === updateLogUrl) return;
+      const text = `${entry.url || ''} ${entry.text || ''}`.trim();
       if (!/favicon|429|Too Many Requests/i.test(text)) pageErrors.push(text);
     }
   });
@@ -174,6 +179,58 @@ try {
 
   await waitFor(async () => evaluate('document.readyState === "complete"'), 15000, 'page load');
   await waitFor(async () => evaluate('typeof window.__ashen === "object"'), 15000, 'game boot');
+
+  const startup = await evaluate(`(async () => {
+    const A = window.__ashen;
+    const resources = performance.getEntriesByType('resource');
+    const scripts = resources.filter(entry => new URL(entry.name).pathname.endsWith('.js'));
+    const styles = resources.filter(entry => new URL(entry.name).pathname.endsWith('.css'));
+    const updateRequests = () => performance.getEntriesByType('resource')
+      .filter(entry => new URL(entry.name).pathname.endsWith('/updates.js'));
+    const coldUpdateRequests = updateRequests().length;
+    const firstView = A.menuView;
+    if (firstView === 'trailer') document.getElementById('btn-trailer-close').click();
+
+    const wrap = document.getElementById('update-log');
+    const firstOpen = A.showUpdates();
+    const loading = wrap.querySelector('[role="status"]')?.textContent.includes('Memuat');
+    document.getElementById('btn-updates-back').click();
+    await firstOpen;
+    const stayedBack = A.menuView === 'title' && !wrap.dataset.ready;
+
+    document.getElementById('btn-updates').click();
+    await A.buildUpdateLog();
+    const entryCount = wrap.querySelectorAll('.update-entry').length;
+    const latest = wrap.querySelector('.update-entry.latest .update-version')?.textContent;
+    const date = document.getElementById('updates-date').textContent;
+    document.getElementById('btn-updates-back').click();
+
+    return {
+      firstView, coldUpdateRequests, loading, stayedBack, entryCount, latest, date,
+      fetched: updateRequests().length,
+      coldModeAssets: resources.filter(entry =>
+        /\\/(mapeditor\\.js|pirates\\.js|wavedefense\\.js|mode3d\\.js|webgl3d\\.js|styles-mapeditor\\.css|styles-pirates\\.css|styles-wavedefense\\.css)$/.test(new URL(entry.name).pathname)).length,
+      bootMs: window.__ashenBoot.readyAt - window.__ashenBoot.startedAt,
+      requests: scripts.length,
+      rawScriptBytes: scripts.reduce((sum, entry) => sum + entry.decodedBodySize, 0),
+      transferredScriptBytes: scripts.reduce((sum, entry) => sum + entry.transferSize, 0),
+      localStylesheets: styles.filter(entry => new URL(entry.name).origin === location.origin).length,
+    };
+  })()`);
+  assert.ok(['title', 'trailer'].includes(startup.firstView), 'the first run lands on a startup screen');
+  assert.equal(startup.coldUpdateRequests, 0, 'startup should not request update history');
+  assert.equal(startup.coldModeAssets, 0, 'startup should not request assets from modes the player has not opened');
+  if (process.env.ASHEN_RELEASE_EXPECTED === '1') {
+    assert.ok(startup.rawScriptBytes <= 2_844_497, 'release startup uses at least 25% less JavaScript than the audited baseline');
+    assert.equal(startup.localStylesheets, 1, 'release startup groups local stylesheets into one request');
+  }
+  assert.equal(startup.loading, true, 'show a loading status before the first update history response');
+  assert.equal(startup.stayedBack, true, 'a late response should respect Back');
+  assert.ok(startup.entryCount >= 5, 'the full update history opens');
+  assert.equal(startup.latest, `v${GAME_VERSION}`);
+  assert.match(startup.date, /^DIPERBARUI /);
+  assert.equal(startup.fetched, 1, 'opening the log again should reuse the same request');
+  console.log('Startup resources', JSON.stringify(startup));
 
   const result = await evaluate(`(async () => {
     const A = window.__ashen;
@@ -327,9 +384,10 @@ try {
   }
 
   // Reload the real page and verify the Atlas save survived.
+  const previousDocument = await evaluate('performance.timeOrigin');
   await send('Page.reload', { ignoreCache: true });
-  await waitFor(async () => evaluate('document.readyState === "complete"'), 15000, 'reloaded page');
-  await waitFor(async () => evaluate('typeof window.__ashen === "object"'), 15000, 'reloaded game boot');
+  await waitFor(async () => evaluate(`performance.timeOrigin !== ${previousDocument} && window.__ashenBoot?.ready === true`),
+    30000, 'reloaded game boot');
   const persisted = await evaluate(`(() => {
     const a = window.__ashen.progress.atlas;
     return {
@@ -347,6 +405,22 @@ try {
   assert.equal(persisted.infusion, 'ember');
   assert.equal(persisted.lore, 1);
   assert.equal(persisted.quickSlot, 'atlas_heal_1');
+
+  await send('Network.enable');
+  await send('Network.setCacheDisabled', { cacheDisabled: true });
+  deliberatelyBlockedUpdate = true;
+  try {
+    await send('Network.setBlockedURLs', { urls: [updateLogUrl] });
+    await evaluate('window.__ashen.showUpdates()');
+    const message = await evaluate('document.querySelector("#update-log [role=status]")?.textContent');
+    assert.match(message, /belum bisa dimuat/i, 'a failed history request has a retryable status');
+  } finally {
+    await send('Network.setBlockedURLs', { urls: [] });
+    deliberatelyBlockedUpdate = false;
+  }
+  await evaluate('document.querySelector("#update-log button").click()');
+  await waitFor(() => evaluate('document.querySelector("#update-log").dataset.ready === "true"'), 15000, 'Update Log retry');
+  assert.equal(await evaluate('document.querySelector("#update-log .latest .update-version").textContent'), `v${GAME_VERSION}`);
   assert.deepEqual(pageErrors, [], `browser errors: ${pageErrors.join(' | ')}`);
 
   console.log('BROWSER SMOKE PASS');

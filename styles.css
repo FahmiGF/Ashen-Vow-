@@ -1130,6 +1130,10 @@ kbd {
   padding: 11px 24px 10px;
 }
 
+.editor-menu-btn span { letter-spacing: 0.06em; }
+.pirate-menu-btn { border-color: rgba(113, 190, 181, 0.32); }
+.wd-menu-btn { border-color: rgba(224, 177, 105, 0.3); }
+
 .menu-btn em {
   font-family: var(--font-body);
   font-size: clamp(9px, 0.9vw, 11.5px);
@@ -7309,4 +7313,49 @@ html[lang='ar'] .settings2-inner, html[lang='ar'] .screen-inner { font-family: v
 }
 @media (prefers-reduced-motion: reduce) {
   .trailer-progress { transition: none; }
+}
+
+.hud-settings-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+}
+
+.title-settings-corner {
+  position: absolute;
+  top: max(14px, env(safe-area-inset-top));
+  right: max(16px, env(safe-area-inset-right));
+  z-index: 25;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 6px 12px;
+  border: 1px solid var(--line-strong);
+  background: rgba(12, 9, 6, 0.86);
+  color: var(--gold-bright);
+  font-family: var(--font-display);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, transform 0.15s;
+}
+
+.title-settings-corner:hover {
+  background: rgba(34, 24, 14, 0.94);
+  border-color: var(--gold-bright);
+  transform: translateY(-1px);
+}
+
+@media (max-width: 520px) {
+  .title-settings-corner span {
+    display: none;
+  }
+  .title-settings-corner {
+    min-width: 40px;
+    min-height: 40px;
+    justify-content: center;
+    padding: 6px 10px;
+  }
 }

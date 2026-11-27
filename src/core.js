@@ -2008,6 +2008,9 @@ export class AshenGame {
       );
     }
     b._info = info;
+    // Custom stages can override what a boss grants without editing the shared
+    // boss table (a Map Editor boss must never end the run in victory).
+    b.rewardOverride = overrides && overrides.rewardOverride ? overrides.rewardOverride : null;
     b.dialogueData = info.dialogueData || null;
     this.boss = b;
     this.emit({ type: 'bossSpawn', name: info.name, title: info.title, kind });
@@ -3738,6 +3741,7 @@ export class AshenGame {
     ) {
       b.phase += 1;
       b.invuln = 0.4;
+      this.player.invuln = Math.max(this.player.invuln, this.campaignConfig?.phaseGrace ?? 0.1);
       // Some bosses change shape and drag the arena with them (Faewood's
       // heaven/hell forms). Apply before the dialogue so both agree.
       const form = ALL_BOSS_INFO[b.kind]?.forms?.[b.phase];
@@ -6992,12 +6996,13 @@ export class AshenGame {
       this.emit({ type: 'bossDown', room, kind: b.dreadBoss, name: b.name });
       return;
     }
-    if (info?.reward === 'victory') {
+    const bossReward = b.rewardOverride || info?.reward;
+    if (bossReward === 'victory') {
       this.state = 'victory';
       this.deathTimer = 0;
       this.emit({ type: 'victory' });
       if (room >= 14 && room < ATLAS_ROOM_START) this.emit({ type: 'campaignComplete', room, chapter: Math.floor((room - 14) / 10) });
-    } else if (info?.reward === 'flask') {
+    } else if (bossReward === 'flask') {
       const p = this.player;
       p.maxFlasks += 1;
       p.flasks = p.maxFlasks;
@@ -7019,7 +7024,7 @@ export class AshenGame {
       this.emit({ type: 'echoGain', amount: echoReward, total: this.echoes });
     }
     this.emit({
-      type: 'bossDown', room, kind: b.kind, name: b.name, next, reward: info?.reward,
+      type: 'bossDown', room, kind: b.kind, name: b.name, next, reward: bossReward,
       chapter: info?.chapter ?? null, mini: !!info?.mini, echoes: echoReward,
     });
     this.shake = 0.9;
