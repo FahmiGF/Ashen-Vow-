@@ -85,7 +85,7 @@ test('the only locked arc is the deliberately empty Rift', () => {
 
 test('shipped arcs claim rooms that exist in ALL_ROOMS', () => {
   const roomCount = ALL_ROOMS.length;
-  assert.equal(roomCount, 774, 'the room table is the reference count');
+  assert.equal(roomCount, 874, 'the room table is the reference count');
 
   const claims = STORY_ARCS.filter((arc) => /\d+ ruang/.test(arc.scope));
   assert.ok(claims.length >= 8);
@@ -98,13 +98,11 @@ test('shipped arcs claim rooms that exist in ALL_ROOMS', () => {
   }
 
   // 474 authored arc rooms + 100 Echoes levels (14–113) + 100 Godfall floors
-  // (562–661) + the 100-room Infinite Frontiers ladder (674–773) = the whole
-  // 774-room table, with no room counted twice. The Frontier ladder is a
-  // separate mode ladder, not an arc, so it carries no story claim of its own.
+  // (562–661) + 100 Infinite Frontiers (674–773) + 100 Overdrive (774–873) = 874.
   assert.equal(total, 474);
   const echoes = storyArcFor('echoes');
   assert.match(echoes.scope, /100 level/);
-  assert.equal(total + 100 + 100 + 100, roomCount);
+  assert.equal(total + 100 + 100 + 100 + 100, roomCount);
 });
 
 test('the summary counts the campaign without mutating it', () => {

@@ -256,10 +256,20 @@ test('Update XV remains documented after the Unwritten Wing expansion', () => {
   }
 });
 
-test('the latest update documents the playable Infinite Frontiers ladder', () => {
+test('the latest update documents Overdrive playable and Wave Defense arsenal', () => {
   const latest = LATEST_UPDATE;
-  assert.equal(latest.version, '0.42.0');
+  assert.equal(latest.version, '0.43.0');
   assert.equal(latest.version, GAME_VERSION);
+  const text = [latest.title, latest.summary, ...latest.highlights, ...(latest.fixes || [])].join(' ');
+  for (const pattern of [/Overdrive/i, /774–873/, /201–300/, /The First God/i, /\[Q\]/, /Legendaris/i, /874/, /Wave Defense/i, /SVG/i, /4×/]) {
+    assert.match(text, pattern);
+  }
+});
+
+test('the 0.42.0 entry documents the playable Infinite Frontiers ladder', () => {
+  const latest = UPDATE_LOG.find((item) => item.version === '0.42.0');
+  assert.ok(latest);
+  assert.equal(latest.version, '0.42.0');
   const text = [latest.title, latest.summary, ...latest.highlights, ...(latest.fixes || [])].join(' ');
   for (const pattern of [/Infinite Frontiers/i, /674–773/, /100 rus|seratus ruang|100 ruang/i, /10 bos|sepuluh bos/i, /Aethron/i, /lima fase|5 fase/i, /elite/i, /E2–E7/, /progress\.frontiers/, /ALL_ROOMS/, /774/, /frontierBoss/, /frontiers:<index>|frontiers:/i, /20 tubuh|20 musuh/i, /ashen-vow-progress-v1/]) {
     assert.match(text, pattern);

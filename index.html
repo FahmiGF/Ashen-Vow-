@@ -4,10 +4,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#0b0807" />
-    <title>Ashen Vow — v0.42.0</title>
+    <title>Ashen Vow — v0.43.0</title>
     <meta
       name="description"
-      content="Ashen Vow adalah metroidvania medieval 2D dengan combat pedang real-time, 774 ruang, 126 boss, Infinite Frontiers 101–200, Peta Sumpah (Map Editor), Peta Kisah, mode Speedrun satu nyawa, Wave Defense dengan 20 menara dan Infinitower, Pirate Tide dengan laut terbuka dan meriam broadside, Riftwar MOBA 5v5 dengan 28 kelas, Thornveil Haven, Scary Mode 2D/3D, dan indeks sumpah."
+      content="Ashen Vow adalah metroidvania medieval 2D dengan combat pedang real-time, 874 ruang, 136 boss, Infinite Frontiers 101–200, Overdrive 201–300, Peta Sumpah (Map Editor), Peta Kisah, mode Speedrun satu nyawa, Wave Defense dengan 20 ikon menara, 9 medan dan partikel 4x, Pirate Tide, Riftwar MOBA 5v5, Thornveil Haven, dan Scary Mode 2D/3D."
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -230,6 +230,7 @@
               <div id="speedrun-badge" class="speedrun-badge hidden">⚡ 2× · 1 NYAWA</div>
               <div id="custom-badge" class="custom-badge hidden">🎯 NORMAL · 1.8×</div>
               <div id="frontier-badge" class="custom-badge frontier-hud-badge hidden">🜂 LV 101 · SHATTERED CONTINENT</div>
+              <div id="overdrive-badge" class="custom-badge frontier-hud-badge hidden">⚡ LV 201 · DROWNED CAPITAL · MANA 100 · [Q]</div>
               <div class="ash-badge" title="Abu — mata uang Warung Abu">
                 <span>✦</span>
                 <strong id="ash-count">0</strong>
@@ -343,7 +344,7 @@
         <section id="title-screen" class="screen title-screen">
           <button id="btn-settings-top" class="title-settings-corner" type="button" title="Settings" aria-label="Settings">⚙ <span>SETTINGS</span></button>
           <div class="screen-inner title-inner">
-            <p class="eyebrow">SEBUAH SUMPAH DI ANTARA ABU · v0.42.0</p>
+            <p class="eyebrow">SEBUAH SUMPAH DI ANTARA ABU · v0.43.0</p>
             <h1 class="game-title">ASHEN<span>VOW</span></h1>
             <div class="title-rule"><i></i><b>✦</b><i></i></div>
             <p class="lede">
@@ -498,7 +499,7 @@
               </button>
               <button id="btn-updates" class="btn btn-ghost menu-btn" type="button">
                 <span>CATATAN UPDATE</span>
-                <em>Riwayat rilis · v0.42.0 · Infinite Frontiers</em>
+                <em>Riwayat rilis · v0.43.0 · Overdrive &amp; Menara</em>
               </button>
             </nav>
 
@@ -621,7 +622,7 @@
             </div>
 
             <div id="credits-times" class="credits-times"></div>
-            <p class="credit-version">ASHEN VOW · v0.42.0 · 18 KELAS · 116 BOSS · 774 RUANG · FRONTIERS</p>
+            <p class="credit-version">ASHEN VOW · v0.43.0 · 18 KELAS · 136 BOSS · 874 RUANG · OVERDRIVE</p>
             <div class="screen-links">
               <button id="btn-credits-back" class="link-btn" type="button">← KEMBALI KE MENU</button>
             </div>
@@ -638,7 +639,7 @@
               Catatan ini ikut tersimpan di dalam game.
             </p>
             <div class="updates-meta">
-              <span id="updates-version">VERSI SAAT INI · v0.42.0</span>
+              <span id="updates-version">VERSI SAAT INI · v0.43.0</span>
               <span>DIPERBARUI 27 NOVEMBER 2026</span>
             </div>
             <div id="update-log" class="update-log"></div>
@@ -791,25 +792,25 @@
         <!-- ══ OVERDRIVE HUB ══ -->
         <section id="overdrive-screen" class="screen hidden">
           <div class="screen-inner overdrive-inner">
-            <p class="eyebrow">ASHEN VOW OVERDRIVE · THE ETERNAL REALM · v0.5.0</p>
+            <p class="eyebrow">ASHEN VOW OVERDRIVE · THE ETERNAL REALM · v0.43.0</p>
             <h2 class="screen-title overdrive-title">THE ETERNAL REALM</h2>
             <p class="screen-sub">
-              Level 201–300 · 10 Bab Wilayah Abadi · 8 Sekolah Sihir · 32 Mantra · 8 Bos Multi-Fase · 12 Mode Overdrive.
+              Level 201–300 (Ruang 774–873) · 10 Bab Wilayah Abadi · 8 Sekolah Sihir [Q] · 8 Senjata Legendaris · 10 Bos Bab · 6 Varian Level.
             </p>
             <div id="overdrive-summary" class="overdrive-summary"></div>
             <nav id="overdrive-tabs" class="exp-tabs overdrive-tabs" aria-label="Bagian Overdrive">
               <button class="exp-tab active" type="button" data-tab="campaign301">KAMPANYE 201–300</button>
               <button class="exp-tab" type="button" data-tab="spellschools">8 SEKOLAH SIHIR</button>
-              <button class="exp-tab" type="button" data-tab="bossfase">BOS &amp; FASE</button>
-              <button class="exp-tab" type="button" data-tab="profiler">DIAGNOSTIK PROFILER</button>
-              <button class="exp-tab" type="button" data-tab="modes">MODE OVERDRIVE</button>
-              <button class="exp-tab" type="button" data-tab="checklist">CHECKLIST RILIS (18/18)</button>
+              <button class="exp-tab" type="button" data-tab="legendaries">8 LEGENDARIS</button>
+              <button class="exp-tab" type="button" data-tab="bossfase">10 BOS &amp; FASE</button>
+              <button class="exp-tab" type="button" data-tab="modes">12 MODE OVERDRIVE</button>
+              <button class="exp-tab" type="button" data-tab="profiler">PROFILER &amp; CHECKLIST</button>
             </nav>
             <div id="overdrive-body" class="overdrive-body"></div>
             <div class="screen-links">
               <button id="btn-overdrive-back" class="link-btn" type="button">← KEMBALI KE MENU</button>
             </div>
-            <p class="micro">Kampanye 2D 1–200 tetap utuh. Overdrive adalah kelanjutan langsung dari Infinite Frontiers.</p>
+            <p class="micro">Kampanye 2D 1–200 tetap utuh. Overdrive (774–873) adalah kelanjutan langsung setelah Aethron di Infinite Frontiers.</p>
           </div>
         </section>
 
@@ -1012,12 +1013,14 @@
             <div id="wd-summary" class="wd-summary"></div>
             <div class="wd-section-head"><h3>KRONIK LINGKAR</h3><span>ENAM TINGKAT · TANPA KEMENANGAN</span></div>
             <div id="wd-story" class="wd-story"></div>
-            <div class="wd-section-head"><h3>PILIH BENTENG</h3><span id="wd-map-count">5 MEDAN</span></div>
+            <div class="wd-section-head"><h3>PILIH BENTENG &amp; STAGE</h3><span id="wd-map-count">9 MEDAN</span></div>
             <div id="wd-maps" class="wd-maps"></div>
             <div class="wd-section-head"><h3>MODE</h3><span>KAMPANYE · TANPA AKHIR · INFINITOWER</span></div>
             <div id="wd-modes" class="wd-choice-row"></div>
             <div class="wd-section-head"><h3>KESULITAN</h3><span>SQUIRE · KNIGHT · WARLORD · ETERNAL</span></div>
             <div id="wd-difficulties" class="wd-choice-row"></div>
+            <div class="wd-section-head"><h3>KEPADATAN PARTIKEL</h3><span id="wd-particle-label">STANDAR (1×)</span></div>
+            <div id="wd-particles" class="wd-choice-row"></div>
             <div class="wd-section-head"><h3>MENARA PERTAHANAN</h3><span id="wd-tower-count">20 JENIS</span></div>
             <div id="wd-towers" class="wd-tower-grid"></div>
             <div class="wd-start-row">
@@ -1069,6 +1072,12 @@
                 <button type="button" data-wd-speed="1" class="active">1×</button>
                 <button type="button" data-wd-speed="2">2×</button>
                 <button type="button" data-wd-speed="3">3×</button>
+              </div>
+              <div id="wd-battle-particles" class="wd-speed" role="group" aria-label="Kepadatan partikel">
+                <button type="button" data-wd-pscale="0.45" title="Partikel Hemat">P:½×</button>
+                <button type="button" data-wd-pscale="1" class="active" title="Partikel Standar">P:1×</button>
+                <button type="button" data-wd-pscale="2" title="Partikel Lebat">P:2×</button>
+                <button type="button" data-wd-pscale="4" title="Partikel Overdrive">P:4×</button>
               </div>
             </div>
             <div id="wd-feed" class="wd-feed"></div>
@@ -2267,7 +2276,7 @@
       </div>
 
       <footer class="footer">
-          <span>ASHEN VOW · v0.42.0</span>
+          <span>ASHEN VOW · v0.43.0</span>
         <span class="dot">✦</span>
         <span>Metroidvania medieval 2D · 14 ruang · 6 boss · dibuat dengan Canvas</span>
       </footer>

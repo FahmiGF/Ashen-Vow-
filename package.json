@@ -1,9 +1,9 @@
 {
   "name": "ashen-vow",
-  "version": "0.42.0",
+  "version": "0.43.0",
   "private": true,
   "type": "module",
-  "description": "Ashen Vow v0.42.0 - Update XXXII: Infinite Frontiers Lv 101-200 becomes 100 playable rooms with ten chapter bosses and E2-E7 elites",
+  "description": "Ashen Vow v0.43.0 - Update XXXIII: Overdrive Lv 201-300 becomes 100 playable rooms (774-873) with 10 bosses, spell casting [Q], plus Tower Defense tower icons, 9 stages & 4x particle density",
   "scripts": {
     "start": "node server.js",
     "test": "node --test tests/*.test.js",
@@ -24,6 +24,7 @@
     "smoke:editor": "node tools/editor-smoke.mjs",
     "smoke:storymap": "node tools/storymap-smoke.mjs",
     "smoke:frontiers": "node tools/frontiers-smoke.mjs",
+    "smoke:overdrive": "node tools/overdrive-smoke.mjs",
     "smoke:fallen": "node tools/fallen-smoke.mjs",
     "audit:gadgets": "node tools/gadget-audit.mjs",
     "smoke:crusade": "node tools/crusade-smoke.mjs",

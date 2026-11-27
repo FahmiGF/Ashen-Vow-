@@ -271,13 +271,14 @@ async function main() {
     } catch {
       // Already closed.
     }
-    chrome.kill();
-    await sleep(200);
+    chrome.kill('SIGKILL');
+    await sleep(150);
     try {
       rmSync(profile, { recursive: true, force: true });
     } catch {
       // Windows can keep the profile locked for a moment.
     }
+    process.exit(0);
   }
 }
 

@@ -76,6 +76,11 @@ import {
   FRONTIER_BOSS_INFO,
 } from './frontiers.js';
 import {
+  OVERDRIVE_ROOMS,
+  OVERDRIVE_ENEMY_INFO,
+  OVERDRIVE_BOSS_INFO,
+} from './overdrive_ladder.js';
+import {
   FALLEN_ROOMS,
   FALLEN_ENEMY_INFO,
   FALLEN_BOSS_INFO,
@@ -1161,8 +1166,8 @@ SHOP_ITEMS.push(...ECLIPSE_SHOP_ITEMS);
 
 // Legacy rooms stay exactly as they were so old saves, map layout and tests keep
 // their meaning. The campaign is a second set of rooms appended at indices 14+.
-export const ALL_ROOMS = [...ROOMS, ...EXPANSION_ROOMS, ...ATLAS_ROOMS, ...COURT_ROOMS, ...FAIRY_ROOMS, ...FALLEN_ROOMS, ...CRUSADE_ROOMS, ...ASTRAL_ROOMS, ...ECLIPSE_ROOMS, ...GODFALL_ROOMS, ...CISTERN_ROOMS, ...LANTERN_ROOMS, ...FRONTIER_ROOMS];
-export const ALL_ENEMY_INFO = { ...ENEMY_INFO, ...EXPANSION_ENEMY_INFO, ...ATLAS_ENEMY_INFO, ...COURT_ENEMY_INFO, ...FAIRY_ENEMY_INFO, ...FALLEN_ENEMY_INFO, ...CRUSADE_ENEMY_INFO, ...ASTRAL_ENEMY_INFO, ...ECLIPSE_ENEMY_INFO, ...CISTERN_ENEMY_INFO, ...LANTERN_ENEMY_INFO, ...FRONTIER_ENEMY_INFO, ...FRONTIER_ELITE_INFO };
+export const ALL_ROOMS = [...ROOMS, ...EXPANSION_ROOMS, ...ATLAS_ROOMS, ...COURT_ROOMS, ...FAIRY_ROOMS, ...FALLEN_ROOMS, ...CRUSADE_ROOMS, ...ASTRAL_ROOMS, ...ECLIPSE_ROOMS, ...GODFALL_ROOMS, ...CISTERN_ROOMS, ...LANTERN_ROOMS, ...FRONTIER_ROOMS, ...OVERDRIVE_ROOMS];
+export const ALL_ENEMY_INFO = { ...ENEMY_INFO, ...EXPANSION_ENEMY_INFO, ...ATLAS_ENEMY_INFO, ...COURT_ENEMY_INFO, ...FAIRY_ENEMY_INFO, ...FALLEN_ENEMY_INFO, ...CRUSADE_ENEMY_INFO, ...ASTRAL_ENEMY_INFO, ...ECLIPSE_ENEMY_INFO, ...CISTERN_ENEMY_INFO, ...LANTERN_ENEMY_INFO, ...FRONTIER_ENEMY_INFO, ...FRONTIER_ELITE_INFO, ...OVERDRIVE_ENEMY_INFO };
 
 const BOSS_INFO = {
   warden: {
@@ -1334,7 +1339,7 @@ const BOSS_INFO = {
   },
 };
 
-export const ALL_BOSS_INFO = { ...BOSS_INFO, ...EXPANSION_BOSS_INFO, ...ATLAS_BOSS_INFO, ...COURT_BOSS_INFO, ...PACK_BOSS_INFO, ...FAIRY_BOSS_INFO, ...FALLEN_BOSS_INFO, ...CRUSADE_BOSS_INFO, ...ASTRAL_BOSS_INFO, ...ECLIPSE_BOSS_INFO, ...GODFALL_BOSS_INFO, ...CISTERN_BOSS_INFO, ...LANTERN_BOSS_INFO, ...FRONTIER_BOSS_INFO };
+export const ALL_BOSS_INFO = { ...BOSS_INFO, ...EXPANSION_BOSS_INFO, ...ATLAS_BOSS_INFO, ...COURT_BOSS_INFO, ...PACK_BOSS_INFO, ...FAIRY_BOSS_INFO, ...FALLEN_BOSS_INFO, ...CRUSADE_BOSS_INFO, ...ASTRAL_BOSS_INFO, ...ECLIPSE_BOSS_INFO, ...GODFALL_BOSS_INFO, ...CISTERN_BOSS_INFO, ...LANTERN_BOSS_INFO, ...FRONTIER_BOSS_INFO, ...OVERDRIVE_BOSS_INFO };
 export const EXPANSION_BOSS_IDS = Object.keys(EXPANSION_BOSS_INFO);
 
 export const CODEX = {
@@ -1601,6 +1606,10 @@ export class AshenGame {
       weapons: ['sword'],
       arrows: 0,
       shurikens: 0,
+      weaponSkillCooldown: 0,
+      overdriveMana: 100,
+      overdriveMaxMana: 100,
+      overdriveSpellCooldown: 0,
       consumeCooldown: 0,
       sigils: [],
       rituals: {},
@@ -2227,6 +2236,11 @@ export class AshenGame {
     if (p.spiritWardTimer > 0) p.spiritWardTimer = Math.max(0, p.spiritWardTimer - dt);
     if (p.spiritWardFlash > 0) p.spiritWardFlash = Math.max(0, p.spiritWardFlash - dt);
     if (p.weaponSkillCooldown > 0) p.weaponSkillCooldown = Math.max(0, p.weaponSkillCooldown - dt);
+    if (p.overdriveSpellCooldown > 0) p.overdriveSpellCooldown = Math.max(0, p.overdriveSpellCooldown - dt);
+    if (this.room?.overdrive) {
+      p.overdriveMaxMana = p.overdriveMaxMana || 100;
+      p.overdriveMana = Math.min(p.overdriveMaxMana, (p.overdriveMana ?? p.overdriveMaxMana) + 8 * dt);
+    }
     if (p.timeField > 0) p.timeField = Math.max(0, p.timeField - dt);
     if (this.combat) {
       if (this.combat.counterWindow > 0) this.combat.counterWindow = Math.max(0, this.combat.counterWindow - dt);
@@ -2546,6 +2560,42 @@ export class AshenGame {
     this.shake = Math.max(this.shake, 0.24);
     this.emit({ type: 'weaponSkill', weapon, name: WEAPONS[weapon]?.name || weapon, element, index: p.weaponSkillIndex });
     return true;
+  }
+
+  castOverdriveSpell(spell, color = '#fb7185') {
+    if (!spell || this.state !== 'playing') return { ok: false, reason: 'inactive' };
+    const p = this.player;
+    const mana = p.overdriveMana ?? 100;
+    const cost = Math.max(0, Number(spell.cost) || 20);
+    if ((p.overdriveSpellCooldown || 0) > 0) return { ok: false, reason: 'cooldown' };
+    if (mana < cost) return { ok: false, reason: 'mana' };
+    p.overdriveMana = mana - cost;
+    p.overdriveSpellCooldown = Math.max(0.6, Number(spell.cooldown) || 1.8);
+    const dmg = Math.max(15, Math.round((Number(spell.damage) || 70) * 0.48 * p.damageMult));
+    const dir = p.facing || 1;
+    this.spawnPlayerProjectile('long_shot', {
+      x: p.x + p.w / 2 + dir * 20,
+      y: p.y + p.h * 0.42,
+      vx: dir * 760,
+      vy: 0,
+      r: 11,
+      dmg,
+      life: 1.5,
+      pierce: true,
+    });
+    const blastBox = { x: p.x - 110, y: p.y - 60, w: p.w + 220, h: p.h + 120 };
+    for (const e of this.enemies) {
+      if (!e.dead && rectHitsRect(blastBox, e)) {
+        this.hurtEnemy(e, { dmg: Math.round(dmg * 0.65), knock: 120, name: spell.id }, dir);
+      }
+    }
+    if (this.boss && !this.boss.dying && rectHitsRect(blastBox, this.boss)) {
+      this.hurtBoss(Math.round(dmg * 0.65), 90, dir, false);
+    }
+    this.burst(p.x + p.w / 2 + dir * 24, p.y + p.h * 0.45, 22, color, 200);
+    this.shake = Math.max(this.shake, 0.2);
+    this.emit({ type: 'overdriveSpell', id: spell.id, name: spell.name, cost, color });
+    return { ok: true, mana: p.overdriveMana };
   }
 
   performAbility(skills = DEFAULT_SKILL_BONUSES) {

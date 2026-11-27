@@ -93,6 +93,23 @@ export const ZONES = {
       fog: '#2b4a6b',
     },
   },
+  overdrive: {
+    id: 'overdrive',
+    name: 'The Eternal Realm',
+    subtitle: 'Overdrive · Alam Abadi',
+    color: '#fb7185',
+    mapColor: '#fb7185',
+    music: 'overdrive',
+    bossMusic: 'overdriveBoss',
+    particle: 'stars',
+    palette: {
+      top: '#120612',
+      mid: '#230b20',
+      low: '#381134',
+      glow: '#fb7185',
+      fog: '#501b49',
+    },
+  },
   frostglass: {
     id: 'frostglass',
     name: 'Frostglass Cathedral',

@@ -39,8 +39,8 @@ test('cistern rooms are contiguous and appended after every existing arc', () =>
   assert.equal(CISTERN_HALL_COUNT, 4);
   CISTERN_ROOMS.forEach((room, i) => assert.equal(room.id, CISTERN_ROOM_START + i));
   assert.equal(roomById(661).name.startsWith('Godfall'), true, 'the previous last room is untouched');
-  assert.equal(ALL_ROOMS.length, 774, 'BAB X, then Frontiers, append after the cistern');
-  assert.equal(ALL_ROOMS.at(-1).id, 773, 'the Frontier ladder closes the table');
+  assert.equal(ALL_ROOMS.length, 874, 'BAB X, Frontiers and Overdrive append after the cistern');
+  assert.equal(ALL_ROOMS.at(-1).id, 873, 'Overdrive closes the table');
   assert.equal(roomById(668).cistern, true, 'the cistern block itself is untouched');
   for (const room of CISTERN_ROOMS) {
     assert.equal(room.zone, 'cistern');

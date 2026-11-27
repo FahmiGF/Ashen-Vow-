@@ -91,7 +91,7 @@ try {
     entry: !!document.getElementById('btn-frontier-menu'),
     rooms: window.__ashen.frontiers.chapters.length,
   }))()`);
-  check(boot.title.includes('v0.42.0'), `the page boots as v0.42.0 (${boot.title})`);
+  check(!!boot.version && boot.title.includes(`v${boot.version}`), `the page boots as v${boot.version} (${boot.title})`);
   check(boot.entry === true, 'the menu keeps its INFINITE FRONTIERS entry');
   check(boot.rooms === 10, `the hub reports ten chapters (${boot.rooms})`);
 
@@ -294,5 +294,6 @@ try {
   process.exitCode = failed ? 1 : 0;
 } finally {
   try { ws?.close(); } catch { /* ignore */ }
-  chrome.kill();
+  chrome.kill('SIGKILL');
+  process.exit(failed ? 1 : 0);
 }

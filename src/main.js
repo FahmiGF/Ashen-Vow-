@@ -832,10 +832,12 @@ import {
   WAVE_DEFENSE_TOWERS,
   WAVE_DEFENSE_TOWER_BY_ID,
   WAVE_DEFENSE_DIFFICULTIES,
+  WAVE_DEFENSE_PARTICLE_LEVELS,
   WAVE_DEFENSE_ENEMY_TYPES,
   WAVE_DEFENSE_BOSSES,
   WAVE_DEFENSE_TOTAL_WAVES,
   WAVE_DEFENSE_INFINITOWER_TIER_WAVES,
+  waveDefenseTowerIconDataUrl,
   SPIRAL_STORY,
   spiralStoryForTier,
   infinitowerTierFor,
@@ -850,6 +852,7 @@ import {
   waveDefenseSelectTower,
   waveDefenseNextWave,
   waveDefenseSetSpeed,
+  waveDefenseSetParticleScale,
   waveDefenseSnapshot,
   waveDefenseSummary,
   defaultWaveDefenseProgress,
@@ -858,6 +861,35 @@ import {
   endWaveDefense,
   renderWaveDefense,
 } from './wavedefense.js';
+import {
+  OVERDRIVE_CHAPTERS as OVERDRIVE_DATA_CHAPTERS,
+  OVERDRIVE_SPECIAL_LEVEL_TYPES,
+  SPELL_SCHOOLS as OVERDRIVE_DATA_SCHOOLS,
+  LEGENDARY_WEAPONS as OVERDRIVE_LEGENDARY_WEAPONS,
+} from './overdrive.js';
+import {
+  OVERDRIVE_ROOMS,
+  OVERDRIVE_LEVEL_COUNT,
+  OVERDRIVE_ROOMS_PER_CHAPTER,
+  OVERDRIVE_CHAPTER_META,
+  OVERDRIVE_LOCAL_NAME,
+  overdriveRoomForIndex,
+  overdriveIndexForRoom,
+  overdriveCampaignUnlocked,
+  overdriveLevelUnlocked,
+  overdriveLevelCleared,
+  overdriveChapterProgress,
+  overdriveCampaignSummary,
+  overdrivePlayerScale,
+  overdriveVitalityScale,
+  overdriveFlaskBonus,
+  overdriveAshStipend,
+  overdriveSpellFor,
+  defaultOverdriveLadderState,
+  sanitizeOverdriveLadderProgress,
+  recordOverdriveLevel,
+  recordOverdriveRun,
+} from './overdrive_ladder.js';
 import {
   PIRATE_STAGES,
   PIRATE_STAGE_BY_ID,
@@ -1068,6 +1100,7 @@ let wdResult = null;
 let wdRecorded = false;
 let wdMapId = 'ashen_keep';
 let wdDifficulty = 'knight';
+let wdParticleId = 'normal';
 let wdEndless = false;
 let wdInfinitower = false;
 let wdIntroSeen = false;
@@ -1303,6 +1336,7 @@ function defaultProgress() {
     cistern: defaultCisternProgress(),
     lanternwake: defaultLanternProgress(),
     frontiers: defaultFrontierCampaignProgress(),
+    overdrive: defaultOverdriveLadderState(),
     speedrun: defaultSpeedrunProgress(),
     fishing: defaultFishingProgress(),
     fallen: defaultFallenProgress(),
@@ -1326,7 +1360,7 @@ function sanitizeStageTimes(raw) {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
   const result = {};
   for (const [key, value] of Object.entries(raw)) {
-    if (!/^(legacy|court|expansion|atlas|cistern|lanternwake|frontiers):\d+$/.test(key) || !value || typeof value !== 'object') continue;
+    if (!/^(legacy|court|expansion|atlas|cistern|lanternwake|frontiers|overdrive):\d+$/.test(key) || !value || typeof value !== 'object') continue;
     result[key] = {
       label: typeof value.label === 'string' ? value.label.slice(0, 80) : key,
       best: Math.max(0, Math.round((Number(value.best) || 0) * 10) / 10),
@@ -1376,7 +1410,7 @@ function loadProgress() {
         };
     // Keep every unknown top-level field. v0.3.0 adds `expansion` without
     // changing the storage key or discarding future/legacy save data.
-    const { version, schemaVersion: _schemaVersion, unlocked: _unlocked, cleared: _cleared, map: _map, expansion: _expansion, atlas: _atlas, labyrinth: _labyrinth, court: _court, skills: _skills, pack: _pack, fairy: _fairy, speedrun: _speedrun, fishing: _fishing, fallen: _fallen, crusade: _crusade, trials: _trials, puzzle: _puzzle, moba: _moba, wavedefense: _wavedefense, pirates: _pirates, astral: _astral, realms: _realms, eclipse: _eclipse, godfall: _godfall, guild: _guild, awakening: _awakening, cistern: _cistern, lanternwake: _lanternwake, frontiers: _frontiers, stageTimes: _stageTimes, ...extras } = parsed;
+    const { version, schemaVersion: _schemaVersion, unlocked: _unlocked, cleared: _cleared, map: _map, expansion: _expansion, atlas: _atlas, labyrinth: _labyrinth, court: _court, skills: _skills, pack: _pack, fairy: _fairy, speedrun: _speedrun, fishing: _fishing, fallen: _fallen, crusade: _crusade, trials: _trials, puzzle: _puzzle, moba: _moba, wavedefense: _wavedefense, pirates: _pirates, astral: _astral, realms: _realms, eclipse: _eclipse, godfall: _godfall, guild: _guild, awakening: _awakening, cistern: _cistern, lanternwake: _lanternwake, frontiers: _frontiers, overdrive: _overdrive, stageTimes: _stageTimes, ...extras } = parsed;
     return {
       ...extras,
       version: 1,
@@ -1394,6 +1428,7 @@ function loadProgress() {
       cistern: sanitizeCisternProgress(parsed.cistern),
       lanternwake: sanitizeLanternProgress(parsed.lanternwake),
       frontiers: sanitizeFrontierCampaignProgress(parsed.frontiers),
+      overdrive: sanitizeOverdriveLadderProgress(parsed.overdrive),
       speedrun: sanitizeSpeedrunProgress(parsed.speedrun),
       fishing: sanitizeFishingProgress(parsed.fishing),
       fallen: sanitizeFallenProgress(parsed.fallen),
@@ -8169,6 +8204,13 @@ function retryRun() {
     startFrontierLevel(activeFrontierIndex >= 0 ? activeFrontierIndex : 0);
     return;
   }
+  if (activeRunKind === 'overdrive') {
+    const state = overdriveState();
+    recordOverdriveRun(state, 0, true);
+    saveProgress();
+    startOverdriveLevel(activeOverdriveIndex >= 0 ? activeOverdriveIndex : 0);
+    return;
+  }
   if (activeRunKind === 'eclipse') {
     progress.eclipse.deaths += 1;
     saveProgress();
@@ -8803,6 +8845,13 @@ function showWaveDefense() {
   syncScreens();
 }
 
+function waveDefenseParticleScale() {
+  const level = WAVE_DEFENSE_PARTICLE_LEVELS.find((entry) => entry.id === wdParticleId);
+  if (level) return level.scale;
+  const mult = Number(settings?.graphics?.particleMultiplier ?? 1);
+  return Math.max(0.25, Math.min(4, mult));
+}
+
 function buildWaveDefenseScreen() {
   const state = waveDefenseState();
   const summary = waveDefenseSummary(state);
@@ -8827,12 +8876,17 @@ function buildWaveDefenseScreen() {
   }
   if (!WAVE_DEFENSE_MAP_BY_ID[wdMapId]) wdMapId = WAVE_DEFENSE_MAPS[0].id;
   if (!WAVE_DEFENSE_DIFFICULTIES.some((entry) => entry.id === wdDifficulty)) wdDifficulty = 'knight';
+  if (!WAVE_DEFENSE_PARTICLE_LEVELS.some((entry) => entry.id === wdParticleId)) wdParticleId = 'normal';
   if (!WAVE_DEFENSE_TOWER_BY_ID[wdSelectedTowerId]) wdSelectedTowerId = WAVE_DEFENSE_TOWERS[0].id;
+  const mapCountEl = $('wd-map-count');
+  if (mapCountEl) mapCountEl.textContent = `${WAVE_DEFENSE_MAPS.length} MEDAN · ${WAVE_DEFENSE_MAPS.filter((m) => m.id !== 'eternal_spiral').length} STAGE`;
   const maps = $('wd-maps');
   if (maps) {
     maps.innerHTML = WAVE_DEFENSE_MAPS.map((map) => {
       const record = state.maps?.[map.id] || {};
-      return `<button class="wd-map-card${map.id === wdMapId ? ' active' : ''}" type="button" data-wd-map="${map.id}">
+      const cleared = (record.wins || 0) > 0;
+      return `<button class="wd-map-card${map.id === wdMapId ? ' active' : ''}${cleared ? ' cleared' : ''}" type="button" data-wd-map="${map.id}">
+        <span class="wm-stage">STAGE ${map.stage || 1}${cleared ? ' · TUNTAS' : ''}${map.id === 'eternal_spiral' ? ' · INFINITOWER' : ''}</span>
         <strong>${esc(map.name)}</strong><em>${esc(map.subtitle)}</em><span>${esc(map.lore)}</span>
         <b>${map.slots.length} POS · REKOR GEL ${record.bestWave || 0} · SKOR ${record.bestScore || 0}</b>
       </button>`;
@@ -8840,6 +8894,15 @@ function buildWaveDefenseScreen() {
   }
   const diffs = $('wd-difficulties');
   if (diffs) diffs.innerHTML = WAVE_DEFENSE_DIFFICULTIES.map((entry) => `<button class="${entry.id === wdDifficulty ? 'active' : ''}" type="button" data-wd-difficulty="${entry.id}" title="${esc(entry.desc)}">${entry.name} · ${entry.castle} HP</button>`).join('');
+  const particlesEl = $('wd-particles');
+  if (particlesEl) {
+    particlesEl.innerHTML = WAVE_DEFENSE_PARTICLE_LEVELS.map((entry) => `<button class="${entry.id === wdParticleId ? 'active' : ''}" type="button" data-wd-particle="${entry.id}" title="${esc(entry.desc)}">${esc(entry.label)}<em>${entry.scale}× partikel</em></button>`).join('');
+  }
+  const pLabel = $('wd-particle-label');
+  if (pLabel) {
+    const activeLevel = WAVE_DEFENSE_PARTICLE_LEVELS.find((entry) => entry.id === wdParticleId) || WAVE_DEFENSE_PARTICLE_LEVELS[1];
+    pLabel.textContent = `${activeLevel.label.toUpperCase()} (${activeLevel.scale}×)`;
+  }
   const modes = $('wd-modes');
   if (modes) {
     const best = summary.endlessBest || {};
@@ -8852,7 +8915,7 @@ function buildWaveDefenseScreen() {
   const towers = $('wd-towers');
   if (towers) {
     towers.innerHTML = WAVE_DEFENSE_TOWERS.map((tower) => `<button class="wd-tower-card${tower.id === wdSelectedTowerId ? ' active' : ''}" type="button" data-wd-tower="${tower.id}" style="--tower-color:${tower.color}">
-      <span class="wt-top"><span class="wt-glyph">${tower.glyph}</span><strong>${esc(tower.name)}</strong></span>
+      <span class="wt-top"><img class="wt-icon" src="${waveDefenseTowerIconDataUrl(tower.id)}" alt="${esc(tower.name)}" /><strong>${esc(tower.name)}</strong></span>
       <em>${tower.cost} EMAS</em>
       <span>${esc(tower.desc)}</span>
       <span class="wt-stats">DMG ${tower.damage} · RANGE ${tower.range} · ${tower.rate.toFixed(2)}/s${tower.splash ? ` · AREA ${tower.splash}` : ''}</span>
@@ -8868,7 +8931,7 @@ function buildWaveDefensePalette() {
   const palette = $('wd-palette');
   if (!palette) return;
   palette.innerHTML = WAVE_DEFENSE_TOWERS.map((tower) => `<button type="button" data-wd-tower="${tower.id}" style="--tower-color:${tower.color}">
-    <span class="wp-glyph">${tower.glyph}</span><span class="wp-name">${esc(tower.name)}</span><span class="wp-cost">${tower.cost}</span>
+    <img class="wp-icon" src="${waveDefenseTowerIconDataUrl(tower.id)}" alt="${esc(tower.name)}" /><span class="wp-name">${esc(tower.name)}</span><span class="wp-cost">${tower.cost}</span>
   </button>`).join('');
   wdSelectionKey = '';
   wdFeedKey = '';
@@ -8882,6 +8945,7 @@ function startWaveDefenseBattle() {
     difficulty: wdDifficulty,
     endless: wdEndless,
     infinitower: wdInfinitower,
+    particleScale: waveDefenseParticleScale(),
     seed: (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0,
   });
   waveDefenseSelectTower(wdMatch, wdSelectedTowerId);
@@ -9049,6 +9113,7 @@ function updateWaveDefenseHud(force = false) {
     next.textContent = m.phase === 'prep' ? `KIRIM GELOMBANG ${Math.min(m.totalWaves, m.wave + 1)}` : m.phase === 'wave' ? `GELOMBANG ${m.wave} BERJALAN` : 'PERTAHANAN SELESAI';
   }
   document.querySelectorAll('#wd-speed [data-wd-speed]').forEach((button) => button.classList.toggle('active', Number(button.dataset.wdSpeed) === m.speed));
+  document.querySelectorAll('#wd-battle-particles [data-wd-pscale]').forEach((button) => button.classList.toggle('active', Math.abs(Number(button.dataset.wdPscale) - (m.particleScale ?? 1)) < 0.15));
   document.querySelectorAll('#wd-palette [data-wd-tower]').forEach((button) => {
     const def = WAVE_DEFENSE_TOWER_BY_ID[button.dataset.wdTower];
     button.classList.toggle('active', button.dataset.wdTower === m.buildTowerId);
@@ -9075,7 +9140,7 @@ function updateWaveDefenseHud(force = false) {
       const def = WAVE_DEFENSE_TOWER_BY_ID[tower.towerId];
       const cost = waveDefenseUpgradeCost(tower);
       const maxed = tower.level >= 3;
-      selection.innerHTML = `<div class="ws-line"><strong>${esc(def.name)} · POS ${tower.slot + 1}</strong><span>LEVEL ${tower.level}/3</span><em>${def.cost} emas</em></div>
+      selection.innerHTML = `<div class="ws-line"><img class="ws-icon" src="${waveDefenseTowerIconDataUrl(def.id)}" alt="${esc(def.name)}" /><strong>${esc(def.name)} · POS ${tower.slot + 1}</strong><span>LEVEL ${tower.level}/3</span><em>${def.cost} emas</em></div>
         <p>${esc(def.desc)}</p>
         <div class="wd-selection-actions">
           <button type="button" data-wd-action="upgrade" ${maxed || m.gold < cost ? 'disabled' : ''}>${maxed ? 'LEVEL MAKSIMUM' : `TINGKATKAN · ${cost} EMAS`}</button>
@@ -9083,7 +9148,7 @@ function updateWaveDefenseHud(force = false) {
         </div>`;
     } else {
       const def = WAVE_DEFENSE_TOWER_BY_ID[m.buildTowerId];
-      selection.innerHTML = `<div class="ws-line"><strong>POS ${m.selectedSlot >= 0 ? m.selectedSlot + 1 : '—'}</strong><span>${def?.name || 'PILIH MENARA'}</span><em>${def?.cost || 0} emas</em></div>
+      selection.innerHTML = `<div class="ws-line">${def ? `<img class="ws-icon" src="${waveDefenseTowerIconDataUrl(def.id)}" alt="${esc(def.name)}" />` : ''}<strong>POS ${m.selectedSlot >= 0 ? m.selectedSlot + 1 : '—'}</strong><span>${def?.name || 'PILIH MENARA'}</span><em>${def?.cost || 0} emas</em></div>
         <p>Klik pos kosong untuk membangun. Pilih menara di panel kiri, lalu klik pos di sepanjang jalan.</p>
         <div class="wd-selection-actions"><button type="button" data-wd-action="hint" disabled>MENUNGGU POS</button></div>`;
     }
@@ -10530,29 +10595,178 @@ const OVERDRIVE_CHECKLIST = [
   { item: 'Save Migration + Backup Recovery', done: true },
 ];
 
+let activeOverdriveIndex = -1;
+let overdriveChapterView = 21;
+let overdriveBadgeCache = '';
+
+function overdriveState() {
+  if (!progress.overdrive || !Array.isArray(progress.overdrive.levels)) {
+    progress.overdrive = sanitizeOverdriveLadderProgress(progress.overdrive);
+  }
+  return progress.overdrive;
+}
+
+function overdriveChapterMetaFor(number) {
+  return OVERDRIVE_CHAPTER_META.find((chapter) => chapter.number === Number(number)) || OVERDRIVE_CHAPTER_META[0];
+}
+
+function startOverdriveLevel(index) {
+  const room = overdriveRoomForIndex(index);
+  if (!room) return;
+  if (!overdriveCampaignUnlocked(progress)) {
+    showToast('Overdrive (Lv 201–300) terbuka setelah Aethron gugur di Infinite Frontiers.', 2600);
+    return;
+  }
+  const state = overdriveState();
+  if (!overdriveLevelUnlocked(state, index)) {
+    showToast('Level Overdrive itu masih tertutup. Selesaikan level sebelumnya dulu.', 2200);
+    return;
+  }
+  audio.init();
+  attempts = 1;
+  coopGuestMode = false;
+  coopGuestRoom = -1;
+  activeRunKind = 'overdrive';
+  activeOverdriveIndex = Number(index);
+  overdriveChapterView = room.overdriveChapter;
+  activeFrontierIndex = -1;
+  activeLanternStage = -1;
+  activeCisternStage = -1;
+  activeFairyStage = -1;
+  activeFairyBoss = null;
+  activeCourtRoom = null;
+  activeCourtTrial = null;
+  activePackIndex = -1;
+  activeExpansionIndex = null;
+  activeModeId = null;
+  activeTrialId = null;
+  modeRunRewarded = false;
+  packRunActive = false;
+  labRun = null;
+  labDirector = null;
+  speedrunRun = null;
+  game.labyrinth = false;
+  game.reset();
+  applyCharacterToGame();
+  applySkinToGame();
+  game.enterRoom(room.id);
+  game.player.relic = true;
+  const legendaryBonus = state.equippedLegendary ? 1.25 : 1;
+  const variantBoost = room.variant === 'cursed_expedition' ? 1.35 : 1;
+  game.player.damageMult *= overdrivePlayerScale(index) * legendaryBonus * variantBoost;
+  game.player.maxHp = Math.round(game.player.maxHp * overdriveVitalityScale(index) * (room.variant === 'cursed_expedition' ? 0.85 : 1));
+  game.player.hp = game.player.maxHp;
+  game.player.maxFlasks = room.variant === 'gauntlet_tower' ? Math.max(2, game.player.maxFlasks) : (game.player.maxFlasks + overdriveFlaskBonus(index));
+  game.player.flasks = game.player.maxFlasks;
+  game.player.overdriveMaxMana = 120;
+  game.player.overdriveMana = 120;
+  const treasureBonus = room.variant === 'treasure_vault' ? 180 : 0;
+  game.ash = Math.max(game.ash, overdriveAshStipend(index) + treasureBonus);
+  state.discovered[index] = true;
+  if (state.discovered[index + 1] !== undefined) state.discovered[index + 1] = true;
+  recordOverdriveRun(state, 0);
+  cutsceneSeen = new Set();
+  postCreditTimer = -1;
+  saveProgress();
+  game.events.length = 0;
+  started = true;
+  paused = false;
+  hunterShopOpen = false;
+  shopOpen = false;
+  mapOpen = false;
+  codexOpen = false;
+  inventoryOpen = false;
+  settingsOpen = false;
+  closeDialogue(true);
+  spectating = false;
+  spectateGame = null;
+  menuView = 'none';
+  lastGameState = 'playing';
+  accumulator = 0;
+  lastTime = performance.now();
+  clearHeldKeys();
+  beginStage(game.roomIndex, room.name);
+  showBanner(`OVD LV ${room.overdriveLevel} — ${room.name}`, room.subtitle);
+  syncScreens();
+  updateHud();
+  const spellPick = overdriveSpellFor(state.activeSchool, state.activeSpellIndex);
+  showToast(`${OVERDRIVE_LOCAL_NAME} · BAB ${room.overdriveChapter} · [Q] ${spellPick.spell.name}`, 2500);
+}
+
+function handleOverdriveLevelClear(index) {
+  const safeIndex = Number(index);
+  if (!Number.isInteger(safeIndex) || safeIndex < 0) return null;
+  const state = overdriveState();
+  const result = recordOverdriveLevel(state, safeIndex);
+  if (!result.ok) return result;
+  if (result.firstClear) {
+    recordOverdriveRun(state, game.time);
+    saveProgress();
+    const room = overdriveRoomForIndex(safeIndex);
+    if (result.unlockedLegendary) {
+      showToast(`SENJATA LEGENDARIS TERBUKA — ${result.unlockedLegendary.name}!`, 3600);
+    } else if (result.bossFirstClear) {
+      const ch = overdriveChapterMetaFor(result.chapter);
+      showToast(`${ch.bossName} GUGUR — ${ch.name} selesai.`, 3200);
+    } else if (result.complete) {
+      showToast('THE FIRST GOD PADAM — Overdrive Lv 300 tuntas!', 3800);
+    } else {
+      showToast(`OVD LV ${room?.overdriveLevel ?? '?'} TUNTAS · BAB ${result.chapter}`, 2100);
+    }
+    buildOverdriveScreen();
+    updateMenuProgress();
+  }
+  return result;
+}
+
+function overdriveLevelCard(room, state) {
+  const index = room.overdriveIndex;
+  const locked = !overdriveCampaignUnlocked(progress) || !overdriveLevelUnlocked(state, index);
+  const cleared = overdriveLevelCleared(state, index);
+  const boss = room.boss ? overdriveChapterMetaFor(room.overdriveChapter) : null;
+  const meta = boss
+    ? `BOSS · ${boss.bossPhases} FASE`
+    : `${room.enemies.length} MUSUH · ${room.variantName || 'ELITE E7'}`;
+  const badge = cleared ? 'TUNTAS' : locked ? 'TERKUNCI' : 'TERBUKA';
+  return `<article class="frontier-level${locked ? ' locked' : ''}${cleared ? ' cleared' : ''}${boss ? ' boss' : ''}" style="--accent:${room.accent}">
+    <header class="fl-head">
+      <span class="fl-num">LV ${room.overdriveLevel}</span>
+      <span class="fl-state">${badge}</span>
+    </header>
+    <h4 class="fl-name">${esc(room.name)}</h4>
+    <p class="fl-meta">${esc(meta)}</p>
+    <div class="fl-actions">
+      ${locked ? '<span class="fl-lock">SELESAIKAN LEVEL SEBELUMNYA</span>' : `<button class="btn btn-primary btn-small" type="button" data-overdrive-play="${index}">MAINKAN</button>`}
+    </div>
+  </article>`;
+}
+
 function buildOverdriveScreen() {
+  const state = overdriveState();
+  const osummary = overdriveCampaignSummary(state);
+  const activeSpell = overdriveSpellFor(state.activeSchool, state.activeSpellIndex);
   const summaryEl = $('overdrive-summary');
   if (summaryEl) {
     summaryEl.innerHTML = `
       <div class="stat-card">
-        <span class="stat-label">LEVEL BARU</span>
-        <strong class="stat-value">100</strong>
-        <em class="stat-sub">Level 201–300 · 10 Bab</em>
+        <span class="stat-label">LEVEL KAMPANYE</span>
+        <strong class="stat-value">${osummary.levelsCleared} / ${OVERDRIVE_LEVEL_COUNT}</strong>
+        <em class="stat-sub">${osummary.bossesCleared}/${OVERDRIVE_CHAPTER_META.length} BOS · ${osummary.percent}%</em>
       </div>
       <div class="stat-card">
-        <span class="stat-label">MANTRA</span>
-        <strong class="stat-value">32</strong>
-        <em class="stat-sub">8 Sekolah Sihir · 4 Mantra/sekolah</em>
+        <span class="stat-label">MANTRA [Q]</span>
+        <strong class="stat-value" style="color:${activeSpell.school.color};">${esc(activeSpell.spell.name)}</strong>
+        <em class="stat-sub">${esc(activeSpell.school.name)} · Mana ${activeSpell.spell.cost}</em>
       </div>
       <div class="stat-card">
-        <span class="stat-label">BOS MULTI-FASE</span>
-        <strong class="stat-value">8</strong>
-        <em class="stat-sub">Armor · Shield · Stagger</em>
+        <span class="stat-label">SENJATA LEGENDARIS</span>
+        <strong class="stat-value">${osummary.legendariesCount} / ${OVERDRIVE_LEGENDARY_WEAPONS.length}</strong>
+        <em class="stat-sub">${state.equippedLegendary ? esc(OVERDRIVE_LEGENDARY_WEAPONS.find((w) => w.id === state.equippedLegendary)?.name || 'Aktif') : 'Belum dipasang'}</em>
       </div>
       <div class="stat-card">
-        <span class="stat-label">CHECKLIST RILIS</span>
-        <strong class="stat-value" style="color:#52b788;">18 / 18 SIAP</strong>
-        <em class="stat-sub">Semua Modul Terverifikasi</em>
+        <span class="stat-label">STATUS OVERDRIVE</span>
+        <strong class="stat-value" style="color:${overdriveCampaignUnlocked(progress) ? '#52b788' : '#ffd166'};">${overdriveCampaignUnlocked(progress) ? 'TERBUKA' : 'TERKUNCI'}</strong>
+        <em class="stat-sub">Lv 201–300 · Ruang 774–873</em>
       </div>
     `;
   }
@@ -10564,79 +10778,115 @@ function buildOverdriveScreen() {
   if (!bodyEl) return;
 
   if (overdriveTab === 'campaign301') {
+    const meta = overdriveChapterMetaFor(overdriveChapterView);
+    const chapterState = overdriveChapterProgress(state, meta.number) || { cleared: 0, total: OVERDRIVE_ROOMS_PER_CHAPTER, bossCleared: false };
+    const chapterRooms = OVERDRIVE_ROOMS.filter((room) => room.overdriveChapter === meta.number);
+    const rail = OVERDRIVE_CHAPTER_META.map((chapter) => {
+      const cp = overdriveChapterProgress(state, chapter.number) || { cleared: 0, total: 10, bossCleared: false };
+      const active = chapter.number === meta.number;
+      return `<button class="frontier-chip${active ? ' active' : ''}${cp.bossCleared ? ' clear' : ''}" type="button" data-overdrive-chapter="${chapter.number}" style="--accent:${chapter.color}">
+        <strong>BAB ${chapter.number}</strong>
+        <span>${cp.cleared}/${cp.total}</span>
+      </button>`;
+    }).join('');
     bodyEl.innerHTML = `
-      <div class="frontier-grid frontier-grid-2">
-        ${OVERDRIVE_CHAPTERS.map((ch) => `
-          <div class="frontier-card" style="border-left: 4px solid ${ch.color};">
-            <div class="frontier-card-head">
-              <strong style="color:${ch.color};font-size:14px;">BAB ${ch.number}: ${ch.name}</strong>
-              <span class="frontier-badge frontier-badge-gold">Lv. ${ch.levelStart}–${ch.levelEnd}</span>
-            </div>
-            <div style="font-size:11.5px;color:#ced4da;margin:4px 0;">
-              <b style="color:#a7c957;">👑 Bos:</b> ${ch.boss}
-            </div>
-            <div style="font-size:11px;background:rgba(0,0,0,0.3);padding:6px 10px;border-radius:4px;">
-              <span style="color:#ffd166;">⚠ Bahaya:</span> ${ch.hazard}
-            </div>
+      ${!overdriveCampaignUnlocked(progress) ? '<p class="frontier-lock-note">Overdrive (Lv 201–300) terbuka setelah Aethron gugur di Infinite Frontiers (Lv 200).</p>' : ''}
+      <div class="frontier-ladder">
+        <div class="frontier-rail" role="tablist" aria-label="Bab Overdrive">${rail}</div>
+        <div class="frontier-chapter-head" style="--accent:${meta.color}">
+          <div>
+            <p class="eyebrow">BAB ${meta.number} · ${esc(meta.biome.toUpperCase())}</p>
+            <h3>${esc(meta.name)}</h3>
+            <p class="micro">${esc(meta.lore)} · Bahaya: ${esc((meta.hazards || []).join(', '))}</p>
           </div>
-        `).join('')}
+          <div class="frontier-chapter-side">
+            <span class="frontier-progress">${chapterState.cleared}/${chapterState.total} TAHAP</span>
+            <span class="micro">${esc(meta.bossName)} · ${meta.bossPhases} FASE${chapterState.bossCleared ? ' · PADAM' : ''}</span>
+          </div>
+        </div>
+        <div class="frontier-levels">${chapterRooms.map((room) => overdriveLevelCard(room, state)).join('')}</div>
       </div>`;
+    bodyEl.querySelectorAll('[data-overdrive-chapter]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        overdriveChapterView = Number(btn.dataset.overdriveChapter) || 21;
+        buildOverdriveScreen();
+      });
+    });
+    bodyEl.querySelectorAll('[data-overdrive-play]').forEach((btn) => {
+      btn.addEventListener('click', () => startOverdriveLevel(Number(btn.dataset.overdrivePlay)));
+    });
   } else if (overdriveTab === 'spellschools') {
     bodyEl.innerHTML = `
       <div class="frontier-grid frontier-grid-2">
-        ${OVERDRIVE_SPELL_SCHOOLS.map((school) => `
-          <div class="frontier-card" style="border-top: 3px solid ${school.color};">
+        ${OVERDRIVE_DATA_SCHOOLS.map((school) => {
+          const isActiveSchool = state.activeSchool === school.id;
+          return `<div class="frontier-card" style="border-top: 3px solid ${school.color};">
             <div class="frontier-card-head">
-              <strong style="color:${school.color};font-size:15px;">${school.icon} Sekolah ${school.name}</strong>
-              <span class="frontier-badge" style="background:${school.color}22;color:${school.color};border:1px solid ${school.color}44;">4 Mantra</span>
+              <strong style="color:${school.color};font-size:15px;">Sekolah ${esc(school.name)}</strong>
+              <span class="frontier-badge" style="background:${school.color}22;color:${school.color};border:1px solid ${school.color}44;">${isActiveSchool ? 'AKTIF [Q]' : 'PILIH'}</span>
             </div>
-            <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;">
-              ${school.spells.map((sp) => `<span class="frontier-badge frontier-badge-blue">${sp}</span>`).join('')}
+            <p style="font-size:11px;color:#b7a486;margin:4px 0 8px;">${esc(school.description)}</p>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;">
+              ${school.spells.map((sp, sIdx) => {
+                const selected = isActiveSchool && state.activeSpellIndex === sIdx;
+                return `<button type="button" class="btn btn-small ${selected ? 'btn-primary' : 'btn-ghost'}" data-overdrive-school="${school.id}" data-overdrive-spell="${sIdx}">${esc(sp.name)} (${sp.cost}M · ${sp.damage}DMG)</button>`;
+              }).join('')}
             </div>
-          </div>
-        `).join('')}
+          </div>`;
+        }).join('')}
       </div>`;
+    bodyEl.querySelectorAll('[data-overdrive-school]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        state.activeSchool = btn.dataset.overdriveSchool;
+        state.activeSpellIndex = Number(btn.dataset.overdriveSpell) || 0;
+        saveProgress();
+        buildOverdriveScreen();
+        showToast(`Mantra [Q]: ${overdriveSpellFor(state.activeSchool, state.activeSpellIndex).spell.name}`, 1600);
+      });
+    });
+  } else if (overdriveTab === 'legendaries') {
+    bodyEl.innerHTML = `
+      <div class="frontier-grid frontier-grid-2">
+        ${OVERDRIVE_LEGENDARY_WEAPONS.map((w) => {
+          const owned = state.legendaryWeaponsFound.includes(w.id);
+          const equipped = state.equippedLegendary === w.id;
+          return `<div class="frontier-card" style="border-left:4px solid ${equipped ? '#ffd166' : owned ? '#52b788' : '#4a4a55'};">
+            <div class="frontier-card-head">
+              <strong style="color:${owned ? '#ffd166' : '#8e8e9e'};font-size:14px;">${esc(w.name)}</strong>
+              <span class="frontier-badge frontier-badge-gold">${esc(w.category)} · ATK ${w.baseAtk}</span>
+            </div>
+            <p style="font-size:11px;color:#ced4da;margin:4px 0;">${esc(w.perk)}</p>
+            <p style="font-size:10px;color:#8e816b;margin:0 0 8px;">${esc(w.lore)}</p>
+            ${owned
+              ? `<button type="button" class="btn btn-small ${equipped ? 'btn-primary' : 'btn-ghost'}" data-overdrive-legendary="${w.id}">${equipped ? 'TERPASANG (+25% DMG)' : 'PASANG'}</button>`
+              : '<span class="micro">Kalahkan bos bab Overdrive untuk membuka senjata ini.</span>'}
+          </div>`;
+        }).join('')}
+      </div>`;
+    bodyEl.querySelectorAll('[data-overdrive-legendary]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.overdriveLegendary;
+        state.equippedLegendary = state.equippedLegendary === id ? null : id;
+        saveProgress();
+        buildOverdriveScreen();
+      });
+    });
   } else if (overdriveTab === 'bossfase') {
     bodyEl.innerHTML = `
       <div class="frontier-grid frontier-grid-2">
-        ${OVERDRIVE_BOSSES.map((b) => `
-          <div class="frontier-card">
+        ${OVERDRIVE_CHAPTER_META.map((ch) => {
+          const killed = state.bosses[ch.number - 21];
+          return `<div class="frontier-card" style="border-left: 4px solid ${ch.color};">
             <div class="frontier-card-head">
-              <strong style="color:#ef9a9a;font-size:14px;">${b.name}</strong>
-              <span class="frontier-badge frontier-badge-purple">${b.phases} FASE</span>
+              <strong style="color:${ch.color};font-size:14px;">${esc(ch.bossName)}</strong>
+              <span class="frontier-badge frontier-badge-purple">BAB ${ch.number} · ${ch.bossPhases} FASE</span>
             </div>
-            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;">
-              ${b.armor ? '<span class="frontier-badge" style="background:#78909c33;color:#90a4ae;border:1px solid #546e7a;">⛊ ARMOR</span>' : ''}
-              ${b.shield ? '<span class="frontier-badge" style="background:#1565c033;color:#64b5f6;border:1px solid #0d47a1;">🛡 SHIELD</span>' : ''}
-              ${b.stagger ? '<span class="frontier-badge" style="background:#e65c0033;color:#ffab91;border:1px solid #bf360c;">💥 STAGGER</span>' : ''}
+            <div style="font-size:11px;color:#ced4da;margin:4px 0;">
+              <b style="color:#a7c957;">Status:</b> ${killed ? 'PADAM' : `Menanti di Lv ${ch.lastLevel}`}
             </div>
-            <div class="boss-minibars" style="margin-top:8px;">
-              <div class="boss-minibar-row"><span class="boss-minibar-lbl">HP</span><div class="boss-minibar-track"><div class="boss-minibar-fill" style="width:100%;background:#ef5350;"></div></div></div>
-              ${b.armor ? '<div class="boss-minibar-row"><span class="boss-minibar-lbl">ARM</span><div class="boss-minibar-track"><div class="boss-minibar-fill" style="width:100%;background:#607d8b;"></div></div></div>' : ''}
-              ${b.shield ? '<div class="boss-minibar-row"><span class="boss-minibar-lbl">SHD</span><div class="boss-minibar-track"><div class="boss-minibar-fill" style="width:100%;background:#1565c0;"></div></div></div>' : ''}
-              ${b.stagger ? '<div class="boss-minibar-row"><span class="boss-minibar-lbl">STG</span><div class="boss-minibar-track"><div class="boss-minibar-fill" style="width:30%;background:#ff6d00;"></div></div></div>' : ''}
-            </div>
-          </div>
-        `).join('')}
-      </div>`;
-  } else if (overdriveTab === 'profiler') {
-    bodyEl.innerHTML = `
-      <div class="frontier-card" style="max-width:520px;margin:0 auto;">
-        <strong style="color:#ffd166;font-size:15px;">⊡ Diagnostic Profiler HUD</strong>
-        <p style="font-size:12px;color:#b7a486;margin:8px 0;">
-          Tekan <kbd>F3</kbd> atau tombol ⊡ di pojok HUD untuk toggle profiler saat bermain.
-        </p>
-        <div class="profiler-hud profiler-demo" style="position:relative;display:block;margin:12px 0;">
-          <div class="profiler-row"><span class="profiler-key">FPS</span><span class="profiler-val">60</span><span class="profiler-key">MS</span><span class="profiler-val">16.7</span></div>
-          <div class="profiler-row"><span class="profiler-key">ENT</span><span class="profiler-val">12</span><span class="profiler-key">PTL</span><span class="profiler-val">48</span></div>
-          <div class="profiler-row"><span class="profiler-key">MEM</span><span class="profiler-val">~24 MB</span></div>
-        </div>
-        <ul style="font-size:11.5px;color:#ced4da;padding-left:18px;margin:4px 0;">
-          <li>FPS rata-rata + frame time (ms)</li>
-          <li>Jumlah entitas aktif + partikel</li>
-          <li>Estimasi memori (KB/MB)</li>
-          <li>⚠ STUTTER alert jika frame > 50ms</li>
-        </ul>
+            <div style="font-size:11px;color:#817563;">Drop Legendaris: ${esc(ch.legendary?.name || '—')}</div>
+          </div>`;
+        }).join('')}
       </div>`;
   } else if (overdriveTab === 'modes') {
     bodyEl.innerHTML = `
@@ -10644,23 +10894,26 @@ function buildOverdriveScreen() {
         ${OVERDRIVE_MODES.map((m, i) => `
           <div class="frontier-card">
             <div class="frontier-card-head">
-              <strong style="color:#ffd166;font-size:13px;">${i + 1}. ${m.name}</strong>
+              <strong style="color:#ffd166;font-size:13px;">${i + 1}. ${esc(m.name)}</strong>
             </div>
-            <p style="font-size:11.5px;color:#ced4da;margin:4px 0;">${m.desc}</p>
+            <p style="font-size:11.5px;color:#ced4da;margin:4px 0;">${esc(m.desc)}</p>
           </div>
         `).join('')}
       </div>`;
-  } else if (overdriveTab === 'checklist') {
+  } else if (overdriveTab === 'profiler') {
     const done = OVERDRIVE_CHECKLIST.filter((c) => c.done).length;
     bodyEl.innerHTML = `
-      <div style="margin-bottom:12px;text-align:center;">
-        <strong style="color:#52b788;font-size:20px;">${done} / ${OVERDRIVE_CHECKLIST.length} SIAP RILIS</strong>
+      <div class="frontier-card" style="max-width:540px;margin:0 auto 12px;">
+        <strong style="color:#ffd166;font-size:15px;">⊡ Diagnostic Profiler HUD &amp; Checklist (${done}/${OVERDRIVE_CHECKLIST.length})</strong>
+        <p style="font-size:12px;color:#b7a486;margin:8px 0;">
+          Tekan <kbd>F3</kbd> saat bermain untuk toggle profiler real-time, dan <kbd>Q</kbd> di Overdrive untuk melepas mantra sekolah terpilih.
+        </p>
       </div>
       <div class="overdrive-checklist">
         ${OVERDRIVE_CHECKLIST.map((c) => `
           <div class="checklist-item ${c.done ? 'done' : ''}">
             <span class="checklist-icon">${c.done ? '✅' : '⬜'}</span>
-            <span class="checklist-text">${c.item}</span>
+            <span class="checklist-text">${esc(c.item)}</span>
           </div>
         `).join('')}
       </div>`;
@@ -12328,8 +12581,9 @@ function applySettings({ persist = true } = {}) {
   music.setVolume(1);
   if (!scareDirector) scareDirector = new ScareDirector(settings.scary || {}, { seed: 20261119 });
   scareDirector.configure(settings.scary || {}, settings.accessibility);
-  const particleMap = { low: 0.4, medium: 0.7, high: 1, ultra: 1.3 };
+  const particleMap = { low: 0.4, medium: 0.7, high: 1, ultra: 1.4 };
   const particleScale = particleMap[settings.graphics.particleQuality] ?? 1;
+  const particleMultiplier = Math.max(0.5, Math.min(4, Number(settings.graphics.particleMultiplier ?? 1)));
   const bias = graphicsScore();
   renderer.options = {
     shakeScale: settings.accessibility.reduceShake
@@ -12343,6 +12597,7 @@ function applySettings({ persist = true } = {}) {
     renderDistance: settings.gameplay.renderDistance,
     qualityBias: bias,
     particleScale,
+    particleMultiplier,
     resolutionScale: (settings.graphics.renderScale / 100) * (settings.display.resolutionScaling / 100),
     gamma: settings.graphics.gamma / 100,
   };
@@ -13248,7 +13503,7 @@ window.addEventListener('keydown', (e) => {
     return;
   }
 
-  if (menuView === 'frontier') {
+  if (menuView === 'frontier' || menuView === 'overdrive') {
     if (e.code === 'Escape' || e.code === 'Backspace') {
       showMenu();
       return;
@@ -13427,6 +13682,15 @@ window.addEventListener('keydown', (e) => {
 
   if (e.code === 'KeyR' && (game.state === 'dead' || game.state === 'victory')) {
     retryRun();
+    return;
+  }
+
+  if (e.code === 'KeyQ' && activeRunKind === 'overdrive' && game.state === 'playing' && !e.repeat) {
+    const st = overdriveState();
+    const { school, spell } = overdriveSpellFor(st.activeSchool, st.activeSpellIndex);
+    const castRes = game.castOverdriveSpell(spell, school.color);
+    if (castRes.ok) showToast(`${spell.name} · Mana ${Math.round(castRes.mana)}`, 900);
+    else if (castRes.reason === 'mana') showToast('Mana Overdrive tidak cukup.', 900);
     return;
   }
 
@@ -15267,6 +15531,8 @@ $('wd-screen')?.addEventListener('click', (event) => {
   if (map) { wdMapId = map.dataset.wdMap; buildWaveDefenseScreen(); return; }
   const difficulty = event.target.closest('[data-wd-difficulty]');
   if (difficulty) { wdDifficulty = difficulty.dataset.wdDifficulty; buildWaveDefenseScreen(); return; }
+  const pbtn = event.target.closest('[data-wd-particle]');
+  if (pbtn) { wdParticleId = pbtn.dataset.wdParticle; buildWaveDefenseScreen(); return; }
   const mode = event.target.closest('[data-wd-mode]');
   if (mode) {
     wdInfinitower = mode.dataset.wdMode === 'infinitower';
@@ -15289,6 +15555,16 @@ $('wd-battle')?.addEventListener('click', (event) => {
   const speed = event.target.closest('[data-wd-speed]');
   if (speed && wdMatch) {
     waveDefenseSetSpeed(wdMatch, Number(speed.dataset.wdSpeed));
+    updateWaveDefenseHud(true);
+    return;
+  }
+  const pscale = event.target.closest('[data-wd-pscale]');
+  if (pscale && wdMatch) {
+    const scale = Number(pscale.dataset.wdPscale);
+    waveDefenseSetParticleScale(wdMatch, scale);
+    const matched = WAVE_DEFENSE_PARTICLE_LEVELS.find((entry) => Math.abs(entry.scale - scale) < 0.15);
+    if (matched) wdParticleId = matched.id;
+    wdRenderDirty = true;
     updateWaveDefenseHud(true);
   }
 });
@@ -15496,6 +15772,13 @@ $('horror3d-sites')?.addEventListener('click', (event) => {
 $('btn-frontier-menu')?.addEventListener('click', () => showFrontier('campaign200'));
 $('btn-frontier-back')?.addEventListener('click', closeFrontier);
 $('btn-overdrive-menu')?.addEventListener('click', () => showOverdrive('campaign301'));
+$('btn-overdrive-back')?.addEventListener('click', closeOverdrive);
+$('overdrive-tabs')?.addEventListener('click', (event) => {
+  const tab = event.target.closest('[data-tab]');
+  if (!tab) return;
+  overdriveTab = tab.dataset.tab;
+  buildOverdriveScreen();
+});
 $('btn-atlas-menu')?.addEventListener('click', () => showAtlas('zones'));
 $('btn-atlas-back')?.addEventListener('click', closeAtlas);
 
@@ -16113,6 +16396,27 @@ function updateHud() {
     }
   }
 
+  const overdriveBadge = $('overdrive-badge');
+  if (overdriveBadge) {
+    if (activeRunKind === 'overdrive' && started && activeOverdriveIndex >= 0) {
+      const room = overdriveRoomForIndex(activeOverdriveIndex);
+      const st = overdriveState();
+      const { spell } = overdriveSpellFor(st.activeSchool, st.activeSpellIndex);
+      const mana = Math.round(game.player?.overdriveMana ?? 100);
+      const text = room
+        ? `⚡ OVD LV ${room.overdriveLevel} · BAB ${room.overdriveChapter} · MANA ${mana} · [Q] ${spell.name.toUpperCase()}`
+        : '';
+      overdriveBadge.classList.remove('hidden');
+      if (text !== overdriveBadgeCache) {
+        overdriveBadgeCache = text;
+        overdriveBadge.textContent = text;
+      }
+    } else {
+      overdriveBadgeCache = '';
+      overdriveBadge.classList.add('hidden');
+    }
+  }
+
   const p = game.player;
   $('ash-count').textContent = game.ash;
   const weapon = WEAPONS[p.weapon] || WEAPONS.sword;
@@ -16427,6 +16731,28 @@ function drainEvents() {
           if (index >= 0) {
             activeFrontierIndex = index;
             frontierState().discovered[index] = true;
+          }
+        }
+      } else if (activeRunKind === 'overdrive') {
+        if (ev.type === 'gatePass') {
+          const from = overdriveIndexForRoom(ev.from);
+          if (from >= 0) handleOverdriveLevelClear(from);
+          const to = overdriveIndexForRoom(ev.to);
+          if (to >= 0) {
+            activeOverdriveIndex = to;
+            const state = overdriveState();
+            state.discovered[to] = true;
+            saveProgress();
+          }
+          buildOverdriveScreen();
+        } else if (ev.type === 'bossDown') {
+          const index = overdriveIndexForRoom(ev.room);
+          if (index >= 0) handleOverdriveLevelClear(index);
+        } else if (ev.type === 'roomEnter') {
+          const index = overdriveIndexForRoom(ev.room);
+          if (index >= 0) {
+            activeOverdriveIndex = index;
+            overdriveState().discovered[index] = true;
           }
         }
       } else if (activeRunKind === 'trials') {
@@ -18323,6 +18649,49 @@ window.__ashen = {
     buildFrontierScreen();
     return frontierChapterView;
   },
+  get overdrive() {
+    const state = overdriveState();
+    return {
+      summary: overdriveCampaignSummary(state),
+      unlocked: overdriveCampaignUnlocked(progress),
+      chapterView: overdriveChapterView,
+      activeIndex: activeOverdriveIndex,
+      runKind: activeRunKind,
+      level: game.room?.overdriveLevel ?? null,
+      chapters: OVERDRIVE_CHAPTER_META.map((chapter) => ({
+        ...chapter,
+        progress: overdriveChapterProgress(state, chapter.number),
+      })),
+    };
+  },
+  showOverdrive,
+  closeOverdrive,
+  overdriveStart(index) {
+    startOverdriveLevel(index);
+    return {
+      runKind: activeRunKind,
+      index: activeOverdriveIndex,
+      room: game.roomIndex,
+      level: game.room?.overdriveLevel ?? null,
+      enemies: game.enemies.length,
+      boss: game.boss?.kind ?? null,
+    };
+  },
+  overdriveClear(index) {
+    const result = handleOverdriveLevelClear(index);
+    buildOverdriveScreen();
+    return result;
+  },
+  overdriveChapter(number) {
+    overdriveChapterView = Math.trunc(Number(number)) || 21;
+    buildOverdriveScreen();
+    return overdriveChapterView;
+  },
+  overdriveCast() {
+    const st = overdriveState();
+    const { school, spell } = overdriveSpellFor(st.activeSchool, st.activeSpellIndex);
+    return game.castOverdriveSpell(spell, school.color);
+  },
   cisternBossDown() {
     handleCisternBoss({ kind: 'tidebound' });
     return cisternSummary(cisternState());
@@ -19516,6 +19885,22 @@ window.__ashen = {
     wdSelectedTowerId = id;
     if (wdMatch) waveDefenseSelectTower(wdMatch, id);
     buildWaveDefenseScreen();
+    updateWaveDefenseHud(true);
+    return true;
+  },
+  setWaveDefenseParticles(idOrScale) {
+    const found = WAVE_DEFENSE_PARTICLE_LEVELS.find((entry) => entry.id === idOrScale);
+    if (found) {
+      wdParticleId = found.id;
+      if (wdMatch) waveDefenseSetParticleScale(wdMatch, found.scale);
+    } else if (Number.isFinite(Number(idOrScale))) {
+      const scale = Math.max(0.25, Math.min(4, Number(idOrScale)));
+      if (wdMatch) waveDefenseSetParticleScale(wdMatch, scale);
+    } else {
+      return false;
+    }
+    buildWaveDefenseScreen();
+    wdRenderDirty = true;
     updateWaveDefenseHud(true);
     return true;
   },

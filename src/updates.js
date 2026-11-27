@@ -7,6 +7,26 @@ export { GAME_VERSION };
 
 export const UPDATE_LOG = [
   {
+    version: '0.43.0',
+    date: '27 November 2026',
+    title: 'UPDATE XXXIII — OVERDRIVE PLAYABLE (LV 201–300) & WAVE DEFENSE ARSENAL',
+    tag: '100 RUANG OVERDRIVE (774–873) · 10 BOS BAB · 50 MUSUH · MANTRA [Q] · 8 LEGENDARIS · 20 IKON MENARA · 9 MEDAN WAVE DEFENSE · PARTIKEL 4×',
+    summary:
+      'Fase 2 The Unfinished Roads selesai: Overdrive (The Eternal Realm) Level 201–300 kini menjadi seratus ruang sungguhan di ALL_ROOMS (774–873) dengan sepuluh bos bab multi-fase sampai The First God, mantra aktif [Q] dari 8 sekolah sihir, 8 senjata legendaris, serta peningkatan besar pada Wave Defense: ikon SVG khusus untuk ke-20 menara, 4 stage medan baru (total 9), dan pengaturan kepadatan partikel hingga 4× (serta pengali partikel di Settings 2.0).',
+    highlights: [
+      'Overdrive Playable (Ruang 774–873): 100 level berurutan sepanjang Bab 21–30 (The Drowned Capital sampai The Final Pantheon), mempertahankan kontrak 20 musuh dan membawa 6 varian level khusus (Endless Dungeon, Colossus Trial, Time Trial, Treasure Vault, Cursed Expedition, Gauntlet Tower).',
+      '10 bos bab playable & 50 musuh baru: Sunken Emperor, Prism Devourer, Forge Titan, Mother of Thorns, Starbound Regent, Pale Frost Monarch, Grand Horologist, The Unmade, Sandstorm Sovereign, hingga The First God (5 fase, victory) di Level 300 — membawa ALL_ROOMS ke 874 ruang, ALL_BOSS_INFO ke 136 bos, dan ALL_ENEMY_INFO ke 367 musuh.',
+      'Mantra aktif [Q] & 8 Senjata Legendaris: pilih satu dari 8 sekolah sihir (32 mantra) di hub Overdrive, regenerasi mana otomatis dan tembakkan mantra [Q] di pertempuran, lalu buka senjata legendaris tiap menaklukkan kursi bos bab.',
+      'Wave Defense · Ikon Menara Kustom: seluruh 20 menara kini memiliki ikon SVG vektor bespoke yang tampil tajam di kartu Hub, palet bangun kiri, dan panel inspeksi.',
+      'Wave Defense · 4 Stage Medan Baru (total 9): Rift Chasm (Stage 5), Moonlit Cloister (Stage 6), Clockwork Viaduct (Stage 7), dan Throneside Gate (Stage 8), masing-masing dengan tata letak jalur dan palet sendiri sebelum Eternal Spiral.',
+      'Wave Defense & Settings · Kontrol Partikel Ekstra: pilih Hemat (0,45×), Standar (1×), Lebat (2×), Badai (3×), atau Overdrive 4× langsung di hub/HUD Wave Defense untuk memunculkan percikan tembakan, serpihan ledakan, semburan kematian bos, dan abu atmosfer; ditambah slider Particle Density Boost (0,5×–4×) dan anggaran partikel hingga 12.000 di Settings 2.0.',
+    ],
+    fixes: [
+      'Tombol kembali dan tab navigasi hub Overdrive serta tombol Escape sekarang terhubung penuh ke shell menu utama.',
+      'Wave Defense menampilkan lencana STAGE 1–9 dan tanda TUNTAS pada kartu medan kampanye yang sudah dimenangkan.',
+    ],
+  },
+  {
     version: '0.42.0',
     date: '27 November 2026',
     title: 'UPDATE XXXII — INFINITE FRONTIERS: BATAS TAK BERUJUNG',
