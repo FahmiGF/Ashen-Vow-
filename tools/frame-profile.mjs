@@ -1,6 +1,7 @@
 // Real frame-cost profile in Chrome: rAF cadence + Long Animation Frame (LoAF)
 // attribution per scenario. Usage: npm start && node tools/frame-profile.mjs
-// Add SCENARIOS=pirates,wave to limit runs; HEADED=1 to watch.
+// Set SCENARIOS to a comma-separated subset, e.g. riftwar,godfall,horror3d.
+// HEADED=1 opens a visible browser with a temporary test profile.
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { existsSync, mkdtempSync, rmSync } from 'node:fs';
@@ -10,7 +11,7 @@ import { join } from 'node:path';
 const URL = process.env.ASHEN_URL || 'http://127.0.0.1:4300/';
 const PORT = Number(process.env.CDP_PORT) || 9271;
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-const WANTED = (process.env.SCENARIOS || 'menu,campaign,pirates,pirateEndless,wave,waveEndless')
+const WANTED = (process.env.SCENARIOS || 'menu,campaign,cistern,lanternwake,pirates,pirateEndless,wave,waveEndless,infinitower,riftwar,godfall,horror2d,horror3d')
   .split(',').map((entry) => entry.trim()).filter(Boolean);
 
 function findBrowser() {
@@ -85,11 +86,12 @@ try {
   // LoAF is the browser's own record of what made a frame late (scripts,
   // rendering, style/layout). rAF gaps give the honest end-to-end cadence.
   const support = await evaluate(`(() => {
-    window.__pf = { loaf: [], gaps: [], watching: false };
+    window.__pf = { loaf: [] };
     try {
       new PerformanceObserver((list) => {
         for (const entry of list.getEntries()) {
           window.__pf.loaf.push({
+            startTime: entry.startTime,
             duration: +entry.duration.toFixed(2),
             blocking: +(entry.blockingDuration || 0).toFixed(2),
             render: entry.renderStart ? +(entry.duration - (entry.renderStart - entry.startTime)).toFixed(2) : 0,
@@ -98,32 +100,34 @@ try {
       }).observe({ type: 'long-animation-frame', buffered: true });
       window.__pf.loafSupported = true;
     } catch { window.__pf.loafSupported = false; }
-    return { loaf: window.__pf.loafSupported, webgl2: !!document.createElement('canvas').getContext('webgl2') };
+    const gl = document.createElement('canvas').getContext('webgl2');
+    const debug = gl?.getExtension('WEBGL_debug_renderer_info');
+    return {
+      loaf: window.__pf.loafSupported,
+      webgl2: !!gl,
+      webglRenderer: debug ? gl.getParameter(debug.UNMASKED_RENDERER_WEBGL) : null,
+    };
   })()`);
 
   const sample = async (ms) => evaluate(`(async () => {
     const pf = window.__pf;
     pf.loaf.length = 0;
     const gaps = [];
-    pf.watching = true;
     const start = performance.now();
+    let last;
     await new Promise((resolve) => {
       const tick = (now) => {
-        const last = pf._last ?? now;
-        pf._last = now;
-        if (gaps.length) gaps.push(now - last);
-        else gaps.push(0);
+        if (last !== undefined) gaps.push(now - last);
+        last = now;
         if (now - start < ${ms}) requestAnimationFrame(tick);
         else resolve();
       };
       requestAnimationFrame(tick);
     });
-    pf._last = 0;
-    gaps.shift();
     const sorted = [...gaps].sort((a, b) => a - b);
     const pick = (p) => +(sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * p))] || 0).toFixed(2);
     const avg = gaps.reduce((sum, value) => sum + value, 0) / Math.max(1, gaps.length);
-    const loaf = pf.loaf.map((entry) => entry.duration);
+    const loaf = pf.loaf.filter((entry) => entry.startTime >= start).map((entry) => entry.duration);
     loaf.sort((a, b) => a - b);
     return {
       frames: gaps.length,
@@ -132,6 +136,7 @@ try {
       p95: pick(0.95),
       p99: pick(0.99),
       worst: +(sorted[sorted.length - 1] || 0).toFixed(2),
+      gapsOver50Ms: gaps.filter((gap) => gap > 50).length,
       longFrames: loaf.length,
       loafP95: +(loaf[Math.floor(loaf.length * 0.95)] || 0).toFixed(2),
       loafWorst: +(loaf[loaf.length - 1] || 0).toFixed(2),
@@ -173,6 +178,56 @@ try {
       A.startCisternStage(1);
       return A.snap().room;
     })()`,
+    lanternwake: `(() => {
+      const A = window.__ashen;
+      A.clearProgress();
+      A.unlockCistern();
+      for (let hall = 0; hall < 4; hall += 1) A.cisternClear(hall);
+      A.cisternBossDown();
+      A.lanternwakeClear(0);
+      const stage = A.lanternwakeStart(1);
+      if (stage.runKind !== 'lanternwake' || stage.stage !== 1) throw new Error('Lanternwake hall 2 failed to load');
+      return { room: stage.room, enemies: A.game.enemies.length };
+    })()`,
+    riftwar: `(() => {
+      const A = window.__ashen;
+      A.showMoba();
+      A.setMobaHero('frontier_riftwalker');
+      A.setMobaMap('ember_vale');
+      A.setMobaLane('top');
+      document.querySelector('[data-moba-difficulty="veteran"]').click();
+      A.startMobaBattle();
+      const battle = A.mobaStep(95);
+      if (battle?.phase !== 'playing' || battle.wave < 3) throw new Error('Riftwar battle failed to reach wave 3');
+      return { wave: battle.wave, counts: battle.counts };
+    })()`,
+    godfall: `(() => {
+      const A = window.__ashen;
+      A.startEclipseGodfall(100, { practice: true });
+      const floor = A.eclipseRuntime.godfallFloor;
+      if (A.runKind !== 'godfall' || floor !== 100) throw new Error('Godfall floor 100 failed to load');
+      return { floor, room: A.game.roomIndex, enemies: A.game.enemies.length };
+    })()`,
+    horror2d: `(() => {
+      const A = window.__ashen;
+      const stage = A.startVeilStage('vesper_hollow_1');
+      if (!stage.ok) throw new Error('Veil stage failed to load');
+      return { room: A.game.roomIndex, enemies: A.game.enemies.length };
+    })()`,
+    horror3d: `(async () => {
+      const A = window.__ashen;
+      const stage = await A.start3DHorror('saint_orra');
+      if (!stage?.active || stage.siteId !== 'saint_orra') throw new Error('Saint Orra failed to load');
+      const terminalStates = ['ready', 'unsupported', 'failed'];
+      const deadline = performance.now() + 20000;
+      while (!terminalStates.includes(A.gfx3D.state) && performance.now() < deadline) {
+        await new Promise((resolve) => setTimeout(resolve, 200));
+      }
+      if (!terminalStates.includes(A.gfx3D.state)) throw new Error('Saint Orra renderer did not finish loading');
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+      const graphics = A.gfx3D;
+      return { site: stage.siteId, phase: stage.phase, rendererState: graphics.state, width: graphics.internalWidth };
+    })()`,
     wave: `(async () => {
       const A = window.__ashen;
       A.leavePirates();
@@ -192,6 +247,7 @@ try {
       if (A.pirates?.active) A.leavePirates();
       A.leaveWaveDefense();
       await A.showWaveDefense();
+      A.setWaveDefenseMap('ashen_keep');
       A.setWaveDefenseMode('endless');
       A.startWaveDefenseBattle();
       A.waveDefenseGold(5000);
@@ -249,15 +305,7 @@ try {
       return +((performance.now() - t0) / 50).toFixed(2);
     })()`,
   };
-  directMeasure.cistern = `(() => {
-    const A = window.__ashen;
-    const ctx = A.renderer.ctx;
-    const flush = () => ctx.getImageData(0, 0, 1, 1);
-    for (let i = 0; i < 12; i += 1) { A.renderer.render(A.game); flush(); }
-    const t0 = performance.now();
-    for (let i = 0; i < 60; i += 1) { A.renderer.render(A.game); flush(); }
-    return +((performance.now() - t0) / 60).toFixed(2);
-  })()`;
+  for (const name of ['cistern', 'lanternwake', 'godfall', 'horror2d']) directMeasure[name] = directMeasure.campaign;
   directMeasure.pirateEndless = directMeasure.pirates;
   directMeasure.waveEndless = directMeasure.wave;
   directMeasure.infinitower = directMeasure.wave;
@@ -291,15 +339,27 @@ try {
 
   const results = [];
   for (const name of WANTED) {
-    if (!setup[name]) continue;
+    assert.ok(Object.hasOwn(setup, name), `Unknown frame profile scenario: ${name}`);
+    await evaluate('window.__ashen.showMenu()');
     const detail = await evaluate(setup[name]);
     await sleep(700);
     const result = await sample(2600);
-    const direct = directMeasure[name] ? await evaluate(directMeasure[name]) : null;
     const cpu = await cpuProfile();
-    results.push({ scenario: name, detail, directMs: direct, cpu, ...result });
-    console.log(`${name.padEnd(13)} ${String(result.fps).padStart(6)} fps · p50 ${result.p50} ms · p95 ${result.p95} ms · worst ${result.worst} ms · canvas ${direct == null ? '—' : `${direct} ms`} · long frames ${result.longFrames}`);
+    results.push({ scenario: name, detail, directMs: null, cpu, ...result });
+    console.log(`${name.padEnd(13)} ${String(result.fps).padStart(6)} fps · p50 ${result.p50} ms · p95 ${result.p95} ms · worst ${result.worst} ms · long frames ${result.longFrames}`);
     console.log(`               cpu ${cpu.top.slice(0, 4).map((entry) => `${entry.fn} ${entry.pct}%`).join(' | ')}`);
+  }
+
+  // Repeated pixel reads can change Chrome's canvas renderer. Complete every
+  // cadence and CPU sample before starting any readback on a shared canvas.
+  for (const result of results) {
+    const measure = directMeasure[result.scenario];
+    if (!measure) continue;
+    await evaluate('window.__ashen.showMenu()');
+    await evaluate(setup[result.scenario]);
+    await sleep(700);
+    result.directMs = await evaluate(measure);
+    console.log(`${result.scenario.padEnd(13)} canvas with readback ${result.directMs} ms`);
   }
 
   console.log('\n' + JSON.stringify({ support, results }, null, 2));
