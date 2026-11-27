@@ -13,3 +13,4 @@ trailer/*.jpg
 trailer/score.wav
 
 data/
+.env
