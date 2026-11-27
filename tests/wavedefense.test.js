@@ -20,6 +20,11 @@ import {
   WAVE_DEFENSE_TOTAL_WAVES,
   WAVE_DEFENSE_ENDLESS_WAVES,
   WAVE_DEFENSE_INFINITOWER_TIER_WAVES,
+  WAVE_DEFENSE_PARTICLE_LEVELS,
+  WAVE_DEFENSE_TOWER_ICONS,
+  waveDefenseTowerIconSvg,
+  waveDefenseTowerIconDataUrl,
+  waveDefenseSetParticleScale,
   infinitowerTierFor,
   WAVE_DEFENSE_MAX_TOWER_LEVEL,
   waveDefenseRefreshAuras,
@@ -48,8 +53,8 @@ import {
 import { SPIRAL_INTRO_CUTSCENE, SPIRAL_BOSS_CUTSCENE, cutsceneFor, cutsceneBeatAt, drawCutscene } from '../src/cutscene.js';
 import { TRACKS } from '../src/music.js';
 
-test('wave defense ships 5 maps, 20 towers, 31 enemies, 9 bosses, 4 difficulties and 24 waves', () => {
-  assert.equal(WAVE_DEFENSE_MAPS.length, 5);
+test('wave defense ships 9 maps, 20 towers, 31 enemies, 9 bosses, 4 difficulties and 24 waves', () => {
+  assert.equal(WAVE_DEFENSE_MAPS.length, 9);
   for (const map of WAVE_DEFENSE_MAPS) {
     assert.ok(map.slots.length >= 20, `${map.id} needs plenty of build sites`);
     assert.ok(map.path.length >= 8);
@@ -647,4 +652,36 @@ test('an ended match stays ended and the renderer draws a real battlefield', () 
   assert.doesNotThrow(() => renderWaveDefense(ctx, m, { width: 960, height: 540, time: 1 }));
   assert.ok(calls.length > 0);
   assert.ok(calls.some(([name]) => name === 'lineTo'), 'rigged limbs are stroked');
+});
+
+test('every tower provides a distinct SVG icon and particle scale expands particle caps', () => {
+  assert.equal(Object.keys(WAVE_DEFENSE_TOWER_ICONS).length, WAVE_DEFENSE_TOWERS.length);
+  assert.equal(WAVE_DEFENSE_PARTICLE_LEVELS.length, 5);
+  const seenSvg = new Set();
+  for (const tower of WAVE_DEFENSE_TOWERS) {
+    const svg = waveDefenseTowerIconSvg(tower.id, 40);
+    assert.match(svg, /^<svg[^>]*viewBox="0 0 40 40"/);
+    assert.ok(!seenSvg.has(svg), `tower ${tower.id} icon must be unique`);
+    seenSvg.add(svg);
+    const dataUrl = waveDefenseTowerIconDataUrl(tower.id);
+    assert.ok(dataUrl.startsWith('data:image/svg+xml;utf8,'));
+  }
+
+  const lowMatch = createWaveDefense({ mapId: 'rift_chasm', particleScale: 0.45, seed: 7 });
+  const highMatch = createWaveDefense({ mapId: 'rift_chasm', particleScale: 4, seed: 7 });
+  assert.equal(lowMatch.mapId, 'rift_chasm');
+  assert.ok(highMatch.maxParticles > lowMatch.maxParticles * 5);
+  lowMatch.gold = 2000;
+  highMatch.gold = 2000;
+  waveDefenseBuild(lowMatch, 0, 'flame_keep');
+  waveDefenseBuild(highMatch, 0, 'flame_keep');
+  waveDefenseNextWave(lowMatch);
+  waveDefenseNextWave(highMatch);
+  for (let i = 0; i < 90; i += 1) {
+    updateWaveDefense(lowMatch, 1 / 30);
+    updateWaveDefense(highMatch, 1 / 30);
+  }
+  assert.ok(highMatch.particles.length > lowMatch.particles.length, `expected more particles (${highMatch.particles.length} vs ${lowMatch.particles.length})`);
+  waveDefenseSetParticleScale(highMatch, 0.25);
+  assert.equal(highMatch.particleScale, 0.25);
 });

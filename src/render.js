@@ -2015,9 +2015,10 @@ export class Renderer {
     const particle = game.arenaTheme?.particle || game.room?.particle;
     if (!particle) return;
     const scale = Number(this.options?.particleScale ?? 1)
+      * Number(this.options?.particleMultiplier ?? 1)
       * (0.55 + (Number(this.options?.qualityBias ?? 55) / 100) * 0.65)
       * (Number(this.options?.renderDistance ?? 100) / 100);
-    const count = Math.max(0, Math.round(52 * scale));
+    const count = Math.max(0, Math.min(260, Math.round(52 * scale)));
     if (!count) return;
     ctx.save();
     for (let i = 0; i < count; i++) {

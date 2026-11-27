@@ -112,6 +112,8 @@ async function main() {
         view: A.menuView,
         maps: document.querySelectorAll('[data-wd-map]').length,
         towers: document.querySelectorAll('#wd-towers [data-wd-tower]').length,
+        towerIcons: document.querySelectorAll('#wd-towers .wt-icon').length,
+        particleChoices: document.querySelectorAll('#wd-particles [data-wd-particle]').length,
         difficulties: document.querySelectorAll('[data-wd-difficulty]').length,
         statCells: document.querySelectorAll('#wd-summary .wd-stat').length,
         save: !!A.progress.wavedefense,
@@ -125,8 +127,10 @@ async function main() {
       };
     })()`);
     check('Wave Defense hub opens from the menu', hub.view, 'wavedefense');
-    check('hub renders five castle maps', hub.maps, 5);
+    check('hub renders nine castle maps / stages', hub.maps, 9);
     check('hub renders twenty tower cards', hub.towers, 20);
+    check('every tower card displays a bespoke SVG image icon', hub.towerIcons, 20);
+    check('hub renders five particle density presets (up to Overdrive 4x)', hub.particleChoices, 5);
     check('hub renders all three battle modes', hub.modes, 3);
     check('hub renders four difficulties', hub.difficulties, 4);
     check('hub renders seven summary cells', hub.statCells, 7);
@@ -138,10 +142,32 @@ async function main() {
     check('the hub exposes the spiral trailer button', hub.trailerButton, true);
     check('the chronicle decorates the hub', hub.firstChapter, 'Lingkar Pertama');
 
+    const picked = await evaluate(`(() => {
+      const A = window.__ashen;
+      document.querySelector('[data-wd-map="rift_chasm"]').click();
+      document.querySelector('[data-wd-difficulty="squire"]').click();
+      document.querySelector('[data-wd-particle="overdrive"]').click();
+      document.querySelector('[data-wd-tower="trebuchet"]').click();
+      document.querySelector('#btn-wd-start').click();
+      A.waveDefenseStep(1);
+      return {
+        view: A.menuView,
+        snap: A.waveDefense.snapshot,
+        paletteIcons: document.querySelectorAll('#wd-palette .wp-icon').length,
+        selIcon: !!document.querySelector('#wd-selection .ws-icon'),
+      };
+    })()`);
+    check('selecting new stage + Overdrive 4x particles enters battle', picked.view === 'wavedefenseBattle' && picked.snap.mapId === 'rift_chasm', true);
+    check('battle palette renders all 20 SVG tower icons', picked.paletteIcons, 20);
+    check('battle inspector shows tower SVG icon', picked.selIcon, true);
+    check('Overdrive particle setting boosts Wave Defense particleScale to 4x', picked.snap.particleScale, 4);
+    check('Overdrive particle setting emits live battlefield particles', picked.snap.particleCount > 0, true);
     const selected = await evaluate(`(() => {
       const A = window.__ashen;
+      A.leaveWaveDefense();
       document.querySelector('[data-wd-map="ember_bastion"]').click();
       document.querySelector('[data-wd-difficulty="squire"]').click();
+      document.querySelector('[data-wd-particle="normal"]').click();
       document.querySelector('[data-wd-tower="trebuchet"]').click();
       return {
         map: A.waveDefense.mapId,

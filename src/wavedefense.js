@@ -11,7 +11,16 @@ export const WAVE_DEFENSE_WORLD_H = 540;
 export const WAVE_DEFENSE_MAX_TOWER_LEVEL = 3;
 export const WAVE_DEFENSE_MAX_ENEMIES = 120;
 export const WAVE_DEFENSE_MAX_PROJECTILES = 180;
-export const WAVE_DEFENSE_MAX_EFFECTS = 48;
+export const WAVE_DEFENSE_MAX_EFFECTS = 64;
+export const WAVE_DEFENSE_MAX_PARTICLES_BASE = 240;
+
+export const WAVE_DEFENSE_PARTICLE_LEVELS = [
+  { id: 'low', label: 'Hemat', scale: 0.45, desc: 'Minimal percikan dan efek ringan untuk FPS maksimal.' },
+  { id: 'normal', label: 'Standar', scale: 1, desc: 'Kepadatan partikel standar di menara dan proyektil.' },
+  { id: 'high', label: 'Lebat', scale: 2, desc: 'Dua kali lipat percikan tembakan, debu, dan ledakan.' },
+  { id: 'ultra', label: 'Badai', scale: 3, desc: 'Tiga kali lipat partikel ledakan, bara, dan aura.' },
+  { id: 'overdrive', label: 'Overdrive 4×', scale: 4, desc: 'Kepadatan maksimum empat kali lipat untuk layar penuh aksi.' },
+];
 
 const TAU = Math.PI * 2;
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -91,6 +100,45 @@ export const WAVE_DEFENSE_TOWERS = [
 ];
 
 export const WAVE_DEFENSE_TOWER_BY_ID = Object.fromEntries(WAVE_DEFENSE_TOWERS.map((tower) => [tower.id, tower]));
+
+// ── Bespoke SVG tower icons ────────────────────────────────────────────────
+const TOWER_ICON_PATHS = {
+  ballista: (c) => `<path d="M9 28 L31 10" stroke="${c}" stroke-width="2.6" stroke-linecap="round"/><path d="M12 13 C18 8 28 11 29 22" fill="none" stroke="#f2e1be" stroke-width="2.2"/><path d="M29 10 L32 15 L26 14 Z" fill="#fff0cb"/>`,
+  catapult: (c) => `<rect x="8" y="26" width="24" height="5" rx="2" fill="${c}"/><path d="M12 26 L26 12" stroke="#f2e1be" stroke-width="3" stroke-linecap="round"/><circle cx="27" cy="11" r="4.5" fill="${c}" stroke="#f2e1be" stroke-width="1.3"/>`,
+  mage_tower: (c) => `<polygon points="20,6 27,20 20,27 13,20" fill="${c}" stroke="#e7dcff" stroke-width="1.5"/><circle cx="20" cy="16" r="3.4" fill="#fff"/><path d="M12 31 H28" stroke="${c}" stroke-width="3" stroke-linecap="round"/>`,
+  frost_spire: (c) => `<polygon points="20,5 28,29 12,29" fill="${c}" opacity="0.88" stroke="#e4fbff" stroke-width="1.4"/><path d="M20 11 V26 M15 18 H25" stroke="#fff" stroke-width="1.6"/>`,
+  cannon_tower: (c) => `<rect x="13" y="8" width="14" height="17" rx="3" fill="${c}" stroke="#f2e1be" stroke-width="1.3"/><rect x="10" y="7" width="20" height="4" rx="1.5" fill="#fff0cb"/><circle cx="20" cy="28" r="6.5" fill="${c}" stroke="#251a14" stroke-width="1.5"/>`,
+  trebuchet: (c) => `<path d="M10 30 L20 10 L30 30" fill="none" stroke="${c}" stroke-width="2.6" stroke-linejoin="round"/><path d="M8 17 L32 11" stroke="#f2e1be" stroke-width="2.8" stroke-linecap="round"/><rect x="8" y="19" width="6" height="7" rx="1" fill="${c}"/>`,
+  flame_keep: (c) => `<path d="M20 6 C28 14 29 24 20 31 C11 24 12 14 20 6 Z" fill="${c}"/><path d="M20 14 C24 19 24 25 20 29 C16 25 16 19 20 14 Z" fill="#fff0cb"/>`,
+  poison_grove: (c) => `<circle cx="15" cy="18" r="6" fill="${c}"/><circle cx="25" cy="18" r="6" fill="${c}"/><circle cx="20" cy="12" r="6" fill="${c}" stroke="#dfffe0" stroke-width="1.2"/><rect x="18" y="21" width="4" height="11" fill="#5e8c49"/>`,
+  tesla_coil: (c) => `<path d="M20 7 V29" stroke="#d4f7ff" stroke-width="2.6"/><ellipse cx="20" cy="14" rx="9" ry="3.2" fill="none" stroke="${c}" stroke-width="2"/><ellipse cx="20" cy="21" rx="7" ry="2.6" fill="none" stroke="${c}" stroke-width="2"/><circle cx="20" cy="8" r="4" fill="#fff" stroke="${c}" stroke-width="2"/>`,
+  sniper_nest: (c) => `<circle cx="20" cy="20" r="10" fill="none" stroke="${c}" stroke-width="2"/><circle cx="20" cy="20" r="3.5" fill="#fff0cb"/><path d="M20 6 V14 M20 26 V34 M6 20 H14 M26 20 H34" stroke="${c}" stroke-width="2.2" stroke-linecap="round"/>`,
+  holy_chapel: (c) => `<rect x="16" y="7" width="8" height="25" rx="1.5" fill="${c}"/><rect x="9" y="14" width="22" height="7" rx="1.5" fill="${c}"/><circle cx="20" cy="17.5" r="2.8" fill="#fff"/>`,
+  rift_obelisk: (c) => `<polygon points="20,5 26,18 23,32 17,32 14,18" fill="${c}" stroke="#f3dcff" stroke-width="1.4"/><circle cx="20" cy="18" r="4.2" fill="#13081c" stroke="#fff" stroke-width="1.3"/>`,
+  vow_banner: (c) => `<rect x="10" y="7" width="3.5" height="26" rx="1.2" fill="#f2e1be"/><path d="M13.5 8 L31 13 L25 18 L31 23 L13.5 24 Z" fill="${c}" stroke="#fff0cb" stroke-width="1.1"/>`,
+  spirit_lantern: (c) => `<path d="M13 11 H27" stroke="#f2e1be" stroke-width="2.4" stroke-linecap="round"/><rect x="14" y="13" width="12" height="15" rx="4" fill="${c}" stroke="#eafff8" stroke-width="1.4"/><circle cx="20" cy="20.5" r="3.5" fill="#fff"/>`,
+  echo_monolith: (c) => `<polygon points="15,8 25,8 28,31 12,31" fill="${c}" stroke="#ece6ff" stroke-width="1.3"/><circle cx="20" cy="18" r="5" fill="none" stroke="#fff" stroke-width="1.8"/><circle cx="20" cy="18" r="2" fill="#fff"/>`,
+  grave_bell: (c) => `<path d="M20 8 C26 10 28 19 29 25 H11 C12 19 14 10 20 8 Z" fill="${c}" stroke="#fff0cb" stroke-width="1.3"/><rect x="10" y="25" width="20" height="3" rx="1.5" fill="${c}"/><circle cx="20" cy="30" r="2.6" fill="#fff0cb"/>`,
+  ash_forge: (c) => `<path d="M9 17 H31 L27 25 H13 Z" fill="${c}" stroke="#ffd7bf" stroke-width="1.3"/><rect x="14" y="25" width="12" height="6" rx="1" fill="#9a5638"/><polygon points="20,7 24,14 16,14" fill="#fff0cb"/>`,
+  watcher_eye: (c) => `<path d="M6 20 Q20 8 34 20 Q20 32 6 20 Z" fill="${c}" stroke="#fff0cb" stroke-width="1.4"/><circle cx="20" cy="20" r="5" fill="#1d130e"/><circle cx="21" cy="19" r="2" fill="#fff"/>`,
+  spiral_anchor: (c) => `<path d="M20 8 V29" stroke="${c}" stroke-width="3" stroke-linecap="round"/><path d="M13 14 H27" stroke="${c}" stroke-width="2.6" stroke-linecap="round"/><path d="M10 22 C11 30 29 30 30 22" fill="none" stroke="#e4eeff" stroke-width="2.4" stroke-linecap="round"/><circle cx="20" cy="9" r="3" fill="none" stroke="#fff" stroke-width="1.5"/>`,
+  hourglass: (c) => `<path d="M11 8 H29 L20 20 Z M20 20 L11 32 H29 Z" fill="${c}" fill-opacity="0.72" stroke="#f3e8ff" stroke-width="1.6" stroke-linejoin="round"/><circle cx="20" cy="20" r="2.2" fill="#fff"/>`,
+};
+
+export function waveDefenseTowerIconSvg(towerId, size = 36) {
+  const def = WAVE_DEFENSE_TOWER_BY_ID[towerId] || WAVE_DEFENSE_TOWERS[0];
+  const color = def?.color || '#d6b16f';
+  const art = (TOWER_ICON_PATHS[def?.id] || TOWER_ICON_PATHS.ballista)(color);
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 40 40" aria-hidden="true"><defs><radialGradient id="g-${def.id}" cx="50%" cy="35%" r="65%"><stop offset="0%" stop-color="${color}" stop-opacity="0.34"/><stop offset="100%" stop-color="#0b0d0c" stop-opacity="0.96"/></radialGradient></defs><rect x="1.5" y="1.5" width="37" height="37" rx="7" fill="url(#g-${def.id})" stroke="${color}" stroke-opacity="0.52" stroke-width="1.4"/>${art}</svg>`;
+}
+
+export function waveDefenseTowerIconDataUrl(towerId) {
+  return `data:image/svg+xml;utf8,${encodeURIComponent(waveDefenseTowerIconSvg(towerId, 40))}`;
+}
+
+export const WAVE_DEFENSE_TOWER_ICONS = Object.freeze(
+  Object.fromEntries(WAVE_DEFENSE_TOWERS.map((tower) => [tower.id, waveDefenseTowerIconDataUrl(tower.id)])),
+);
 
 export const WAVE_DEFENSE_DIFFICULTIES = [
   { id: 'squire', name: 'SQUIRE', hp: 0.82, speed: 0.92, gold: 320, castle: 140, desc: 'Gelombang lebih ringan dan kas kastil lebih longgar.' },
@@ -221,6 +269,8 @@ function makeSlots(path, castle, wanted = 24) {
 const MAP_BLUEPRINTS = [
   {
     id: 'ashen_keep',
+    stage: 1,
+    ambientParticle: 'ash',
     name: 'ASHEN KEEP',
     subtitle: 'Benteng Terakhir',
     lore: 'Jalan batu tua berkelok menuju gerbang utama. Dua belas menara pertama menemukan rumahnya di sini.',
@@ -234,6 +284,8 @@ const MAP_BLUEPRINTS = [
   },
   {
     id: 'ember_bastion',
+    stage: 2,
+    ambientParticle: 'embers',
     name: 'EMBER BASTION',
     subtitle: 'Benteng Api',
     lore: 'Parit bara dan jalan sempit memaksa musuh melewati setiap menara dua kali.',
@@ -247,6 +299,8 @@ const MAP_BLUEPRINTS = [
   },
   {
     id: 'sunken_causeway',
+    stage: 3,
+    ambientParticle: 'spores',
     name: 'SUNKEN CAUSEWAY',
     subtitle: 'Jalan Karam',
     lore: 'Jalan tenggelam berkelok di antara menara tua; setiap tikungan menutup satu jalur pelarian.',
@@ -260,6 +314,8 @@ const MAP_BLUEPRINTS = [
   },
   {
     id: 'frostgate',
+    stage: 4,
+    ambientParticle: 'snow',
     name: 'FROSTGATE CITADEL',
     subtitle: 'Benteng Beku',
     lore: 'Tembok es menahan laju musuh, tetapi setiap lorong membuka jalan baru menuju mahkota.',
@@ -272,7 +328,69 @@ const MAP_BLUEPRINTS = [
     ],
   },
   {
+    id: 'rift_chasm',
+    stage: 5,
+    ambientParticle: 'stars',
+    name: 'RIFT CHASM',
+    subtitle: 'Jurang Retak',
+    lore: 'Dua jembatan batu melintasi celah ungu tua. Pulau tengah menjadi titik tembak silang terkuat.',
+    theme: { ground: '#0e0917', earth: '#271a3b', path: '#4a3269', edge: '#07040d', accent: '#d28aff', mist: '#6f4e99' },
+    castle: { x: 892, y: 148 },
+    path: [
+      { x: -30, y: 148 }, { x: 240, y: 148 }, { x: 240, y: 438 }, { x: 468, y: 438 },
+      { x: 468, y: 268 }, { x: 680, y: 268 }, { x: 680, y: 438 }, { x: 824, y: 438 },
+      { x: 824, y: 148 }, { x: 856, y: 148 },
+    ],
+  },
+  {
+    id: 'moonlit_cloister',
+    stage: 6,
+    ambientParticle: 'mist',
+    name: 'MOONLIT CLOISTER',
+    subtitle: 'Biara Bulan',
+    lore: 'Lorong kembar biara tua memantulkan cahaya lentera, mengundang formasi menara rapat di beranda tengah.',
+    theme: { ground: '#09121a', earth: '#182b3b', path: '#2e4d63', edge: '#050a10', accent: '#9ad4ff', mist: '#517fa1' },
+    castle: { x: 894, y: 392 },
+    path: [
+      { x: -30, y: 392 }, { x: 140, y: 392 }, { x: 140, y: 110 }, { x: 480, y: 110 },
+      { x: 480, y: 274 }, { x: 290, y: 274 }, { x: 290, y: 444 }, { x: 676, y: 444 },
+      { x: 676, y: 170 }, { x: 824, y: 170 }, { x: 824, y: 392 }, { x: 858, y: 392 },
+    ],
+  },
+  {
+    id: 'clockwork_viaduct',
+    stage: 7,
+    ambientParticle: 'gears',
+    name: 'CLOCKWORK VIADUCT',
+    subtitle: 'Viaduk Jam Abadi',
+    lore: 'Saluran kuningan bertingkat dari Ekspanse Jam. Setiap tikungan siku menggandakan jangkauan petir dan perlambatan.',
+    theme: { ground: '#141008', earth: '#332714', path: '#5c4623', edge: '#0a0804', accent: '#ffb703', mist: '#8a6d2e' },
+    castle: { x: 892, y: 132 },
+    path: [
+      { x: -30, y: 446 }, { x: 210, y: 446 }, { x: 210, y: 108 }, { x: 396, y: 108 },
+      { x: 396, y: 368 }, { x: 590, y: 368 }, { x: 590, y: 108 }, { x: 774, y: 108 },
+      { x: 774, y: 374 }, { x: 842, y: 374 }, { x: 842, y: 132 }, { x: 860, y: 132 },
+    ],
+  },
+  {
+    id: 'throne_approaches',
+    stage: 8,
+    ambientParticle: 'embers',
+    name: 'THRONESIDE GATE',
+    subtitle: 'Gerbang Takhta Pertama',
+    lore: 'Serambi kerajaan terakhir sebelum takhta Abu Abadi. Jalur panjang melingkari benteng kerajaan.',
+    theme: { ground: '#14090d', earth: '#33161f', path: '#5b2836', edge: '#0a0406', accent: '#ff7096', mist: '#8c3f57' },
+    castle: { x: 890, y: 270 },
+    path: [
+      { x: -30, y: 98 }, { x: 760, y: 98 }, { x: 760, y: 214 }, { x: 162, y: 214 },
+      { x: 162, y: 344 }, { x: 644, y: 344 }, { x: 644, y: 454 }, { x: 270, y: 454 },
+      { x: 270, y: 270 }, { x: 852, y: 270 },
+    ],
+  },
+  {
     id: 'eternal_spiral',
+    stage: 9,
+    ambientParticle: 'stars',
     name: 'ETERNAL SPIRAL',
     subtitle: 'Lingkar Tanpa Ujung',
     lore: 'Jalan memutar ke dalam tanpa ujung. Setiap sepuluh gelombang lingkar menebal; tidak ada kemenangan, hanya seberapa lama mahkota bertahan.',
@@ -379,13 +497,14 @@ function buildWaveQueue(match) {
 }
 
 // ── Match lifecycle ────────────────────────────────────────────────────────
-export function createWaveDefense({ mapId = 'ashen_keep', difficulty = 'knight', seed = 1, endless = false, infinitower = false } = {}) {
+export function createWaveDefense({ mapId = 'ashen_keep', difficulty = 'knight', seed = 1, endless = false, infinitower = false, particleScale = 1 } = {}) {
   const mode = infinitower ? 'infinitower' : (endless ? 'endless' : 'campaign');
   const map = mode === 'infinitower'
     ? WAVE_DEFENSE_MAP_BY_ID.eternal_spiral
     : (WAVE_DEFENSE_MAP_BY_ID[mapId] || WAVE_DEFENSE_MAPS[0]);
   const diff = WAVE_DEFENSE_DIFFICULTY_BY_ID[difficulty] || WAVE_DEFENSE_DIFFICULTY_BY_ID.knight;
   const maxHp = Math.round(diff.castle);
+  const clampedParticleScale = clamp(asNumber(particleScale, 1), 0.25, 4);
   return {
     version: WAVE_DEFENSE_VERSION,
     mapId: map.id,
@@ -395,6 +514,9 @@ export function createWaveDefense({ mapId = 'ashen_keep', difficulty = 'knight',
     nextId: 1,
     time: 0,
     speed: 1,
+    particleScale: clampedParticleScale,
+    maxParticles: Math.round(WAVE_DEFENSE_MAX_PARTICLES_BASE * clampedParticleScale),
+    ambientTimer: 0,
     wave: 0,
     mode,
     endless: mode !== 'campaign',
@@ -418,6 +540,7 @@ export function createWaveDefense({ mapId = 'ashen_keep', difficulty = 'knight',
     towers: [],
     projectiles: [],
     effects: [],
+    particles: [],
     slots: map.slots.map((slot, index) => ({ index, x: slot.x, y: slot.y, towerId: null })),
     selectedSlot: -1,
     buildTowerId: 'ballista',
@@ -643,6 +766,17 @@ export function waveDefenseSetSpeed(match, speed) {
   return true;
 }
 
+export function waveDefenseSetParticleScale(match, scale) {
+  if (!match) return false;
+  const next = clamp(asNumber(scale, 1), 0.25, 4);
+  match.particleScale = next;
+  match.maxParticles = Math.round(WAVE_DEFENSE_MAX_PARTICLES_BASE * next);
+  if (Array.isArray(match.particles) && match.particles.length > match.maxParticles) {
+    match.particles.length = match.maxParticles;
+  }
+  return true;
+}
+
 function towerStats(tower) {
   const def = WAVE_DEFENSE_TOWER_BY_ID[tower.towerId];
   const level = tower.level - 1;
@@ -746,6 +880,30 @@ function addEffect(match, x, y, radius, color, life = 0.32) {
   match.effects.push({ x, y, radius, color, life, maxLife: life });
 }
 
+function addParticles(match, x, y, baseCount, color, { speed = 72, spread = TAU, angle = 0, size = 2.6, life = 0.48, glow = false } = {}) {
+  const scale = clamp(asNumber(match?.particleScale, 1), 0.25, 4);
+  const max = match?.maxParticles || Math.round(WAVE_DEFENSE_MAX_PARTICLES_BASE * scale);
+  const count = Math.max(1, Math.round(baseCount * scale));
+  if (!Array.isArray(match.particles)) match.particles = [];
+  for (let i = 0; i < count; i += 1) {
+    if (match.particles.length >= max) match.particles.shift();
+    const rAngle = angle + (match.rng() - 0.5) * spread;
+    const rSpeed = speed * (0.45 + match.rng() * 0.85);
+    const pLife = life * (0.6 + match.rng() * 0.65);
+    match.particles.push({
+      x,
+      y,
+      vx: Math.cos(rAngle) * rSpeed,
+      vy: Math.sin(rAngle) * rSpeed,
+      size: size * (0.65 + match.rng() * 0.7),
+      color,
+      life: pLife,
+      maxLife: pLife,
+      glow,
+    });
+  }
+}
+
 function damageEnemy(match, enemy, amount, { magic = false, source = null } = {}) {
   if (!enemy || enemy.dead) return 0;
   const dealt = waveDefenseIncomingDamage(amount, enemy, { magic });
@@ -774,6 +932,12 @@ function damageEnemy(match, enemy, amount, { magic = false, source = null } = {}
       pushText(match, `${enemy.name} gugur! +${enemy.bounty} emas`, '#ffd166');
     }
     addEffect(match, enemy.x, enemy.y, enemy.boss ? 55 : 20, enemy.color, 0.45);
+    addParticles(match, enemy.x, enemy.y, enemy.boss ? 28 : 9, enemy.color, {
+      speed: enemy.boss ? 128 : 68,
+      size: enemy.boss ? 4 : 2.6,
+      life: enemy.boss ? 0.75 : 0.45,
+      glow: true,
+    });
     if (source?.healCastle) healCastle(match, source.healCastle);
   }
   return dealt;
@@ -791,6 +955,14 @@ function fireTower(match, tower, target, stats) {
   if (stats.shape === 'sniper' && tower.shots % 4 === 0) damage *= 2.25;
   if (stats.execute && target.hp / target.maxHp <= stats.execute) damage *= stats.executeBonus || 2;
   if (stats.healCastle) healCastle(match, stats.healCastle);
+  addParticles(match, tower.x + Math.cos(tower.angle) * 14, tower.y - 6 + Math.sin(tower.angle) * 14, 3, stats.color, {
+    speed: 62,
+    spread: 0.7,
+    angle: tower.angle,
+    size: 2.2,
+    life: 0.24,
+    glow: true,
+  });
   if (match.projectiles.length >= WAVE_DEFENSE_MAX_PROJECTILES) {
     impactProjectile(match, { target, damage, splash: stats.splash || 0, magic: stats.magic, slow: stats.slow, slowTime: stats.slowTime, poison: stats.poison, poisonTime: stats.poisonTime, mark: stats.mark || 0, stun: stats.stun || 0, shred: stats.shred || 0, shredTime: stats.shredTime || 0, chain: stats.chain || 0, x: target.x, y: target.y, color: stats.color });
     return;
@@ -831,10 +1003,21 @@ function impactProjectile(match, projectile) {
       }
     }
     addEffect(match, projectile.x, projectile.y, projectile.splash, projectile.color, 0.34);
+    addParticles(match, projectile.x, projectile.y, 11, projectile.color, {
+      speed: 96,
+      size: 3.1,
+      life: 0.46,
+      glow: true,
+    });
   } else if (target && !target.dead) {
     damageEnemy(match, target, projectile.damage, { magic: projectile.magic });
     applyStatus(match, target, projectile);
     addEffect(match, target.x, target.y, 10, projectile.color, 0.2);
+    addParticles(match, target.x, target.y, 4, projectile.color, {
+      speed: 58,
+      size: 2.2,
+      life: 0.28,
+    });
   }
   if (projectile.chain > 0) {
     let source = target && !target.dead ? target : null;
@@ -1121,6 +1304,38 @@ function updateEffects(match, dt) {
   match.effects.length = write;
 }
 
+function updateParticles(match, dt) {
+  if (!Array.isArray(match.particles)) match.particles = [];
+  const scale = clamp(asNumber(match.particleScale, 1), 0.25, 4);
+  match.ambientTimer = (match.ambientTimer || 0) - dt * scale;
+  if (match.ambientTimer <= 0) {
+    match.ambientTimer = 0.09;
+    const accent = match.map?.theme?.accent || '#d8ac67';
+    const x = match.rng() * WAVE_DEFENSE_WORLD_W;
+    const y = match.rng() * WAVE_DEFENSE_WORLD_H;
+    addParticles(match, x, y, 1, accent, {
+      speed: 24,
+      angle: -Math.PI / 2,
+      spread: Math.PI,
+      size: 1.9,
+      life: 1.15,
+      glow: false,
+    });
+  }
+  let write = 0;
+  for (let read = 0; read < match.particles.length; read += 1) {
+    const p = match.particles[read];
+    p.life -= dt;
+    if (p.life <= 0) continue;
+    p.x += p.vx * dt;
+    p.y += p.vy * dt;
+    p.vx *= 0.96;
+    p.vy *= 0.96;
+    match.particles[write++] = p;
+  }
+  match.particles.length = write;
+}
+
 export function endWaveDefense(match, result = 'defeat') {
   if (!match || match.phase === 'ended') return match;
   match.phase = 'ended';
@@ -1166,6 +1381,7 @@ export function updateWaveDefense(match, dt, input = {}) {
   }
 
   updateEffects(match, scaled);
+  updateParticles(match, scaled);
   updateScore(match);
   return match;
 }
@@ -1335,6 +1551,8 @@ export function waveDefenseSnapshot(match) {
     prepTimer: Math.max(0, match.prepTimer),
     time: match.time,
     speed: match.speed,
+    particleScale: match.particleScale ?? 1,
+    particleCount: match.particles?.length ?? 0,
     gold: match.gold,
     score: match.score,
     castle: { hp: match.castle.hp, maxHp: match.castle.maxHp },
@@ -1806,6 +2024,18 @@ export function renderWaveDefense(ctx, match, { width = WAVE_DEFENSE_WORLD_W, he
     ctx.globalAlpha = t;
     ctx.lineWidth = 2;
     ctx.beginPath(); ctx.arc(effect.x, effect.y, effect.radius * (1.15 - t * 0.6), 0, TAU); ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+
+  if (Array.isArray(match.particles) && match.particles.length) {
+    for (const p of match.particles) {
+      const t = Math.max(0, p.life / p.maxLife);
+      ctx.globalAlpha = p.glow ? t * 0.9 : t * 0.6;
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, Math.max(0.8, p.size * (0.4 + t * 0.6)), 0, TAU);
+      ctx.fill();
+    }
     ctx.globalAlpha = 1;
   }
 

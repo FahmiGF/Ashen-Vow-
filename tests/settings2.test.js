@@ -140,3 +140,18 @@ test('settings value helpers resolve nested paths without mutating unrelated sec
   assert.equal(settings.hud.scale, 100);
   assert.equal(LANGUAGES.length, 14);
 });
+
+test('particle multiplier, budget, and hard cap scale smoothly for dense effects', () => {
+  const settings = defaultExtendedSettings();
+  assert.equal(settings.graphics.particleMultiplier, 1);
+  applyGraphicsPreset(settings, 'extreme');
+  assert.equal(settings.graphics.particleMultiplier, 2.5);
+  const maxed = sanitizeExtendedSettings({
+    graphics: { particleMultiplier: 10 },
+    performance: { particleBudget: 99999 },
+    advanced: { maxParticles: 99999 },
+  });
+  assert.equal(maxed.graphics.particleMultiplier, 4);
+  assert.equal(maxed.performance.particleBudget, 6000);
+  assert.equal(maxed.advanced.maxParticles, 12000);
+});
