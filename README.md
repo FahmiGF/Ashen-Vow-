@@ -1,4 +1,12 @@
-# Ashen Vow — v0.42.0
+# Ashen Vow — v0.43.0
+
+## v0.43.0 — Update XXXIII: Overdrive Playable (Lv 201–300) & Wave Defense Arsenal
+
+Phase 2 (*The Unfinished Roads*) finishes: **Overdrive: The Eternal Realm** Levels 201–300 are now **100 real playable rooms at ids 774–873** (`ALL_ROOMS = 874`, `ALL_BOSS_INFO = 136`, `ALL_ENEMY_INFO = 367`), paired with **Wave Defense** tower SVG icons, 4 new campaign stages (9 maps total), and configurable particle density up to **4×** (plus Settings 2.0 particle boost up to `12,000`).
+
+- **Overdrive Lv 201–300 (`src/overdrive_ladder.js`)**: Chapters 21–30 (*The Drowned Capital* through *The Final Pantheon*) keep the 20-body 4-archetype contract, apply the 6 special level variants (`endless_dungeon`, `colossus_trial`, `time_trial`, `treasure_vault`, `cursed_expedition`, `gauntlet_tower`), pit you against **10 chapter bosses** ending on **The First God** (5 phases, `reward: 'victory'`), let you cast from **8 elemental spell schools (`[Q]`)**, and reward **8 Legendary Weapons**.
+- **Wave Defense Tower Icons, 9 Stages & 4× Particles (`src/wavedefense.js`, `src/settings2.js`)**: bespoke vector SVG icons (`<img>`) for all 20 towers across hub cards, palette, and inspector; 4 new campaign maps (*Rift Chasm*, *Moonlit Cloister*, *Clockwork Viaduct*, *Throneside Gate*); live particle bursts, ambient ash/embers/snow/stars, and `WAVE_DEFENSE_PARTICLE_LEVELS` (`0.45×` to `4×` Overdrive particles) plus `graphics.particleMultiplier` (`0.5×–4×`), `performance.particleBudget` (`6000`), and `advanced.maxParticles` (`12000`) in Settings 2.0.
+- **Verification**: `tests/overdrive_ladder.test.js`, extended `tests/wavedefense.test.js` & `tests/settings2.test.js`, plus real-Chrome `npm run smoke:overdrive` and `npm run smoke:wavedefense`.
 
 ## v0.42.0 — Update XXXII: Infinite Frontiers — Batas Tak Berujung
 

@@ -117,9 +117,9 @@ MENU → INFINITE FRONTIERS → tab KAMPANYE 101–200
 
 ---
 
-## 4. Release 2 — v0.43.0 Overdrive playable (planned)
+## 4. Release 2 — v0.43.0 Overdrive playable (shipped)
 
-Scope: `OVERDRIVE_ROOMS` at ids **774–873** (100 rooms), the 10 chapter bosses plus the 6 roaming encounters, the spell slot (`Q`, one of 8 schools, mana from hits), the 8 legendary weapon drops, and the 6 special level types as real variants. Same room contract, same sequential save model under `progress.overdrive`. Deferred to its own PRD addendum once v0.42.0 is green.
+Scope delivered in `v0.43.0`: `OVERDRIVE_ROOMS` at ids **774–873** (100 rooms in `ALL_ROOMS = 874`), all 10 chapter bosses ending on `the_first_god` (`ALL_BOSS_INFO = 136`), 50 Overdrive enemy bodies (`ALL_ENEMY_INFO = 367`), active elemental spell slot (`Q`, 8 schools / 32 spells, mana regen + burst), 8 Legendary Weapons rewarded on chapter clears, and the 6 special level types mapped onto stages under `progress.overdrive`.
 
 ---
 
