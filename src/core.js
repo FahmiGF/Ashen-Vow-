@@ -131,6 +131,14 @@ import {
   RIFT_FRACTURE_INTERVAL,
   RIFT_PHASE_SHIFT_COOLDOWN,
 } from './rift.js';
+import {
+  UNWRITTEN_ROOMS,
+  UNWRITTEN_ENEMY_INFO,
+  UNWRITTEN_BOSS_INFO,
+  UNWRITTEN_SIGIL_BY_ID,
+  INK_SEVERANCE_MIN_RESONANCE,
+  INK_SEVERANCE_COOLDOWN,
+} from './unwritten.js';
 
 export const WEAPON_ELEMENTS = {
   sword: 'physical', pike: 'physical', bow: 'physical', greataxe: 'physical', twinblades: 'wind',
@@ -1173,8 +1181,8 @@ SHOP_ITEMS.push(...ECLIPSE_SHOP_ITEMS);
 
 // Legacy rooms stay exactly as they were so old saves, map layout and tests keep
 // their meaning. The campaign is a second set of rooms appended at indices 14+.
-export const ALL_ROOMS = [...ROOMS, ...EXPANSION_ROOMS, ...ATLAS_ROOMS, ...COURT_ROOMS, ...FAIRY_ROOMS, ...FALLEN_ROOMS, ...CRUSADE_ROOMS, ...ASTRAL_ROOMS, ...ECLIPSE_ROOMS, ...GODFALL_ROOMS, ...CISTERN_ROOMS, ...LANTERN_ROOMS, ...FRONTIER_ROOMS, ...OVERDRIVE_ROOMS, ...RIFT_ROOMS];
-export const ALL_ENEMY_INFO = { ...ENEMY_INFO, ...EXPANSION_ENEMY_INFO, ...ATLAS_ENEMY_INFO, ...COURT_ENEMY_INFO, ...FAIRY_ENEMY_INFO, ...FALLEN_ENEMY_INFO, ...CRUSADE_ENEMY_INFO, ...ASTRAL_ENEMY_INFO, ...ECLIPSE_ENEMY_INFO, ...CISTERN_ENEMY_INFO, ...LANTERN_ENEMY_INFO, ...FRONTIER_ENEMY_INFO, ...FRONTIER_ELITE_INFO, ...OVERDRIVE_ENEMY_INFO, ...RIFT_ENEMY_INFO };
+export const ALL_ROOMS = [...ROOMS, ...EXPANSION_ROOMS, ...ATLAS_ROOMS, ...COURT_ROOMS, ...FAIRY_ROOMS, ...FALLEN_ROOMS, ...CRUSADE_ROOMS, ...ASTRAL_ROOMS, ...ECLIPSE_ROOMS, ...GODFALL_ROOMS, ...CISTERN_ROOMS, ...LANTERN_ROOMS, ...FRONTIER_ROOMS, ...OVERDRIVE_ROOMS, ...RIFT_ROOMS, ...UNWRITTEN_ROOMS];
+export const ALL_ENEMY_INFO = { ...ENEMY_INFO, ...EXPANSION_ENEMY_INFO, ...ATLAS_ENEMY_INFO, ...COURT_ENEMY_INFO, ...FAIRY_ENEMY_INFO, ...FALLEN_ENEMY_INFO, ...CRUSADE_ENEMY_INFO, ...ASTRAL_ENEMY_INFO, ...ECLIPSE_ENEMY_INFO, ...CISTERN_ENEMY_INFO, ...LANTERN_ENEMY_INFO, ...FRONTIER_ENEMY_INFO, ...FRONTIER_ELITE_INFO, ...OVERDRIVE_ENEMY_INFO, ...RIFT_ENEMY_INFO, ...UNWRITTEN_ENEMY_INFO };
 
 const BOSS_INFO = {
   warden: {
@@ -1346,7 +1354,7 @@ const BOSS_INFO = {
   },
 };
 
-export const ALL_BOSS_INFO = { ...BOSS_INFO, ...EXPANSION_BOSS_INFO, ...ATLAS_BOSS_INFO, ...COURT_BOSS_INFO, ...PACK_BOSS_INFO, ...FAIRY_BOSS_INFO, ...FALLEN_BOSS_INFO, ...CRUSADE_BOSS_INFO, ...ASTRAL_BOSS_INFO, ...ECLIPSE_BOSS_INFO, ...GODFALL_BOSS_INFO, ...CISTERN_BOSS_INFO, ...LANTERN_BOSS_INFO, ...FRONTIER_BOSS_INFO, ...OVERDRIVE_BOSS_INFO, ...RIFT_BOSS_INFO };
+export const ALL_BOSS_INFO = { ...BOSS_INFO, ...EXPANSION_BOSS_INFO, ...ATLAS_BOSS_INFO, ...COURT_BOSS_INFO, ...PACK_BOSS_INFO, ...FAIRY_BOSS_INFO, ...FALLEN_BOSS_INFO, ...CRUSADE_BOSS_INFO, ...ASTRAL_BOSS_INFO, ...ECLIPSE_BOSS_INFO, ...GODFALL_BOSS_INFO, ...CISTERN_BOSS_INFO, ...LANTERN_BOSS_INFO, ...FRONTIER_BOSS_INFO, ...OVERDRIVE_BOSS_INFO, ...RIFT_BOSS_INFO, ...UNWRITTEN_BOSS_INFO };
 export const EXPANSION_BOSS_IDS = Object.keys(EXPANSION_BOSS_INFO);
 
 export const CODEX = {
@@ -1579,6 +1587,8 @@ export class AshenGame {
     this.resonanceTimer = 0;
     this.resonanceHits = 0;
     this.bestResonance = 'D';
+    this.oathSigilId = 'blank_page';
+    this.inkSeveranceCooldown = 0;
 
     this.player = {
       x: 0,
@@ -2226,11 +2236,72 @@ export class AshenGame {
 
   resonanceDamageMult() {
     if ((this.resonance || 0) < 15) return 1;
-    return 1 + clamp((this.resonance || 0) / 100, 0, 1) * 0.3;
+    let mult = 1 + clamp((this.resonance || 0) / 100, 0, 1) * 0.3;
+    if (this.oathSigilId === 'scorched_ink') mult += UNWRITTEN_SIGIL_BY_ID.scorched_ink.damageBonus;
+    return mult;
   }
 
   resonanceSpeedMult() {
-    return 1 + clamp((this.resonance || 0) / 100, 0, 1) * 0.12;
+    let mult = 1 + clamp((this.resonance || 0) / 100, 0, 1) * 0.12;
+    if (this.oathSigilId === 'quicksilver_nib' && (this.resonance || 0) >= 35) {
+      mult += UNWRITTEN_SIGIL_BY_ID.quicksilver_nib.speedBonus;
+    }
+    return mult;
+  }
+
+  setOathSigil(sigilId) {
+    if (UNWRITTEN_SIGIL_BY_ID[sigilId]) {
+      this.oathSigilId = sigilId;
+      return true;
+    }
+    return false;
+  }
+
+  inkSeverance(force = false) {
+    const p = this.player;
+    if (this.state !== 'playing' || !p) return { ok: false, reason: 'state' };
+    if (!force && (this.inkSeveranceCooldown || 0) > 0) return { ok: false, reason: 'cooldown' };
+    if (!force && (this.resonance || 0) < INK_SEVERANCE_MIN_RESONANCE) {
+      return { ok: false, reason: 'resonance' };
+    }
+    const sigil = UNWRITTEN_SIGIL_BY_ID[this.oathSigilId] || UNWRITTEN_SIGIL_BY_ID.blank_page;
+    const radius = 190 + (sigil.radiusBonus || 0);
+    const baseDmg = 38 * (sigil.severanceScale || 1) * this.resonanceDamageMult();
+    const cdReduction = sigil.cooldownReduction || 0;
+    this.inkSeveranceCooldown = Math.max(1.2, INK_SEVERANCE_COOLDOWN - cdReduction);
+    if (!force) this.resonance = Math.max(0, (this.resonance || 0) - 20);
+    this.resonanceRank = this.resonanceRankFor(this.resonance);
+
+    const px = p.x + p.w / 2;
+    const py = p.y + p.h / 2;
+    let hits = 0;
+    for (const e of this.enemies) {
+      if (e.dead) continue;
+      if (Math.hypot(e.x + e.w / 2 - px, e.y + e.h / 2 - py) <= radius) {
+        if (e.veil) e.veil = false;
+        e.hp -= Math.round(baseDmg);
+        e.hitFlash = 0.18;
+        e.state = 'hurt';
+        e.timer = 0.3;
+        hits += 1;
+        if (e.hp <= 0) {
+          e.dead = true;
+          this.kills += 1;
+        }
+      }
+    }
+    if (this.boss && !this.boss.dying) {
+      const bx = this.boss.x + this.boss.w / 2;
+      const by = this.boss.y + this.boss.h / 2;
+      if (Math.hypot(bx - px, by - py) <= radius + 40) {
+        this.hurtBoss(baseDmg * 1.15, 180, p.facing, true, 'astral');
+        hits += 1;
+      }
+    }
+    this.shake = Math.max(this.shake, 0.42);
+    this.burst(px, py, 28, '#ffd78a', 260);
+    this.emit({ type: 'inkSeverance', sigil: sigil.id, radius, hits });
+    return { ok: true, sigil: sigil.id, radius, hits };
   }
 
   gainResonance(points = 10, reason = 'hit') {
@@ -2306,6 +2377,7 @@ export class AshenGame {
         this.player.hitFlash = Math.max(0, this.player.hitFlash - dt);
         this.wallHitFlash = Math.max(0, this.wallHitFlash - dt);
         if (this.gateLock > 0) this.gateLock = Math.max(0, this.gateLock - dt);
+        if (this.inkSeveranceCooldown > 0) this.inkSeveranceCooldown = Math.max(0, this.inkSeveranceCooldown - dt);
         if (this.player.phaseShiftCooldown > 0) this.player.phaseShiftCooldown = Math.max(0, this.player.phaseShiftCooldown - dt);
         if (this.room?.rift) {
           this.fractureTimer = (this.fractureTimer || 0) + dt;
@@ -3994,6 +4066,9 @@ export class AshenGame {
     }
     if (p.invuln > 0) return false;
     let warded = false;
+    if (this.oathSigilId === 'blank_page' && (this.resonance || 0) >= 55) {
+      amount *= 1 - UNWRITTEN_SIGIL_BY_ID.blank_page.incomingReduction;
+    }
     if (p.spiritWardTimer > 0 && isSpiritSource(opts.source)) {
       amount *= 1 - clamp(p.spiritWardReduction || 0.6, 0, 0.9);
       p.spiritWardFlash = Math.max(p.spiritWardFlash || 0, 0.3);

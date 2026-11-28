@@ -124,7 +124,7 @@ try {
   check(opened.view === 'storymap', 'the button switches the shell to the story map view');
   check(opened.visible, 'the story map screen is actually visible');
   check(opened.title.trim() === 'PETA KISAH', 'the screen is titled PETA KISAH');
-  check(opened.chips === 14, `the rail lists every saga (${opened.chips})`);
+  check(opened.chips === 15, `the rail lists every saga (${opened.chips})`);
   check(opened.stats === 5, 'the summary strip renders five counters');
   check(/SAGA/.test(opened.statText) && /BOSS/.test(opened.statText), 'the summary names the saga and boss totals');
   check(opened.selected === 'arc11', 'the newest arc is selected by default');
@@ -163,7 +163,7 @@ try {
   check(/HEARTHFALL/.test(prolog.title), 'clicking a chip swaps the detail pane');
   check(/60/.test(prolog.meta), 'Hearthfall reports its sixty rooms');
   check(prolog.selected === 'hearthfall', 'the debug surface follows the selection');
-  check(/1 \/ 14/.test(prolog.counter), 'the arc counter reports its position');
+  check(/1 \/ 15/.test(prolog.counter), 'the arc counter reports its position');
 
   await evaluate(`document.querySelector('[data-story-arc="rift"]').click()`);
   await sleep(150);

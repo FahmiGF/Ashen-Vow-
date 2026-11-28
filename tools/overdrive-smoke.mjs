@@ -92,7 +92,7 @@ try {
     chapters: window.__ashen.overdrive.chapters.length,
     btn: !!document.getElementById('btn-overdrive-menu'),
   }))()`);
-  check(boot.title.includes('v0.44.0') && boot.version === '0.44.0', `boots as v0.44.0 (${boot.title})`);
+  check(boot.title.includes('v0.45.0') && boot.version === '0.45.0', `boots as v0.45.0 (${boot.title})`);
   check(boot.btn === true && boot.chapters === 10, `menu & 10 chapters ready (${boot.chapters})`);
 
   const locked = await evaluate(`(() => {

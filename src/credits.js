@@ -77,6 +77,14 @@ export const CREDIT_ARCS = [
     line: 'The Architect of Eternity gugur. Dominion berpindah tangan.',
   },
   {
+    id: 'unwritten',
+    numeral: 'UNWRITTEN',
+    title: 'THE UNWRITTEN EXPANSE',
+    subtitle: 'Tepi perkamen di luar halaman terakhir.',
+    bosses: { unwritten: ['unwritten_blank_author'] },
+    line: 'The Blank Author meletakkan pena. Halaman terakhir kini milikmu.',
+  },
+  {
     id: 'eclipse',
     numeral: 'ARC VIII',
     title: 'ECLIPSE OF THE FORGOTTEN GODS',

@@ -1,4 +1,11 @@
-# Ashen Vow — v0.44.0
+# Ashen Vow — v0.45.0
+
+## v0.45.0 — Update XXXV: The Unwritten Expanse, Oath Sigils & Ink Severance [G]
+
+**The Unwritten Expanse** (`src/unwritten.js`, Phase 4.2) opens the long-teased margin beyond Astral & The Rift with **30 playable rooms (`901–930`)** across 3 chapters (`ALL_ROOMS = 931`, `ALL_BOSS_INFO = 146`, `ALL_ENEMY_INFO = 380`), **6 `unwritten_*` enemies**, **4 multi-phase bosses** ending with **The Blank Author**, and **Resonance-linked Oath Sigils**:
+
+- **Oath Sigils & Ink Severance (`[G]`)**: Equip 4 unlockable Oath Sigils (*Blank Page*, *Scorched Ink*, *Quicksilver Nib*, *Author's Vow*) that unlock passive scaling at Oath Resonance `C+`/`B+`/`A+` and unleash an **Ink Severance (`KeyG`)** shockwave at Rank `B+` (`35%+` Resonance).
+- **Updated PRD & Story Map**: [phase-4-through-the-rift.md](docs/prd/phase-4-through-the-rift.md) marks `v0.45.0` **SHIPPED**, with `v0.46.0` (*Arc V: The Ashfall Accord*) next.
 
 ## v0.44.0 — Update XXXIV: Arc IV: The Rift, Phase-Shift [F] & Oath Resonance
 

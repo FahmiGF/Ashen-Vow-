@@ -7,6 +7,23 @@ export { GAME_VERSION };
 
 export const UPDATE_LOG = [
   {
+    version: '0.45.0',
+    date: '28 November 2026',
+    title: 'UPDATE XXXV — THE UNWRITTEN EXPANSE, OATH SIGILS & INK SEVERANCE [G]',
+    tag: '30 RUANG BARU (901–930) · 4 BOS BARU · 6 MUSUH UNWRITTEN · 4 OATH SIGILS · INK SEVERANCE [G] · 931 RUANG · 146 BOS',
+    summary:
+      'Fase 4.2 menghadirkan The Unwritten Expanse di tepi luar Astral Dominion dan Arc IV The Rift: 30 ruang ekspedisi baru (901–930) di 3 bab (Blank Cartography, Margins of Memory, The Final Blank), 6 musuh unwritten_*, 4 bos multi-fase sampai The Blank Author (4 fase, victory), serta sistem Oath Sigils yang terhubung langsung dengan Oath Resonance dan jurus aktif Ink Severance [G].',
+    highlights: [
+      'The Unwritten Expanse (Ruang 901–930): 3 bab × 10 tahap dengan anomali bergantian (Ink Tide, Half-Drawn Gravity, Resonance Surge), membawa total game menjadi 931 ruang, 146 bos, dan 380 tipe musuh.',
+      'Empat Bos Tepi Perkamen: The Unwritten Scribe (3 fase), Palimpsest Warden (3 fase), Margin Archivist (2 fase), hingga The Blank Author (4 fase, reward: victory) dengan dua track musik baru (unwritten & unwrittenBoss).',
+      'Oath Sigils & Ink Severance [G]: kumpulkan dan pasang 4 Segel Sumpah (Blank Page, Scorched Ink, Quicksilver Nib, Author’s Vow) yang mengaktifkan bonus pasif pada peringkat Resonance C+/B+/A+ serta melepaskan gelombang kejut Ink Severance [G] di peringkat B+ (35%).',
+      'Peta Kisah, Kredit & PRD Fase 4: The Unwritten Expanse resmi tercatat di STORY_ARCS dan CREDIT_ARCS, sementara PRD Fase 4 menandai v0.45.0 SHIPPED menuju v0.46.0 Arc V: The Ashfall Accord.',
+    ],
+    fixes: [
+      'Lencana HUD #sigil-badge menampilkan Segel Sumpah aktif dan status siap/cooldown Ink Severance [G] secara langsung.',
+    ],
+  },
+  {
     version: '0.44.0',
     date: '28 November 2026',
     title: 'UPDATE XXXIV — ARC IV: THE RIFT, PHASE-SHIFT [F] & OATH RESONANCE',

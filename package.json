@@ -1,9 +1,9 @@
 {
   "name": "ashen-vow",
-  "version": "0.44.0",
+  "version": "0.45.0",
   "private": true,
   "type": "module",
-  "description": "Ashen Vow v0.44.0 - Update XXXIV: Arc IV The Rift (27 rooms 874-900, 6 bosses ending on The Devilish Scum), Dual-Reality Fracture & Phase-Shift [F], and Campaign-Wide Oath Resonance (D -> ASHEN)",
+  "description": "Ashen Vow v0.45.0 - Update XXXV: The Unwritten Expanse (30 rooms 901-930, 4 bosses ending on The Blank Author), Oath Sigils & Ink Severance [G]",
   "scripts": {
     "start": "node server.js",
     "test": "node --test tests/*.test.js",
@@ -26,6 +26,7 @@
     "smoke:frontiers": "node tools/frontiers-smoke.mjs",
     "smoke:overdrive": "node tools/overdrive-smoke.mjs",
     "smoke:rift": "node tools/rift-smoke.mjs",
+    "smoke:unwritten": "node tools/unwritten-smoke.mjs",
     "smoke:fallen": "node tools/fallen-smoke.mjs",
     "audit:gadgets": "node tools/gadget-audit.mjs",
     "smoke:crusade": "node tools/crusade-smoke.mjs",

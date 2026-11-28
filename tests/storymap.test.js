@@ -85,10 +85,10 @@ test('Arc IV The Rift is now unlocked and playable alongside the other arcs', ()
 
 test('shipped arcs claim rooms that exist in ALL_ROOMS', () => {
   const roomCount = ALL_ROOMS.length;
-  assert.equal(roomCount, 901, 'the room table is the reference count');
+  assert.equal(roomCount, 931, 'the room table is the reference count');
 
   const claims = STORY_ARCS.filter((arc) => /\d+ ruang/.test(arc.scope));
-  assert.ok(claims.length >= 9);
+  assert.ok(claims.length >= 10);
 
   let total = 0;
   for (const arc of claims) {
@@ -97,9 +97,9 @@ test('shipped arcs claim rooms that exist in ALL_ROOMS', () => {
     total += count;
   }
 
-  // 474 authored arc rooms + 27 Arc IV Rift rooms (874-900) + 100 Echoes levels (14–113) + 100 Godfall floors
-  // (562–661) + 100 Infinite Frontiers (674–773) + 100 Overdrive (774–873) = 901.
-  assert.equal(total, 501);
+  // 474 authored arc rooms + 27 Arc IV Rift rooms (874-900) + 30 Unwritten Expanse rooms (901-930) + 100 Echoes levels (14–113) + 100 Godfall floors
+  // (562–661) + 100 Infinite Frontiers (674–773) + 100 Overdrive (774–873) = 931.
+  assert.equal(total, 531);
   const echoes = storyArcFor('echoes');
   assert.match(echoes.scope, /100 level/);
   assert.equal(total + 100 + 100 + 100 + 100, roomCount);

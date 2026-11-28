@@ -29,7 +29,7 @@ test('Arc IV The Rift appends 27 playable rooms (874–900), 8 enemies, and 6 bo
   assert.equal(Object.keys(RIFT_ENEMY_INFO).length, 8);
   assert.equal(Object.keys(RIFT_BOSS_INFO).length, 6);
   assert.equal(RIFT_ROOMS.length, 27);
-  assert.equal(ALL_ROOMS.length, 901);
+  assert.equal(ALL_ROOMS.length, 931);
   assert.equal(ALL_ROOMS[874].id, 874);
   assert.equal(ALL_ROOMS[900].id, 900);
   assert.equal(ALL_ROOMS[900].secret, true);

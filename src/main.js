@@ -724,6 +724,22 @@ import {
   riftSummary,
 } from './rift.js';
 import {
+  UNWRITTEN_ROOM_START,
+  UNWRITTEN_ROOM_COUNT,
+  UNWRITTEN_CHAPTERS,
+  UNWRITTEN_SIGILS,
+  UNWRITTEN_SIGIL_BY_ID,
+  UNWRITTEN_BOSS_INFO,
+  INK_SEVERANCE_MIN_RESONANCE,
+  defaultUnwrittenProgress,
+  sanitizeUnwrittenProgress,
+  unwrittenUnlocked,
+  recordUnwrittenRoom,
+  recordUnwrittenBoss,
+  equipUnwrittenSigil,
+  unwrittenSummary,
+} from './unwritten.js';
+import {
   LABYRINTH_VERSION,
   LABYRINTH_NAME,
   LABYRINTH_MODES,
@@ -4624,6 +4640,10 @@ function updateMenuProgress() {
   if (riftButton) {
     riftButton.classList.toggle('hidden', !riftUnlocked(progress));
   }
+  const unwrittenButton = $('btn-unwritten-menu');
+  if (unwrittenButton) {
+    unwrittenButton.classList.toggle('hidden', !unwrittenUnlocked(progress));
+  }
 }
 
 // ── expansion progression ────────────────────────────────────────────────
@@ -8199,6 +8219,10 @@ function retryRun() {
   }
   if (activeRunKind === 'rift') {
     startRiftRoom(Math.max(RIFT_ROOM_START, game.roomIndex || RIFT_ROOM_START));
+    return;
+  }
+  if (activeRunKind === 'unwritten') {
+    startUnwrittenRoom(Math.max(UNWRITTEN_ROOM_START, game.roomIndex || UNWRITTEN_ROOM_START));
     return;
   }
   if (activeRunKind === 'pack' && activePackIndex >= 0) {
@@ -13724,6 +13748,19 @@ window.addEventListener('keydown', (e) => {
     return;
   }
 
+  if (e.code === 'KeyG' && activeRunKind !== 'crusade' && game.state === 'playing' && !e.repeat) {
+    const res = game.inkSeverance();
+    if (res.ok) {
+      progress.unwritten = sanitizeUnwrittenProgress(progress.unwritten);
+      progress.unwritten.severances += 1;
+      updateHud();
+      showToast(`✒ INK SEVERANCE (${res.hits} target)`, 900);
+    } else if (res.reason === 'resonance') {
+      showToast('Butuh Oath Resonance B+ (35%) untuk Ink Severance [G].', 900);
+    }
+    return;
+  }
+
   const action = actionForCode(settings, e.code);
   if (action && game.state === 'playing') {
     keys[action] = true;
@@ -15428,6 +15465,14 @@ $('btn-rift-back')?.addEventListener('click', () => showMenu());
 $('rift-badge')?.addEventListener('click', () => {
   if (started && menuView === 'none' && game.state === 'playing' && game.phaseShift()) updateHud();
 });
+$('btn-unwritten-menu')?.addEventListener('click', () => showUnwrittenScreen());
+$('btn-unwritten-back')?.addEventListener('click', () => showMenu());
+$('sigil-badge')?.addEventListener('click', () => {
+  if (started && menuView === 'none' && game.state === 'playing') {
+    const res = game.inkSeverance();
+    if (res.ok) updateHud();
+  }
+});
 $('crusade-hud')?.addEventListener('click', (event) => {
   if (event.target.closest('[data-crusade-action="strike"]')) crusadeStrike();
 });
@@ -16290,6 +16335,7 @@ function syncScreens() {
   $('crusade-screen')?.classList.toggle('hidden', menuView !== 'crusade' || covered);
   $('crusade-clear-screen')?.classList.toggle('hidden', !(crusadeClearOpen && started));
   $('rift-screen')?.classList.toggle('hidden', menuView !== 'rift' || covered);
+  $('unwritten-screen')?.classList.toggle('hidden', menuView !== 'unwritten' || covered);
   $('speedrun-screen')?.classList.toggle('hidden', menuView !== 'speedrun' || covered);
   $('editor-screen')?.classList.toggle('hidden', menuView !== 'editor' || covered);
   $('fishing-screen')?.classList.toggle('hidden', menuView !== 'fishing' || covered);
@@ -16507,6 +16553,18 @@ function updateHud() {
       riftBadge.classList.toggle('phase-a', game.fracturePhase === 0);
       riftBadge.classList.toggle('cooldown', cd > 0);
     }
+  }
+
+  const sigilBadge = $('sigil-badge');
+  if (sigilBadge) {
+    const sigil = UNWRITTEN_SIGIL_BY_ID[game.oathSigilId] || UNWRITTEN_SIGIL_BY_ID.blank_page;
+    const ready = (game.resonance || 0) >= INK_SEVERANCE_MIN_RESONANCE && (game.inkSeveranceCooldown || 0) <= 0;
+    const cd = game.inkSeveranceCooldown || 0;
+    sigilBadge.textContent = cd > 0
+      ? `${sigil.glyph} ${sigil.name.split(' ').pop().toUpperCase()} (${cd.toFixed(1)}s)`
+      : `${sigil.glyph} ${sigil.name.split(' ').pop().toUpperCase()} [G]`;
+    sigilBadge.classList.toggle('ready', ready);
+    sigilBadge.classList.toggle('cooldown', !ready);
   }
 
   const boss = hud.boss;
@@ -16872,10 +16930,24 @@ function drainEvents() {
           progress.rift = recordRiftBoss(progress.rift, ev.kind);
           saveProgress();
           if (ev.kind === 'rift_devilish_scum') {
-            showToast('THE DEVILISH SCUM TUMBANG — Arc IV: The Rift ditaklukkan!', 3200);
+            showToast('THE DEVILISH SCUM TUMBANG — Arc IV: The Rift & The Unwritten Expanse terbuka!', 3200);
           } else {
             showToast(`◈ Bos Celah gugur: ${ev.name}`, 2400);
           }
+        }
+      } else if (activeRunKind === 'unwritten') {
+        if (ev.type === 'gatePass') {
+          progress.unwritten = recordUnwrittenRoom(progress.unwritten, ev.from);
+          saveProgress();
+        } else if (ev.type === 'bossDown') {
+          progress.unwritten = recordUnwrittenBoss(progress.unwritten, ev.kind);
+          saveProgress();
+          showToast(
+            ev.kind === 'unwritten_blank_author'
+              ? 'THE BLANK AUTHOR MELETAKKAN PENA — The Unwritten Expanse ditaklukkan!'
+              : `✒ Bos Tepi Perkamen gugur: ${ev.name}`,
+            3000,
+          );
         }
       } else if (activeRunKind === 'eclipse') {
         if (ev.type === 'gatePass') {
@@ -17040,9 +17112,11 @@ function desiredTrack() {
   if (menuView === 'crusadeMenu') return 'hearth';
   if (menuView === 'crusade') return 'cinderworks';
   if (menuView === 'rift') return 'rift';
+  if (menuView === 'unwritten') return 'unwritten';
   if (menuView === 'eclipse') return 'forgotten';
   if (started && !spectating && menuView === 'none') {
     if (activeRunKind === 'rift') return game.boss && game.state === 'playing' ? 'riftBoss' : 'rift';
+    if (activeRunKind === 'unwritten') return game.boss && game.state === 'playing' ? 'unwrittenBoss' : 'unwritten';
     if ((activeRunKind === 'eclipse' || activeRunKind === 'raid') && game.room) return game.boss && game.state === 'playing' ? 'bossJudge' : (game.room.music || 'forgotten');
     if (activeRunKind === 'godfall' && game.room) return game.boss && game.state === 'playing' ? 'bossJudge' : (game.room.music || 'lastvigil');
     if (game.state === 'victory') {
@@ -18655,8 +18729,129 @@ function showRiftScreen() {
   syncScreens();
 }
 
+function startUnwrittenRoom(roomIndex = UNWRITTEN_ROOM_START) {
+  const target = clamp(Math.floor(Number(roomIndex) || UNWRITTEN_ROOM_START), UNWRITTEN_ROOM_START, UNWRITTEN_ROOM_START + UNWRITTEN_ROOM_COUNT - 1);
+  if (typeof trailerActive !== 'undefined' && trailerActive) closeTrailer();
+  cancelPrologue();
+  closeDialogue(true);
+  started = true;
+  paused = false;
+  shopOpen = false;
+  mapOpen = false;
+  codexOpen = false;
+  inventoryOpen = false;
+  settingsOpen = false;
+  spectating = false;
+  spectateGame = null;
+  activeRunKind = 'unwritten';
+  menuView = 'none';
+  progress.unwritten = sanitizeUnwrittenProgress(progress.unwritten);
+  progress.unwritten.unlocked = true;
+  game.reset();
+  game.state = 'playing';
+  game.setOathSigil(progress.unwritten.equippedSigil);
+  game.loadRoom(target);
+  clearHeldKeys();
+  syncScreens();
+  updateHud();
+}
+
+function buildUnwrittenScreen() {
+  progress.unwritten = sanitizeUnwrittenProgress(progress.unwritten);
+  const summary = unwrittenSummary(progress);
+  const sumEl = $('unwritten-summary');
+  if (sumEl) {
+    sumEl.innerHTML = [
+      ['LEMBAR', `${summary.rooms}/${summary.totalRooms}`],
+      ['BOS', `${summary.bosses}/${summary.totalBosses}`],
+      ['SEGEL', `${summary.sigils}/${summary.totalSigils}`],
+      ['SEVERANCE', String(summary.severances)],
+    ]
+      .map(([label, value]) => `<div class="crusade-stat"><span>${label}</span><strong>${value}</strong></div>`)
+      .join('');
+  }
+  const sigilWrap = $('unwritten-sigils');
+  if (sigilWrap) {
+    sigilWrap.innerHTML = UNWRITTEN_SIGILS.map((sigil) => {
+      const owned = progress.unwritten.sigils.includes(sigil.id);
+      const equipped = progress.unwritten.equippedSigil === sigil.id;
+      return `<article class="crusade-card ${owned ? 'earned' : 'unseen'}">
+        <strong>${sigil.glyph} ${esc(sigil.name)}</strong>
+        <em>${equipped ? 'TERPASANG' : owned ? `TERBUKA (${sigil.minRank}+)` : 'TERKUNCI'}</em>
+        <p>${esc(sigil.summary)}</p>
+        ${owned && !equipped ? `<button type="button" class="btn btn-ghost" data-sigil-equip="${sigil.id}">PASANG SEGEL</button>` : ''}
+      </article>`;
+    }).join('');
+    sigilWrap.querySelectorAll('[data-sigil-equip]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        progress.unwritten = equipUnwrittenSigil(progress.unwritten, btn.dataset.sigilEquip);
+        game.setOathSigil(progress.unwritten.equippedSigil);
+        saveProgress();
+        buildUnwrittenScreen();
+      });
+    });
+  }
+  const body = $('unwritten-body');
+  if (body) {
+    body.innerHTML = `<div class="crusade-grid">${UNWRITTEN_CHAPTERS.map((ch) => {
+      const boss = UNWRITTEN_BOSS_INFO[ch.boss];
+      const bossDown = !!progress.unwritten.bosses[ch.boss];
+      return `<article class="crusade-card ${bossDown ? 'earned' : ''}">
+        <strong>${ch.glyph} ${esc(ch.name)}</strong>
+        <em>${bossDown ? 'DITAKLUKKAN' : `RUANG ${ch.roomStart}–${ch.roomEnd}`}</em>
+        <p>${esc(ch.gimmick)}</p>
+        <p class="crusade-card-meta">Bos: ${esc(boss?.name || ch.boss)}</p>
+        <button type="button" class="btn btn-primary" data-unwritten-start="${ch.roomStart}">MASUK BAB ${ch.order}</button>
+      </article>`;
+    }).join('')}</div>`;
+    body.querySelectorAll('[data-unwritten-start]').forEach((btn) => {
+      btn.addEventListener('click', () => startUnwrittenRoom(Number(btn.dataset.unwrittenStart)));
+    });
+  }
+}
+
+function showUnwrittenScreen() {
+  cancelPrologue();
+  started = false;
+  paused = false;
+  shopOpen = false;
+  mapOpen = false;
+  codexOpen = false;
+  inventoryOpen = false;
+  settingsOpen = false;
+  closeDialogue(true);
+  spectating = false;
+  spectateGame = null;
+  menuView = 'unwritten';
+  game.reset();
+  clearHeldKeys();
+  buildUnwrittenScreen();
+  syncScreens();
+}
+
 // ── debug hooks (used by automated smoke tests) ─────────────────────────
 window.__ashen = {
+  get unwritten() {
+    return {
+      ...unwrittenSummary(progress),
+      roomIndex: game.roomIndex,
+      oathSigilId: game.oathSigilId,
+      inkSeveranceCooldown: Number((game.inkSeveranceCooldown || 0).toFixed(2)),
+    };
+  },
+  unwrittenStart(roomIndex = UNWRITTEN_ROOM_START) {
+    startUnwrittenRoom(roomIndex);
+    return { ok: true, room: game.roomIndex };
+  },
+  inkSeverance(force = false) {
+    return game.inkSeverance(force);
+  },
+  equipOathSigil(sigilId) {
+    progress.unwritten = equipUnwrittenSigil(progress.unwritten, sigilId);
+    game.setOathSigil(progress.unwritten.equippedSigil);
+    saveProgress();
+    return { ok: game.oathSigilId === sigilId, equipped: game.oathSigilId };
+  },
   get rift() {
     return {
       ...riftSummary(progress),

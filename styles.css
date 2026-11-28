@@ -7433,3 +7433,17 @@ html[lang='ar'] .settings2-inner, html[lang='ar'] .screen-inner { font-family: v
   color: #ffb8c8;
   background: rgba(54, 14, 32, 0.78);
 }
+
+.sigil-badge {
+  cursor: pointer;
+  border-color: rgba(232, 215, 174, 0.55);
+  color: #f3e6c4;
+  background: rgba(34, 28, 42, 0.78);
+}
+
+.sigil-badge.ready {
+  border-color: rgba(255, 215, 138, 0.9);
+  color: #fff6dc;
+  background: rgba(74, 54, 24, 0.85);
+  box-shadow: 0 0 12px rgba(255, 215, 138, 0.45);
+}

@@ -1,6 +1,6 @@
 # Phase 4 PRD — Through the Rift (v0.44.0+)
 
-> Status: **v0.44.0 SHIPPED** (Arc IV — The Rift + Oath Resonance) · **v0.45.0–v0.46.0 PLANNED**
+> Status: **v0.44.0 SHIPPED** (Arc IV — The Rift) · **v0.45.0 SHIPPED** (The Unwritten Expanse + Oath Sigils) · **v0.46.0 NEXT** (Arc V — The Ashfall Accord)
 
 ## 1. Shipped in v0.44.0 (Update XXXIV)
 
@@ -30,6 +30,6 @@
 | Milestone | Target | Status | Scope & Exit Criteria |
 | --- | --- | --- | --- |
 | **v0.44.0 · Arc IV — The Rift** | Phase 4.1 | **SHIPPED** | 27 rooms (`874–900`), 6 bosses ending on The Devilish Scum, Dual-Reality Fracture `[F]`, Oath Resonance meter, Story Map & Credits wired, Chrome smoke + Node tests green. |
-| **v0.45.0 · The Unwritten Expanse** | Phase 4.2 | **NEXT / PLANNED** | Post-Astral & Post-Rift frontier wing: procedural/handcrafted hybrid expedition rooms (`901–930`), Resonance-linked Oath Sigils, and Phase 3 unique boss state-machine refactors for Frontier/Overdrive seats. |
-| **v0.46.0 · Arc V — The Ashfall Accord** | Phase 4.3 | **PLANNED** | Resolve the reserved `Arc V` slot in `MASTERPLAN` & Story Map with faction diplomacy/betrayal encounters and dual-stance weapon switching. |
+| **v0.45.0 · The Unwritten Expanse** | Phase 4.2 | **SHIPPED** | 30 expedition rooms (`901–930`) across 3 chapters, 6 `unwritten_*` enemies, 4 bosses ending on **The Blank Author**, 4 Resonance-linked **Oath Sigils**, and **Ink Severance `[G]`**. |
+| **v0.46.0 · Arc V — The Ashfall Accord** | Phase 4.3 | **NEXT / PLANNED** | Resolve the reserved `Arc V` slot in `MASTERPLAN` & Story Map with faction diplomacy/betrayal encounters and dual-stance weapon switching. |
 | **v0.47.0 · Masterplan P2–P3 Perf & Audio** | Phase 5 | **PLANNED** | Further startup bundle splitting (`≤900 KB` cold JS target), 30-minute memory soak verification, and 4-player co-op bandwidth profiling. |

@@ -256,12 +256,12 @@ test('Update XV remains documented after the Unwritten Wing expansion', () => {
   }
 });
 
-test('the latest update documents Arc IV The Rift, Phase-Shift [F] & Oath Resonance', () => {
+test('the latest update documents The Unwritten Expanse, Oath Sigils & Ink Severance [G]', () => {
   const latest = LATEST_UPDATE;
-  assert.equal(latest.version, '0.44.0');
+  assert.equal(latest.version, '0.45.0');
   assert.equal(latest.version, GAME_VERSION);
   const text = [latest.title, latest.summary, ...latest.highlights, ...(latest.fixes || [])].join(' ');
-  for (const pattern of [/The Rift/i, /874–900/, /The Devilish Scum/i, /\[F\]/, /Oath Resonance/i, /ASHEN/, /901/, /Phase-Shift/i]) {
+  for (const pattern of [/Unwritten Expanse/i, /901–930/, /The Blank Author/i, /\[G\]/, /Oath Sigil/i, /Ink Severance/i, /931/]) {
     assert.match(text, pattern);
   }
 });

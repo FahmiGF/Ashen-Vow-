@@ -7,6 +7,7 @@ import { BIOMES } from './expansion.js';
 import { COURT_ZONES } from './court.js';
 import { FAIRY_ZONE } from './fairy.js';
 import { RIFT_ZONE } from './rift.js';
+import { UNWRITTEN_ZONE } from './unwritten.js';
 
 export const ZONES = {
   ashen: {
@@ -202,6 +203,18 @@ ZONES[RIFT_ZONE.id] = {
   bossMusic: RIFT_ZONE.bossMusic,
   particle: RIFT_ZONE.particle,
   palette: { ...RIFT_ZONE.palette },
+};
+
+ZONES[UNWRITTEN_ZONE.id] = {
+  id: UNWRITTEN_ZONE.id,
+  name: UNWRITTEN_ZONE.name,
+  subtitle: UNWRITTEN_ZONE.localName,
+  color: UNWRITTEN_ZONE.color,
+  mapColor: UNWRITTEN_ZONE.color,
+  music: UNWRITTEN_ZONE.music,
+  bossMusic: UNWRITTEN_ZONE.bossMusic,
+  particle: UNWRITTEN_ZONE.particle,
+  palette: { ...UNWRITTEN_ZONE.palette },
 };
 
 export const ZONE_IDS = Object.keys(ZONES);

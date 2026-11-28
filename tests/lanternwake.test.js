@@ -34,7 +34,7 @@ test('the chapter is appended after the cistern without moving any room', () => 
   assert.equal(LANTERN_HALL_COUNT, 4);
   LANTERN_ROOMS.forEach((room, i) => assert.equal(room.id, LANTERN_ROOM_START + i));
   assert.equal(roomById(668).name, 'Gua Surut', 'the cistern still ends at 668');
-  assert.equal(ALL_ROOMS.length, 901, 'Frontiers, Overdrive and Arc IV Rift follow the Lanternwake');
+  assert.equal(ALL_ROOMS.length, 931, 'Frontiers, Overdrive, Arc IV Rift and Unwritten Expanse follow the Lanternwake');
   assert.equal(roomById(673).lanternwake, true, 'the Lanternwake still owns 669-673');
   assert.equal(roomById(674).frontier, true, 'the next table entry is a Frontier room');
   for (const room of LANTERN_ROOMS) {
