@@ -4,10 +4,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#0b0807" />
-    <title>Ashen Vow — v0.36.0</title>
+    <title>Ashen Vow — v0.45.0</title>
     <meta
       name="description"
-      content="Ashen Vow adalah metroidvania medieval 2D dengan combat pedang real-time, 426 ruang, 72 boss, mode Speedrun satu nyawa, 100 level ekspansi, Wave Defense dengan 24 gelombang dan 12 menara, Pirate Tide dengan laut terbuka dan meriam broadside, Riftwar MOBA 5v5 dengan 28 kelas, Thornveil Haven, peta, jam langsung, dan indeks sumpah."
+      content="Ashen Vow adalah metroidvania medieval 2D dengan combat pedang real-time, 931 ruang, 146 boss, The Unwritten Expanse (Oath Sigils & Ink Severance [G]), Arc IV The Rift (Dual-Reality Phase-Shift [F] & Oath Resonance), Infinite Frontiers 101–200, Overdrive 201–300, Peta Sumpah (Map Editor), Peta Kisah, mode Speedrun satu nyawa, Wave Defense dengan 20 ikon menara, 9 medan dan partikel 4x, Pirate Tide, Riftwar MOBA 5v5, Thornveil Haven, dan Scary Mode 2D/3D."
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -30,6 +30,7 @@
     <link rel="stylesheet" href="./styles-veil.css" />
     <link rel="stylesheet" href="./styles-eternal.css" />
     <link rel="stylesheet" href="./styles-archive.css" />
+    <link rel="stylesheet" href="./styles-frontiers.css" />
     <link
       rel="icon"
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%230b0807'/%3E%3Cpath d='M32 6l7 18 18 8-18 8-7 18-7-18-18-8 18-8z' fill='%23d08a45'/%3E%3C/svg%3E"
@@ -188,6 +189,9 @@
                   <span id="weapon-badge" class="weapon-badge">PEDANG</span>
                   <span id="ammo-badge" class="ammo-badge">SHURIKEN 0</span>
                   <span id="ability-badge" class="ability-badge ready">⚡ SKILL [U]</span>
+                  <span id="resonance-badge" class="ability-badge resonance-badge">✦ RESONANCE D</span>
+                  <span id="rift-badge" class="ability-badge rift-badge hidden">◈ FASA A [F]</span>
+                  <span id="sigil-badge" class="ability-badge sigil-badge">✒ SEGEL [G]</span>
                 </div>
                 <div id="atlas-quickbar" class="atlas-quickbar hidden" aria-label="Slot cepat Atlas"></div>
                 <div id="crusade-hud" class="crusade-hud hidden" aria-label="Valor Chain Perang Salib">
@@ -227,12 +231,16 @@
             </div>
             <div class="hud-right">
               <div id="speedrun-badge" class="speedrun-badge hidden">⚡ 2× · 1 NYAWA</div>
+              <div id="custom-badge" class="custom-badge hidden">🎯 NORMAL · 1.8×</div>
+              <div id="frontier-badge" class="custom-badge frontier-hud-badge hidden">🜂 LV 101 · SHATTERED CONTINENT</div>
+              <div id="overdrive-badge" class="custom-badge frontier-hud-badge hidden">⚡ LV 201 · DROWNED CAPITAL · MANA 100 · [Q]</div>
               <div class="ash-badge" title="Abu — mata uang Warung Abu">
                 <span>✦</span>
                 <strong id="ash-count">0</strong>
                 <em>ABU</em>
               </div>
               <button id="sound-btn" class="sound-btn" type="button" title="Suara (M)" aria-label="Suara">♪</button>
+              <button id="btn-hud-settings" class="sound-btn hud-settings-btn" type="button" title="Settings" aria-label="Settings">⚙</button>
               <div class="room-plate">
                 <span id="room-sub" class="room-sub">THE ASHEN GATE</span>
                 <strong id="room-name" class="room-name">Gerbang Abu</strong>
@@ -337,8 +345,9 @@
 
         <!-- ══ MAIN MENU ══ -->
         <section id="title-screen" class="screen title-screen">
+          <button id="btn-settings-top" class="title-settings-corner" type="button" title="Settings" aria-label="Settings">⚙ <span>SETTINGS</span></button>
           <div class="screen-inner title-inner">
-            <p class="eyebrow">SEBUAH SUMPAH DI ANTARA ABU · v0.23.0</p>
+            <p class="eyebrow">SEBUAH SUMPAH DI ANTARA ABU · v0.45.0</p>
             <h1 class="game-title">ASHEN<span>VOW</span></h1>
             <div class="title-rule"><i></i><b>✦</b><i></i></div>
             <p class="lede">
@@ -373,7 +382,11 @@
               </button>
               <button id="btn-map-menu" class="btn btn-ghost menu-btn" type="button">
                 <span>PETA SUMPAH</span>
-                <em>Lihat seluruh perjalanan · M</em>
+                <em>Peta 14 ruang kampanye · pin · M</em>
+              </button>
+              <button id="btn-storymap-menu" class="btn btn-ghost menu-btn storymap-menu-btn" type="button">
+                <span>PETA KISAH</span>
+                <em>Seluruh alur cerita · Hearthfall → Arc XI · V</em>
               </button>
               <button id="btn-codex-menu" class="btn btn-ghost menu-btn" type="button">
                 <span>INDEKS SUMPAH</span>
@@ -459,6 +472,10 @@
                 <span>SPEEDRUN — SATU NYAWA</span>
                 <em>2× → 3× → 4× · tanpa checkpoint</em>
               </button>
+              <button id="btn-editor-menu" class="btn btn-ghost menu-btn editor-menu-btn" type="button">
+                <span>PETA SUMPAH — MAP EDITOR KAMPANYE</span>
+                <em>Buat stage sendiri · musuh · bos · latar · musik · pembuka · kelas · senjata</em>
+              </button>
               <button id="btn-fishing-menu" class="btn btn-ghost menu-btn fishing-menu-btn" type="button">
                 <span>PONDOK UMPAN — MEMANCING</span>
                 <em>9 umpan · 25/50/100 koin · indeks 25 ikan</em>
@@ -470,6 +487,14 @@
               <button id="btn-crusade-menu" class="btn btn-ghost menu-btn crusade-menu-btn hidden" type="button">
                 <span>THE RADIANT CRUSADE — PERANG SALIB</span>
                 <em>Arc III · 5 tingkat · 5 bos · Valor Chain</em>
+              </button>
+              <button id="btn-rift-menu" class="btn btn-ghost menu-btn rift-menu-btn hidden" type="button">
+                <span>THE RIFT — CELAH DUA KENYATAAN</span>
+                <em>Arc IV · 5 wilayah · 27 ruang · 6 bos · Phase-Shift [F]</em>
+              </button>
+              <button id="btn-unwritten-menu" class="btn btn-ghost menu-btn unwritten-menu-btn hidden" type="button">
+                <span>THE UNWRITTEN EXPANSE — TEPI PERKAMEN</span>
+                <em>30 ruang (901–930) · 4 bos · Oath Sigils &amp; Ink Severance [G]</em>
               </button>
               <button id="btn-expansion-menu" class="btn btn-ghost menu-btn expansion-menu-btn" type="button">
                 <span>ECHOES OF THE FORGOTTEN WORLD</span>
@@ -485,7 +510,7 @@
               </button>
               <button id="btn-updates" class="btn btn-ghost menu-btn" type="button">
                 <span>CATATAN UPDATE</span>
-                <em>Riwayat rilis · v0.36.0 · Api Sembilan Sumbu</em>
+                <em>Riwayat rilis · v0.45.0 · The Unwritten Expanse</em>
               </button>
             </nav>
 
@@ -608,7 +633,7 @@
             </div>
 
             <div id="credits-times" class="credits-times"></div>
-            <p class="credit-version">ASHEN VOW · v0.36.0 · 13 PENJAGA · 116 BOSS · 674 RUANG</p>
+            <p class="credit-version">ASHEN VOW · v0.45.0 · 18 KELAS · 146 BOSS · 931 RUANG · UNWRITTEN EXPANSE</p>
             <div class="screen-links">
               <button id="btn-credits-back" class="link-btn" type="button">← KEMBALI KE MENU</button>
             </div>
@@ -625,8 +650,8 @@
               Catatan ini ikut tersimpan di dalam game.
             </p>
             <div class="updates-meta">
-              <span id="updates-version">VERSI SAAT INI · v0.36.0</span>
-              <span>DIPERBARUI 15 NOVEMBER 2026</span>
+              <span id="updates-version">VERSI SAAT INI · v0.45.0</span>
+              <span>DIPERBARUI 27 NOVEMBER 2026</span>
             </div>
             <div id="update-log" class="update-log"></div>
             <div class="screen-links">
@@ -667,7 +692,7 @@
           <div class="screen-inner mode3d-inner">
             <div class="mode3d-header">
               <div>
-                <p class="eyebrow">ASHEN VOW 3D · METROIDVANIA ORANG KETIGA · UPDATE XXI · v0.36.0</p>
+                <p class="eyebrow">ASHEN VOW 3D · METROIDVANIA ORANG KETIGA · UPDATE XXI · v0.38.0</p>
                 <h2 class="screen-title">THORNVEIL FOREST VERTICAL SLICE</h2>
               </div>
               <div class="mode3d-controls-bar">
@@ -751,10 +776,10 @@
         <!-- ══ INFINITE FRONTIERS HUB ══ -->
         <section id="frontier-screen" class="screen hidden">
           <div class="screen-inner frontier-inner">
-            <p class="eyebrow">ASHEN VOW — INFINITE FRONTIERS UPDATE · v0.4.0</p>
+            <p class="eyebrow">ASHEN VOW — INFINITE FRONTIERS · HIDUP SEJAK v0.42.0</p>
             <h2 class="screen-title">BEYOND THE VEIL</h2>
             <p class="screen-sub">
-              Kampanye Level 101–200, 15 Kelas Baru, 15 Elite Mobs, 15 Senjata, Mode 3D, Kingdom Defense, dan Pembangun Dunia 2D &amp; 3D.
+              Kampanye Level 101–200 kini bisa dimainkan: 100 ruang, 10 bos bab, dan elite E2–E7. 15 Kelas, 15 Senjata, Mode 3D, Kingdom Defense, dan Pembangun Dunia tetap ada di tab lain.
             </p>
             <div id="frontier-summary" class="frontier-summary"></div>
             <nav id="frontier-tabs" class="exp-tabs" aria-label="Bagian Infinite Frontiers">
@@ -778,25 +803,25 @@
         <!-- ══ OVERDRIVE HUB ══ -->
         <section id="overdrive-screen" class="screen hidden">
           <div class="screen-inner overdrive-inner">
-            <p class="eyebrow">ASHEN VOW OVERDRIVE · THE ETERNAL REALM · v0.5.0</p>
+            <p class="eyebrow">ASHEN VOW OVERDRIVE · THE ETERNAL REALM · v0.43.0</p>
             <h2 class="screen-title overdrive-title">THE ETERNAL REALM</h2>
             <p class="screen-sub">
-              Level 201–300 · 10 Bab Wilayah Abadi · 8 Sekolah Sihir · 32 Mantra · 8 Bos Multi-Fase · 12 Mode Overdrive.
+              Level 201–300 (Ruang 774–873) · 10 Bab Wilayah Abadi · 8 Sekolah Sihir [Q] · 8 Senjata Legendaris · 10 Bos Bab · 6 Varian Level.
             </p>
             <div id="overdrive-summary" class="overdrive-summary"></div>
             <nav id="overdrive-tabs" class="exp-tabs overdrive-tabs" aria-label="Bagian Overdrive">
               <button class="exp-tab active" type="button" data-tab="campaign301">KAMPANYE 201–300</button>
               <button class="exp-tab" type="button" data-tab="spellschools">8 SEKOLAH SIHIR</button>
-              <button class="exp-tab" type="button" data-tab="bossfase">BOS &amp; FASE</button>
-              <button class="exp-tab" type="button" data-tab="profiler">DIAGNOSTIK PROFILER</button>
-              <button class="exp-tab" type="button" data-tab="modes">MODE OVERDRIVE</button>
-              <button class="exp-tab" type="button" data-tab="checklist">CHECKLIST RILIS (18/18)</button>
+              <button class="exp-tab" type="button" data-tab="legendaries">8 LEGENDARIS</button>
+              <button class="exp-tab" type="button" data-tab="bossfase">10 BOS &amp; FASE</button>
+              <button class="exp-tab" type="button" data-tab="modes">12 MODE OVERDRIVE</button>
+              <button class="exp-tab" type="button" data-tab="profiler">PROFILER &amp; CHECKLIST</button>
             </nav>
             <div id="overdrive-body" class="overdrive-body"></div>
             <div class="screen-links">
               <button id="btn-overdrive-back" class="link-btn" type="button">← KEMBALI KE MENU</button>
             </div>
-            <p class="micro">Kampanye 2D 1–200 tetap utuh. Overdrive adalah kelanjutan langsung dari Infinite Frontiers.</p>
+            <p class="micro">Kampanye 2D 1–200 tetap utuh. Overdrive (774–873) adalah kelanjutan langsung setelah Aethron di Infinite Frontiers.</p>
           </div>
         </section>
 
@@ -988,20 +1013,26 @@
         <!-- ══ WAVE DEFENSE: THE LAST RAMPART ══ -->
         <section id="wd-screen" class="screen hidden">
           <div class="screen-inner wd-inner">
-            <p class="eyebrow">WAVE DEFENSE · 4 BENTENG · 24 GELOMBANG · 14 MENARA · TANPA AKHIR</p>
+            <p class="eyebrow">WAVE DEFENSE · 5 BENTENG · 20 MENARA · 31 MUSUH · 9 BOS · 4 KESULITAN · INFINITOWER</p>
             <h2 class="screen-title wd-title">THE LAST RAMPART</h2>
             <p class="screen-sub">
-              Musuh datang dari gerbang utara. Bangun Ballista, Catapult, Trebuchet, Mage Tower,
-              Cannon Tower, Panji Sumpah dan sembilan menara lain di sepanjang jalan, lalu pertahankan mahkota terakhir.
+              Musuh datang dari gerbang utara. Bangun Ballista, Catapult, Monolit Gema, Tempa Abu,
+              Jangkar Lingkar, Jam Pasir Ketiga dan lima belas menara lain di sepanjang jalan, lalu pertahankan mahkota terakhir —
+              atau masuk ke <b>INFINITOWER</b>, lingkar tanpa kemenangan di mana setiap sepuluh gelombang naik tingkat
+              dan koor di bawah lantai mulai menghitung namamu.
             </p>
             <div id="wd-summary" class="wd-summary"></div>
-            <div class="wd-section-head"><h3>PILIH BENTENG</h3><span id="wd-map-count">4 MEDAN</span></div>
+            <div class="wd-section-head"><h3>KRONIK LINGKAR</h3><span>ENAM TINGKAT · TANPA KEMENANGAN</span></div>
+            <div id="wd-story" class="wd-story"></div>
+            <div class="wd-section-head"><h3>PILIH BENTENG &amp; STAGE</h3><span id="wd-map-count">9 MEDAN</span></div>
             <div id="wd-maps" class="wd-maps"></div>
-            <div class="wd-section-head"><h3>MODE</h3><span>KAMPANYE ATAU TANPA AKHIR</span></div>
+            <div class="wd-section-head"><h3>MODE</h3><span>KAMPANYE · TANPA AKHIR · INFINITOWER</span></div>
             <div id="wd-modes" class="wd-choice-row"></div>
-            <div class="wd-section-head"><h3>KESULITAN</h3><span>GOLD &amp; HP KASTIL BERUBAH</span></div>
+            <div class="wd-section-head"><h3>KESULITAN</h3><span>SQUIRE · KNIGHT · WARLORD · ETERNAL</span></div>
             <div id="wd-difficulties" class="wd-choice-row"></div>
-            <div class="wd-section-head"><h3>MENARA PERTAHANAN</h3><span id="wd-tower-count">14 JENIS</span></div>
+            <div class="wd-section-head"><h3>KEPADATAN PARTIKEL</h3><span id="wd-particle-label">STANDAR (1×)</span></div>
+            <div id="wd-particles" class="wd-choice-row"></div>
+            <div class="wd-section-head"><h3>MENARA PERTAHANAN</h3><span id="wd-tower-count">20 JENIS</span></div>
             <div id="wd-towers" class="wd-tower-grid"></div>
             <div class="wd-start-row">
               <button id="btn-wd-start" class="btn btn-primary" type="button">
@@ -1010,6 +1041,7 @@
               </button>
             </div>
             <div class="screen-links">
+              <button id="btn-wd-trailer" class="link-btn wd-trailer-btn" type="button">▶ PUTAR TRAILER LINGKAR</button>
               <button id="btn-wd-back" class="link-btn" type="button">← KEMBALI KE MENU</button>
             </div>
           </div>
@@ -1051,6 +1083,12 @@
                 <button type="button" data-wd-speed="1" class="active">1×</button>
                 <button type="button" data-wd-speed="2">2×</button>
                 <button type="button" data-wd-speed="3">3×</button>
+              </div>
+              <div id="wd-battle-particles" class="wd-speed" role="group" aria-label="Kepadatan partikel">
+                <button type="button" data-wd-pscale="0.45" title="Partikel Hemat">P:½×</button>
+                <button type="button" data-wd-pscale="1" class="active" title="Partikel Standar">P:1×</button>
+                <button type="button" data-wd-pscale="2" title="Partikel Lebat">P:2×</button>
+                <button type="button" data-wd-pscale="4" title="Partikel Overdrive">P:4×</button>
               </div>
             </div>
             <div id="wd-feed" class="wd-feed"></div>
@@ -1313,6 +1351,40 @@
           </div>
         </section>
 
+        <section id="rift-screen" class="screen hidden">
+          <div class="screen-inner crusade-inner">
+            <p class="eyebrow crusade-eyebrow">ARC IV · DUAL-REALITY FRACTURE · 27 RUANG · 6 BOS</p>
+            <h2 class="screen-title">THE RIFT — CELAH</h2>
+            <p class="screen-sub">
+              Dua kenyataan berimpit di bawah Perang Salib. Pelat Fasa A dan Fasa B bergantian tiap 8 detik;
+              tekan <strong>[F]</strong> untuk Phase-Shift seketika, memecah Selubung Celah, dan membangun
+              <strong>Oath Resonance</strong> hingga peringkat <strong>ASHEN</strong>.
+            </p>
+            <div id="rift-summary" class="crusade-summary"></div>
+            <div id="rift-body" class="crusade-body"></div>
+            <div class="screen-links">
+              <button id="btn-rift-back" class="link-btn" type="button">← KEMBALI KE MENU</button>
+            </div>
+          </div>
+        </section>
+
+        <section id="unwritten-screen" class="screen hidden">
+          <div class="screen-inner crusade-inner">
+            <p class="eyebrow crusade-eyebrow">FASE 4.2 · 30 RUANG (901–930) · 4 BOS · OATH SIGILS</p>
+            <h2 class="screen-title">THE UNWRITTEN EXPANSE</h2>
+            <p class="screen-sub">
+              Bentangan putih di luar halaman Astral dan Celah. Pasang <strong>Oath Sigil</strong> pilihanmu dan
+              lepaskan <strong>Ink Severance [G]</strong> begitu Oath Resonance mencapai peringkat <strong>B+</strong>.
+            </p>
+            <div id="unwritten-summary" class="crusade-summary"></div>
+            <div id="unwritten-sigils" class="crusade-grid"></div>
+            <div id="unwritten-body" class="crusade-body"></div>
+            <div class="screen-links">
+              <button id="btn-unwritten-back" class="link-btn" type="button">← KEMBALI KE MENU</button>
+            </div>
+          </div>
+        </section>
+
         <section id="crusade-clear-screen" class="screen overlay-screen crusade-clear-screen hidden">
           <div class="screen-inner narrow">
             <p class="eyebrow crusade-eyebrow">PALADIN TEMPLAR GUGUR · GERBANG TERBUKA</p>
@@ -1323,6 +1395,63 @@
         </section>
 
         <!-- ══ SPEEDRUN HUB ══ -->
+        <!-- ══ CAMPAIGN MAP EDITOR ══ -->
+        <section id="editor-screen" class="screen hidden">
+          <div class="screen-inner editor-inner">
+            <p class="eyebrow">PETA SUMPAH · MAP EDITOR KAMPANYE · MESIN YANG SAMA DENGAN KAMPANYE</p>
+            <h2 class="screen-title">BANGUN STAGEMU SENDIRI</h2>
+            <p class="screen-sub">
+              Gambar medan sendiri di kanvas, pilih latar zona, track musik, pembuka sinematik, kelas,
+              senjata, flask, dan abu awal. Tandai musuh sebagai elite, pilih objektif bersihkan atau
+              bertahan, atur takaran dari Mode Cerita sampai Abisal, lalu baca meter keseimbangan sebelum
+              memainkannya. Sambungkan sampai enam ruang jadi satu rantai, lalu bagikan petamu lewat kode.
+            </p>
+            <div id="editor-summary" class="exp-summary editor-summary"></div>
+            <div class="editor-layout">
+              <aside class="editor-panel">
+                <h3>DAFTAR PETA</h3>
+                <ol id="editor-list" class="editor-list"></ol>
+                <div class="editor-list-actions">
+                  <button id="editor-new" class="btn btn-ghost btn-compact" type="button">PETA BARU</button>
+                  <button id="editor-duplicate" class="btn btn-ghost btn-compact" type="button">DUPLIKAT</button>
+                  <button id="editor-delete" class="btn btn-ghost btn-compact" type="button">HAPUS</button>
+                  <button id="editor-save" class="btn btn-ghost btn-compact" type="button">SIMPAN</button>
+                </div>
+                <h3 class="editor-presets-title">MULAI DARI PRESET</h3>
+                <div id="editor-presets" class="editor-presets">
+                  <button type="button" data-editor-preset="preset_hall">Aula Latihan</button>
+                  <button type="button" data-editor-preset="preset_duel">Duel Penjaga</button>
+                  <button type="button" data-editor-preset="preset_gauntlet">Gelombang Abu</button>
+                  <button type="button" data-editor-preset="preset_siege">Pengepungan 60 Detik</button>
+                </div>
+                <p class="editor-empty">Maksimal 20 peta, dan satu rantai boleh berisi sampai enam ruang. Empat preset sudah tersedia sebagai titik awal.</p>
+              </aside>
+              <div id="editor-form" class="editor-panel"></div>
+            </div>
+            <div id="editor-message" class="editor-message" role="status" aria-live="polite"></div>
+            <div class="screen-links">
+              <button id="editor-play" class="btn btn-primary" type="button"><span>MAINKAN PETA</span></button>
+              <button id="btn-editor-back" class="link-btn" type="button">← KEMBALI KE MENU</button>
+            </div>
+            <p class="micro">Peta buatan tidak menyentuh progress kampanye, rekor arc, atau save key lain.</p>
+          </div>
+        </section>
+
+        <!-- ══ CUSTOM STAGE CLEAR ══ -->
+        <section id="custom-clear-screen" class="screen overlay-screen hidden">
+          <div class="screen-inner narrow">
+            <p class="eyebrow">PETA SUMPAH · TUNTAS</p>
+            <h2 id="custom-clear-title" class="screen-title">PETA BERSIH</h2>
+            <p id="custom-clear-sub" class="screen-sub">Semua abu di peta buatanmu sudah padam.</p>
+            <div id="custom-clear-body" class="custom-clear-card"></div>
+            <div class="screen-links">
+              <button id="custom-clear-again" class="btn btn-primary" type="button"><span>MAIN LAGI</span></button>
+              <button id="custom-clear-editor" class="btn btn-ghost" type="button"><span>KEMBALI KE EDITOR</span></button>
+              <button id="custom-clear-menu" class="link-btn" type="button">MENU UTAMA</button>
+            </div>
+          </div>
+        </section>
+
         <section id="speedrun-screen" class="screen hidden">
           <div class="screen-inner speedrun-inner">
             <p class="eyebrow">SPEEDRUN · SATU NYAWA · TANPA CHECKPOINT</p>
@@ -1730,6 +1859,29 @@
           </div>
         </section>
 
+        <!-- ══ PETA KISAH — STORYLINE MAP ══ -->
+        <section id="storymap-screen" class="screen overlay-screen hidden">
+          <div class="screen-inner storymap-inner">
+            <div class="storymap-head">
+              <div>
+                <p class="eyebrow">PETA KISAH · DARI SUMPAH PERTAMA SAMPAI ARC XI</p>
+                <h2 class="screen-title">PETA KISAH</h2>
+                <p class="screen-sub">
+                  Seluruh cerita Ashen Vow di satu halaman: prolog Hearthfall, Arc I sampai Arc XI,
+                  dan saga sisi yang berjalan di antaranya. Baca saja — tidak ada progres yang diubah.
+                </p>
+              </div>
+              <button id="btn-storymap-close" class="btn btn-ghost btn-small" type="button">TUTUP</button>
+            </div>
+            <div id="storymap-summary" class="storymap-summary" aria-live="polite"></div>
+            <div class="storymap-layout">
+              <nav id="storymap-rail" class="storymap-rail" aria-label="Daftar arc cerita"></nav>
+              <article id="storymap-detail" class="storymap-detail" aria-live="polite"></article>
+            </div>
+            <p class="micro">Peta Kisah tidak membuka arc terkunci dan tidak menulis ke save mana pun.</p>
+          </div>
+        </section>
+
         <!-- ══ SETTINGS 2.0 ══ -->
         <!-- ══ SCARY MODE 2.0 — THE NIGHTMARE PROTOCOL ══ -->
         <section id="scary-screen" class="screen overlay-screen hidden">
@@ -1837,7 +1989,7 @@
           <div class="screen-inner archive-inner">
             <div class="scary-head">
               <div>
-                <p class="eyebrow">STAGE ARCHIVE 2.0 · SCARY MODE UPDATE XXI · v0.36.0</p>
+                <p class="eyebrow">STAGE ARCHIVE 2.0 · SCARY MODE UPDATE XXI · v0.38.0</p>
                 <h2 class="screen-title">THE SUPERNATURAL ARCHIVE</h2>
                 <p class="screen-sub">Semua tahap Arc IX dan Arc X, Level Checker, Sneak Peek, Ghost Index 3.0, Jumpscare Index, dan persiapan peralatan investigasi.</p>
               </div>
@@ -2105,6 +2257,7 @@
             <p id="dialogue-line" class="dialogue-line"></p>
             <div class="dialogue-foot">
               <span id="dialogue-counter" class="dialogue-counter">1 / 1</span>
+              <button id="btn-dialogue-voice" class="dialogue-voice" type="button" title="Ganti sumber suara boss">SUARA</button>
               <button id="btn-dialogue-next" class="btn btn-primary btn-small" type="button">LANJUT</button>
             </div>
             <p class="dialogue-hint">SPACE / ENTER untuk melanjutkan</p>
@@ -2168,7 +2321,7 @@
       </div>
 
       <footer class="footer">
-          <span>ASHEN VOW · v0.36.0</span>
+          <span>ASHEN VOW · v0.45.0</span>
         <span class="dot">✦</span>
         <span>Metroidvania medieval 2D · 14 ruang · 6 boss · dibuat dengan Canvas</span>
       </footer>

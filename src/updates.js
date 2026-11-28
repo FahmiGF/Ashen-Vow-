@@ -1,9 +1,204 @@
 // Ashen Vow — release history shown in the in-game Update Log.
-// Keep the newest entry first. `GAME_VERSION` is the single source of truth
-// for the version shown by the Update Log screen and the debug hooks.
-export const GAME_VERSION = '0.36.0';
+// Keep the newest entry first. `GAME_VERSION` is re-exported from `./version.js`
+// so startup and server code can read the version without pulling the log text.
+import { GAME_VERSION } from './version.js';
+
+export { GAME_VERSION };
 
 export const UPDATE_LOG = [
+  {
+    version: '0.45.0',
+    date: '28 November 2026',
+    title: 'UPDATE XXXV — THE UNWRITTEN EXPANSE, OATH SIGILS & INK SEVERANCE [G]',
+    tag: '30 RUANG BARU (901–930) · 4 BOS BARU · 6 MUSUH UNWRITTEN · 4 OATH SIGILS · INK SEVERANCE [G] · 931 RUANG · 146 BOS',
+    summary:
+      'Fase 4.2 menghadirkan The Unwritten Expanse di tepi luar Astral Dominion dan Arc IV The Rift: 30 ruang ekspedisi baru (901–930) di 3 bab (Blank Cartography, Margins of Memory, The Final Blank), 6 musuh unwritten_*, 4 bos multi-fase sampai The Blank Author (4 fase, victory), serta sistem Oath Sigils yang terhubung langsung dengan Oath Resonance dan jurus aktif Ink Severance [G].',
+    highlights: [
+      'The Unwritten Expanse (Ruang 901–930): 3 bab × 10 tahap dengan anomali bergantian (Ink Tide, Half-Drawn Gravity, Resonance Surge), membawa total game menjadi 931 ruang, 146 bos, dan 380 tipe musuh.',
+      'Empat Bos Tepi Perkamen: The Unwritten Scribe (3 fase), Palimpsest Warden (3 fase), Margin Archivist (2 fase), hingga The Blank Author (4 fase, reward: victory) dengan dua track musik baru (unwritten & unwrittenBoss).',
+      'Oath Sigils & Ink Severance [G]: kumpulkan dan pasang 4 Segel Sumpah (Blank Page, Scorched Ink, Quicksilver Nib, Author’s Vow) yang mengaktifkan bonus pasif pada peringkat Resonance C+/B+/A+ serta melepaskan gelombang kejut Ink Severance [G] di peringkat B+ (35%).',
+      'Peta Kisah, Kredit & PRD Fase 4: The Unwritten Expanse resmi tercatat di STORY_ARCS dan CREDIT_ARCS, sementara PRD Fase 4 menandai v0.45.0 SHIPPED menuju v0.46.0 Arc V: The Ashfall Accord.',
+    ],
+    fixes: [
+      'Lencana HUD #sigil-badge menampilkan Segel Sumpah aktif dan status siap/cooldown Ink Severance [G] secara langsung.',
+    ],
+  },
+  {
+    version: '0.44.0',
+    date: '28 November 2026',
+    title: 'UPDATE XXXIV — ARC IV: THE RIFT, PHASE-SHIFT [F] & OATH RESONANCE',
+    tag: '27 RUANG BARU (874–900) · 6 BOS CELAH · 8 MUSUH RIFT · DUAL-REALITY FRACTURE [F] · OATH RESONANCE (D → ASHEN)',
+    summary:
+      'Arc IV yang sejak lama terkunci di bawah Perang Salib kini terbuka penuh: The Rift menghadirkan 27 ruang playable (874–900) di 5 wilayah plus 2 ruang rahasia, 6 bos multi-fase yang berakhir pada The Devilish Scum, mekanik Dual-Reality Fracture dengan tombol aktif Phase-Shift [F], serta sistem inovasi kampanye Oath Resonance (peringkat D hingga ASHEN) yang memperkuat gerak dan serangan di seluruh kampanye.',
+    highlights: [
+      'Arc IV — The Rift (Ruang 874–900): lima wilayah lima tahap (Rift Mouth, Inverted Bastion, Sea of Glass Knives, Hollow Orchard of Echoes, The Seam) ditambah dua ruang rahasia Fasa B (Fractured Reliquary & Unseamed Vault) — membawa total game ke 901 ruang, 142 bos, dan 374 tipe musuh.',
+      'Enam Bos Celah Multi-Fase: Herald of the Maw, Inverted Castellan, Shattered Glass Seraph, Orchard Echo Matriarch, Arbiter of the Seam, hingga penguasa akhir 3-fase The Devilish Scum (reward: victory) lengkap dengan dialog dan dua track musik baru (rift & riftBoss).',
+      'Inovasi Arc IV · Dual-Reality Fracture & Phase-Shift [F]: setiap ruang Celah membelah pijakan menjadi Fasa A dan Fasa B yang bergantian tiap 8 detik (dengan peringatan visual 1,5 detik), atau langsung dibalik lewat tombol [F] / lencana HUD untuk melepas Rift Shockwave yang melukai musuh dekat dan memecah Selubung Fasa.',
+      'Inovasi Kampanye Utama · Oath Resonance (D → C → B → A → S → ASHEN): serangan beruntun, pukulan berat, perfect dodge, dan Phase-Shift mengisi meter Resonance (0–100) di seluruh mode kampanye/arc, memberi bonus +0–30% damage, +0–12% kecepatan gerak, serta otomatis menembus Selubung musuh Celah pada peringkat A+.',
+      'Peta Kisah, Kredit & PRD Fase 4: kartu Arc IV di Peta Kisah kini berstatus RILIS dengan 5 wilayah & 6 bos, adegan kredit Arc IV ditambahkan ke CREDIT_ARCS, dan status PRD Fase 4–5 diperbarui di docs/prd/phase-4-through-the-rift.md.',
+    ],
+    fixes: [
+      'Kartu The Rift di menu Perang Salib dan tombol menu utama kini membuka hub wilayah Arc IV setelah Paladin atau kampanye utama ditaklukkan.',
+      'Pelat fasa non-aktif digambar sebagai garis putus-putus transparan agar rute lompatan dan jalur rahasia Fasa B tetap terbaca.',
+    ],
+  },
+  {
+    version: '0.43.0',
+    date: '27 November 2026',
+    title: 'UPDATE XXXIII — OVERDRIVE PLAYABLE (LV 201–300) & WAVE DEFENSE ARSENAL',
+    tag: '100 RUANG OVERDRIVE (774–873) · 10 BOS BAB · 50 MUSUH · MANTRA [Q] · 8 LEGENDARIS · 20 IKON MENARA · 9 MEDAN WAVE DEFENSE · PARTIKEL 4×',
+    summary:
+      'Fase 2 The Unfinished Roads selesai: Overdrive (The Eternal Realm) Level 201–300 kini menjadi seratus ruang sungguhan di ALL_ROOMS (774–873) dengan sepuluh bos bab multi-fase sampai The First God, mantra aktif [Q] dari 8 sekolah sihir, 8 senjata legendaris, serta peningkatan besar pada Wave Defense: ikon SVG khusus untuk ke-20 menara, 4 stage medan baru (total 9), dan pengaturan kepadatan partikel hingga 4× (serta pengali partikel di Settings 2.0).',
+    highlights: [
+      'Overdrive Playable (Ruang 774–873): 100 level berurutan sepanjang Bab 21–30 (The Drowned Capital sampai The Final Pantheon), mempertahankan kontrak 20 musuh dan membawa 6 varian level khusus (Endless Dungeon, Colossus Trial, Time Trial, Treasure Vault, Cursed Expedition, Gauntlet Tower).',
+      '10 bos bab playable & 50 musuh baru: Sunken Emperor, Prism Devourer, Forge Titan, Mother of Thorns, Starbound Regent, Pale Frost Monarch, Grand Horologist, The Unmade, Sandstorm Sovereign, hingga The First God (5 fase, victory) di Level 300 — membawa ALL_ROOMS ke 874 ruang, ALL_BOSS_INFO ke 136 bos, dan ALL_ENEMY_INFO ke 367 musuh.',
+      'Mantra aktif [Q] & 8 Senjata Legendaris: pilih satu dari 8 sekolah sihir (32 mantra) di hub Overdrive, regenerasi mana otomatis dan tembakkan mantra [Q] di pertempuran, lalu buka senjata legendaris tiap menaklukkan kursi bos bab.',
+      'Wave Defense · Ikon Menara Kustom: seluruh 20 menara kini memiliki ikon SVG vektor bespoke yang tampil tajam di kartu Hub, palet bangun kiri, dan panel inspeksi.',
+      'Wave Defense · 4 Stage Medan Baru (total 9): Rift Chasm (Stage 5), Moonlit Cloister (Stage 6), Clockwork Viaduct (Stage 7), dan Throneside Gate (Stage 8), masing-masing dengan tata letak jalur dan palet sendiri sebelum Eternal Spiral.',
+      'Wave Defense & Settings · Kontrol Partikel Ekstra: pilih Hemat (0,45×), Standar (1×), Lebat (2×), Badai (3×), atau Overdrive 4× langsung di hub/HUD Wave Defense untuk memunculkan percikan tembakan, serpihan ledakan, semburan kematian bos, dan abu atmosfer; ditambah slider Particle Density Boost (0,5×–4×) dan anggaran partikel hingga 12.000 di Settings 2.0.',
+    ],
+    fixes: [
+      'Tombol kembali dan tab navigasi hub Overdrive serta tombol Escape sekarang terhubung penuh ke shell menu utama.',
+      'Wave Defense menampilkan lencana STAGE 1–9 dan tanda TUNTAS pada kartu medan kampanye yang sudah dimenangkan.',
+    ],
+  },
+  {
+    version: '0.42.0',
+    date: '27 November 2026',
+    title: 'UPDATE XXXII — INFINITE FRONTIERS: BATAS TAK BERUJUNG',
+    tag: '100 RUANG BARU (674–773) · 10 BOS BAB · 40 MUSUH · 15 ELITE E2–E7 · KONTRAK 20 MUSUH · SAVE BERURUTAN · DUA TRACK BARU',
+    summary:
+      'Infinite Frontiers berhenti jadi tabel. Seratus level yang sejak lama hanya ada sebagai data kini menjadi seratus ruang sungguhan di ALL_ROOMS, dari Lv 101 di Benua Hancur sampai Aethron di Batas Terakhir. Setiap level memakai mesin kampanye yang sama: pedang, flask, Warung Abu, dan kontrak 20 musuh dengan satu elite yang dijamin. Sepuluh bos bab membawa tiga sampai lima fase dan dialog lengkap, dan progres disimpan berurutan di progress.frontiers di dalam payload ashen-vow-progress-v1.',
+    highlights: [
+      'Seratus ruang di id 674–773, sepuluh bab × sepuluh level. Tidak ada id lama yang bergeser: Lanternwake tetap berakhir di 673, dan ALL_ROOMS kini 774 ruang.',
+      'Kontrak ruang tetap: setiap level standar berisi tepat 20 tubuh — 19 normal dari empat archetype (chaser, ranged, lunge, slam) dan satu elite yang dijamin. Bos menempati level kesepuluh setiap bab dan hanya memunculkan dirinya.',
+      'Empat puluh tubuh baru, empat per bab, dari Sky Husk di reruntuhan langit sampai Genesis Colossus di mesin dunia. Lima belas elite lama dari tabel Frontier akhirnya benar-benar muncul sebagai spawn dengan peringkat E2–E7, bounty elite ×2,2, dan tubuh yang lebih besar di peringkat tinggi.',
+      'Sepuluh bos bab: The Skybreaker (3 fase), Emperor Solvar (4), The Primordial Leviathan (4), Zarakh (3), Elder Yggvar (4), The Astral Devourer (5), The Architect of Nothing (4), Chronos (4), Gorath (4), dan Aethron, the Origin Beyond (5 fase, reward victory). Masing-masing punya nama, gelar, warna, pola serangan, tubuh panggilan, dan track musik sendiri.',
+      'Kurva kesulitan linier dan terbaca: HP tubuh naik 1,2% per level (×2,19 di Lv 200), damage naik 0,6% per level, kecepatan naik tiga kali sepanjang tangga, dan abu awal naik dari 120 ke 516. Bos naik dari 1.400 ke 4.200 HP sebelum pengali kesulitan pemain.',
+      'Karena tangga ini tidak punya level karakter, pertumbuhan pemain dibawa oleh run: masuk level i memberi damage ×(1 + i·0,018) (×2,78 di Lv 200), vitalitas ×(1 + i·0,01), dan satu flask tambahan setiap 25 level. Semuanya run-scoped dan tidak menyentuh karakter tersimpan maupun kesulitan global.',
+      'Progres berurutan di progress.frontiers: level hanya terbuka setelah level sebelumnya tuntas, bos bab tercatat di kursinya sendiri, dan sanitizer merapikan urutan yang dilewati atau bos tanpa kursi. Save campaign dan arc tidak tersentuh.',
+      'Hub Infinite Frontiers memakai tab KAMPANYE 101–200 yang sudah ada: rail sepuluh bab, sepuluh kartu level dengan nomor level, status TUNTAS/TERKUNCI, peringkat elite, dan tombol MAINKAN. Kartu bos ditandai BOSS beserta jumlah fasenya.',
+      'Dua track prosedural baru: frontier (92 BPM, luas dan menanjak) untuk seluruh tangga, dan frontierBoss (150 BPM) untuk Aethron. Sembilan bos lain memakai tema bos yang sudah ada supaya tiap bab terdengar berbeda.',
+      'HUD menampilkan badge LV dan nama bab selama run Frontiers, dan waktu per level tercatat di progress.stageTimes dengan kunci frontiers:<index>.',
+    ],
+    fixes: [
+      'Retry di tengah tangga mengulang level yang sedang dimainkan dan mencatat kematian, bukan melempar pemain kembali ke level pertama.',
+      'Level terkunci tidak bisa dimulai lewat debug hook atau klik ganda: startFrontierLevel memeriksa ulang frontierLevelUnlocked sebelum memuat ruang.',
+    ],
+  },
+  {
+    version: '0.41.0',
+    date: '26 November 2026',
+    title: 'UPDATE XXXI — PETA SUMPAH: TAKARAN, ELITE & BERTAHAN',
+    tag: 'TAKARAN 6 TINGKAT · METER KESEIMBANGAN · AUTO-SEIMBANG · MUSUH ELITE · OBJEKTIF BERTAHAN · BOS TERUKUR · KODE BAGI v3',
+    summary:
+      'Map Editor kini punya alat penyeimbang yang nyata. Setiap peta memilih takarannya sendiri dari Mode Cerita sampai Abisal, bisa menandai musuh sebagai elite, dan bisa memakai objektif bertahan dengan hitungan waktu. Sebelum dimainkan, editor menghitung tekanan peta terhadap kekuatan pemain, menampilkan meter dan saran konkret, lalu tombol AUTO-SEIMBANG menyetel flask, jumlah musuh, dan takaran sampai masuk jalur seimbang. Semua tetap di ashen-vow-mapeditor-v1 dan tetap memakai mesin kampanye.',
+    highlights: [
+      'Takaran per peta: enam profil kampanye yang sama dipakai sebagai pengali absolut — HP, damage, dan kecepatan musuh, plus HP dan damage bos. Normal = 1×, jadi peta Story tetap ringan walaupun pengaturan global pemain sedang di Abisal.',
+      'Meter keseimbangan: editor menghitung beban ruang (HP musuh, elite ×1,8, dan bos ×0,9 pada takaran terpilih) lalu membandingkannya dengan kekuatan pemain (HP dan damage kelas, flask, jumlah senjata, anak panah, relik, abu). Hasilnya satu angka tekanan dengan empat pita: Ringan, Seimbang, Berat, dan Brutal, lengkap dengan saran seperti “Tambah 2–4 musuh” atau “Kurangi musuh, turunkan takaran”.',
+      'AUTO-SEIMBANG: satu tombol menaikkan flask, memangkas atau menambah musuh, lalu menurunkan atau menaikkan takaran sampai tekanan masuk jalur seimbang. Setiap langkahnya dilaporkan di pesan editor, jadi tidak ada peta yang berubah diam-diam. TAKARAN LEBIH RINGAN menurunkan satu tingkat tanpa menyentuh isi lain.',
+      'Musuh elite: setiap musuh bisa ditandai elite dari baris rosternya. Elite memakai jalur elite mesin (bounty ×2,2), dihitung ×1,8 pada meter tekanan, dan digambar lebih besar dengan cincin emas di kanvas.',
+      'Objektif bertahan: pilih BERTAHAN lalu tentukan 20–180 detik. Ruang selesai saat hitungan habis, bukan saat layar kosong, jadi musuh yang masih hidup tidak membatalkan apa pun. Badge HUD menampilkan sisa detik dan berdenyut di sepuluh detik terakhir.',
+      'Bos terukur: HP dan damage kontak bos mengikuti takaran peta lewat override data, tanpa mengubah tabel bos global. Bos buatan tetap selalu memberi berkah, tidak pernah memicu layar kemenangan kampanye.',
+      'Preset keempat “Pengepungan 60 Detik” memperkenalkan objektif bertahan, dan panel MULAI DARI PRESET membuat keempat preset bisa dipakai langsung dari daftar peta.',
+      'Kode bagi naik ke skema 3 dan membawa takaran, objektif, waktu bertahan, serta tanda elite. Kode skema 2 dari v0.40.0 tetap bisa diimpor dan mendapat nilai default yang aman.',
+      'Ringkasan editor dan daftar peta sekarang menampilkan jumlah elite, peta bertahan, dan label takaran plus pita tekanan pada tiap baris.',
+    ],
+    fixes: [
+      'Kartu tuntas menampilkan takaran dan tekanan peta, dan judul ruang bertahan menyebut durasinya, sehingga hasil run bisa dibandingkan dengan takaran yang dipilih.',
+      'Sanitizer menyimpan tanda elite, takaran, objektif, dan waktu bertahan; nilai rusak jatuh ke default dan waktu di luar 20–180 detik ditolak validator dengan pesan konkret.',
+    ],
+  },
+  {
+    version: '0.40.0',
+    date: '26 November 2026',
+    title: 'UPDATE XXX — PETA SUMPAH: KANVAS MEDAN, RANTAI RUANG & KODE BAGI',
+    tag: 'TERRAIN BEBAS · PRATINJAU KANVAS · RANTAI 6 RUANG · KODE BAGI AVME1 · MUAT-IMPOR · SAVE LAMA TETAP JALAN',
+    summary:
+      'Peta Sumpah tidak lagi terbatas pada empat tata letak jadi. Pemain kini menggambar medannya sendiri di kanvas, menyambung sampai enam ruang menjadi satu rantai yang dimainkan berurutan dengan HP, flask, anak panah, senjata, dan abu yang terbawa, lalu membagikan peta atau rantainya sebagai satu kode teks. Semua tetap di key ashen-vow-mapeditor-v1, dan save skema 1 dari v0.39.0 dimuat tanpa kehilangan peta.',
+    highlights: [
+      'Kanvas medan bebas: seret di pratinjau untuk menggambar pijakan baru (snap 20 px, tinggi 18 px), klik pijakan untuk memilihnya, lalu hapus. Tombol + LANTAI PENUH, + PIJAKAN, HAPUS TERPILIH, dan RESET TATA LETAK melengkapi kuas itu. Sampai 26 pijakan per ruang.',
+      'Pratinjau kanvas menggambar persis ruang yang akan dimuat mesin: palet zona, grid 100 unit, pijakan terpilih, titik awal hijau, gerbang keluar, Warung Abu, relik, satu titik per musuh (dengan tinggi badan dari HP aslinya), dan berlian bos. Gambar ini murni dan deterministik, jadi bisa diuji di Node dengan ctx tiruan.',
+      'Rantai ruang: setiap peta punya LANJUT KE PETA, jadi sampai enam ruang berjalan sebagai satu run. Saat satu ruang bersih, shell memuat ruang berikutnya dengan HP, flask, anak panah, senjata, relik, dan abu yang sama; banner menulis RUANG 2/3, dan rekor waktu dihitung untuk seluruh rantai lalu dicatat pada ruang pertama.',
+      'Validator rantai: tautan ke peta yang tidak ada, tautan ke diri sendiri, rantai yang berputar, dan rantai lebih dari enam ruang ditolak dengan pesan konkret. Sanitizer membuang tautan rusak saat memuat save, dan MENGHAPUS peta membersihkan tautan yang menunjuk ke peta itu.',
+      'startCustomStage memvalidasi seluruh rantai, bukan hanya ruang pertama, jadi ruang lanjutan yang titik awalnya melayang tidak bisa ikut dimainkan.',
+      'Kode bagi AVME1: satu peta atau seluruh rantai dikemas sebagai base64url dari payload JSON ringkas. SALIN KODE menyalinnya ke clipboard (dan menandai teksnya bila clipboard diblokir), IMPOR menerima kode orang lain, memberi id baru, menyambung ulang ruang-ruang yang ikut serta, dan menghormati batas 20 peta. Nama Unicode seperti Jurang Āsh — 試作 selamat bolak-balik.',
+      'Kompatibel save: MAP_EDITOR_SCHEMA naik ke 2, tetapi peta v0.39.0 tanpa medan apa pun otomatis mendapat pijakan dari tata letak lamanya, sehingga tidak ada peta yang hilang atau berubah.',
+      'Hook debug baru: addEditorPlatform, deleteEditorPlatform, resetEditorTerrain, paintEditorCanvas, copyEditorShare, importEditorShare, editorChain, editorShareCode, importEditorCode, decodeEditorCode, plus chain/chainIndex/selectedPlatform/shareText pada __ashen.editor.',
+    ],
+    fixes: [
+      'Titik awal kini dijaga di dua lapis: validasi menolak medan tanpa alas, dan menghapus pijakan terakhir otomatis mengembalikan lantai penuh supaya peta tidak pernah dimulai di udara.',
+      'Ruang lanjutan yang tidak valid tidak lagi lolos diam-diam: rantai diperiksa utuh sebelum run dimulai, dan pesan menyebut nama ruang yang bermasalah.',
+    ],
+  },
+  {
+    version: '0.39.0',
+    date: '26 November 2026',
+    title: 'UPDATE XXIX — PETA SUMPAH: MAP EDITOR KAMPANYE',
+    tag: 'EDITOR PETA · MUSUH · BOS · LATAR ZONA · MUSIK · PEMBUKA · KELAS · SENJATA · 20 PETA · SAVE KEY SENDIRI',
+    summary:
+      'Ashen Vow kini punya Map Editor kampanye: pemain menyusun stage sendiri di mesin yang sama dengan kampanye — pilih latar zona, track musik biasa dan musik bos, pembuka sinematik, kelas, senjata awal, anak panah, flask, abu, relik, dan Warung Abu, lalu tempatkan sampai 28 musuh dan satu dari 116 bos. Semua peta disimpan di key ashen-vow-mapeditor-v1 yang terpisah dan dimuat lewat game.loadArena(), sehingga tidak ada satu pun ruang kampanye, indeks ALL_ROOMS, atau ledger arc yang berubah.',
+    highlights: [
+      'Modul murni src/mapeditor.js: blueprint, sanitizer, validasi, preset, dan konversi ruang. Tidak ada DOM dan tidak ada storage di dalamnya, jadi seluruh kontrak peta bisa diuji di Node.',
+      'Lima pengaturan dunia yang benar-benar dibaca mesin: latar zona (20 zona termasuk miselium, cistern, dan faewood), musik biasa, musik bos, tata letak panggung, dan pembuka sinematik (prolog 60 detik, trailer 80 detik, atau trailer Lingkar 18 detik).',
+      'Empat tata letak panggung yang dijamin punya lantai di bawah titik awal: Aula Datar, Teras Bertingkat, Jurang Tengah, dan Menara Gantung. Validator menolak peta yang titik awalnya melayang.',
+      'Roster lengkap: sampai 28 musuh yang bisa ditambah satu per satu dari seluruh tabel musuh dan ditempatkan di koordinat X sendiri, ditambah satu bos pilihan dari 116 penjaga. Bos buatan selalu memberi berkah, tidak pernah memicu layar kemenangan kampanye.',
+      'Kustomisasi awal run: kelas dari seluruh roster, sampai lima senjata awal, anak panah, flask 1-6, abu 0-500, relik opsional, dan Warung Abu opsional di pintu masuk supaya toko tetap bisa dipakai.',
+      'Loadout dan identitas tidak mengubah save: peta memakai key ashen-vow-mapeditor-v1 miliknya sendiri (maksimal 20 peta, plus hitungan main dan rekor waktu per peta), sedangkan progress kampanye di ashen-vow-progress-v1, skill point, dan rekor arc tidak disentuh sama sekali.',
+      'Panel editor menampilkan ringkasan, daftar peta, dan form lengkap; pesan validasi menyebut alasan konkret, peta yang belum valid tetap tersimpan tetapi tidak bisa dimainkan sampai diperbaiki.',
+      'Tiga preset siap pakai (Aula Latihan, Duel Penjaga, Gelombang Abu) memberi titik awal, dan kartu hasil menampilkan waktu, musuh gugur, rekor peta, dan jumlah tuntas dengan tombol main lagi, kembali ke editor, atau menu utama.',
+      'Hook debug __ashen.editor, showEditor, saveEditorStage, startCustomStage, finishCustomStage, validateEditorBlueprint, dan editorBlueprintRoom membuat seluruh alur bisa diuji di browser nyata.',
+    ],
+    fixes: [
+      'Skill Point dan credit scene tidak lagi dipicu oleh boss di peta buatan: keduanya kini melewati run berjenis custom sehingga editor tidak bisa dipakai untuk menanam progres kampanye.',
+      'Pintu keluar peta buatan memakai next -1 sehingga berfungsi sebagai penanda visual dan tidak pernah memuat ruang kampanye, sementara akhir stage ditentukan oleh skrip shell yang membaca sisa musuh dan bos.',
+    ],
+  },
+  {
+    version: '0.38.0',
+    date: '25 November 2026',
+    title: 'UPDATE XXVIII — INFINITOWER: KOOR LINGKAR',
+    tag: '2 MENARA · 3 MUSUH + 1 BOS · KESULITAN ETERNAL · RIGGING PROSEDURAL · KRONIK 6 TINGKAT · 2 CUTSCENE · 3 TRACK MUSIK · v0.38.0',
+    summary:
+      'Infinitower tidak lagi hanya naik angka. Lingkar abadi mendapat suara: Koor Lingkar, tiga tubuh baru yang mengubah cara membaca jalan, dua menara yang memainkan waktu dan ruang, kesulitan keempat ETERNAL, rig prosedural untuk setiap tubuh, enam bab kronik yang terbuka per tingkat, dua sinematik lengkap dengan musik trailer, dan tiga track musik prosedural baru. Tidak ada save key baru: seluruh rekor tetap di progress.wavedefense.infinitower di dalam key ashen-vow-progress-v1 yang sama.',
+    highlights: [
+      'Dua menara konsep baru: Jangkar Lingkar (ledakan sihir area yang memperlambat 62% selama 2,4 detik) dan Jam Pasir Ketiga (tidak menembak, tetapi memproyeksikan medan waktu radius 148 yang memperlambat setiap musuh 24%, bertambah per level). Keduanya menambah roster menjadi 20 menara.',
+      'Tiga tubuh baru mengubah prioritas pertahanan: Rift Hopper melompat 34 unit ke depan setiap 3,6 detik sehingga sarang berjangkauan pendek kehilangan target, Lantern Moth membutakan menara radius 100 selama 1,6 detik saat mati, dan Grave Taxer merampas 14 emas dari kas perang jika mencapai gerbang.',
+      'BOS INFINITOWER baru Spiral Choir: 18.500 HP, armor 22%, dan summon dua Mirror Thrall setiap tujuh detik. Panggilan masuk lewat antrean split yang sudah ada sehingga tidak pernah membayar bounty dua kali. Total roster menjadi 31 entri, 22 tubuh biasa dan 9 bos.',
+      'Kesulitan keempat ETERNAL: HP musuh 175%, kecepatan 122%, kas awal 195 emas, dan mahkota hanya 80 HP. Empat tingkat kini tersedia di hub: SQUIRE, KNIGHT, WARLORD, ETERNAL.',
+      'Rigging prosedural: setiap tubuh kini digambar dari rig berartikulasi (dua atau empat kaki, dua lengan, kepala, dan bob tubuh) dengan keluarga humanoid, hound, wraith, brute, dan colossus. Pose dihitung murni dari jenis dan waktu, sehingga deterministik dan bisa diuji di Node. Menara juga mendapat recoil saat menembak, dan Jam Pasir menggambar medan waktunya di lantai.',
+      'Kronik Lingkar: enam bab yang terbuka setiap tingkat Infinitower (Lingkar Pertama, Nyanyian di Bawah Lantai, Ngengat Membawa Lentera, Pemungut dari Kubur, Tingkat Tanpa Nama, Lingkar yang Menutup). Setiap tingkat baru menulis satu baris ke feed pertempuran dan ke panel KRONIK LINGKAR di hub.',
+      'Dua sinematik: trailer pembuka 18 detik dengan enam beat dan potret bos 11 detik dengan empat beat, keduanya dirender prosedural di mesin (spiral batu, mahkota menara, koor bermata banyak). Trailer diputar dari hub atau otomatis sekali saat Infinitower pertama dimulai; potret bos diputar sekali per run ketika bos pertama muncul, lalu melanjutkan pertempuran.',
+      'Tiga track musik prosedural baru: spiral (arena, 88 BPM, sawtooth), spiralBoss (104 BPM, square, filter terbuka) dan spiralTrailer (64 BPM, build lambat). Hub memakai spiral, pertempuran memakai spiral, dan begitu bos muncul musik berpindah ke spiralBoss.',
+      'Kontrak save tidak berubah: progress.wavedefense.infinitower tetap berisi runs, bestWave, bestTier, bestScore, bestKills, bestTime, dan sanitizer tetap membatasi bestWave 999 serta bestTier 100.',
+    ],
+    fixes: [
+      'Pose rig, medan waktu, lompatan Rift Hopper, buta dari Lantern Moth, rampasan Grave Taxer, dan panggilan Spiral Choir semuanya diuji lewat simulasi nyata, bukan hanya data.',
+      'Pemutar cutscene pada mode medan (Wave Defense, Pirate Tide, Riftwar) kini menick sinematiknya sendiri; sebelumnya cabang mode kembali lebih awal sehingga kanvas sinematik tidak pernah maju.',
+    ],
+  },
+  {
+    version: '0.37.0',
+    date: '25 November 2026',
+    title: 'UPDATE XXVII — WAVE DEFENSE: INFINITOWER',
+    tag: 'PETA KELIMA · 4 MENARA BARU · 5 MUSUH + 2 BOS · INFINITOWER TANPA KEMENANGAN · LEDGER SENDIRI · v0.37.0',
+    summary:
+      'Wave Defense mendapat medan kelima dan satu mode yang tidak pernah dimenangkan: INFINITOWER, lingkar spiral di mana setiap sepuluh gelombang menaikkan tingkat dan memperberat seluruh pasukan. Delapan belas menara kini mencakup empat konsep baru (rantai, henti gerak, penghancur armor, eksekusi), dan tujuh jenis tubuh baru mengisi gelombang tanpa mengubah kontrak save lama.',
+    highlights: [
+      'Medan kelima ETERNAL SPIRAL: jalan memutar ke dalam dengan panjang lintasan terpanjang di antara lima benteng, 24 pos bangun, dan palet ungu-abu yang berbeda dari empat medan lama.',
+      'Empat menara konsep baru: Monolit Gema (bola sihir yang melompat ke tiga musuh, 34 damage), Lonceng Kubur (gelombang bunyi ber-area yang menghentikan gerak 0,9 detik), Tempa Abu (menghancurkan armor target 20% selama lima detik) dan Mata Pengawas (tembakan 224 jangkauan yang menghabisi musuh di bawah 35% HP dengan damage 2,4 kali).',
+      'Stun, shred, regen, haste aura dan disabler kini benar-benar dibaca mesin: musuh yang dihentikan tidak bergerak, armor yang dihancurkan menurunkan reduksi damage, Obsidian Golem pulih 16 HP tiap dua detik, Grave Chorister mempercepat musuh di sekitarnya 22%, dan Tower Breaker melumpuhkan menara terdekat 2,4 detik setiap 3,6 detik.',
+      'Lima tubuh baru mengisi roster: Mirror Thrall (pecah jadi dua Ash Runner saat gugur), Cinder Wraith (kebal perlambatan), Grave Chorister (haste aura), Tower Breaker (disabler) dan Obsidian Golem (armor 45% + regen). Dua bos Infinitower, Spiral Tyrant dan Lantern Devourer, hanya muncul di gelombang dalam.',
+      'INFINITOWER: mode tanpa kemenangan di ETERNAL SPIRAL. Tingkat naik setiap sepuluh gelombang, HP musuh +16% per tingkat, kecepatan +2%, bounty +2, komposisi memakai roster yang terbuka per tingkat dan menambah satu grup elite mulai tingkat tiga. Gelombang bos tetap tiap lima gelombang, dan jeda persiapan memendek seiring tingkat.',
+      'Ledger baru progress.wavedefense.infinitower (runs, bestWave, bestTier, bestScore, bestKills, bestTime) di dalam key ashen-vow-progress-v1 yang sama. Sanitizer membatasi bestWave ke 999 dan bestTier ke 100; run Infinitower tidak pernah menambah runs/wins/losses kampanye.',
+      'Hub Wave Defense kini menampilkan tiga mode (Kampanye, Tanpa Akhir, Infinitower), kartu hasil dengan judul LINGKAR PADAM, HUD yang menampilkan tingkat aktif, dan hook debug setWaveDefenseMode("infinitower") serta setWaveDefenseInfinitower().',
+      'Kontrak lama dipertahankan: 24 gelombang kampanye tetap sama, enam bos kampanye tidak berubah, dan save v1 tetap dapat dimuat tanpa migrasi.',
+    ],
+    fixes: [
+      'Musuh yang di-stun, di-shred, atau membawa disabler sebelumnya hanya menyimpan datanya tanpa efek; sekarang semuanya diproses di updateEnemies dan updateTowers.',
+      'Menara yang dilumpuhkan kini melewati cooldown tanpa menembak dan digambar dengan cincin merah agar statusnya terbaca.',
+    ],
+  },
   {
     version: '0.36.0',
     date: '24 November 2026',

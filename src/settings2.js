@@ -67,7 +67,7 @@ export const GRAPHICS_PRESETS = {
       foliageQuality: 'low', viewDistance: 'near', postProcessing: 'off', motionBlur: 'off',
       depthOfField: 'off', bloom: 'off', chromaticAberration: 'off', lensFlare: 'off',
       screenSpaceReflections: 'off', rayTracing: 'off', upscaling: 'native', renderScale: 65,
-      anisotropicFiltering: 'off', antiAliasing: 'off',
+      anisotropicFiltering: 'off', antiAliasing: 'off', particleMultiplier: 0.5,
     },
   },
   medium: {
@@ -78,7 +78,7 @@ export const GRAPHICS_PRESETS = {
       foliageQuality: 'medium', viewDistance: 'medium', postProcessing: 'low', motionBlur: 'off',
       depthOfField: 'off', bloom: 'low', chromaticAberration: 'off', lensFlare: 'off',
       screenSpaceReflections: 'off', rayTracing: 'off', upscaling: 'native', renderScale: 85,
-      anisotropicFiltering: '4x', antiAliasing: 'fxaa',
+      anisotropicFiltering: '4x', antiAliasing: 'fxaa', particleMultiplier: 0.85,
     },
   },
   high: {
@@ -89,7 +89,7 @@ export const GRAPHICS_PRESETS = {
       foliageQuality: 'high', viewDistance: 'far', postProcessing: 'high', motionBlur: 'low',
       depthOfField: 'on', bloom: 'high', chromaticAberration: 'off', lensFlare: 'on',
       screenSpaceReflections: 'on', rayTracing: 'off', upscaling: 'native', renderScale: 100,
-      anisotropicFiltering: '8x', antiAliasing: 'smaa',
+      anisotropicFiltering: '8x', antiAliasing: 'smaa', particleMultiplier: 1,
     },
   },
   ultra: {
@@ -100,7 +100,7 @@ export const GRAPHICS_PRESETS = {
       foliageQuality: 'ultra', viewDistance: 'ultra', postProcessing: 'ultra', motionBlur: 'high',
       depthOfField: 'on', bloom: 'high', chromaticAberration: 'on', lensFlare: 'on',
       screenSpaceReflections: 'on', rayTracing: 'off', upscaling: 'native', renderScale: 115,
-      anisotropicFiltering: '16x', antiAliasing: 'taa',
+      anisotropicFiltering: '16x', antiAliasing: 'taa', particleMultiplier: 1.75,
     },
   },
   extreme: {
@@ -111,7 +111,7 @@ export const GRAPHICS_PRESETS = {
       foliageQuality: 'ultra', viewDistance: 'ultra', postProcessing: 'ultra', motionBlur: 'high',
       depthOfField: 'on', bloom: 'high', chromaticAberration: 'on', lensFlare: 'on',
       screenSpaceReflections: 'on', rayTracing: 'auto', upscaling: 'native', renderScale: 115,
-      anisotropicFiltering: '16x', antiAliasing: 'msaa',
+      anisotropicFiltering: '16x', antiAliasing: 'msaa', particleMultiplier: 2.5,
     },
   },
   custom: { label: 'Custom', tagline: 'Pilihan manual', values: {} },
@@ -186,6 +186,7 @@ export const SETTING_DEFINITIONS = [
   select('graphics.reflectionQuality', 'Reflection Quality', 'Refleksi air dan permukaan.', QUALITY4, 'graphics'),
   select('graphics.volumetricFog', 'Volumetric Fog', 'Kabut bervolume dan scattering.', [{ id: 'off', label: 'Off' }, ...QUALITY4.slice(0, 3)], 'graphics'),
   select('graphics.particleQuality', 'Particle Quality', 'Kepadatan partikel dan efek dunia.', QUALITY4, 'graphics'),
+  range('graphics.particleMultiplier', 'Particle Density Boost', 'Pengali kepadatan partikel ekstra (hingga 4× untuk efek penuh).', 0.5, 4, 0.25, '×', 'graphics'),
   select('graphics.waterQuality', 'Water Quality', 'Detail air, riak, dan refraksi.', QUALITY4, 'graphics'),
   select('graphics.foliageQuality', 'Foliage Quality', 'Kepadatan rumput, daun, dan vegetasi.', QUALITY4, 'graphics'),
   select('graphics.viewDistance', 'View Distance', 'Jarak pandang dunia dan populasi objek.', VIEW_DISTANCES, 'graphics'),
@@ -290,7 +291,7 @@ export const SETTING_DEFINITIONS = [
   range('performance.backgroundFps', 'Background FPS Limit', 'Batas FPS saat tab tidak fokus.', 5, 60, 5, ' FPS', 'performance'),
   select('performance.shaderCompilation', 'Shader Compilation', 'Perilaku kompilasi shader/efek.', [{ id: 'auto', label: 'Auto' }, { id: 'background', label: 'Background' }, { id: 'on-demand', label: 'On demand' }], 'performance'),
   select('performance.assetStreaming', 'Asset Streaming Quality', 'Anggaran streaming aset per region.', STREAMING_QUALITY, 'performance'),
-  range('performance.particleBudget', 'Particle Budget', 'Batas partikel aktif.', 100, 2000, 50, '', 'performance'),
+  range('performance.particleBudget', 'Particle Budget', 'Batas partikel aktif (hingga 6000 untuk mode penuh efek).', 100, 6000, 100, '', 'performance'),
   range('performance.npcUpdateFrequency', 'NPC Update Frequency', 'Frekuensi update NPC jauh.', 10, 120, 5, ' Hz', 'performance'),
   select('performance.animationQuality', 'Animation Quality', 'Detail interpolasi dan pose.', QUALITY4, 'performance'),
   select('performance.physicsQuality', 'Physics Quality', 'Frekuensi dan presisi fisika.', QUALITY4, 'performance'),
@@ -335,7 +336,7 @@ export const SETTING_DEFINITIONS = [
 
   toggle('advanced.diagnostics', 'Diagnostics Overlay', 'Menampilkan status penerapan tiap pengaturan.', 'advanced'),
   select('advanced.logging', 'Logging Level', 'Tingkat log runtime.', LOG_LEVELS, 'advanced'),
-  range('advanced.maxParticles', 'Max Particles', 'Batas keras partikel aktif.', 100, 4000, 100, '', 'advanced'),
+  range('advanced.maxParticles', 'Max Particles', 'Batas keras partikel aktif (hingga 12000).', 100, 12000, 200, '', 'advanced'),
   range('advanced.physicsHz', 'Physics Frequency', 'Frekuensi langkah fisika.', 30, 240, 10, ' Hz', 'advanced'),
   range('advanced.entityBudget', 'Entity Budget', 'Batas entity yang di-update.', 50, 500, 25, '', 'advanced'),
 ];
@@ -390,7 +391,7 @@ export function defaultExtendedSettings() {
     language: { interface: 'id', subtitles: 'id', voice: 'id', dialogue: 'id' },
     performance: {
       dynamicResolution: true, backgroundFps: 15, shaderCompilation: 'auto', assetStreaming: 'high',
-      particleBudget: 800, npcUpdateFrequency: 60, animationQuality: 'high', physicsQuality: 'high',
+      particleBudget: 1200, npcUpdateFrequency: 60, animationQuality: 'high', physicsQuality: 'high',
       viewDistance3d: 100, asyncLoading: true,
     },
     hud: {
@@ -403,7 +404,7 @@ export function defaultExtendedSettings() {
     notifications: { master: true, combat: true, loot: true, quests: true, system: true, duration: 4 },
     privacy: { telemetry: false, crashReports: true, onlineStatus: 'friends', crossplay: false, dataSaver: false },
     account: { profileName: 'Penjaga', cloudSave: false, syncSettings: true },
-    advanced: { diagnostics: false, logging: 'warn', maxParticles: 1600, physicsHz: 120, entityBudget: 300 },
+    advanced: { diagnostics: false, logging: 'warn', maxParticles: 2400, physicsHz: 120, entityBudget: 300 },
   };
 }
 
@@ -493,6 +494,7 @@ export function sanitizeExtendedSettings(raw = {}) {
   graphics.reflectionQuality = quality('reflectionQuality', QUALITY4, presetsFallback(presetValues.reflectionQuality));
   graphics.volumetricFog = quality('volumetricFog', [{ id: 'off', label: 'Off' }, ...QUALITY4.slice(0, 3)], presetsFallback(presetValues.volumetricFog));
   graphics.particleQuality = quality('particleQuality', QUALITY4, presetsFallback(presetValues.particleQuality));
+  graphics.particleMultiplier = clamp(Math.round(num(graphicsRaw.particleMultiplier, presetValues.particleMultiplier ?? 1) * 4) / 4, 0.5, 4);
   graphics.waterQuality = quality('waterQuality', QUALITY4, presetsFallback(presetValues.waterQuality));
   graphics.foliageQuality = quality('foliageQuality', QUALITY4, presetsFallback(presetValues.foliageQuality));
   graphics.viewDistance = quality('viewDistance', VIEW_DISTANCES, presetsFallback(presetValues.viewDistance));
@@ -564,7 +566,7 @@ export function sanitizeExtendedSettings(raw = {}) {
   performance.backgroundFps = clamp(Math.round(num(performanceRaw.backgroundFps, 15)), 5, 60);
   performance.shaderCompilation = pick(performanceRaw.shaderCompilation, [{ id: 'auto' }, { id: 'background' }, { id: 'on-demand' }], 'auto');
   performance.assetStreaming = pick(performanceRaw.assetStreaming, STREAMING_QUALITY, 'high');
-  performance.particleBudget = clamp(Math.round(num(performanceRaw.particleBudget, 800)), 100, 2000);
+  performance.particleBudget = clamp(Math.round(num(performanceRaw.particleBudget, 1200)), 100, 6000);
   performance.npcUpdateFrequency = clamp(Math.round(num(performanceRaw.npcUpdateFrequency, 60)), 10, 120);
   performance.animationQuality = pick(performanceRaw.animationQuality, QUALITY4, 'high');
   performance.physicsQuality = pick(performanceRaw.physicsQuality, QUALITY4, 'high');
@@ -599,7 +601,7 @@ export function sanitizeExtendedSettings(raw = {}) {
   const advanced = { ...defaults.advanced };
   advanced.diagnostics = Boolean(advancedRaw.diagnostics);
   advanced.logging = pick(advancedRaw.logging, LOG_LEVELS, 'warn');
-  advanced.maxParticles = clamp(Math.round(num(advancedRaw.maxParticles, 1600)), 100, 4000);
+  advanced.maxParticles = clamp(Math.round(num(advancedRaw.maxParticles, 2400)), 100, 12000);
   advanced.physicsHz = clamp(Math.round(num(advancedRaw.physicsHz, 120)), 30, 240);
   advanced.entityBudget = clamp(Math.round(num(advancedRaw.entityBudget, 300)), 50, 500);
 

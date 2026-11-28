@@ -1,0 +1,221 @@
+/* Ashen Vow — Infinite Frontiers ladder (v0.42.0).
+   The hub shell, tabs and data cards live in styles.css. This file adds the
+   playable 100-level ladder: chapter rail, level cards and the run HUD badge. */
+
+.frontier-lock-note {
+  margin: 0 0 14px;
+  padding: 10px 14px;
+  border-left: 3px solid #d99a4e;
+  background: rgba(217, 154, 78, 0.08);
+  color: #e6cba4;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.frontier-ladder {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.frontier-rail {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+  scrollbar-width: thin;
+}
+
+.frontier-chip {
+  flex: 0 0 auto;
+  min-width: 74px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-left: 3px solid var(--accent, #8ec5fc);
+  background: rgba(10, 12, 18, 0.72);
+  color: #cfd6e4;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: transform 0.14s ease, border-color 0.14s ease, background 0.14s ease;
+}
+
+.frontier-chip strong {
+  font-size: 11px;
+  color: var(--accent, #8ec5fc);
+}
+
+.frontier-chip span {
+  font-size: 10.5px;
+  color: #9aa6b8;
+}
+
+.frontier-chip:hover {
+  transform: translateY(-1px);
+  border-color: var(--accent, #8ec5fc);
+}
+
+.frontier-chip.active {
+  background: linear-gradient(180deg, rgba(142, 197, 252, 0.2), rgba(10, 12, 18, 0.9));
+  border-color: var(--accent, #8ec5fc);
+  box-shadow: 0 0 0 1px rgba(142, 197, 252, 0.25) inset;
+}
+
+.frontier-chip.clear span {
+  color: #8fe0b0;
+}
+
+.frontier-chapter-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 3px solid var(--accent, #8ec5fc);
+  background: linear-gradient(180deg, rgba(16, 20, 30, 0.9), rgba(8, 10, 16, 0.85));
+}
+
+.frontier-chapter-head h3 {
+  margin: 2px 0 4px;
+  font-size: 18px;
+  letter-spacing: 0.04em;
+  color: #f2e8d8;
+}
+
+.frontier-chapter-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  min-width: 140px;
+}
+
+.frontier-progress {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #8ec5fc;
+}
+
+.frontier-levels {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(210px, 100%), 1fr));
+  gap: 10px;
+}
+
+.frontier-level {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-left: 3px solid var(--accent, #8ec5fc);
+  background: rgba(10, 12, 18, 0.78);
+  min-height: 132px;
+}
+
+.frontier-level .fl-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.frontier-level .fl-num {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--accent, #8ec5fc);
+}
+
+.frontier-level .fl-state {
+  font-size: 9.5px;
+  letter-spacing: 0.08em;
+  padding: 2px 6px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: #c8d0dd;
+}
+
+.frontier-level .fl-name {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.25;
+  color: #f0e6d6;
+}
+
+.frontier-level .fl-meta {
+  margin: 0;
+  font-size: 10.5px;
+  letter-spacing: 0.05em;
+  color: #9aa6b8;
+}
+
+.frontier-level .fl-actions {
+  margin-top: auto;
+}
+
+.frontier-level .fl-lock {
+  font-size: 9.5px;
+  letter-spacing: 0.06em;
+  color: #7c8494;
+}
+
+.frontier-level.cleared {
+  border-left-color: #8fe0b0;
+  background: rgba(12, 22, 18, 0.82);
+}
+
+.frontier-level.cleared .fl-state {
+  color: #8fe0b0;
+  border-color: rgba(143, 224, 176, 0.45);
+}
+
+.frontier-level.locked {
+  opacity: 0.62;
+}
+
+.frontier-level.boss {
+  background: linear-gradient(180deg, rgba(28, 12, 22, 0.9), rgba(10, 8, 14, 0.9));
+  border-top: 1px solid rgba(247, 37, 133, 0.3);
+}
+
+.frontier-level.boss .fl-name {
+  color: #ffc7e0;
+}
+
+.frontier-hud-badge {
+  background: linear-gradient(90deg, rgba(142, 197, 252, 0.22), rgba(142, 197, 252, 0.06));
+  border-color: rgba(142, 197, 252, 0.45);
+  color: #cfe6ff;
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+}
+
+@media (max-width: 640px) {
+  .frontier-chapter-side {
+    align-items: flex-start;
+    min-width: 0;
+  }
+
+  .frontier-levels {
+    grid-template-columns: 1fr;
+  }
+
+  .frontier-level {
+    min-height: 0;
+  }
+
+  .frontier-hud-badge {
+    display: none;
+  }
+}

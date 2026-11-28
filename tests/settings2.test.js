@@ -94,7 +94,7 @@ test('six difficulty profiles change actual enemy, boss, and incoming-damage beh
   assert.ok(easyEnemy.maxHp < base.maxHp);
   assert.ok(hardEnemy.maxHp > base.maxHp);
   assert.equal(hardEnemy.aggroMul, 1.4);
-  assert.equal(hardEnemy.attackRate, 1.46);
+  assert.equal(hardEnemy.attackRate, 1.38);
   const story = new AshenGame();
   story.setDifficulty('story');
   story.player.invuln = 0;
@@ -104,7 +104,7 @@ test('six difficulty profiles change actual enemy, boss, and incoming-damage beh
   hard.setDifficulty('abyssal');
   hard.player.invuln = 0;
   hard.damagePlayer(20, 0);
-  assert.equal(hard.player.hp, hard.player.maxHp - 37);
+  assert.equal(hard.player.hp, hard.player.maxHp - 32);
   normal.reset();
   assert.equal(normal.campaignDifficulty, 'normal');
 });
@@ -139,4 +139,19 @@ test('settings value helpers resolve nested paths without mutating unrelated sec
   assert.equal(getSettingsValue(settings, 'hud.opacity'), 45);
   assert.equal(settings.hud.scale, 100);
   assert.equal(LANGUAGES.length, 14);
+});
+
+test('particle multiplier, budget, and hard cap scale smoothly for dense effects', () => {
+  const settings = defaultExtendedSettings();
+  assert.equal(settings.graphics.particleMultiplier, 1);
+  applyGraphicsPreset(settings, 'extreme');
+  assert.equal(settings.graphics.particleMultiplier, 2.5);
+  const maxed = sanitizeExtendedSettings({
+    graphics: { particleMultiplier: 10 },
+    performance: { particleBudget: 99999 },
+    advanced: { maxParticles: 99999 },
+  });
+  assert.equal(maxed.graphics.particleMultiplier, 4);
+  assert.equal(maxed.performance.particleBudget, 6000);
+  assert.equal(maxed.advanced.maxParticles, 12000);
 });

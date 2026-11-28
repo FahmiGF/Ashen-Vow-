@@ -1,452 +1,118 @@
-# ASHEN VOW — MASTER PLAN 3.0
-
-> **Road to v1.0: every mode finished, deeper, and faster.**
-> Written 24 November 2026 against the live tree at **v0.36.0**. v0.36.0 ships Updates XXV and XXVI, which had sat unreleased on top of v0.35.0 (Tidewrought Cistern). XXV covers ElevenLabs voice, the in-engine trailer, ghost GLBs, the Vigil Tree and the startup guard. XXVI covers BAB X The Lanternwake and the asset inventory. Phase 0 of this plan is that release.
-> Live engine totals: **674 rooms** in `ALL_ROOMS`, **116 bosses**, **262 enemy types**, **18 playable classes** (+15 Frontier 3D classes), **776/776** Node tests.
-> The previous plan (Master Plan 2.0: Milestones A–F, Parts I–III, Appendices A–F) is kept unchanged at [`docs/archive/MASTERPLAN-2.0.md`](docs/archive/MASTERPLAN-2.0.md). It stays the idea bank for systems this plan does not schedule yet, such as the Wonderland, Alien Mode, the War Update and Prestige.
-
----
-
-## Document map
-
-| § | Section | What it answers |
-|---|---|---|
-| 1 | Guiding rules | The rules every phase must keep |
-| 2 | Where the game stands | Every mode, its room range and whether it is really playable |
-| 3 | Roadmap at a glance | Phases 0–7, version numbers, exit criteria |
-| 4 | Phase details | Scope, files touched and acceptance checks for each phase |
-| 5 | Per-mode content plan | More levels, bosses and features for **every** mode |
-| 6 | New boss roster | All 82 planned bosses with phases and their new attack machines |
-| 7 | Enemy AI expansion | 7 behaviours → 16 |
-| 8 | Systems and features | Save slots, menu hubs, fast travel, localization, accessibility and more |
-| 9 | Optimization plan | Measured baselines, budgets, and how each one is checked |
-| 10 | Room-id and save-key ledger | Where new content goes without renumbering anything |
-| 11 | Verification gates | What "done" means for each phase |
-| 12 | Risks and cut lines | What to drop first if a phase runs long |
-
----
-
-## 1. Guiding rules
-
-These carry over from Master Plan 2.0 and CLAUDE.md §10. Rules 9–12 are new.
-
-1. **Ship every phase.** Each version leaves the game playable. No phase depends on a later one to be fun.
-2. **Real systems only.** No placeholder buttons, fake progression or invented verification numbers. A locked teaser is allowed only when the content behind it is on this roadmap.
-3. **Preserve saves.** Every schema change ships a migration, a sanitizer and a test. Room ids 0–673 are never renumbered.
-4. **Data-driven content.** Rooms, bosses, enemies, shop items and codex entries live in exported tables. New content must not touch the renderer, audio engine or map renderer.
-5. **Pure simulation.** `src/core.js` and every `*_data.js` / chapter module stay free of DOM and audio access. Every mechanic gets a deterministic Node test.
-6. **Green before commit.** Run `npm test` and the touched mode's `smoke:*` script before every commit, on desktop and on a 390×844 portrait viewport.
-7. **Metroidvania first.** Side modes extend the oath-and-ash identity. They never replace it.
-8. **No pay-to-win.** Cosmetics are visual only, and every gameplay system is earned in game.
-9. **Measure, then optimize.** Performance claims cite a probe (`profile:frames`, `probe:render`, `bench:sim`, `bench:3d`) with before/after numbers in the same session. Failed experiments are written down, as v0.34–v0.35 did, so nobody repeats them.
-10. **New content gets new behaviour.** A new boss can share the boss core (hitboxes, phase controller). It cannot reuse another boss's whole attack machine the way Orsella reuses Vasska's. A new enemy must use one of the 16 behaviours in §7, and every chapter needs at least one behaviour the previous chapter did not have.
-11. **Docs stay true.** Every release updates `package.json`, `GAME_VERSION`, the Update Log, CLAUDE.md §0 and this file's §2 table in the same commit. Unversioned "follow-up" updates are not allowed any more: a working-tree update ships as a patch version.
-12. **One door per mode.** New modes and arcs go into one of the menu hubs in §8.2. The top-level main menu never grows past 8 entries again.
-
----
-
-## 2. Where the game stands (24 Nov 2026, v0.36.0)
-
-State legend: **Playable** means it has real rooms, combat and saves. **Partial** means some content is playable and the rest is data. **Data** means tables exist but nothing is playable. **Teaser** means a locked card with nothing behind it.
-
-### 2.1 Campaign and arcs
-
-| Content | Rooms (`ALL_ROOMS`) | Bosses | State | Main gap |
-|---|---|---|---|---|
-| Base campaign | 0–13 | 6 | Playable | — |
-| Echoes of the Forgotten World | 14–113 | 30 (10 major + 20 mini) | Playable | Enemies are 100 types on 7 behaviours |
-| The Sundered Atlas | 114–353 | 16 | Playable | — |
-| Hearthfall: The Hollow Court | 354–413 | 12 | Playable | — |
-| Taman Peri / Faewood | 414–425 | 2 | Playable | — |
-| Arc II The Fallen Ones | 426–484 | 15 | Playable | — |
-| Arc III The Radiant Crusade | 485–504 | 5 | Playable | Ends on the locked **The Rift** teaser |
-| Arc VI The Astral Dominion | 505–524 | 5 | Playable | Ends on the locked **Unwritten Expanse** teaser |
-| Arc VIII Eclipse + Godfall | 525–661 | 7 + Godfall floors | Playable | — |
-| BAB IX Tidewrought Cistern | 662–668 | 1 (Vasska, 3 phases) | Playable (v0.35.0) | — |
-| BAB X The Lanternwake | 669–673 | 1 (Orsella, 4 phases) | Playable (v0.36.0) | Orsella runs Vasska's tide-regent machine |
-| Infinite Frontiers Lv 101–200 | none | 10 named | **Data** | Not in `ALL_ROOMS`. `FRONTIER_ROOM_START = 114` collides with Atlas |
-| Overdrive Lv 201–300 | none | 10 named + 6 background | **Data** | `OVERDRIVE_LEVEL_SPECS` exist, no rooms |
-| Arc IV The Rift | none | 0 | **Teaser** | Nothing behind the card |
-| Arc V, Arc VII | none | 0 | Unused numbers | — |
-| Unwritten Expanse (Arc VI epilogue) | none | 0 | **Teaser** | Nothing behind the card |
-
-### 2.2 Scary Mode line
-
-| Layer | State | Notes |
-|---|---|---|
-| Nightmare Protocol (v0.22) | Playable | 8 ghosts, 17 jumpscares, journal, anti-jumpscare |
-| Vigil Tree | Playable (v0.36.0) | 3 branches, 9 nodes, 21 ranks |
-| Hunter's Kit (v0.30) | Playable | 5 tools |
-| The Dread Beyond (v0.23) | Playable | 5 environments, 3 bosses |
-| Arc IX Veil (v0.24) | Playable | 30 stages, 7 bosses |
-| Arc X Eternal Night (v0.25–27) | Playable | 40 stages (9600–9639), 9 bosses, 80 Ghost Index entities |
-| Stage Archive (v0.26) | Playable | 65+ stages catalogued |
-| 3D Blackveil Nightfall (v0.28) | Playable | 5 sites, 15 phases. Its hunters cannot be killed, so it has no boss |
-
-### 2.3 Standalone modes
-
-3D Mode (15 areas, 6 bosses) · Infinite Labyrinth (20 zones, 30 bosses) · Co-op 2–4 (relay) · Fivefold Trials (100 levels, 20 bosses) · Puzzle Adventure (100 stages, 10 bosses) · Riftwar MOBA (28 heroes, 3 maps) · Wave Defense (4 maps, 24 waves + endless) · Pirate Tide (10 routes + endless) · Infinite Realms (6 modes) · Panggung Abadi (6 bosses) · Speedrun · Pondok Umpan (25 fish) · Trailer · Credits & Secrets · Admin. All are playable. Their gaps are depth, not existence.
-
-### 2.4 Engineering baseline (measured or counted from the repo)
-
-| Item | Now |
-|---|---|
-| `src/main.js` | **799 KB, 19,227 lines**, 57 static `import` statements, **0 dynamic `import()`** |
-| JS parsed before the menu | ≈ **3.8 MB** across 71 modules. Every mode loads at boot |
-| Stylesheets | **15 render-blocking `<link>`s** (`styles.css` alone is 168 KB) |
-| `src/updates.js` | 114 KB of release text loaded at boot |
-| GLB kit | 16 files, 4,819.8 KB, 58,802 triangles |
-| Campaign frame (headless Chrome, software raster, 1280×900) | canvas 13.8 ms, of which `drawBackground` is 8.9 ms. p95 ≈ 7.1 ms |
-| Sim throughput (`bench:sim`) | 10,689–18,095 steps/s |
-| Save keys | 13 localStorage keys, one profile, no slots, no export |
-| Enemy behaviours | 7 (`chaser`, `ranged`, `lunge`, `slam`, `burrower`, `hover`, `spawner`) |
-| Release gates never measured | low/medium/high hardware profiles, 30-min memory soak, co-op network load |
-
----
-
-## 3. Roadmap at a glance
-
-| Phase | Versions | Name | Theme | Exit criterion |
-|---|---|---|---|---|
-| **0** | v0.36.0 | *Ledger of Ash* | Ship the unreleased work and make the docs true | Update Log, CLAUDE.md, README and this plan agree on the version and totals |
-| **1** | v0.37 – v0.39 | *Lighter Ash* | Optimization and foundations | Boot JS ≤ 900 KB, menu ≤ 8 entries, 3 save slots |
-| **2** | v0.40 – v0.42 | *The Unfinished Roads* | Frontiers 101–200 and Overdrive 201–300 playable | +200 rooms, +20 bosses, both modes leave **Data** state |
-| **3** | v0.43 – v0.45 | *Living Ash* | Enemy AI 7 → 16, a unique machine for every boss | No two bosses share an attack machine |
-| **4** | v0.46 – v0.48 | *Through the Rift* | Arc IV The Rift, Unwritten Expanse, Arc V | No teaser card left without content |
-| **5** | v0.49 – v0.53 | *Every Door Opened* | Per-mode expansions (§5) | Every standalone mode gains at least one level pack and one boss |
-| **6** | v0.54 – v0.57 | *The Last Vow* | Arc VII, BAB XI–XII, finale Arc XII, true ending | One story ending that ties all the arcs together |
-| **7** | v0.58 → **v1.0.0** | *Oath Kept* | Localization, accessibility, release gates, polish | All §11 gates green on 3 hardware profiles |
-
-**Totals at v1.0:** **980 rooms** in `ALL_ROOMS` (+306, up to 1,000 with the reserved arc-pack block), **198 bosses** (+82), **16 enemy behaviours** (+9), and about **300 enemy types** (+38 bespoke bodies, not reskins).
-
-**Dependency order:** Phase 0 → Phase 1 → (Phases 2 and 3 can run in parallel) → Phase 4 → Phase 5 → Phase 6 → Phase 7. Phase 1 comes first because adding 300 rooms on top of a 19k-line `main.js` and a 3.8 MB boot would make every later phase slower to build and slower to load.
-
----
-
-## 4. Phase details
-
-### Phase 0 — v0.36.0 *Ledger of Ash* (ship and tell the truth)
-
-**Scope**
-- Commit the working-tree Updates XXV and XXVI as **v0.36.0**: ElevenLabs voice and `/api/voice`, the 16-shot trailer, the 8 ghost GLBs and 9 mode props, the Vigil Tree, the startup guard (BOOT-01…04), BAB X The Lanternwake and `docs/asset-inventory.md`.
-- Add an Update Log entry for v0.36.0 to `src/updates.js` and bump `GAME_VERSION` and `package.json` to `0.36.0`. In `tests/updates.test.js`, change the Cistern test to look up `0.35.0` by version instead of `LATEST_UPDATE`, and add a v0.36.0 test.
-- Add a **docs-truth test** (`tests/docs.test.js`) that fails when `package.json.version`, `GAME_VERSION`, the first heading of CLAUDE.md §0 and the version in this plan's header disagree. It also asserts that `ALL_ROOMS.length` matches the room total stated in CLAUDE.md.
-- Fix the stale facts in CLAUDE.md: Cistern is not "configuration only", the trailer exists, narration can use ElevenLabs, there are 18 classes rather than 10, and GLB assets exist.
-- Archive Master Plan 2.0 at `docs/archive/MASTERPLAN-2.0.md` (done in the same change as this plan).
-
-**Acceptance:** `npm test` green; `smoke:lanternwake`, `smoke:trailer` and `smoke:scary2` green; the Update Log screen shows v0.36.0 first.
-
-### Phase 1 — v0.37 – v0.39 *Lighter Ash* (optimization and foundations)
-
-**v0.37.0 — Split and lazy-load**
-- Split `src/main.js` into `src/ui/` modules by screen: `boot.js`, `menu.js`, `hud.js`, `level_select.js`, `settings_ui.js`, `codex_ui.js`, `map_ui.js`, `debug_hooks.js`, plus one `src/modes/<mode>_ui.js` per mode. Target: no file over 120 KB, and `main.js` ≤ 60 KB as a router.
-- Every mode is loaded with `import()` on first entry. Boot loads only core, render, audio, menu, settings and the save layer. The other modes are not loaded until the player opens them.
-- `updates.js` becomes `updates_data.js`, loaded when the Update Log opens. `GAME_VERSION` moves to `src/version.js`.
-- Mode stylesheets load with the mode (a `<link>` injected by the mode loader). Only `styles.css` blocks render.
-- `window.__ashen` keeps its full surface: `debug_hooks.js` installs lazy getters that `await` the mode module, so the CDP smoke scripts keep working.
-
-**v0.38.0 — Save slots and the save layer**
-- New `src/save.js` owns **every** localStorage key. 3 profile slots plus 1 auto-backup. Key scheme: `ashen-vow-slot<N>-<area>-v1`; the existing keys migrate to slot 1 on first boot, and the old keys are kept read-only for one release.
-- **Export / import**: one JSON file per slot (versioned, checksummed, passed through every sanitizer on import).
-- Debounced writes (at most 1 per 2 s per key, flushed on `visibilitychange`/`pagehide`) in place of the 15 direct `localStorage.setItem` calls in `main.js`.
-- Optional **cloud save** through `server.js` (`/api/save`, local-account token) is designed here but built in Phase 7.
-
-**v0.39.0 — Menu hubs and the render budget pass**
-- Main menu reduced from ~35 entries to **7**: *Lanjutkan* · *Kampanye* · *Arc & Ekspansi* · *Scary Mode* · *Mode Arena* · *Arsip* · *Pengaturan* (layout in §8.2).
-- Render pass on the measured hot spots: `drawBackground` (8.9 of 13.8 ms) gets the same treatment that worked for Cistern (cached gradients, native-size glow blits, ring-only particles) in every room type. Sprite-tile caching stays banned: it was measured slower twice, in v0.34 and v0.35.
-- First run of the three missing release gates (§9.4) to record a baseline.
-
-### Phase 2 — v0.40 – v0.42 *The Unfinished Roads*
-
-**v0.40.0 — Frontiers playable, Lv 101–150 (rooms 674–723)**
-- New constant `FRONTIER_GLOBAL_START = 674`; `FRONTIER_ROOM_START = 114` is renamed `FRONTIER_LEVEL_OFFSET` because it is a level-number offset, not a room id. Builds `FRONTIER_ROOMS` from `FRONTIER_LEVEL_SPECS` and appends them to `ALL_ROOMS`.
-- Chapters 11–15: Benua Hancur, Kekaisaran Terlupakan, Kerajaan Palung Laut, Gurun Abadi, Raksasa Hijau. Bosses: The Skybreaker, Emperor Solvar, The Primordial Leviathan, Zarakh the Sandbound Sovereign, Elder Yggvar (shares lore and model with the 3D Mode boss, but gets a 2D move set of its own).
-- The 15 Frontier elite mobs (ranks E1–E7) become real spawns with their 10 modifiers. Mounts and companions are cut from the 2D build (they move to 3D Mode in Phase 5).
-
-**v0.41.0 — Frontiers Lv 151–200 (rooms 724–773)**
-- Chapters 16–20: Garis Batas Astral, Dimensi Rongga, Mesin Surgawi, Tanah Purba, Batas Terakhir. Bosses: The Astral Devourer, The Architect of Nothing, Chronos the Eternal Mechanism, Gorath the First Colossus, **Aethron, the Origin Beyond** (5 phases).
-- Kingdom Defense (10 towers) is folded into Wave Defense as a fifth map (§5) instead of living as a separate data mode.
-
-**v0.42.0 — Overdrive playable, Lv 201–300 (rooms 774–873)**
-- Builds `OVERDRIVE_ROOMS` from `OVERDRIVE_LEVEL_SPECS`: 10 chapters × 10 levels, with the boss seat on level 10 of each chapter.
-- Chapter bosses: The Sunken Emperor, The Prism Devourer, The Forge Titan, The Mother of Thorns, The Starbound Regent, The Pale Frost Monarch, The Grand Horologist, The Unmade, The Sandstorm Sovereign, **The First God** (5 phases).
-- The 8 spell schools (32 spells) become a real spell slot next to the weapon (`Q` to cast, mana regenerates from hits). The 8 legendary weapons drop from chapter bosses. The 6 special level types (Endless Dungeon, Colossus Trial, Time Trial, Treasure Vault, Cursed Expedition, Gauntlet Tower) become playable level variants.
-- The 6 *background bosses* (World Colossus, Roaming Nemesis, Sky Behemoth, Abyssal Creature, Ancient Guardian, Rival Champion) become roaming encounters that can appear in any Overdrive level after chapter 3.
-- Of the 12 Overdrive mode specs, 4 ship (World Boss Hunt, Endless Descent, Colossus Arena, Spell Mastery). The rest are marked "folded into Infinite Realms / Labyrinth" in data, so the game no longer advertises them.
-
-### Phase 3 — v0.43 – v0.45 *Living Ash*
-- v0.43.0: behaviours 8–12 from §7 in `src/ai/behaviours.js` (pure), each with a Node test that drives the state machine. Echoes chapters are rebalanced so each one uses at least 3 behaviours.
-- v0.44.0: behaviours 13–16. A **boss machine registry** (`src/boss_machines/`) gives every boss its own attack list. Orsella gets her own wick-and-flame machine (see §6). The Atlas guardians and Echoes mini-bosses that share "pattern families" get at least one signature move each.
-- v0.45.0: **enemy readability pass**. Each behaviour gets a wind-up telegraph (colour flash plus sound cue) of at least 0.35 s on Normal, and the Codex shows the behaviour icon for each enemy.
-
-### Phase 4 — v0.46 – v0.48 *Through the Rift*
-- v0.46.0 **Arc IV — The Rift** (rooms 874–900). Opens from the Radiant Crusade's red crack. 5 regions × 5 rooms + 2 secret rooms: *Rift Mouth*, *Inverted Bastion*, *Sea of Glass Knives*, *Hollow Orchard of Echoes*, *The Seam*. New mechanic: **Fracture** — the room flips between two layouts every N seconds, and some platforms exist in only one layout. 6 bosses (§6).
-- v0.47.0 **Unwritten Expanse** (rooms 901–915). Opens from the Astral Dominion's ending. Mechanic: **Ink** — the player writes 1 of 3 glyphs into the level before entering (bridge, wall, light). 3 bosses.
-- v0.48.0 **Arc V — The Ashfall Accord** (rooms 916–935). A diplomatic war arc between the Crusade and the Fallen. 4 regions × 5 rooms, with a **faction choice** at room 920 that changes 2 of the 5 bosses. Uses the Valor Chain and Radiance meters together.
-
-### Phase 5 — v0.49 – v0.53 *Every Door Opened*
-Per-mode packs in §5, grouped by release:
-- v0.49.0 Scary line (new Veil and Eternal stages, Blackveil sites 6–7, 3 new ghosts)
-- v0.50.0 Arena modes (Labyrinth, Trials, Puzzle, Speedrun)
-- v0.51.0 Strategy modes (Wave Defense, MOBA, Realms)
-- v0.52.0 Sea and leisure (Pirate Tide Act III, Fishing 2.0)
-- v0.53.0 3D Mode and Co-op
-
-### Phase 6 — v0.54 – v0.57 *The Last Vow*
-- v0.54.0 **BAB XI — Frostglass Cathedral** (rooms 956–961; this was Milestone D in Master Plan 2.0). Mechanic: frozen glass that cracks on the second landing. Boss: Ysolde, the Glass Abbess (3 phases).
-- v0.55.0 **BAB XII — Cinder Maw** (rooms 962–967). Mechanic: a lava tide that rises on a timer, the inverse of the Cistern. Boss: Gharrow, Maw of Cinders (4 phases).
-- v0.56.0 **Arc VII — The Hollow Meridian** (rooms 936–955). The arc that bridges the timelines: one arc visits a future version of each base room. 5 bosses.
-- v0.57.0 **Arc XII — The Last Vow** (rooms 968–979), the finale. It needs Arcs II–VII, VIII and BAB X–XII cleared. 3 bosses, ending with **The Unbroken Oath** (6 phases, one per major arc). It has a **true ending** and an **Oath Ledger** epilogue screen listing which endings and arcs the player completed.
-
-### Phase 7 — v0.58 → v1.0.0 *Oath Kept*
-- Full localization (Indonesian and English for all gameplay text, not only settings) with a string table and a missing-key test.
-- Accessibility: one-handed preset, hold-to-toggle for every hold input, colour-blind palettes for telegraphs, captions for all ghost audio cues, and a "no flashing" global switch.
-- Cloud save (optional, `/api/save`) with conflict resolution by `updatedAt` plus a manual choice screen.
-- Release gates in §11 on 3 hardware profiles, a 30-min soak, and a 4-player co-op load test.
-- v1.0.0 credits keep the exact line "Made by SealiusHQ with a lot of support from Contributors".
-
----
-
-## 5. Per-mode content plan
-
-Every mode gets more levels, at least one new boss, and at least one feature. The "Phase" column shows the version.
-
-### 5.1 Campaign and arcs
-
-| Mode | More levels | New bosses | New features | Phase |
-|---|---|---|---|---|
-| Base campaign | +12 rooms (BAB XI–XII) | Ysolde, Gharrow | **Fast travel** between Warung Abu checkpoints; ash banking (25% of run ash kept on death) | 6 |
-| Echoes | +10 *Echo Remix* levels (one per chapter: the same layout, mirrored, with new behaviours) | 0 new; 20 mini-bosses get signature moves | Chapter Mastery medals (no-hit, under par, all relics) | 3 |
-| Sundered Atlas | +8 secret rooms (1 per zone, behind ability gates the player already has) | 1 secret boss: **The Cartographer** (4 phases) | Atlas map completion % and a 5th ending for 100% | 5 |
-| Hearthfall | +6 rooms: the **Undercroft** of the house | **The Hearth Below** (3 phases) | Furnishing sets with set bonuses (cosmetic only); resident affinity level 6 | 5 |
-| Faewood | +5 stages: **Moonlit Glade** night variant | **Nyx-Ilra, Moth Queen** (3 phases) | Fairy companion that follows the player and lights dark rooms | 5 |
-| Arc II Fallen | +5 rooms in an optional **Choir Reprise** region | **The Eighth Voice** (4 phases) | New Game+ for the arc with remixed Purity Shields | 5 |
-| Arc III Crusade | +5 rooms: *Siege Reversed* (defend the camp) | **Templar Marshal Kesh** (3 phases) | Banner loadout (equip 2 of 5 banners) | 5 |
-| Arc VI Astral | +15 rooms (Unwritten Expanse) | 3 (§6) | Ink glyphs | 4 |
-| Arc VIII Eclipse | Godfall floors 101–150 | **Godfall Warden** every 25 floors (2 new) | Weekly seeded Godfall modifier (local clock, like seasonal events) | 5 |
-| BAB IX Cistern | +2 rooms: *Pump Heart* challenge | 0 | Tide timer challenge mode | 5 |
-| BAB X Lanternwake | +2 rooms: *Ninth Wick* secret | **The Unlit** (2 phases, secret) | Light radius mechanic: wicks extend vision | 3 |
-| Infinite Frontiers | **100 rooms** (Lv 101–200) | 10 | Elite ranks E1–E7 live | 2 |
-| Overdrive | **100 rooms** (Lv 201–300) | 10 + 6 roaming | Spell slot, legendary weapons, 6 special level types | 2 |
-| Arc IV The Rift | 27 rooms | 6 | Fracture | 4 |
-| Arc V Ashfall Accord | 20 rooms | 5 (2 depend on faction) | Faction choice | 4 |
-| Arc VII Hollow Meridian | 20 rooms | 5 | Future-room overlays | 6 |
-| Arc XII The Last Vow | 12 rooms | 3 | True ending, Oath Ledger | 6 |
-
-### 5.2 Scary Mode line
-
-| Mode | More levels | New bosses | New features | Phase |
-|---|---|---|---|---|
-| Nightmare Protocol | 3 new ghosts (**The Bellringer's Child**, **Ash Widow**, **The Counting Man**) → 11 | — | Per-ghost "tell" tutorial cards in the journal | 5 |
-| Vigil Tree | +1 branch (*Witness*: evidence and Ghost Index perks), 9 → 12 nodes, 21 → 30 ranks | — | Respec costs nothing in Story/Easy | 5 |
-| Hunter's Kit | +3 tools (Iron Thread, Mirror Shard, Candle of Names) → 8 | — | Tool upgrade tier II for every tool | 5 |
-| Dread Beyond | +2 environments (*Drowned School*, *Radio Tower*) → 7 | **The Static Saint** (3 phases) | Co-op Dread expedition (uses the Eternal expedition relay) | 5 |
-| Arc IX Veil | +1 chapter, 5 stages → 35 | **The Veilwright's Echo** (4 phases) | Case replay with evidence timeline | 5 |
-| Arc X Eternal Night | +1 chapter, 5 stages → 45 (rooms 9640–9644) | **The Last Lantern** (5 phases) | Ghost Index to 90 entities; Index Rank cap 100 → 120 | 5 |
-| Stage Archive | Catalogues all new stages | — | Archive search and filter by ghost or tool | 5 |
-| 3D Blackveil | +2 sites (**Saint Orra's Bell Tower**, **Blackwater Ferry**) → 7 sites / 21 phases | **The Keeper of Blackveil**, the first 3D horror entity that can be killed (3 phases) | Flashlight battery as a resource; hide-in-locker | 5 |
-
-The 20-enemy horror contract (19 normal + 1 elite, 4 archetypes) stays in force for every new stage.
-
-### 5.3 Standalone modes
-
-| Mode | More levels | New bosses | New features | Phase |
-|---|---|---|---|---|
-| 3D Mode | +3 areas (Frontier mount plains, Overdrive Astral Citadel, Rift Mouth) → 18 | **Aethron's Shadow** (3D) | Mounts and companions from Frontier data become real in 3D | 5 |
-| Infinite Labyrinth | +4 zones → 24 | +4 bosses → 34 | Daily seed (local clock) and a ghost replay of your best run | 5 |
-| Co-op | Campaign arcs Fallen and Crusade join Campaign / Hearthfall / Labyrinth | — | Reconnect after drop; spectator slot; host migration | 5 |
-| Fivefold Trials | +4 biomes, 20 levels → 120 | +4 biome bosses → 24 | Medal targets per level | 5 |
-| Puzzle Adventure | +2 arcs, 20 stages → 120 | +2 puzzle bosses → 12 | Level editor for puzzle stages (reuses the map editor data model) | 5 |
-| Riftwar MOBA | +1 map (**Glass Rift**) → 4 | +1 epic boss → 7 | +6 heroes → 34; bot difficulty tiers | 5 |
-| Wave Defense | +2 maps (Kingdom Defense map from Frontiers, **Lanternwake Pass**) → 6 | +2 bosses → 8 | 10 Kingdom Defense towers merged into the 14 → 18 towers after dedupe | 5 |
-| Pirate Tide | **Act III**: 5 routes → 15, 2 islands | +5 captains → 15; sea boss **The Drowned Crown** | Ship upgrades (hull, sails, cannons) bought with gold | 5 |
-| Infinite Realms | +2 modes (Rift Hunt, Ink Duel) → 8 | — | Realm modifiers shared with Labyrinth | 5 |
-| Panggung Abadi | +4 bosses → 10 | Encore versions of Vasska, Orsella, Aethron and The First God | Boss Rush ladder with time medals | 5 |
-| Speedrun | +3 courses (Cistern, Lanternwake, Rift) | — | Split timer per room, ghost of personal best | 5 |
-| Pondok Umpan | +2 lakes (Cistern sump, Faewood pond) → 3 | **Leviathan Kecil** gets a boss reel (3 phases) | Weather and time of day change the odds; the per-bait columns still sum to 100.0 | 5 |
-| Trailer | Re-cut for v1.0 with new arcs | — | Chapter trailers per arc | 7 |
-| Credits & Secrets | Credit scenes for the 6 new arcs/chapters | — | Hidden mode marks for every new mode → 40 | 6 |
-| Admin | — | — | Save-slot inspector; per-slot audit | 1 |
-
----
-
-## 6. New boss roster (82 bosses)
-
-Every boss ships with `intro`, one `phaseN` per extra phase, and `defeat` dialogue. Each gets its **own machine** in `src/boss_machines/` (rule 10).
-
-| # | Boss | Home | Phases | Signature machine |
-|---|---|---|---|---|
-| 1–10 | Skybreaker, Emperor Solvar, Primordial Leviathan, Zarakh, Elder Yggvar (2D), Astral Devourer, Architect of Nothing, Chronos, Gorath, **Aethron (5)** | Frontiers | 3–5 | Flight sweeps; flame thrones; sea surge; sand pyramids rising; root tethers; gravity well; room-geometry swap; clock-hand sweeps; ground-quake columns; first-flame cross |
-| 11–20 | Sunken Emperor, Prism Devourer, Forge Titan, Mother of Thorns, Starbound Regent, Pale Frost Monarch, Grand Horologist, The Unmade, Sandstorm Sovereign, **The First God (5)** | Overdrive | 3–5 | Each counters one spell school; the First God cycles through all 8 |
-| 21–26 | World Colossus, Roaming Nemesis, Sky Behemoth, Abyssal Creature, Ancient Guardian, Rival Champion | Overdrive (roaming) | 2–3 | Roam between rooms; the Rival copies the player's last 3 attacks |
-| 27–32 | **Riftmaw** (3), **The Inverted Paladin** (3), **Glass Knife Saint** (3), **Echo-Mother** (4), **Seam Warden** (4), **The Rift Itself** (5) | Arc IV | 3–5 | Built on Fracture: attacks exist in only one layout |
-| 33–35 | **Inkless Scribe** (3), **The Blank Choir** (3), **The Unwritten** (5) | Unwritten Expanse | 3–5 | Erase the player's glyphs; write hazards |
-| 36–40 | **Accord Herald** (3), **Ser Varga / Seraph Lune** (faction, 3), **Ash Diplomat** (3), **Twin Banners** (duo, 4), **The Treaty-Breaker** (5) | Arc V | 3–5 | Duo boss with a shared HP pool; faction-swapped move sets |
-| 41–45 | **Meridian Clockmaid** (3), **Future Mordrake** (3), **Future Vhael** (4), **The Hollow Hour** (4), **Meridian Oathbreaker** (5) | Arc VII | 3–5 | Future versions of base bosses with new phases |
-| 46–47 | **Ysolde, the Glass Abbess** (3), **Gharrow, Maw of Cinders** (4) | BAB XI–XII | 3–4 | Floor cracking; rising lava tide |
-| 48–50 | **Ash Regent** (3), **The Last Warden** (4), **The Unbroken Oath** (6) | Arc XII | 3–6 | One phase per major arc's mechanic |
-| 51 | **The Unlit** (2) | Lanternwake secret | 2 | Darkness: the boss is visible only inside wick light |
-| 52–58 | Cartographer (4), Hearth Below (3), Nyx-Ilra (3), Eighth Voice (4), Templar Marshal Kesh (3), 2 Godfall Wardens (3) | Arc packs | 3–4 | — |
-| 59–62 | Static Saint (3), Veilwright's Echo (4), The Last Lantern (5), Keeper of Blackveil (3) | Scary line | 3–5 | Sanity and evidence aware; anti-jumpscare respected |
-| 63–82 | Aethron's Shadow (3D), 4 Labyrinth bosses, 4 Trials biome bosses, 2 Puzzle bosses, MOBA Glass Rift boss, 2 Wave Defense bosses, Drowned Crown + 5 Pirate captains | Standalone | 2–5 | Mode-native (for example, the Pirate bosses are ships) |
-
-The Panggung Abadi encores and the Leviathan Kecil boss reel are not counted as new bosses: they reuse a machine on purpose. **Orsella** is not on the list because she already exists, but Phase 3 gives her a machine of her own: wick lances, a lantern-ring arena, and a phase-4 "all nine wicks" ultimate.
-
----
-
-## 7. Enemy AI expansion (7 → 16 behaviours)
-
-All behaviours live in `src/ai/behaviours.js` as pure state machines on top of the existing EnemyBrain (12 states) and NavGraph A*. Every behaviour has a Node test that steps it 600 ticks and checks its signature action.
-
-| # | Behaviour | Status | Signature |
-|---|---|---|---|
-| 1 | chaser | exists | Close distance, melee |
-| 2 | ranged | exists | Keep distance, fire |
-| 3 | lunge | exists | Mark, then dash |
-| 4 | slam | exists | Jump and ground slam |
-| 5 | burrower | exists | Dig, then surface under the player |
-| 6 | hover | exists | Fly and drift |
-| 7 | spawner | exists | Summon children |
-| 8 | **shielder** | new (v0.43) | Front shield; must be hit from behind or parried |
-| 9 | **pack** | new (v0.43) | 3–5 share a target and flank from both sides |
-| 10 | **sniper** | new (v0.43) | Long telegraph laser; breaks line of sight to cancel |
-| 11 | **mimic** | new (v0.43) | Disguised as a chest or prop; ambushes |
-| 12 | **support** | new (v0.43) | Heals or buffs nearby enemies (like Bone Herald in WD) |
-| 13 | **teleporter** | new (v0.44) | Blinks behind the player after a visible sigil |
-| 14 | **kamikaze** | new (v0.44) | Rushes in and explodes; can be knocked back |
-| 15 | **trapper** | new (v0.44) | Lays hazards (webs, ink, ice) on the platforms |
-| 16 | **phase-walker** | new (v0.44) | Exists in one Fracture layout; built for Arc IV |
-
-**Budget:** AI update ≤ 0.6 ms for 40 enemies at 1/120 s (`bench:sim` gets a 40-enemy scenario). Pathfinding queries are capped at 4 per tick and share a cache per room.
-
----
-
-## 8. Systems and features
-
-### 8.1 Save slots, backup and cloud
-Covered in Phase 1 (v0.38) and Phase 7. Slot cards show class, play time, furthest arc and the date of the last save. Deleting a slot asks to type the slot name and keeps a 24-hour undo backup.
-
-### 8.2 Main menu hubs (35 → 7)
-
-| Top level | Contains |
-|---|---|
-| **Lanjutkan** | Resume the last played mode (hidden on a new save) |
-| **Kampanye** | Start Journey, Level Select, Choose Guardian, Difficulty, Map, Codex |
-| **Arc & Ekspansi** | Echoes, Sundered Atlas, Hearthfall, Faewood, Fallen*, Crusade*, Astral, Eclipse, Frontiers, Overdrive, The Rift*, Unwritten*, Accord*, Meridian*, The Last Vow* (* hidden until unlocked, as today) |
-| **Scary Mode** | Scary Mode, 3D Blackveil, Stage Archive, Vigil Tree, Hunter's Kit |
-| **Mode Arena** | 3D Mode, Labyrinth, Trials, Puzzle, Riftwar, Wave Defense, Pirate Tide, Realms, Panggung Abadi, Speedrun, Pondok Umpan, Co-op |
-| **Arsip** | Update Log, Trailer, Credits, Secrets, Stage Access (dev), Admin (hidden) |
-| **Pengaturan** | Settings 2.0 |
-
-Rules: a hub shows a "NEW" pip when it contains something unseen. Keyboard and gamepad focus returns to the last-used card. Boot still lands on the menu and never auto-starts gameplay.
-
-### 8.3 Other features (scheduled)
-- **Fast travel** between Warung Abu checkpoints in the base campaign and chapters (Phase 6).
-- **Ash banking**: 25% of run ash is kept on death, so the rule "ash is run-scoped" becomes "mostly run-scoped" (Phase 6, behind a difficulty flag; off on Nightmare and Abyssal).
-- **Codex discovery gating**: entries unlock on first sighting (Phase 3).
-- **Sneak Peek touch pan** (Phase 1).
-- **Per-action gamepad rebinding** (Phase 7).
-- **Music variation**: every zone track gets an A/B section and a 4-bar variation so long sessions loop less (Phase 5).
-- **Full localization** (Phase 7).
-
-### 8.4 Not scheduled (kept in the Master Plan 2.0 archive)
-Wonderland, Alien Mode, the War Update, Prestige ranks, the Advanced Map Editor 2.0, the player-facing Kingdom Rush tower campaign, paid cosmetics. They can enter a later plan after v1.0.
-
----
-
-## 9. Optimization plan
-
-### 9.1 Budgets
-
-| Metric | Baseline (§2.4) | Target | Phase | Checked by |
-|---|---|---|---|---|
-| JS parsed before the menu is interactive | ≈ 3.8 MB | **≤ 900 KB** | 1 | New `tools/boot-probe.mjs`: sums `transferSize` of scripts loaded before `__ashenBootReady` |
-| Largest single JS file | 799 KB (`main.js`) | **≤ 120 KB** (`core.js` exempt until Phase 3, then ≤ 180 KB) | 1, 3 | `tests/budget.test.js` (fails on regressions) |
-| Render-blocking stylesheets | 15 | **1** | 1 | `boot-probe` |
-| Time to menu (cold, local server) | not measured | **≤ 1.2 s** desktop, ≤ 2.5 s on the low profile | 1 | `boot-probe` |
-| Campaign canvas frame (software raster) | 13.8 ms | **≤ 8 ms**, `drawBackground` ≤ 4 ms | 1 | `profile:frames`, `probe:render` |
-| Per-frame gradient allocations | 0 in Cistern, unknown elsewhere | **0 in every room type** | 1 | `probe:render` counter |
-| p95 frame, heaviest mode (Godfall / MOBA) | not measured | ≤ 12 ms, no long animation frames over 50 ms in a 60 s run | 1 | `profile:frames` |
-| Sim throughput | 10.7k–18.1k steps/s | **≥ 20k steps/s** with 40 enemies | 3 | `bench:sim` |
-| 30-min memory soak | not measured | heap growth ≤ 10%, no detached canvases | 1, 7 | New `tools/soak.mjs` (CDP heap snapshots at 0/15/30 min) |
-| GLB kit | 4,819.8 KB | **≤ 3.5 MB** via quantized positions/normals in `export-glb.mjs` (no new dependency) | 5 | `assets:inventory` reports size |
-| 3D frame (`bench:3d`) | — | ≤ 16.7 ms on the medium profile with 3 LODs | 5 | `bench:3d` |
-| Save writes | 15 direct writes | ≤ 1 write per 2 s per key, flushed on `pagehide` | 1 | `tests/save.test.js` |
-| Co-op relay | not measured | 4 players at 20 Hz snapshots ≤ 40 KB/s per client | 7 | New `tools/coop-load.mjs` |
-| HUD DOM writes | written only when changed (since v0.12) | kept; extend to every mode HUD | 1 | Audit in `audit:gadgets` |
-
-### 9.2 Techniques that are allowed
-- Dynamic `import()` per mode; lazy `<link>` per mode stylesheet.
-- Gradient and path caching per canvas (proven in Cistern and Pirate Tide).
-- Camera culling for every mode that draws off-screen entities (proven in Pirate Tide).
-- Native-size glow blits (proven: 0.17–0.20 ms against 7.04–8.13 ms upscaled).
-- Object pools for projectiles and particles (perf.js already exposes budgets).
-- Axis-rejection before distance checks for collision (proven in Pirate Tide).
-
-### 9.3 Techniques that were measured slower (do not retry without new evidence)
-- OffscreenCanvas sprite cache for islands: 7.04 → 21.07 ms (v0.34).
-- Tile sprite cache for cistern arches and pillars: 10.7 → 19.5 ms (v0.35).
-
-### 9.4 Hardware profiles for release gates
-- **Low**: 4× CPU throttle, software raster, 1280×720, Graphics preset Low.
-- **Medium**: 2× throttle, GPU raster, 1920×1080, preset Medium.
-- **High**: no throttle, GPU raster, 2560×1440, preset High.
-All three run in headless Chrome via CDP, so they can be repeated on any machine. The numbers are recorded in the Update Log entry of the release that measured them.
-
----
-
-## 10. Room-id and save-key ledger
-
-### 10.1 Room ids (append-only)
-
-| Range | Content | Count | Phase |
-|---|---|---|---|
-| 0–673 | Everything shipped (see §2.1) | 674 | — |
-| 674–723 | Frontiers Lv 101–150 | 50 | 2 |
-| 724–773 | Frontiers Lv 151–200 | 50 | 2 |
-| 774–873 | Overdrive Lv 201–300 | 100 | 2 |
-| 874–900 | Arc IV The Rift (25 + 2 secret) | 27 | 4 |
-| 901–915 | Unwritten Expanse | 15 | 4 |
-| 916–935 | Arc V The Ashfall Accord | 20 | 4 |
-| 936–955 | Arc VII The Hollow Meridian | 20 | 6 |
-| 956–961 | BAB XI Frostglass Cathedral | 6 | 6 |
-| 962–967 | BAB XII Cinder Maw | 6 | 6 |
-| 968–979 | Arc XII The Last Vow | 12 | 6 |
-| 980–999 | Reserved for arc packs in §5.1 (Echo Remix, Undercroft, Moonlit Glade, Choir Reprise, Siege Reversed, secret rooms) | up to 20 | 3–5 |
-| 9600–9644 | Scary: Arc X stages (9640–9644 new) | 45 | 5 |
-
-Allocation rule: a new chapter takes the next free block and records it here in the same commit. `validate<Chapter>Rooms()` asserts that the block does not overlap with any other.
-
-### 10.2 Save keys
-Phase 1 moves every key below into `ashen-vow-slot<N>-*` and keeps the old keys readable for one release:
-`progress-v1` (main, schema v2), `settings-v1` (global, **not** per slot), `character-v1`, `horror-v1`, `dread-v1`, `veil-v1`, `eternal-v1`, `archive-v1`, `3dhorror-v1`, `hunter-v1`, `secrets-v1`, `voice-v1` (global). New progress blocks go inside `progress` (`progress.frontierRooms`, `progress.overdriveRun`, `progress.rift`, `progress.expanse`, `progress.accord`, `progress.meridian`, `progress.frostglass`, `progress.cindermaw`, `progress.lastVow`), each with its own sanitizer.
-
----
-
-## 11. Verification gates
-
-| Gate | Applies to | Pass condition |
-|---|---|---|
-| Unit | every commit | `npm test` green; every new mechanic has a test |
-| Docs truth | every release | `tests/docs.test.js` green (version and room total agree everywhere) |
-| Budget | every commit from v0.37 | `tests/budget.test.js` green (file sizes, boot list) |
-| Smoke | the mode touched | its `smoke:*` script green with zero console errors, desktop and 390×844 |
-| Layout | every UI change | `audit:gadgets` green with no horizontal overflow on 10 viewports |
-| Perf | Phase 1 and every 3rd release | §9.1 targets on the Medium profile; Low profile must stay playable (p95 ≤ 25 ms) |
-| Soak | Phase 1, Phase 7 | 30 minutes with heap growth ≤ 10% |
-| Save | every schema change | migration test from a v0.35.0 fixture save and from the previous release |
-| v1.0 | release | all of the above on Low/Medium/High, a 4-player co-op load test, and a full playthrough of the true ending with the debug hooks off |
-
----
-
-## 12. Risks and cut lines
-
-| Risk | Mitigation | Cut first if late |
-|---|---|---|
-| Splitting `main.js` breaks the CDP smoke scripts | `debug_hooks.js` keeps the whole `window.__ashen` surface; run every smoke script in v0.37 | — (this phase cannot be cut) |
-| 200 Frontiers/Overdrive rooms feel generic | Each chapter needs 1 new behaviour and 1 signature room mechanic; Echo-style special/elite/boss level types | Ship Overdrive chapters 1–5 in v0.42, chapters 6–10 in v0.45 |
-| Boss count outpaces quality | Rule 10: one machine per boss; dialogue is required | The standalone-mode bosses in §6 rows 63–82 |
-| Save migration to slots loses progress | Old keys stay read-only for one release; export runs before migration | — |
-| Scope keeps growing | §8.4 lists what is out; new ideas go to the 2.0 archive, not this plan | Phase 5 packs for Realms, Puzzle and MOBA |
-| Procedural audio loops get tiring | A/B sections plus variation bars | Chapter-specific tracks (map the new chapters to existing tracks first) |
-| No `.blend` sources for 3D | Keep GLBs script-generated; document it in `asset-inventory.md` | New 3D areas in §5.3 |
+# Ashen Vow — Masterplan 4.0
+
+**28 November 2026 · Baseline audit v0.41.0 · Status tree saat ini v0.45.0 · Roadmap menuju v1.0**
+
+> Rencana sebelumnya diarsipkan utuh di [`docs/archive/MASTERPLAN-3.0.md`](docs/archive/MASTERPLAN-3.0.md) (Master Plan 3.0) dan [`docs/archive/MASTERPLAN-2.0.md`](docs/archive/MASTERPLAN-2.0.md) (Master Plan 2.0).
+
+Prioritas rilis berikutnya adalah mengamankan snapshot kerja, memulihkan verifikasi browser, lalu mempercepat jalur dari startup ke permainan. Optimasi berjalan per mode dengan pengukuran sebelum dan sesudah. Roadmap konten dari `MASTERPLAN.md` 3.0 tetap menjadi rujukan untuk desain, roster, dan alokasi ruang, dengan urutan rilis yang diperbarui di bawah.
+
+## 1. Snapshot yang diaudit
+
+| Aspek | Kondisi audit awal (v0.41.0) | Status aktual tree saat ini (`v0.42.0`) |
+| --- | --- | --- |
+| Branch dan commit lokal | `feat/boss-voice` di `ba27daf`, sama dengan ref pelacak lokal `origin/feat/boss-voice`. Commit ini satu commit di depan `release/v0.36.0`. | Branch `feat/boss-voice` dirapikan menjadi commit berurut ketergantungan; versi aktif **v0.42.0**. |
+| Staging Git | **Kosong**. `git diff-index --cached --quiet HEAD` mengembalikan `0`. | Pekerjaan lokal terpisah per mode dan perubahan fondasi P0–P1. |
+| Perubahan lokal awal | **21 file terlacak berubah** dan **5 file belum terlacak**, yaitu `src/mapeditor.js`, `styles-mapeditor.css`, `tests/mapeditor.test.js`, `tools/editor-smoke.mjs`, dan `tools/bake-trailer-voice.mjs`. | Ditambah Peta Kisah (`src/storymap.js`, `src/storymap_ui.js`), Frontiers (`src/frontiers.js`, `styles-frontiers.css`), versi & lazy-loader (`src/version.js`, `src/mapeditor_ui.js`), serta probe startup (`tools/boot-probe.mjs`, `tests/startup.test.js`). |
+| Versi yang dijalankan | `package.json`, judul HTML, dan `GAME_VERSION` menunjuk v0.41.0. Update Log sudah memuat Update XXXI. Judul teratas README dan entri penjelasan terbaru di `CLAUDE.md` masih v0.40.0. `MASTERPLAN.md` 3.0 juga memakai nomor v0.37–0.41 untuk pekerjaan lama yang sebagian masih terbuka. | `src/version.js`, `src/updates.js`, `package.json`, `README.md`, `CLAUDE.md`, `MASTERPLAN.md`, dan `index.html` selaras pada **v0.45.0** (Update XXXV). |
+| Konten yang ada | **674 ruang kampanye, 116 bos, 262 tipe musuh, 18 kelas kampanye**. Peta Sumpah mempunyai kanvas medan, rantai maksimal enam ruang, enam takaran, elite, objektif bertahan, dan AUTO-SEIMBANG. | **931 ruang (`ALL_ROOMS`), 146 bos (`ALL_BOSS_INFO`), 380 tipe musuh (`ALL_ENEMY_INFO`), 18 kelas kampanye**. Frontiers 101–200 (674–773), Overdrive 201–300 (774–873), Arc IV: The Rift (874–900), dan **The Unwritten Expanse (901–930)** kini playable. |
+| Kompatibilitas Peta Sumpah | Save memakai `ashen-vow-mapeditor-v1` skema 3. Prefix kode berbagi tetap `AVME1.`. Decoder menerima payload skema 2 dari v0.40.0. | Tetap kompatibel pada skema 3, kode `AVME1.` skema 2 & 3, plus **Peta Kisah** (15 saga). |
+| Suara bos | Katalog mencakup **613 baris dari 116 bos**, dengan 454 baris bos dan 159 baris pemain. Manifest checkout berisi **0 rekaman terdaftar**. Mode default dapat memakai sting sinematik. Suara AI ber-FX bergantung pada konfigurasi dan pilihan pemain. | Katalog diperbarui menjadi **146 bos** di [`docs/voice-script.md`](docs/voice-script.md); manifest checkout tetap **0 rekaman terdaftar**. |
+| Jalur yang masih terbuka | Spesifikasi Frontiers 101–200 dan Overdrive 201–300 ada, dengan ruang yang belum masuk `ALL_ROOMS`. Arc IV The Rift dan Unwritten Expanse masih menunggu realisasi. | Frontiers, Overdrive, Arc IV The Rift, dan Unwritten Expanse sudah masuk `ALL_ROOMS` (674–930). Arc V The Ashfall Accord dan Phase 3 AI/bos unik menunggu realisasi (lihat [`docs/prd/phase-4-through-the-rift.md`](docs/prd/phase-4-through-the-rift.md)). |
+
+Pisahkan snapshot lokal menjadi perubahan Infinitower dan Spiral Choir, fondasi dan perluasan Peta Sumpah, serta dokumentasi rilis. Susun berdasarkan ketergantungan dan periksa perpotongan perubahan di `src/main.js`, `src/core.js`, `index.html`, dan `src/updates.js` sebelum menentukan commit rilis.
+
+## 2. Baseline dan sasaran optimasi
+
+| Area | Baseline saat audit | Sasaran awal | Cara memeriksa |
+| --- | --- | --- | --- |
+| Startup JavaScript | Graf impor statis `src/main.js` mencapai **69 modul**, **3.792.663 byte mentah** dan sekitar **1.012.168 byte gzip**, dihitung per modul (`boot-probe` v0.42.0 sebelum P1: **71 modul**, **3.876.938 byte mentah**). `main.js` berisi **20.788 baris**, **60 deklarasi impor statis**, dan **0 `import()`**. | Kurangi byte mentah startup ≥25% pada iterasi pertama. Sasaran tahap fondasi ≤900 KB mentah sebelum menu interaktif. | Ambil startup cold/warm memakai Chrome. Laporkan byte mentah, byte transfer, p50/p95 waktu ke menu, dan waktu muat pertama setiap mode. |
+| CSS startup | **16 stylesheet lokal** di `index.html` saat audit (**17** di v0.42.0 dengan `styles-frontiers.css`), dengan **351.419 byte mentah** (**360.881 byte** di v0.42.0), ditambah stylesheet font eksternal. | Satu stylesheet lokal yang memblokir menu setelah CSS mode dimuat saat dibutuhkan. | Periksa daftar request, menu pertama, transisi, dan pergantian orientasi. |
+| Update Log | `src/updates.js` **136.296 byte mentah**, sekitar **49.962 byte gzip**. Modul masuk graf startup menu dan diimpor server untuk membaca versi. | Pindahkan data riwayat keluar jalur startup. Versi game tetap tersedia sinkron (`src/version.js`). | Startup tidak meminta modul riwayat. Klik atau tombol pintas membuka riwayat lengkap, dan versi server, judul HTML, serta log tetap cocok. |
+| Frame 2D | Satu profil Chrome headless 1280×900 di salinan menghasilkan p95 interval **13,4 ms** di menu dan **13,8 ms** di kampanye (ruang 3) serta Wave Defense Endless (gelombang 26). Biaya canvas dengan readback **19,09 ms** di kampanye dan **16,34 ms** di Endless. Sampel 2,6 detik per skenario ini bersifat indikatif. | p95 interval frame ≤16,7 ms untuk sasaran 60 FPS desktop, ≤33,3 ms untuk sasaran 30 FPS perangkat rendah. | `profile:frames`, `probe:render`, dan rekaman LoAF. Laporkan waktu render, interval aktual, p99, dan frame >50 ms secara terpisah. |
+| Simulasi | `bench:sim` awal memakai ruangan 7, 10 musuh, 160 proyektil, dan 220 efek. Compaction saat ini **6.919 langkah/detik** dan pembanding `filter` **7.289** pada satu percobaan. | Tetapkan ambang dari beberapa ulangan berpasangan. Tambahkan skenario 40 musuh, dan terima perubahan jika p95 biaya step atau alokasi membaik dengan hasil simulasi yang sama. | `bench:sim`, `bench:wavedefense`, `bench:pirates`, `bench:court`, plus replay dengan seed dan input tetap. |
+| 3D dan aset | Inventaris menyebut **16 GLB**, sekitar **4,71 MiB** dan **58.802 segitiga**. | Muat model per mode, lalu uji sasaran aset total ≤3,5 MiB. Pertahankan animasi, collision, dan keterbacaan siluet. | `bench:3d`, `assets:inventory`, uji 3D/Blackveil, dan jejak memori saat mode ditutup. |
+| Peta Sumpah | Patch kandidat mempercepat kalkulasi meter dan AUTO-SEIMBANG pada benchmark Node. Lihat §3. | Dukungan input lama, hasil penyeimbangan yang konsisten, dan jalur UI cepat dengan 20 peta berisi roster penuh. | Suite Map Editor, fixture skema 1–3, uji drag/auto-balance di desktop dan 390×844, serta pengukuran waktu interaksi. |
+| Save dan memori | Penyimpanan tersebar di `src/main.js` dan modul. Soak 30 menit belum diukur. | Stabilkan heap setelah pemanasan. Sasaran awal ≤10% pertumbuhan heap pasca-GC pada profil yang sama dan nol canvas lepas yang tertahan. | Ulangi masuk-keluar mode selama 30 menit. Catat listener, timer, RAF, `AudioNode`, dan heap sebelum/sesudah siklus. |
+| Co-op, suara, dan server | Tes relay ada. Bandwidth 4 pemain, beban cold-cache, dan waktu decode audio belum diukur pada audit. | Co-op 4 pemain pada 20 Hz dengan sasaran ≤40 KB/detik per klien. Kurangi kompresi, request, dan decode yang berulang setelah diprofilkan. | Beban lokal dengan fixture 4 pemain, HTTP cold/warm, reconnect dan migrasi host, serta metrik audio offline dan saat layanan eksternal lambat. |
+
+Gunakan tiga profil bernama dengan spesifikasi tercatat. Jalankan desktop, browser pada viewport ponsel potret, dan setidaknya satu ponsel fisik untuk menilai GPU, audio, dan termal. Ukur waktu sampai bootstrap siap secara terpisah dari waktu sampai menu bisa dipakai setelah trailer dilewati. Sasaran cold boot lokal untuk jalur menu adalah ≤1,2 detik di desktop dan ≤2,5 detik pada profil perangkat rendah. Tetapkan ambang otomatis setelah variasi antar-run diketahui. Simpan build, versi browser, resolusi, DPR, preset, seed, pemanasan, durasi, serta p50/p95/p99 untuk setiap hasil yang dibandingkan.
+
+## 3. Optimasi pertama yang diukur
+
+Kandidat `src/mapeditor.js` memakai satu sanitasi untuk satu kalkulasi meter. AUTO-SEIMBANG menghitung rasio setiap iterasi, lalu menyusun pita dan saran sekali setelah penyeimbangan selesai. Hasil API diuji terhadap implementasi awal pada empat fungsi publik dengan 645 input, termasuk keenam takaran, musuh elite, bos, objektif bertahan, roster besar, dan masukan rusak.
+
+| Kalkulasi (audit salinan awal) | Sebelum | Kandidat | Percepatan |
+| --- | --- | --- | --- |
+| Meter tekanan (`threatRating`) | 12,896 ms | 7,349 ms | **1,75×** |
+| AUTO-SEIMBANG (`autoBalanceBlueprint`) | 197,233 ms | 21,581 ms | **9,14×** |
+
+Angka di atas adalah median dari 15 ulangan berpasangan, masing-masing memakai 640 peta uji pada Node v24.22.0. Durasi mengukur kalkulasi murni. Jalur UI menyertakan biaya tambahan berupa pekerjaan DOM dan canvas.
+
+Verifikasi penerapan langsung pada repo (`src/mapeditor.js`, median 15 ulangan berpasangan × 640 peta, Node lokal) menghasilkan:
+- `threatRating`: **4,874 ms → 4,432 ms** (**1,10×**)
+- `autoBalanceBlueprint`: **42,241 ms → 7,728 ms** (**5,47×**)
+- Kesesuaian output penuh (`threatRating`, `playerPower`, `enemyLoad`, `autoBalanceBlueprint`): **646/646 identik tepat**.
+
+Smoke editor Chrome desktop lulus **76/76** (termasuk alur trailer, skema 3, kode v0.40 `AVME1.`, viewport `390×844`, takaran, elite, bertahan, dan `AUTO-SEIMBANG`). Kegagalan HTTP 404 pada `assets/voice/trailer/ident.mp3` saat trailer boot tanpa rekaman terpaket telah diperbaiki lewat manifest `/api/voice` (`trailerBaked`) sehingga `http404Count = 0`.
+
+## 4. Roadmap pelaksanaan
+
+| Tahap | Pekerjaan | Kriteria keluar |
+| --- | --- | --- |
+| **P0 · Stabilkan kandidat rilis** | Tetapkan snapshot kerja dan selaraskan README, `CLAUDE.md`, deskripsi paket, Update Log, dan jejak rilis. Perbarui smoke yang mengasumsikan menu judul saat boot dan Peta Sumpah skema 2. | Tes Node hijau. Browser fresh-profile membuktikan trailer dapat masuk/keluar menuju menu. Peta Sumpah membuktikan elite, AUTO-SEIMBANG, bertahan, rantai, kode lama dan baru, serta reload. Ketiga mode suara diuji dengan manifest kosong dan fixture rekaman. |
+| **P1 · Percepat startup dan perpindahan mode** | Ekstrak versi (`src/version.js`), lazy-load Update Log, lalu migrasikan satu mode lengkap sekaligus, dimulai dari Peta Sumpah (`src/mapeditor_ui.js` + `styles-mapeditor.css`) dan Peta Kisah (`src/storymap_ui.js`), dilanjutkan mode arena serta 3D/horror. Muat CSS dan katalog bersama modul pemiliknya. | Sasaran startup tercapai (Update Log & Peta Sumpah + Peta Kisah sebagai irisan percontohan pertama; mode tersisa dimigrasikan pada irisan lanjutan sampai ≤900 KB). Masuk pertama, masuk ulang, tombol Back, dan kegagalan muat aset punya alur yang jelas. Menu kampanye dan smoke `window.__ashen` lolos setiap migrasi. |
+| **P2 · Optimasi gameplay dan perangkat rendah** | Ukur kampanye, Cistern/Lanternwake, Infinitower, Riftwar, Pirate Tide, Godfall, dan horror 2D/3D. Optimalkan dua sumber biaya terbesar per skenario. Ukur biaya drag/DOM Peta Sumpah secara terpisah. | Peningkatan p95 atau alokasi bisa diulang pada baseline sebanding. Input, hitbox, damage, AI, rekor, dan tempo simulasi lolos replay dan smoke. |
+| **P3 · Aset, audio, save, dan layanan** | Lazy-load GLB dan bank suara. Batasi memori dengan batas byte, hentikan audio lama saat pindah mode, dan gunakan migrator serta sanitizer yang sudah ada untuk tiga slot dan cadangan. Ukur cache server dan relay di bawah beban yang ditetapkan. | Soak 30 menit, putar ulang audio offline, save lama dan kode berbagi dapat dimuat, ekspor/impor satu profil tetap terisolasi, pemulihan dari kegagalan penulisan teruji, dan sesi 4 pemain lolos. |
+| **P4 · Konten tertunda** | Frontiers 101–200 (**v0.42.0**) dan Overdrive 201–300 (**v0.43.0**) selesai. Selanjutnya pisahkan mesin AI unik per bos (Orsella, Vasska, dll.) dan perluasan ekspansi. | 200 ruang Frontiers & Overdrive live (`674–873`), save kompatibel, dan fase Living Ash (AI & bos unik) siap dimulai. |
+| **P5 · Arc dan mode menuju v1.0** | Lanjutkan Rift, Unwritten Expanse dan arc lanjutan, kemudian finale. Kelompokkan mode dalam hub dengan sasaran maksimal delapan pintu utama. Selaraskan kontrol, subtitle, opsi Anti-Jumpscare, aksesibilitas dan bahasa. Ambil ekspansi mode tambahan dari rencana 3.0 sesuai anggaran. | Perjalanan kampanye ke ending bisa ditamatkan. Smoke lintas mode hijau, target performa profil rilis tercapai, dan uji save lengkap dilakukan. |
+
+Nomor patch berikutnya melanjutkan setelah **v0.42.0**. Nomor v0.37–0.42 sudah muncul di riwayat game. Fase memakai nama dan kriteria keluar agar pekerjaan fondasi dapat dipindah ke versi berikutnya tanpa bentrok dengan versi yang sudah dipakai.
+
+## 5. Urutan kerja dan verifikasi
+
+### P0 · Dua perubahan pertama
+
+1. **Snapshot rilis dan dokumentasi** — catat `HEAD`, inventaris file Git, hash snapshot, manifest aset, dan hasil `npm test`. Selaraskan README, `CLAUDE.md`, deskripsi paket, `MASTERPLAN.md`, dan perkuat pemeriksaan di `tests/docs.test.js` dan `tests/updates.test.js`.
+2. **Smoke untuk snapshot rilis** — jadikan alur trailer profil kosong skenario eksplisit. Setelah itu buka menu melalui tombol yang tersedia. Saat `assets/voice/trailer/ident.mp3` belum dipaketkan, pilih fallback trailer tanpa request ke file yang tidak ada. Perbarui `tools/editor-smoke.mjs` untuk skema 3 dan uji waktu bertahan, elite, takaran, AUTO-SEIMBANG, kompatibilitas kode v0.40, dan persistensi pada viewport desktop serta ponsel. Pastikan pesan harness membedakan gagal meluncurkan browser, gagal boot aplikasi, dan gagal assertion fitur.
+
+### P1 · Startup tanpa memutus jalur masuk
+
+3. **Update Log sebagai uji pertama** — pindahkan `GAME_VERSION` ke modul ringan (`src/version.js`) dan ekspor ulang dari `src/updates.js` untuk pembaca yang ada. Impor riwayat saat panel pertama dibuka. Tampilkan status memuat dan tindakan coba lagi, serta pastikan callback lama tidak mengganti panel jika pemain sudah berpindah. Ukur startup dingin dan waktu klik pertama sebelum serta sesudah.
+4. **Peta Sumpah sebagai mode percontohan** — pindahkan siklus masuk, bermain, keluar, dan stylesheet (`src/mapeditor_ui.js`, `styles-mapeditor.css`) dalam satu irisan (disertai Peta Kisah di `src/storymap_ui.js`). Pertahankan sanitizer dan jalur `AVME1.`. Pastikan preview, klik pointer, room-chain, checkpoint, kemenangan buatan, serta debug hooks berfungsi sebelum memigrasikan mode berikutnya.
+5. **Katalog dan shell** — gunakan kebutuhan jalur startup untuk memutus impor inti yang menarik data banyak mode (Frontier, Echoes, Godfall, Codex/Archive, mode arena & 3D). Fokuskan ukuran `main.js` dengan memindahkan tanggung jawab per layar. Uji menu, pengaturan, input, hotkey, reset, dan akses langsung dari save lama pada setiap pemindahan.
+
+### P2–P3 · Sesuaikan perbaikan dengan biaya yang diukur
+
+6. **Canvas dan HUD** — periksa waktu tiap layer, overdraw, dan biaya layout. Uji culling, cache gradien berulang, atau pembaruan HUD berbasis perubahan data sesuai hotspot. Pada Peta Sumpah, uji penggabungan `pointermove` sampai satu repaint per frame dan pembaruan parsial DOM jika profil menunjukkan manfaat. Uji drag yang keluar dari canvas dan pelepasan pointer.
+7. **Simulasi dan AI** — pertahankan fixed step 120 Hz. Bandingkan collision, pencarian target, alokasi proyektil, dan gelombang akhir. Gunakan broadphase, pengelompokan update AI, atau pooling hanya untuk biaya yang terlihat. Lakukan A/B dengan input dan seed sama, termasuk guard agar tidak ada bounty ganda dan event completion hilang.
+8. **WebGL dan paket aset** — profil CPU, draw calls, penggunaan buffer, shader, dan upload GLB sebelum memilih LOD atau kuantisasi. Pastikan aset yang dimuat saat masuk mode dapat dilepas setelah keluar. Validasi sampel visual serta animasi dan collision per model yang berubah.
+9. **Save, server, dan suara** — inventaris kunci aktif dan pisahkan preferensi global dari progres mode. Tambahkan fixture save lama sebelum mengubah susunan atau frekuensi penulisan. Ukur latensi dan memori cache aset/voice sesudah cold boot serta saat co-op ramai, lalu pilih cache berbatas byte, deduplikasi request, atau kompresi di luar request hanya sesuai hasil profil. Uji audio lokal/offline sebelum pengujian layanan berbayar.
+
+Pakai skenario padat untuk menemukan hotspot dan skenario pendek untuk menjaga cakupan mode. Bandingkan arena akhir Riftwar, Godfall, dan Infinitower dengan perpindahan zona Labyrinth, interior Cistern, serta pelayaran Pirate Tide. Tambahkan run 2×–4× Speedrun untuk simulasi, scroll pada Archive/Index untuk DOM, dan siklus masuk-keluar Fishing, Trials, Puzzle, Panggung Abadi, serta Infinite Realms untuk memori dan pembersihan sumber daya.
+
+## 6. Gerbang integrasi dan batas rilis
+
+- Jalankan `npm test`, smoke mode yang berubah, dan skenario fresh boot untuk setiap perubahan startup. Jalankan `smoke:editor`, `smoke:bossvoice`, serta smoke Infinitower pada kandidat rilis. Catat hasil aktual dan kondisi peluncuran browser.
+- Gunakan replay dan fixture save untuk mengunci perilaku yang dipertahankan. ID kampanye **0–673** (serta Frontiers **674–773**) tetap stabil. Konfirmasi blok Overdrive dari ledger sebelum menambah ruang. Save Peta Sumpah skema 1/2 dan kode berbagi skema 2 masuk sebagai fixture regresi.
+- Sebelum setiap penggabungan optimasi, lampirkan pengukuran sebelum/sesudah, skenario yang diperbaiki, dan dampak pada startup atau mode lain. Bagi perubahan agar dapat dibalik sendiri-sendiri. Dokumentasikan hasil yang gagal membaik, termasuk eksperimen tile cache lama sampai ada bukti baru.
+- Jika jadwal menyempit, tunda ekspansi mode tambahan, pengurangan ukuran GLB lanjutan, dan cloud save. Pertahankan verifikasi jalur masuk, kompatibilitas save, baseline performa, dan pengujian rilis.
+
+## 7. Hasil eksekusi awal P0–P1 (27 November 2026)
+
+Pengukuran dilakukan di Windows 11 (`Chrome/158.0.8127.37` headless, SwiftShader, viewport `1280×900`, `RUNS=3`, cold cache disabled) melalui [`tools/boot-probe.mjs`](tools/boot-probe.mjs):
+
+| Metrik startup (`v0.42.0`) | Sebelum P1 | Sesudah irisan P1 #1 | Perubahan |
+| --- | --- | --- | --- |
+| Modul JS saat boot (`bootJsModules`) | 71 | 69 | −2 modul (Update Log + Peta Sumpah + Peta Kisah keluar jalur boot; `+src/version.js`) |
+| Byte mentah JS boot (`bootJsRawBytes`) | 3.876.938 B | 3.639.325 B | **−237.613 B (−6,13%)** |
+| Byte transfer JS boot (`bootJsTransferBytes`) | 1.057.447 B | 978.021 B | **−79.426 B (−7,51%)** |
+| Stylesheet saat boot (`bootCssCount`) | 17 (360.881 B) | 16 (350.091 B) | **−10.790 B** (`styles-mapeditor.css` dimuat on-demand) |
+| HTTP 404 saat fresh boot (`ident.mp3`) | 6 (2 per run) | **0** | Selesai via `/api/voice` `trailerBaked` |
+| Buka Update Log pertama (`p50` / `p95`) | 8,9 ms / 18,3 ms | 49,8 ms / 110,3 ms | Lazy-load on-demand pertama + guard `updates-loading` / `COBA LAGI` |
+| Buka Peta Sumpah pertama (`p50` / `p95`) | 20,3 ms / 21,2 ms | 60,2 ms / 72,9 ms | Lazy-load modul + CSS; `editorReopenOk: true`, `staleGuardOk: true` |
+
+Catatan jujur: irisan P1 pertama memvalidasi pola ekstraksi (`src/version.js`, Update Log, Peta Sumpah, dan Peta Kisah) serta menurunkan startup JS sebesar **6,13%**. Target iterasi penuh (≥25% dan ≤900 KB) dilanjutkan pada langkah §5.5 (katalog & mode arena/3D) agar setiap mode lain menyusul dengan batas uji yang tetap hijau (`npm test` **841/841**).
+
+## Sumber audit dalam repositori
+
+`docs/archive/MASTERPLAN-3.0.md` dan `docs/archive/MASTERPLAN-2.0.md` untuk rancangan dan ledger · `package.json`, `src/version.js`, `src/updates.js`, `README.md`, `CLAUDE.md` untuk versi · `src/core.js`, `src/mapeditor.js`, `src/storymap.js`, `src/frontiers.js`, `src/boss_voice.js`, `assets/voice/manifest.json`, `docs/asset-inventory.md` untuk isi aktual · `index.html`, `src/main.js`, `src/mapeditor_ui.js`, `src/storymap_ui.js`, `server.js`, `tests/`, dan `tools/` untuk jalur masuk dan verifikasi.

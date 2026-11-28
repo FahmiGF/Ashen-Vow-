@@ -112,6 +112,8 @@ async function main() {
         view: A.menuView,
         maps: document.querySelectorAll('[data-wd-map]').length,
         towers: document.querySelectorAll('#wd-towers [data-wd-tower]').length,
+        towerIcons: document.querySelectorAll('#wd-towers .wt-icon').length,
+        particleChoices: document.querySelectorAll('#wd-particles [data-wd-particle]').length,
         difficulties: document.querySelectorAll('[data-wd-difficulty]').length,
         statCells: document.querySelectorAll('#wd-summary .wd-stat').length,
         save: !!A.progress.wavedefense,
@@ -119,23 +121,53 @@ async function main() {
         totalBosses: A.waveDefense.summary.bosses,
         totalEnemies: A.waveDefense.summary.enemies,
         modes: document.querySelectorAll('[data-wd-mode]').length,
+        story: document.querySelectorAll('#wd-story .wd-story-chapter').length,
+        firstChapter: document.querySelector('#wd-story .wd-story-chapter strong')?.textContent || '',
+        trailerButton: !!document.querySelector('#btn-wd-trailer'),
       };
     })()`);
     check('Wave Defense hub opens from the menu', hub.view, 'wavedefense');
-    check('hub renders four castle maps', hub.maps, 4);
-    check('hub renders fourteen tower cards', hub.towers, 14);
-    check('hub renders both battle modes', hub.modes, 2);
-    check('hub renders three difficulties', hub.difficulties, 3);
-    check('hub renders six summary cells', hub.statCells, 6);
+    check('hub renders nine castle maps / stages', hub.maps, 9);
+    check('hub renders twenty tower cards', hub.towers, 20);
+    check('every tower card displays a bespoke SVG image icon', hub.towerIcons, 20);
+    check('hub renders five particle density presets (up to Overdrive 4x)', hub.particleChoices, 5);
+    check('hub renders all three battle modes', hub.modes, 3);
+    check('hub renders four difficulties', hub.difficulties, 4);
+    check('hub renders seven summary cells', hub.statCells, 7);
     check('save carries wave-defense progress', hub.save, true);
-    check('tower summary counts all fourteen types', hub.totalTowers, 14);
-    check('boss summary counts all six bosses', hub.totalBosses, 6);
-    check('enemy summary counts all twenty types', hub.totalEnemies, 20);
+    check('tower summary counts all twenty types', hub.totalTowers, 20);
+    check('boss summary counts all nine bosses', hub.totalBosses, 9);
+    check('enemy summary counts all thirty-one types', hub.totalEnemies, 31);
+    check('the hub shows the six-chapter Spiral Chronicle', hub.story, 6);
+    check('the hub exposes the spiral trailer button', hub.trailerButton, true);
+    check('the chronicle decorates the hub', hub.firstChapter, 'Lingkar Pertama');
 
+    const picked = await evaluate(`(() => {
+      const A = window.__ashen;
+      document.querySelector('[data-wd-map="rift_chasm"]').click();
+      document.querySelector('[data-wd-difficulty="squire"]').click();
+      document.querySelector('[data-wd-particle="overdrive"]').click();
+      document.querySelector('[data-wd-tower="trebuchet"]').click();
+      document.querySelector('#btn-wd-start').click();
+      A.waveDefenseStep(1);
+      return {
+        view: A.menuView,
+        snap: A.waveDefense.snapshot,
+        paletteIcons: document.querySelectorAll('#wd-palette .wp-icon').length,
+        selIcon: !!document.querySelector('#wd-selection .ws-icon'),
+      };
+    })()`);
+    check('selecting new stage + Overdrive 4x particles enters battle', picked.view === 'wavedefenseBattle' && picked.snap.mapId === 'rift_chasm', true);
+    check('battle palette renders all 20 SVG tower icons', picked.paletteIcons, 20);
+    check('battle inspector shows tower SVG icon', picked.selIcon, true);
+    check('Overdrive particle setting boosts Wave Defense particleScale to 4x', picked.snap.particleScale, 4);
+    check('Overdrive particle setting emits live battlefield particles', picked.snap.particleCount > 0, true);
     const selected = await evaluate(`(() => {
       const A = window.__ashen;
+      A.leaveWaveDefense();
       document.querySelector('[data-wd-map="ember_bastion"]').click();
       document.querySelector('[data-wd-difficulty="squire"]').click();
+      document.querySelector('[data-wd-particle="normal"]').click();
       document.querySelector('[data-wd-tower="trebuchet"]').click();
       return {
         map: A.waveDefense.mapId,
@@ -175,7 +207,7 @@ async function main() {
     check('match starts with spendable gold', battle.gold > 0, true);
     check('match exposes twenty-four waves', battle.waves, 24);
     check('castle map exposes build sites', battle.slots >= 20, true);
-    check('battle palette renders all towers', battle.palette, 14);
+    check('battle palette renders all towers', battle.palette, 20);
     check('canvas draws the battlefield', battle.rendered > 0, true);
     check('battlefield is visible', battle.canvasVisible, true);
 
@@ -293,7 +325,7 @@ async function main() {
     check('leaving the result returns to the hub', left.view, 'wavedefense');
     check('battle simulation stops on leave', left.active, false);
     check('result clears on leave', left.result, null);
-    check('tower roster still renders after leave', left.cards, 14);
+    check('tower roster still renders after leave', left.cards, 20);
 
     await send('Page.reload');
     await sleep(350);
@@ -313,7 +345,7 @@ async function main() {
     check('wave-defense wins survive reload', persisted.wins, 1);
     check('wave-defense losses survive reload', persisted.losses, 1);
     check('map record survives reload', persisted.mapRuns, 2);
-    check('tower roster survives reload', persisted.cards, 14);
+    check('tower roster survives reload', persisted.cards, 20);
 
     // Endless: no wave cap, defeats record in their own ledger.
     const endless = await evaluate(`(() => {
@@ -348,6 +380,82 @@ async function main() {
     check('endless defeats record in the endless ledger', endless.resultEndless && endless.ledger.runs === 1 && endless.ledger.bestWave === 30, true);
     check('endless runs never count as campaign results', endless.runs === endless.before.runs && endless.wins === endless.before.wins && endless.losses === endless.before.losses, true);
     await evaluate(`window.__ashen.leaveWaveDefense()`);
+
+    // Infinitower: forced Eternal Spiral, tier climb, its own ledger.
+    const infinitower = await evaluate(`(() => {
+      const A = window.__ashen;
+      A.showWaveDefense();
+      const before = { runs: A.progress.wavedefense.runs, wins: A.progress.wavedefense.wins, losses: A.progress.wavedefense.losses };
+      document.querySelector('[data-wd-mode="infinitower"]').click();
+      const hubCards = document.querySelectorAll('#wd-towers [data-wd-tower]').length;
+      A.startWaveDefenseBattle();
+      const start = A.waveDefense.snapshot;
+      A.waveDefenseSetWave(21);
+      A.waveDefenseNextWave();
+      const deep = A.waveDefense.snapshot;
+      const hud = document.querySelector('#wd-map-name').textContent;
+      A.waveDefenseDamageCastle(99999);
+      return {
+        before,
+        hubCards,
+        mode: start.mode,
+        infinitower: start.infinitower,
+        map: start.mapId,
+        totalWaves: start.totalWaves,
+        wave: deep.wave,
+        tier: deep.tier,
+        hud,
+        ledger: A.progress.wavedefense.infinitower,
+        runs: A.progress.wavedefense.runs,
+        wins: A.progress.wavedefense.wins,
+        losses: A.progress.wavedefense.losses,
+        resultInfinitower: !!A.waveDefense.result?.infinitower,
+      };
+    })()`);
+    check('the third mode starts an Infinitower defense', infinitower.infinitower && infinitower.mode === 'infinitower', true);
+    check('Infinitower forces the Eternal Spiral arena', infinitower.map, 'eternal_spiral');
+    check('Infinitower removes the wave cap', infinitower.totalWaves > 900, true);
+    check('Infinitower climbs a tier every ten waves', infinitower.wave === 21 && infinitower.tier === 3, true);
+    check('Infinitower HUD shows the active tier', /INFINITOWER T3/.test(infinitower.hud), true);
+    check('Infinitower defeats record in their own ledger', infinitower.resultInfinitower && infinitower.ledger.runs === 1 && infinitower.ledger.bestWave === 21 && infinitower.ledger.bestTier === 3, true);
+    check('Infinitower runs never count as campaign results', infinitower.runs === infinitower.before.runs && infinitower.wins === infinitower.before.wins && infinitower.losses === infinitower.before.losses, true);
+    await evaluate(`window.__ashen.leaveWaveDefense()`);
+
+    // Boss portrait: the first boss of an Infinitower run pauses the battle.
+    await evaluate(`(() => {
+      const A = window.__ashen;
+      A.setWaveDefenseInfinitower(true);
+      A.startWaveDefenseBattle();
+      A.waveDefenseSetWave(5);
+      A.waveDefenseNextWave();
+    })()`);
+    await sleep(1400);
+    const bossCutscene = await evaluate(`(() => {
+      const A = window.__ashen;
+      return { active: A.cutscene.active, id: A.cutscene.id, duration: A.cutscene.duration, paused: A.waveDefense.paused, wave: A.waveDefense.snapshot?.wave, phase: A.waveDefense.snapshot?.phase, enemies: A.waveDefense.snapshot?.enemies, boss: !!A.waveDefense.snapshot?.boss, infinitower: !!A.waveDefense.snapshot?.infinitower, activeRun: A.waveDefense.active };
+    })()`);
+    check('the first Infinitower boss opens a boss portrait', bossCutscene.active && bossCutscene.id === 'spiral_boss', true);
+    check('the boss portrait lasts eleven seconds', bossCutscene.duration, 11);
+    check('the battle pauses under the boss portrait', bossCutscene.paused, true);
+    await evaluate(`document.querySelector('#btn-cutscene-skip').click()`);
+    await sleep(300);
+    const resumed = await evaluate(`(() => { const A = window.__ashen; return { active: A.cutscene.active, paused: A.waveDefense.paused }; })()`);
+    check('skipping the boss portrait resumes the battle', resumed.active === false && resumed.paused === false, true);
+    await evaluate(`window.__ashen.leaveWaveDefense()`);
+
+    // Trailer: the hub plays the eighteen-second spiral cutscene.
+    await evaluate(`(() => {
+      const A = window.__ashen;
+      A.showWaveDefense();
+      document.querySelector('#btn-wd-trailer').click();
+    })()`);
+    await sleep(400);
+    const trailer = await evaluate(`(() => { const A = window.__ashen; return { active: A.cutscene.active, id: A.cutscene.id, duration: A.cutscene.duration }; })()`);
+    check('the hub trailer plays the spiral intro', trailer.active && trailer.id === 'spiral_intro', true);
+    check('the spiral trailer lasts eighteen seconds', trailer.duration, 18);
+    await evaluate(`document.querySelector('#btn-cutscene-skip').click()`);
+    await sleep(250);
+    check('the trailer can be skipped back to the hub', await evaluate(`window.__ashen.cutscene.active`), false);
 
     await sleep(300);
     assert.deepEqual(pageErrors, [], `console errors: ${pageErrors.join(' | ')}`);

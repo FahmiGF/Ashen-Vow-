@@ -545,15 +545,15 @@ export const CRUSADE_RIFT = {
   id: 'rift',
   label: 'THE RIFT',
   local: 'CELAH',
-  note: 'Something stirs below.',
-  locked: true,
+  note: 'Dua kenyataan berimpit di bawah surga yang runtuh. 27 ruang · 6 bos.',
+  locked: false,
 };
 
 export const CRUSADE_MENU_OPTIONS = [
   { id: 'continue', label: 'CONTINUE CRUSADE', local: 'LANJUTKAN', note: 'Muat simpanan Perang Salib.' },
   { id: 'levels', label: 'THE FIVE LEVELS', local: 'LIMA TINGKAT', note: 'Pilih tingkat dan bos.' },
   { id: 'camp', label: 'WAR CAMP OF EMBERS', local: 'KEMAH PERANG', note: 'Belanja Sigil, baca arsip.' },
-  { id: 'rift', label: CRUSADE_RIFT.label, local: CRUSADE_RIFT.local, note: CRUSADE_RIFT.note, locked: true },
+  { id: 'rift', label: CRUSADE_RIFT.label, local: CRUSADE_RIFT.local, note: CRUSADE_RIFT.note, locked: false },
   { id: 'heaven', label: 'RETURN TO HEAVEN', local: 'KEMBALI KE LANGIT', note: 'Buka menu Yang Terjatuh.' },
   { id: 'options', label: 'OPTIONS', local: 'OPSI', note: 'Pengaturan dan tema menu.' },
 ];

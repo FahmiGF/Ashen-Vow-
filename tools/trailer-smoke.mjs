@@ -144,7 +144,7 @@ try {
   })()`);
   check(advanced.shot === 6, `seeking lands on the Faewood shot (${advanced.shot})`);
   check(advanced.eyebrow.includes('FAEWOOD'), `the shot title swaps with the cut (${advanced.eyebrow})`);
-  check(advanced.line.includes('Langit retak'), 'the narration swaps with the shot');
+  check(advanced.line.includes('The sky did not fracture') || advanced.line.includes('Langit retak'), 'the narration swaps with the shot');
   check(parseFloat(advanced.progress) > 30, `progress follows the playhead (${advanced.progress})`);
   check(advanced.clock.startsWith('00:31'), `the clock follows the playhead (${advanced.clock})`);
 

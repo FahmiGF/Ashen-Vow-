@@ -1,10 +1,11 @@
 import { createServer } from 'node:http';
-import { readFile, stat } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
+import { readdir, readFile, stat } from 'node:fs/promises';
 import { gzipSync } from 'node:zlib';
 import { extname, join, normalize, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
-import { GAME_VERSION } from './src/updates.js';
+import { GAME_VERSION } from './src/version.js';
 import { createAdminService } from './src/admin_server.js';
 
 const ROOT = fileURLToPath(new URL('.', import.meta.url));
@@ -23,6 +24,10 @@ const MIME = {
   '.svg': 'image/svg+xml',
   '.ico': 'image/x-icon',
   '.woff2': 'font/woff2',
+  '.mp3': 'audio/mpeg',
+  '.ogg': 'audio/ogg',
+  '.wav': 'audio/wav',
+  '.m4a': 'audio/mp4',
 };
 
 // Small asset cache: avoids re-reading and re-compressing unchanged files on
@@ -132,9 +137,23 @@ function jsonResponse(res, status, value) {
   res.end(body);
 }
 
+async function listTrailerBakedShots() {
+  const dir = join(ROOT, 'assets', 'voice', 'trailer');
+  if (!existsSync(dir)) return [];
+  try {
+    const entries = await readdir(dir, { withFileTypes: true });
+    return entries
+      .filter((entry) => entry.isFile() && /\.(mp3|ogg|wav|m4a)$/i.test(entry.name))
+      .map((entry) => entry.name.replace(/\.(mp3|ogg|wav|m4a)$/i, ''));
+  } catch {
+    return [];
+  }
+}
+
 async function handleVoice(req, res, url) {
   if (url.pathname !== '/api/voice') return false;
   if (req.method === 'GET') {
+    const trailerBaked = await listTrailerBakedShots();
     jsonResponse(res, 200, {
       configured: voiceConfigured(),
       provider: 'elevenlabs',
@@ -142,6 +161,7 @@ async function handleVoice(req, res, url) {
       maxChars: VOICE_MAX_CHARS,
       cast: Object.keys(VOICE_CAST_IDS),
       cached: voiceCache.size,
+      trailerBaked,
     });
     return true;
   }

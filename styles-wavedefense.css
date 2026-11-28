@@ -11,7 +11,7 @@
 }
 .wd-summary {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 7px;
   margin: 16px 0 20px;
 }
@@ -23,6 +23,30 @@
 .wd-stat span { display: block; color: #907c60; font-size: 7px; letter-spacing: 0.16em; }
 .wd-stat strong { display: block; margin-top: 3px; color: #f2e1be; font-size: 16px; line-height: 1; }
 .wd-stat em { display: block; margin-top: 3px; color: #736550; font-size: 6px; font-style: normal; }
+
+/* Spiral Chronicle — one card per Infinitower tier. */
+.wd-story {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.wd-story-chapter {
+  padding: 8px 7px;
+  border: 1px solid rgba(200, 169, 255, 0.22);
+  background: linear-gradient(160deg, rgba(44, 33, 68, 0.72), rgba(12, 10, 20, 0.9));
+}
+.wd-story-chapter span { display: block; color: #9d86c9; font-size: 6px; letter-spacing: 0.16em; }
+.wd-story-chapter strong { display: block; margin: 2px 0 4px; color: #e7dcff; font: 700 9px var(--font-display); }
+.wd-story-chapter p { margin: 0; color: #8b82a3; font-size: 6px; line-height: 1.45; }
+.wd-story-chapter:first-child { border-color: rgba(226, 208, 255, 0.55); box-shadow: inset 0 0 0 1px rgba(200, 169, 255, 0.12); }
+.wd-trailer-btn { color: #cbb4ff; border-color: rgba(200, 169, 255, 0.35); }
+.wd-trailer-btn:hover { color: #eadfff; border-color: rgba(220, 198, 255, 0.8); }
+.wd-choice-row button[data-wd-difficulty="eternal"].active {
+  border-color: rgba(255, 150, 130, 0.72);
+  background: linear-gradient(150deg, rgba(86, 36, 40, 0.72), rgba(22, 12, 14, 0.92));
+  color: #ffd7cd;
+}
 
 .wd-section-head {
   display: flex;
@@ -77,6 +101,12 @@
   letter-spacing: 0.04em;
 }
 .wd-choice-row button.active em { color: #c9b28a; }
+.wd-choice-row button[data-wd-mode="infinitower"].active {
+  border-color: rgba(200, 169, 255, 0.7);
+  box-shadow: inset 0 0 0 1px rgba(200, 169, 255, 0.18), 0 0 18px rgba(140, 105, 220, 0.18);
+  background: linear-gradient(150deg, rgba(58, 44, 92, 0.7), rgba(16, 13, 26, 0.9));
+}
+.wd-choice-row button[data-wd-mode="infinitower"].active em { color: #cbb4ff; }
 
 .wd-tower-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; }
 .wd-tower-card {
@@ -88,8 +118,19 @@
   cursor: pointer;
 }
 .wd-tower-card:hover, .wd-tower-card.active { border-color: rgba(239, 199, 129, 0.6); background: rgba(57, 45, 28, 0.72); }
-.wd-tower-card .wt-top { display: flex; align-items: center; gap: 5px; }
+.wd-tower-card .wt-top { display: flex; align-items: center; gap: 6px; }
+.wd-tower-card .wt-icon { width: 26px; height: 26px; flex: 0 0 26px; border-radius: 5px; display: block; }
 .wd-tower-card .wt-glyph { color: var(--tower-color, #d6b16f); font-size: 14px; }
+.wd-map-card .wm-stage {
+  display: inline-block;
+  margin-bottom: 4px;
+  padding: 1px 5px;
+  border: 1px solid rgba(224, 177, 105, 0.25);
+  color: #e6cb95;
+  font-size: 6px;
+  letter-spacing: 0.14em;
+}
+.wd-map-card.cleared .wm-stage { border-color: rgba(111, 180, 118, 0.55); color: #9be0a2; }
 .wd-tower-card strong { color: #ecdec3; font-size: 8px; }
 .wd-tower-card em { display: block; color: #b6905e; font-size: 7px; font-style: normal; margin: 2px 0 3px; }
 .wd-tower-card span { display: block; color: #7c715f; font-size: 6px; line-height: 1.35; }
@@ -189,10 +230,10 @@
 .wd-palette::-webkit-scrollbar-thumb { background: rgba(224, 177, 105, 0.3); }
 .wd-palette button {
   display: grid;
-  grid-template-columns: 18px 1fr auto;
+  grid-template-columns: 20px 1fr auto;
   align-items: center;
-  gap: 4px;
-  min-height: 25px;
+  gap: 5px;
+  min-height: 26px;
   padding: 3px 4px;
   border: 1px solid rgba(255, 255, 255, 0.06);
   background: rgba(19, 20, 16, 0.9);
@@ -200,7 +241,9 @@
   text-align: left;
   cursor: pointer;
 }
+.wd-palette button .wp-icon { width: 18px; height: 18px; border-radius: 3px; display: block; }
 .wd-palette button .wp-glyph { color: var(--tower-color, #d6b16f); font-size: 11px; text-align: center; }
+.wd-selection .ws-icon { width: 24px; height: 24px; border-radius: 4px; vertical-align: middle; }
 .wd-palette button .wp-name { font-size: 7px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .wd-palette button .wp-cost { color: #e5bd75; font-size: 7px; }
 .wd-palette button.active { border-color: rgba(239, 199, 129, 0.65); background: rgba(74, 55, 31, 0.75); }
@@ -314,6 +357,7 @@
 .wd-result-actions .btn { flex: 1; }
 
 @media (max-width: 900px) {
+  .wd-story { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .wd-summary { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .wd-tower-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .wd-palette { width: 96px; }
@@ -322,6 +366,7 @@
   .wd-selection { left: 113px; width: 260px; }
 }
 @media (max-width: 700px) {
+  .wd-story { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .wd-maps { grid-template-columns: 1fr; }
   .wd-tower-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .wd-feed { display: none; }

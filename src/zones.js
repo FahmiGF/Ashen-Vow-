@@ -6,6 +6,8 @@ import { ALL_ROOMS, ROOMS } from './core.js';
 import { BIOMES } from './expansion.js';
 import { COURT_ZONES } from './court.js';
 import { FAIRY_ZONE } from './fairy.js';
+import { RIFT_ZONE } from './rift.js';
+import { UNWRITTEN_ZONE } from './unwritten.js';
 
 export const ZONES = {
   ashen: {
@@ -74,6 +76,40 @@ export const ZONES = {
       low: '#3a2610',
       glow: '#ffb85c',
       fog: '#4a3216',
+    },
+  },
+  frontier: {
+    id: 'frontier',
+    name: 'Infinite Frontiers',
+    subtitle: 'Batas Tak Berujung',
+    color: '#8ec5fc',
+    mapColor: '#8ec5fc',
+    music: 'frontier',
+    bossMusic: 'frontierBoss',
+    particle: 'stars',
+    palette: {
+      top: '#08121f',
+      mid: '#102236',
+      low: '#1b3550',
+      glow: '#8ec5fc',
+      fog: '#2b4a6b',
+    },
+  },
+  overdrive: {
+    id: 'overdrive',
+    name: 'The Eternal Realm',
+    subtitle: 'Overdrive · Alam Abadi',
+    color: '#fb7185',
+    mapColor: '#fb7185',
+    music: 'overdrive',
+    bossMusic: 'overdriveBoss',
+    particle: 'stars',
+    palette: {
+      top: '#120612',
+      mid: '#230b20',
+      low: '#381134',
+      glow: '#fb7185',
+      fog: '#501b49',
     },
   },
   frostglass: {
@@ -155,6 +191,30 @@ ZONES[FAIRY_ZONE.id] = {
   bossMusic: FAIRY_ZONE.bossMusic,
   particle: FAIRY_ZONE.particle,
   palette: { ...FAIRY_ZONE.palette },
+};
+
+ZONES[RIFT_ZONE.id] = {
+  id: RIFT_ZONE.id,
+  name: RIFT_ZONE.name,
+  subtitle: RIFT_ZONE.localName,
+  color: RIFT_ZONE.color,
+  mapColor: RIFT_ZONE.color,
+  music: RIFT_ZONE.music,
+  bossMusic: RIFT_ZONE.bossMusic,
+  particle: RIFT_ZONE.particle,
+  palette: { ...RIFT_ZONE.palette },
+};
+
+ZONES[UNWRITTEN_ZONE.id] = {
+  id: UNWRITTEN_ZONE.id,
+  name: UNWRITTEN_ZONE.name,
+  subtitle: UNWRITTEN_ZONE.localName,
+  color: UNWRITTEN_ZONE.color,
+  mapColor: UNWRITTEN_ZONE.color,
+  music: UNWRITTEN_ZONE.music,
+  bossMusic: UNWRITTEN_ZONE.bossMusic,
+  particle: UNWRITTEN_ZONE.particle,
+  palette: { ...UNWRITTEN_ZONE.palette },
 };
 
 export const ZONE_IDS = Object.keys(ZONES);

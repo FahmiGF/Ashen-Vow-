@@ -61,12 +61,28 @@ export const CREDIT_ARCS = [
     line: 'Paladin Templar gugur. Celah di langit terbuka.',
   },
   {
+    id: 'rift',
+    numeral: 'ARC IV',
+    title: 'THE RIFT',
+    subtitle: 'Jahitan di antara dua kenyataan.',
+    bosses: { rift: ['rift_devilish_scum'] },
+    line: 'The Devilish Scum tumbang. Kedua kenyataan kembali bernapas.',
+  },
+  {
     id: 'astral',
     numeral: 'ARC VI',
     title: 'THE ASTRAL DOMINION',
     subtitle: 'Tahta di antara bintang dan kehampaan.',
     bosses: { astral: ['astral_architect_of_eternity'] },
     line: 'The Architect of Eternity gugur. Dominion berpindah tangan.',
+  },
+  {
+    id: 'unwritten',
+    numeral: 'UNWRITTEN',
+    title: 'THE UNWRITTEN EXPANSE',
+    subtitle: 'Tepi perkamen di luar halaman terakhir.',
+    bosses: { unwritten: ['unwritten_blank_author'] },
+    line: 'The Blank Author meletakkan pena. Halaman terakhir kini milikmu.',
   },
   {
     id: 'eclipse',

@@ -3,7 +3,10 @@ import {
   AshenGame,
   ROOMS,
   ALL_ROOMS,
+  ALL_ENEMY_INFO,
+  ALL_BOSS_INFO,
   WORLD_W,
+  FLOOR_Y,
   VIEW_W,
   WEAPONS,
   SHOP_ITEMS,
@@ -17,6 +20,17 @@ import {
   DEFAULT_APPEARANCE,
 } from './core.js';
 import { Renderer } from './render.js';
+import {
+  bossVoiceLine,
+  bossVoiceSummary,
+  archetypeForBoss,
+  sanitizeBossVoiceSettings,
+  sanitizeVoiceManifest,
+  resolveBossVoiceSource,
+  BOSS_VOICE_SOURCE_LABEL,
+  PLAYER_SPEAKER,
+} from './boss_voice.js';
+import { VoiceFX } from './voice_fx.js';
 import { SoundKit } from './audio.js';
 import { MusicManager, bossTrackFor } from './music.js';
 import {
@@ -57,7 +71,7 @@ import {
   formatCode,
   gamepadActions,
 } from './settings.js';
-import { ZONE_LIST, zoneForRoom } from './zones.js';
+import { ZONE_LIST, ZONES, zoneForRoom } from './zones.js';
 import {
   MapView,
   LEGEND,
@@ -78,6 +92,8 @@ import {
   drawCutscene,
   cutsceneFor,
   cutsceneBeatAt,
+  SPIRAL_INTRO_CUTSCENE,
+  SPIRAL_BOSS_CUTSCENE,
 } from './cutscene.js';
 import {
   VOICE_SAVE_KEY,
@@ -120,6 +136,7 @@ import {
   creditSceneFor,
   isArcFinalBoss,
 } from './credits.js';
+
 import {
   SPEEDRUN_LIVES,
   SPEEDRUN_RULES,
@@ -157,7 +174,7 @@ import {
   reelZone,
   sanitizeFishingProgress,
 } from './fishing.js';
-import { UPDATE_LOG, GAME_VERSION } from './updates.js';
+import { GAME_VERSION } from './version.js';
 import {
   EXPANSION_NAME,
   EXPANSION_ROOM_START,
@@ -579,6 +596,29 @@ import {
   recordLanternRun,
 } from './lanternwake.js';
 import {
+  FRONTIERS_NAME,
+  FRONTIERS_LOCAL_NAME,
+  FRONTIER_ROOMS,
+  FRONTIER_CHAPTER_META,
+  FRONTIER_LEVEL_COUNT,
+  FRONTIER_ROOMS_PER_CHAPTER,
+  defaultFrontierCampaignProgress,
+  sanitizeFrontierCampaignProgress,
+  frontierCampaignUnlocked,
+  frontierCampaignSummary,
+  frontierChapterProgress,
+  frontierLevelUnlocked,
+  frontierLevelCleared,
+  frontierIndexForRoom,
+  frontierRoomForIndex,
+  frontierAshStipend,
+  frontierPlayerScale,
+  frontierVitalityScale,
+  frontierFlaskBonus,
+  recordFrontierLevel,
+  recordFrontierRun,
+} from './frontiers.js';
+import {
   FALLEN_NAME,
   FALLEN_LOCAL_NAME,
   FALLEN_SUBTITLE,
@@ -670,6 +710,35 @@ import {
   breakPaladinChain,
   valorMultiplier,
 } from './crusade.js';
+import {
+  RIFT_ROOM_START,
+  RIFT_ROOM_COUNT,
+  RIFT_REGIONS,
+  RIFT_ROOMS,
+  RIFT_BOSS_INFO,
+  defaultRiftProgress,
+  sanitizeRiftProgress,
+  riftUnlocked,
+  recordRiftRoom,
+  recordRiftBoss,
+  riftSummary,
+} from './rift.js';
+import {
+  UNWRITTEN_ROOM_START,
+  UNWRITTEN_ROOM_COUNT,
+  UNWRITTEN_CHAPTERS,
+  UNWRITTEN_SIGILS,
+  UNWRITTEN_SIGIL_BY_ID,
+  UNWRITTEN_BOSS_INFO,
+  INK_SEVERANCE_MIN_RESONANCE,
+  defaultUnwrittenProgress,
+  sanitizeUnwrittenProgress,
+  unwrittenUnlocked,
+  recordUnwrittenRoom,
+  recordUnwrittenBoss,
+  equipUnwrittenSigil,
+  unwrittenSummary,
+} from './unwritten.js';
 import {
   LABYRINTH_VERSION,
   LABYRINTH_NAME,
@@ -792,9 +861,15 @@ import {
   WAVE_DEFENSE_TOWERS,
   WAVE_DEFENSE_TOWER_BY_ID,
   WAVE_DEFENSE_DIFFICULTIES,
+  WAVE_DEFENSE_PARTICLE_LEVELS,
   WAVE_DEFENSE_ENEMY_TYPES,
   WAVE_DEFENSE_BOSSES,
   WAVE_DEFENSE_TOTAL_WAVES,
+  WAVE_DEFENSE_INFINITOWER_TIER_WAVES,
+  waveDefenseTowerIconDataUrl,
+  SPIRAL_STORY,
+  spiralStoryForTier,
+  infinitowerTierFor,
   createWaveDefense,
   updateWaveDefense,
   waveDefenseBuild,
@@ -806,6 +881,7 @@ import {
   waveDefenseSelectTower,
   waveDefenseNextWave,
   waveDefenseSetSpeed,
+  waveDefenseSetParticleScale,
   waveDefenseSnapshot,
   waveDefenseSummary,
   defaultWaveDefenseProgress,
@@ -814,6 +890,35 @@ import {
   endWaveDefense,
   renderWaveDefense,
 } from './wavedefense.js';
+import {
+  OVERDRIVE_CHAPTERS as OVERDRIVE_DATA_CHAPTERS,
+  OVERDRIVE_SPECIAL_LEVEL_TYPES,
+  SPELL_SCHOOLS as OVERDRIVE_DATA_SCHOOLS,
+  LEGENDARY_WEAPONS as OVERDRIVE_LEGENDARY_WEAPONS,
+} from './overdrive.js';
+import {
+  OVERDRIVE_ROOMS,
+  OVERDRIVE_LEVEL_COUNT,
+  OVERDRIVE_ROOMS_PER_CHAPTER,
+  OVERDRIVE_CHAPTER_META,
+  OVERDRIVE_LOCAL_NAME,
+  overdriveRoomForIndex,
+  overdriveIndexForRoom,
+  overdriveCampaignUnlocked,
+  overdriveLevelUnlocked,
+  overdriveLevelCleared,
+  overdriveChapterProgress,
+  overdriveCampaignSummary,
+  overdrivePlayerScale,
+  overdriveVitalityScale,
+  overdriveFlaskBonus,
+  overdriveAshStipend,
+  overdriveSpellFor,
+  defaultOverdriveLadderState,
+  sanitizeOverdriveLadderProgress,
+  recordOverdriveLevel,
+  recordOverdriveRun,
+} from './overdrive_ladder.js';
 import {
   PIRATE_STAGES,
   PIRATE_STAGE_BY_ID,
@@ -916,7 +1021,32 @@ const mapView = new MapView($('map-canvas'));
 
 let started = false;
 let paused = false;
-let menuView = 'title'; // title | fallenMenu | fallen | levels | credits | updates | character | expansion | frontier | overdrive | mode3d | court | labyrinth | fairy | speedrun | fishing | baitShop | fishIndex | none
+let menuView = 'title'; // title | fallenMenu | fallen | levels | credits | updates | storymap | character | expansion | frontier | overdrive | mode3d | court | labyrinth | fairy | speedrun | fishing | baitShop | fishIndex | none
+const loadedStylesheets = new Map();
+function ensureStylesheet(href) {
+  if (typeof document === 'undefined') return Promise.resolve();
+  if (loadedStylesheets.has(href)) return loadedStylesheets.get(href);
+  const existing = [...document.querySelectorAll('link[rel="stylesheet"]')].find((el) => el.getAttribute('href') === href);
+  if (existing) {
+    const p = Promise.resolve(existing);
+    loadedStylesheets.set(href, p);
+    return p;
+  }
+  const promise = new Promise((resolve, reject) => {
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = href;
+    link.onload = () => resolve(link);
+    link.onerror = () => {
+      loadedStylesheets.delete(href);
+      link.remove();
+      reject(new Error(`Gagal memuat stylesheet: ${href}`));
+    };
+    document.head.appendChild(link);
+  });
+  loadedStylesheets.set(href, promise);
+  return promise;
+}
 let fishingReel = null;
 let fishingReelFrame = 0;
 let fishIndexTab = 0;
@@ -999,7 +1129,11 @@ let wdResult = null;
 let wdRecorded = false;
 let wdMapId = 'ashen_keep';
 let wdDifficulty = 'knight';
+let wdParticleId = 'normal';
 let wdEndless = false;
+let wdInfinitower = false;
+let wdIntroSeen = false;
+let wdBossCutsceneSeen = false;
 let wdSelectedTowerId = 'ballista';
 let wdUiTimer = 0;
 let wdRenderDirty = true;
@@ -1230,6 +1364,8 @@ function defaultProgress() {
     fairy: defaultFairyProgress(),
     cistern: defaultCisternProgress(),
     lanternwake: defaultLanternProgress(),
+    frontiers: defaultFrontierCampaignProgress(),
+    overdrive: defaultOverdriveLadderState(),
     speedrun: defaultSpeedrunProgress(),
     fishing: defaultFishingProgress(),
     fallen: defaultFallenProgress(),
@@ -1253,7 +1389,7 @@ function sanitizeStageTimes(raw) {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
   const result = {};
   for (const [key, value] of Object.entries(raw)) {
-    if (!/^(legacy|court|expansion|atlas|cistern|lanternwake):\d+$/.test(key) || !value || typeof value !== 'object') continue;
+    if (!/^(legacy|court|expansion|atlas|cistern|lanternwake|frontiers|overdrive):\d+$/.test(key) || !value || typeof value !== 'object') continue;
     result[key] = {
       label: typeof value.label === 'string' ? value.label.slice(0, 80) : key,
       best: Math.max(0, Math.round((Number(value.best) || 0) * 10) / 10),
@@ -1303,7 +1439,7 @@ function loadProgress() {
         };
     // Keep every unknown top-level field. v0.3.0 adds `expansion` without
     // changing the storage key or discarding future/legacy save data.
-    const { version, schemaVersion: _schemaVersion, unlocked: _unlocked, cleared: _cleared, map: _map, expansion: _expansion, atlas: _atlas, labyrinth: _labyrinth, court: _court, skills: _skills, pack: _pack, fairy: _fairy, speedrun: _speedrun, fishing: _fishing, fallen: _fallen, crusade: _crusade, trials: _trials, puzzle: _puzzle, moba: _moba, wavedefense: _wavedefense, pirates: _pirates, astral: _astral, realms: _realms, eclipse: _eclipse, godfall: _godfall, guild: _guild, awakening: _awakening, cistern: _cistern, lanternwake: _lanternwake, stageTimes: _stageTimes, ...extras } = parsed;
+    const { version, schemaVersion: _schemaVersion, unlocked: _unlocked, cleared: _cleared, map: _map, expansion: _expansion, atlas: _atlas, labyrinth: _labyrinth, court: _court, skills: _skills, pack: _pack, fairy: _fairy, speedrun: _speedrun, fishing: _fishing, fallen: _fallen, crusade: _crusade, trials: _trials, puzzle: _puzzle, moba: _moba, wavedefense: _wavedefense, pirates: _pirates, astral: _astral, realms: _realms, eclipse: _eclipse, godfall: _godfall, guild: _guild, awakening: _awakening, cistern: _cistern, lanternwake: _lanternwake, frontiers: _frontiers, overdrive: _overdrive, stageTimes: _stageTimes, ...extras } = parsed;
     return {
       ...extras,
       version: 1,
@@ -1320,6 +1456,8 @@ function loadProgress() {
       fairy: sanitizeFairyProgress(parsed.fairy),
       cistern: sanitizeCisternProgress(parsed.cistern),
       lanternwake: sanitizeLanternProgress(parsed.lanternwake),
+      frontiers: sanitizeFrontierCampaignProgress(parsed.frontiers),
+      overdrive: sanitizeOverdriveLadderProgress(parsed.overdrive),
       speedrun: sanitizeSpeedrunProgress(parsed.speedrun),
       fishing: sanitizeFishingProgress(parsed.fishing),
       fallen: sanitizeFallenProgress(parsed.fallen),
@@ -1342,7 +1480,13 @@ function loadProgress() {
   }
 }
 
-function saveProgress() {
+let _saveProgressTimer = 0;
+let _saveProgressLastMs = 0;
+function flushSaveProgress() {
+  if (_saveProgressTimer) {
+    clearTimeout(_saveProgressTimer);
+    _saveProgressTimer = 0;
+  }
   if (activeRunKind === 'hack' && hackSnapshot) return;
   try {
     const previous = localStorage.getItem(PROGRESS_KEY);
@@ -1350,9 +1494,28 @@ function saveProgress() {
     progress.version = 1;
     progress.schemaVersion = 2;
     localStorage.setItem(PROGRESS_KEY, JSON.stringify(progress));
+    _saveProgressLastMs = Date.now();
   } catch {
     /* storage unavailable — keep in memory */
   }
+}
+
+function saveProgress({ immediate = false } = {}) {
+  if (activeRunKind === 'hack' && hackSnapshot) return;
+  const now = Date.now();
+  if (immediate || now - _saveProgressLastMs >= 1200) {
+    flushSaveProgress();
+    return;
+  }
+  if (!_saveProgressTimer) {
+    _saveProgressTimer = setTimeout(() => flushSaveProgress(), 1200 - (now - _saveProgressLastMs));
+  }
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('pagehide', () => {
+    if (_saveProgressTimer) flushSaveProgress();
+  });
 }
 
 let progress = loadProgress();
@@ -4473,6 +4636,14 @@ function updateMenuProgress() {
       if (link) link.classList.remove('hidden');
     }
   }
+  const riftButton = $('btn-rift-menu');
+  if (riftButton) {
+    riftButton.classList.toggle('hidden', !riftUnlocked(progress));
+  }
+  const unwrittenButton = $('btn-unwritten-menu');
+  if (unwrittenButton) {
+    unwrittenButton.classList.toggle('hidden', !unwrittenUnlocked(progress));
+  }
 }
 
 // ── expansion progression ────────────────────────────────────────────────
@@ -5780,6 +5951,182 @@ function speedrunStamp(at) {
   if (Number.isNaN(date.getTime())) return '—';
   const pad = (n) => String(n).padStart(2, '0');
   return `${pad(date.getDate())}/${pad(date.getMonth() + 1)} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+// ── Campaign Map Editor (lazy-loaded pilot mode) ────────────────────────
+let mapEditorCtrl = null;
+let mapEditorPromise = null;
+let editorOpenToken = 0;
+let customIntroCallback = null;
+let customBadgeCache = '';
+
+function clearShellOverlays() {
+  cancelPrologue();
+  shopOpen = false;
+  mapOpen = false;
+  codexOpen = false;
+  inventoryOpen = false;
+  settingsOpen = false;
+  closeDialogue(true);
+  spectating = false;
+  spectateGame = null;
+}
+
+function resetArenaStateForCustomRun() {
+  attempts = 1;
+  coopGuestMode = false;
+  coopGuestRoom = -1;
+  activeCourtTrial = null;
+  activeCourtRoom = null;
+  activePackIndex = -1;
+  activeFairyStage = -1;
+  activeFairyBoss = null;
+  speedrunRun = null;
+  speedrunSummaryOpen = false;
+  labRun = null;
+  labDirector = null;
+  labGuestMode = false;
+  labRewardsOpen = false;
+  labSummaryOpen = false;
+  activeExpansionIndex = null;
+  activeModeId = null;
+  activeTrialId = null;
+  cutsceneSeen = new Set();
+  postCreditTimer = -1;
+  horrorEventLayer = {};
+  horrorPresence = null;
+  horrorLastDone = null;
+}
+
+function ensureMapEditor() {
+  if (mapEditorCtrl) return Promise.resolve(mapEditorCtrl);
+  if (!mapEditorPromise) {
+    mapEditorPromise = Promise.all([
+      import('./mapeditor_ui.js'),
+      ensureStylesheet('./styles-mapeditor.css'),
+    ])
+      .then(([mod]) => {
+        if (!mapEditorCtrl) {
+          mapEditorCtrl = mod.createMapEditorController({
+            $,
+            esc,
+            game,
+            audio,
+            formatTime,
+            getMenuView: () => menuView,
+            setMenuView: (v) => { menuView = v; },
+            isStarted: () => started,
+            setStarted: (v) => { started = v; },
+            setPaused: (v) => { paused = v; },
+            getActiveRunKind: () => activeRunKind,
+            setActiveRunKind: (v) => { activeRunKind = v; },
+            clearShellOverlays,
+            resetArenaStateForCustomRun,
+            applyCustomPlayerLoadout: (bp) => {
+              game.applyCharacter(bp.classId);
+              game.applySkillBonuses(skillBonuses(progress.skills));
+              game.setAppearance({
+                race: character.race,
+                skin: character.skin,
+                outfit: character.outfit,
+                armor: character.armor,
+              });
+            },
+            applyCustomHunterItems: () => {
+              game.setHunterItems(hunterState.items);
+            },
+            beginCustomStageRecord: (bp, room) => {
+              lastGameState = 'playing';
+              accumulator = 0;
+              lastTime = performance.now();
+              activeStage = { key: `custom:${bp.id}`, index: room.index, label: bp.name, startedAt: game.time, recorded: false };
+            },
+            setCustomIntroCallback: (fn) => { customIntroCallback = fn; },
+            startPrologue,
+            openTrailer,
+            startCutscene,
+            syncScreens,
+            updateHud,
+            clearHeldKeys,
+            showBanner,
+            showToast,
+            showMenu,
+            unlockAudio: () => {
+              audio.init();
+              audioUnlocked = true;
+            },
+          });
+          mapEditorCtrl.bindDom();
+        }
+        return mapEditorCtrl;
+      })
+      .catch((err) => {
+        mapEditorPromise = null;
+        throw err;
+      });
+  }
+  return mapEditorPromise;
+}
+
+async function showEditor() {
+  const token = ++editorOpenToken;
+  clearShellOverlays();
+  started = false;
+  paused = false;
+  menuView = 'editor';
+  clearHeldKeys();
+  const form = $('editor-form');
+  const msg = $('editor-message');
+  if (!mapEditorCtrl) {
+    if (form) form.innerHTML = '<p class="editor-empty" role="status">Memuat Peta Sumpah…</p>';
+    if (msg) {
+      msg.textContent = 'Memuat modul Peta Sumpah…';
+      msg.className = 'editor-message';
+    }
+  }
+  syncScreens();
+  try {
+    const ctrl = await ensureMapEditor();
+    if (token !== editorOpenToken || menuView !== 'editor') return false;
+    return ctrl.open();
+  } catch (error) {
+    if (token !== editorOpenToken || menuView !== 'editor') return false;
+    if (form) {
+      form.innerHTML = `<p class="editor-empty">Gagal memuat Peta Sumpah: ${esc(error?.message || 'galat')}</p><button class="btn btn-ghost btn-compact" type="button" data-editor-retry="1">COBA LAGI</button>`;
+    }
+    if (msg) {
+      msg.textContent = 'Gagal memuat modul Peta Sumpah.';
+      msg.className = 'editor-message error';
+    }
+    return false;
+  }
+}
+
+function isCustomClearOpen() {
+  return Boolean(mapEditorCtrl?.isClearOpen());
+}
+
+function tickCustomStage(dt) {
+  mapEditorCtrl?.tick(dt);
+}
+
+function resetCustomRun() {
+  mapEditorCtrl?.resetActiveRun();
+}
+
+function startCustomStage(id) {
+  if (mapEditorCtrl) return mapEditorCtrl.startCustomStage(id);
+  return ensureMapEditor().then((ctrl) => ctrl.startCustomStage(id));
+}
+
+function retryCustomRun() {
+  if (mapEditorCtrl) return mapEditorCtrl.retryCustomStage();
+  return ensureMapEditor().then((ctrl) => ctrl.retryCustomStage());
+}
+
+function editorSyncOrAsync(fn) {
+  if (mapEditorCtrl) return fn(mapEditorCtrl);
+  return ensureMapEditor().then(fn);
 }
 
 function showSpeedrun() {
@@ -7821,6 +8168,10 @@ function startRun(index = 0) {
 }
 
 function retryRun() {
+  if (activeRunKind === 'custom') {
+    void retryCustomRun();
+    return;
+  }
   attempts += 1;
   if (activeRunKind === 'eternal') {
     const stageId = eternalController?.activeStage;
@@ -7866,6 +8217,14 @@ function retryRun() {
     else startCrusadeLevel(Math.max(0, activeCrusadeLevel));
     return;
   }
+  if (activeRunKind === 'rift') {
+    startRiftRoom(Math.max(RIFT_ROOM_START, game.roomIndex || RIFT_ROOM_START));
+    return;
+  }
+  if (activeRunKind === 'unwritten') {
+    startUnwrittenRoom(Math.max(UNWRITTEN_ROOM_START, game.roomIndex || UNWRITTEN_ROOM_START));
+    return;
+  }
   if (activeRunKind === 'pack' && activePackIndex >= 0) {
     startPackRun(activePackIndex);
     return;
@@ -7881,6 +8240,20 @@ function retryRun() {
   }
   if (activeRunKind === 'lanternwake') {
     startLanternwakeStage(activeLanternStage >= 0 ? activeLanternStage : 0);
+    return;
+  }
+  if (activeRunKind === 'frontiers') {
+    const state = frontierState();
+    recordFrontierRun(state, 0, true);
+    saveProgress();
+    startFrontierLevel(activeFrontierIndex >= 0 ? activeFrontierIndex : 0);
+    return;
+  }
+  if (activeRunKind === 'overdrive') {
+    const state = overdriveState();
+    recordOverdriveRun(state, 0, true);
+    saveProgress();
+    startOverdriveLevel(activeOverdriveIndex >= 0 ? activeOverdriveIndex : 0);
     return;
   }
   if (activeRunKind === 'eclipse') {
@@ -7956,6 +8329,7 @@ function retryRun() {
 }
 
 function showMenu() {
+  resetCustomRun();
   hunterShopOpen = false;
   cancelPrologue();
   if (activeRunKind === 'hack' && hackSnapshot) progress = hackSnapshot;
@@ -8516,9 +8890,24 @@ function showWaveDefense() {
   syncScreens();
 }
 
+function waveDefenseParticleScale() {
+  const level = WAVE_DEFENSE_PARTICLE_LEVELS.find((entry) => entry.id === wdParticleId);
+  if (level) return level.scale;
+  const mult = Number(settings?.graphics?.particleMultiplier ?? 1);
+  return Math.max(0.25, Math.min(4, mult));
+}
+
 function buildWaveDefenseScreen() {
   const state = waveDefenseState();
   const summary = waveDefenseSummary(state);
+  const storyEl = $('wd-story');
+  if (storyEl) {
+    storyEl.innerHTML = SPIRAL_STORY.map((chapter) => `<article class="wd-story-chapter">
+      <span>TINGKAT ${chapter.tier}</span>
+      <strong>${esc(chapter.title)}</strong>
+      <p>${esc(chapter.line)}</p>
+    </article>`).join('');
+  }
   const summaryEl = $('wd-summary');
   if (summaryEl) {
     summaryEl.innerHTML = `
@@ -8527,16 +8916,22 @@ function buildWaveDefenseScreen() {
       <div class="wd-stat"><span>GELOMBANG</span><strong>${summary.bestWave}/${WAVE_DEFENSE_TOTAL_WAVES}</strong><em>rekor tertinggi</em></div>
       <div class="wd-stat"><span>SKOR</span><strong>${summary.bestScore}</strong><em>rekor benteng</em></div>
       <div class="wd-stat"><span>TOTAL KILL</span><strong>${summary.totalKills}</strong><em>${summary.totalLeaks} bocor</em></div>
-      <div class="wd-stat"><span>MENARA</span><strong>${summary.towers}</strong><em>${summary.enemies} musuh · ${summary.bosses} bos</em></div>`;
+      <div class="wd-stat"><span>MENARA</span><strong>${summary.towers}</strong><em>${summary.enemies} musuh · ${summary.bosses} bos</em></div>
+      <div class="wd-stat"><span>INFINITOWER</span><strong>T${summary.infinitowerBest?.bestTier || 0}</strong><em>gel ${summary.infinitowerBest?.bestWave || 0} · ${summary.infinitowerBest?.bestKills || 0} kill</em></div>`;
   }
   if (!WAVE_DEFENSE_MAP_BY_ID[wdMapId]) wdMapId = WAVE_DEFENSE_MAPS[0].id;
   if (!WAVE_DEFENSE_DIFFICULTIES.some((entry) => entry.id === wdDifficulty)) wdDifficulty = 'knight';
+  if (!WAVE_DEFENSE_PARTICLE_LEVELS.some((entry) => entry.id === wdParticleId)) wdParticleId = 'normal';
   if (!WAVE_DEFENSE_TOWER_BY_ID[wdSelectedTowerId]) wdSelectedTowerId = WAVE_DEFENSE_TOWERS[0].id;
+  const mapCountEl = $('wd-map-count');
+  if (mapCountEl) mapCountEl.textContent = `${WAVE_DEFENSE_MAPS.length} MEDAN · ${WAVE_DEFENSE_MAPS.filter((m) => m.id !== 'eternal_spiral').length} STAGE`;
   const maps = $('wd-maps');
   if (maps) {
     maps.innerHTML = WAVE_DEFENSE_MAPS.map((map) => {
       const record = state.maps?.[map.id] || {};
-      return `<button class="wd-map-card${map.id === wdMapId ? ' active' : ''}" type="button" data-wd-map="${map.id}">
+      const cleared = (record.wins || 0) > 0;
+      return `<button class="wd-map-card${map.id === wdMapId ? ' active' : ''}${cleared ? ' cleared' : ''}" type="button" data-wd-map="${map.id}">
+        <span class="wm-stage">STAGE ${map.stage || 1}${cleared ? ' · TUNTAS' : ''}${map.id === 'eternal_spiral' ? ' · INFINITOWER' : ''}</span>
         <strong>${esc(map.name)}</strong><em>${esc(map.subtitle)}</em><span>${esc(map.lore)}</span>
         <b>${map.slots.length} POS · REKOR GEL ${record.bestWave || 0} · SKOR ${record.bestScore || 0}</b>
       </button>`;
@@ -8544,17 +8939,28 @@ function buildWaveDefenseScreen() {
   }
   const diffs = $('wd-difficulties');
   if (diffs) diffs.innerHTML = WAVE_DEFENSE_DIFFICULTIES.map((entry) => `<button class="${entry.id === wdDifficulty ? 'active' : ''}" type="button" data-wd-difficulty="${entry.id}" title="${esc(entry.desc)}">${entry.name} · ${entry.castle} HP</button>`).join('');
+  const particlesEl = $('wd-particles');
+  if (particlesEl) {
+    particlesEl.innerHTML = WAVE_DEFENSE_PARTICLE_LEVELS.map((entry) => `<button class="${entry.id === wdParticleId ? 'active' : ''}" type="button" data-wd-particle="${entry.id}" title="${esc(entry.desc)}">${esc(entry.label)}<em>${entry.scale}× partikel</em></button>`).join('');
+  }
+  const pLabel = $('wd-particle-label');
+  if (pLabel) {
+    const activeLevel = WAVE_DEFENSE_PARTICLE_LEVELS.find((entry) => entry.id === wdParticleId) || WAVE_DEFENSE_PARTICLE_LEVELS[1];
+    pLabel.textContent = `${activeLevel.label.toUpperCase()} (${activeLevel.scale}×)`;
+  }
   const modes = $('wd-modes');
   if (modes) {
     const best = summary.endlessBest || {};
+    const tower = summary.infinitowerBest || {};
     modes.innerHTML = `
-      <button class="${wdEndless ? '' : 'active'}" type="button" data-wd-mode="classic">KAMPANYE · 24 GELOMBANG<em>Rekor gel ${summary.bestWave}/${WAVE_DEFENSE_TOTAL_WAVES} · skor ${summary.bestScore}</em></button>
-      <button class="${wdEndless ? 'active' : ''}" type="button" data-wd-mode="endless">TANPA AKHIR<em>Rekor gel ${best.bestWave || 0} · ${best.bestKills || 0} kill · skor ${best.bestScore || 0}</em></button>`;
+      <button class="${!wdEndless && !wdInfinitower ? 'active' : ''}" type="button" data-wd-mode="classic">KAMPANYE · 24 GELOMBANG<em>Rekor gel ${summary.bestWave}/${WAVE_DEFENSE_TOTAL_WAVES} · skor ${summary.bestScore}</em></button>
+      <button class="${wdEndless && !wdInfinitower ? 'active' : ''}" type="button" data-wd-mode="endless">TANPA AKHIR<em>Rekor gel ${best.bestWave || 0} · ${best.bestKills || 0} kill · skor ${best.bestScore || 0}</em></button>
+      <button class="${wdInfinitower ? 'active' : ''}" type="button" data-wd-mode="infinitower">INFINITOWER · LINGKAR ABADI<em>Tingkat ${tower.bestTier || 0} · gel ${tower.bestWave || 0} · ${tower.bestKills || 0} kill</em></button>`;
   }
   const towers = $('wd-towers');
   if (towers) {
     towers.innerHTML = WAVE_DEFENSE_TOWERS.map((tower) => `<button class="wd-tower-card${tower.id === wdSelectedTowerId ? ' active' : ''}" type="button" data-wd-tower="${tower.id}" style="--tower-color:${tower.color}">
-      <span class="wt-top"><span class="wt-glyph">${tower.glyph}</span><strong>${esc(tower.name)}</strong></span>
+      <span class="wt-top"><img class="wt-icon" src="${waveDefenseTowerIconDataUrl(tower.id)}" alt="${esc(tower.name)}" /><strong>${esc(tower.name)}</strong></span>
       <em>${tower.cost} EMAS</em>
       <span>${esc(tower.desc)}</span>
       <span class="wt-stats">DMG ${tower.damage} · RANGE ${tower.range} · ${tower.rate.toFixed(2)}/s${tower.splash ? ` · AREA ${tower.splash}` : ''}</span>
@@ -8563,14 +8969,14 @@ function buildWaveDefenseScreen() {
   const count = $('wd-tower-count');
   if (count) count.textContent = `${WAVE_DEFENSE_TOWERS.length} JENIS · ${WAVE_DEFENSE_ENEMY_TYPES.length} MUSUH · ${WAVE_DEFENSE_BOSSES.length} BOS`;
   const button = $('btn-wd-start');
-  if (button) button.innerHTML = `<span>${wdEndless ? 'MULAI TANPA AKHIR' : 'MULAI PERTAHANAN'}</span><em>${esc(WAVE_DEFENSE_MAP_BY_ID[wdMapId]?.name || 'ASHEN KEEP')} · ${WAVE_DEFENSE_TOWER_BY_ID[wdSelectedTowerId]?.name || 'BALLISTA'} · ${WAVE_DEFENSE_DIFFICULTIES.find((entry) => entry.id === wdDifficulty)?.name || 'KNIGHT'}${wdEndless ? ' · ∞' : ''}</em>`;
+  if (button) button.innerHTML = `<span>${wdInfinitower ? 'MULAI INFINITOWER' : wdEndless ? 'MULAI TANPA AKHIR' : 'MULAI PERTAHANAN'}</span><em>${esc((wdInfinitower ? WAVE_DEFENSE_MAP_BY_ID.eternal_spiral : WAVE_DEFENSE_MAP_BY_ID[wdMapId])?.name || 'ASHEN KEEP')} · ${WAVE_DEFENSE_TOWER_BY_ID[wdSelectedTowerId]?.name || 'BALLISTA'} · ${WAVE_DEFENSE_DIFFICULTIES.find((entry) => entry.id === wdDifficulty)?.name || 'KNIGHT'}${wdInfinitower ? ` · TINGKAT / ${WAVE_DEFENSE_INFINITOWER_TIER_WAVES} GEL` : wdEndless ? ' · ∞' : ''}</em>`;
 }
 
 function buildWaveDefensePalette() {
   const palette = $('wd-palette');
   if (!palette) return;
   palette.innerHTML = WAVE_DEFENSE_TOWERS.map((tower) => `<button type="button" data-wd-tower="${tower.id}" style="--tower-color:${tower.color}">
-    <span class="wp-glyph">${tower.glyph}</span><span class="wp-name">${esc(tower.name)}</span><span class="wp-cost">${tower.cost}</span>
+    <img class="wp-icon" src="${waveDefenseTowerIconDataUrl(tower.id)}" alt="${esc(tower.name)}" /><span class="wp-name">${esc(tower.name)}</span><span class="wp-cost">${tower.cost}</span>
   </button>`).join('');
   wdSelectionKey = '';
   wdFeedKey = '';
@@ -8583,10 +8989,13 @@ function startWaveDefenseBattle() {
     mapId: wdMapId,
     difficulty: wdDifficulty,
     endless: wdEndless,
+    infinitower: wdInfinitower,
+    particleScale: waveDefenseParticleScale(),
     seed: (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0,
   });
   waveDefenseSelectTower(wdMatch, wdSelectedTowerId);
   wdActive = true;
+  wdBossCutsceneSeen = false;
   wdPaused = false;
   wdResult = null;
   wdRecorded = false;
@@ -8610,6 +9019,42 @@ function startWaveDefenseBattle() {
   const canvas = $('wd-canvas');
   const ctx = canvas?.getContext('2d');
   if (canvas && ctx) renderWaveDefense(ctx, wdMatch, { width: canvas.width, height: canvas.height, time: performance.now() / 1000 });
+}
+
+// ── Infinitower cinematics ─────────────────────────────────────────────────
+function playWaveDefenseCutscene(scene, onDone) {
+  if (!scene) return false;
+  startCutscene(scene, onDone);
+  return true;
+}
+
+function playWaveDefenseTrailer() {
+  audio.init();
+  audioUnlocked = true;
+  return playWaveDefenseCutscene(SPIRAL_INTRO_CUTSCENE);
+}
+
+function playWaveDefenseIntro() {
+  if (wdIntroSeen) return false;
+  wdIntroSeen = true;
+  if (wdActive) toggleWaveDefensePause(true);
+  return playWaveDefenseCutscene(SPIRAL_INTRO_CUTSCENE, () => { if (wdActive) toggleWaveDefensePause(false); });
+}
+
+// The first boss of a run gets a full portrait. Later bosses keep the fight
+// moving and announce themselves through the battle feed instead.
+function maybeWaveDefenseBossCutscene() {
+  if (!wdActive || !wdMatch || wdPaused || cutsceneActive || wdBossCutsceneSeen) return false;
+  if (!wdMatch.infinitower) return false;
+  if (!wdMatch.enemies.some((enemy) => enemy.boss && !enemy.dead)) return false;
+  wdBossCutsceneSeen = true;
+  toggleWaveDefensePause(true);
+  return playWaveDefenseCutscene(SPIRAL_BOSS_CUTSCENE, () => { if (wdActive) toggleWaveDefensePause(false); });
+}
+
+function startWaveDefenseFromHub() {
+  startWaveDefenseBattle();
+  if (wdInfinitower && wdActive && !wdIntroSeen) playWaveDefenseIntro();
 }
 
 function toggleWaveDefensePause(next = !wdPaused) {
@@ -8651,14 +9096,18 @@ function renderWaveDefenseResult() {
   const overlay = $('wd-result');
   if (!overlay || !wdResult) return;
   const r = wdResult;
+  const infinitower = !!r.infinitower || !!r.snapshot?.infinitower;
   const endless = !!r.endless || !!r.snapshot?.endless;
   const win = r.win || r.snapshot?.result === 'victory';
-  const title = endless ? 'PASANG TANPA AKHIR' : win ? 'MAHKOTA BERTAHAN' : 'GERBANG TERBELAH';
-  const body = endless
-    ? `Benteng jatuh pada gelombang ${r.snapshot?.wave || 0}. Rekor ${r.isRecord ? 'diperbarui' : 'tetap berdiri'}.`
-    : win ? 'Dua puluh empat gelombang hancur. Benteng terakhir masih berdiri.' : `Benteng jatuh pada gelombang ${r.snapshot?.wave || 0}. Bangun lebih awal dan tutup jalur dengan area damage.`;
+  const tier = r.tier || r.snapshot?.tier || 1;
+  const title = infinitower ? 'LINGKAR PADAM' : endless ? 'PASANG TANPA AKHIR' : win ? 'MAHKOTA BERTAHAN' : 'GERBANG TERBELAH';
+  const body = infinitower
+    ? `Infinitower runtuh pada gelombang ${r.snapshot?.wave || 0} — tingkat ${tier}. Rekor ${r.isRecord ? 'diperbarui' : 'tetap berdiri'}; lingkar berikutnya menunggu.`
+    : endless
+      ? `Benteng jatuh pada gelombang ${r.snapshot?.wave || 0}. Rekor ${r.isRecord ? 'diperbarui' : 'tetap berdiri'}.`
+      : win ? 'Dua puluh empat gelombang hancur. Benteng terakhir masih berdiri.' : `Benteng jatuh pada gelombang ${r.snapshot?.wave || 0}. Bangun lebih awal dan tutup jalur dengan area damage.`;
   overlay.innerHTML = `<div class="wd-modal wd-result-card ${endless || win ? 'victory' : 'defeat'}">
-    <p class="eyebrow">WAVE DEFENSE · ${esc(endless ? 'TANPA AKHIR' : r.mapName)} · ${formatPuzzleTime(r.snapshot?.time || 0)}</p>
+    <p class="eyebrow">WAVE DEFENSE · ${esc(infinitower ? `INFINITOWER · TINGKAT ${tier}` : endless ? 'TANPA AKHIR' : r.mapName)} · ${formatPuzzleTime(r.snapshot?.time || 0)}</p>
     <h3 class="wd-result-title">${title}</h3>
     <p>${body}</p>
     <div class="wd-result-stats">
@@ -8694,11 +9143,11 @@ function updateWaveDefenseHud(force = false) {
   if (fill) fill.style.width = `${hpRatio * 100}%`;
   const bar = $('wd-castle-bar');
   if (bar) bar.classList.toggle('low', hpRatio <= 0.3);
-  setText('wd-map-name', m.endless ? `${m.map.name} · TANPA AKHIR` : m.map.name);
-  setText('wd-wave', m.phase === 'prep' ? 'SIAP' : `GELOMBANG ${m.wave}`);
+  setText('wd-map-name', m.infinitower ? `${m.map.name} · INFINITOWER T${infinitowerTierFor(m.wave)}` : m.endless ? `${m.map.name} · TANPA AKHIR` : m.map.name);
+  setText('wd-wave', m.phase === 'prep' ? 'SIAP' : `${m.infinitower ? 'INFINITOWER' : 'GELOMBANG'} ${m.wave}`);
   setText('wd-phase', m.phase === 'prep'
-    ? `GELOMBANG ${m.wave + 1}${m.endless ? ' · TANPA AKHIR' : ` / ${m.totalWaves}`} DALAM ${Math.max(0, m.prepTimer).toFixed(1)}`
-    : m.phase === 'wave' ? `${m.enemies.length} MUSUH · ${m.stats.kills} KILL` : 'PERTAHANAN SELESAI');
+    ? `${m.infinitower ? `TINGKAT ${infinitowerTierFor(m.wave + 1)} · ` : ''}GELOMBANG ${m.wave + 1}${m.endless ? ' · TANPA AKHIR' : ` / ${m.totalWaves}`} DALAM ${Math.max(0, m.prepTimer).toFixed(1)}`
+    : m.phase === 'wave' ? `${m.enemies.length} MUSUH · ${m.stats.kills} KILL${m.infinitower ? ` · T${infinitowerTierFor(m.wave)}` : ''}` : 'PERTAHANAN SELESAI');
   setText('wd-gold', m.gold);
   setText('wd-score', m.score);
   setText('wd-kills', m.stats.kills);
@@ -8709,6 +9158,7 @@ function updateWaveDefenseHud(force = false) {
     next.textContent = m.phase === 'prep' ? `KIRIM GELOMBANG ${Math.min(m.totalWaves, m.wave + 1)}` : m.phase === 'wave' ? `GELOMBANG ${m.wave} BERJALAN` : 'PERTAHANAN SELESAI';
   }
   document.querySelectorAll('#wd-speed [data-wd-speed]').forEach((button) => button.classList.toggle('active', Number(button.dataset.wdSpeed) === m.speed));
+  document.querySelectorAll('#wd-battle-particles [data-wd-pscale]').forEach((button) => button.classList.toggle('active', Math.abs(Number(button.dataset.wdPscale) - (m.particleScale ?? 1)) < 0.15));
   document.querySelectorAll('#wd-palette [data-wd-tower]').forEach((button) => {
     const def = WAVE_DEFENSE_TOWER_BY_ID[button.dataset.wdTower];
     button.classList.toggle('active', button.dataset.wdTower === m.buildTowerId);
@@ -8735,7 +9185,7 @@ function updateWaveDefenseHud(force = false) {
       const def = WAVE_DEFENSE_TOWER_BY_ID[tower.towerId];
       const cost = waveDefenseUpgradeCost(tower);
       const maxed = tower.level >= 3;
-      selection.innerHTML = `<div class="ws-line"><strong>${esc(def.name)} · POS ${tower.slot + 1}</strong><span>LEVEL ${tower.level}/3</span><em>${def.cost} emas</em></div>
+      selection.innerHTML = `<div class="ws-line"><img class="ws-icon" src="${waveDefenseTowerIconDataUrl(def.id)}" alt="${esc(def.name)}" /><strong>${esc(def.name)} · POS ${tower.slot + 1}</strong><span>LEVEL ${tower.level}/3</span><em>${def.cost} emas</em></div>
         <p>${esc(def.desc)}</p>
         <div class="wd-selection-actions">
           <button type="button" data-wd-action="upgrade" ${maxed || m.gold < cost ? 'disabled' : ''}>${maxed ? 'LEVEL MAKSIMUM' : `TINGKATKAN · ${cost} EMAS`}</button>
@@ -8743,7 +9193,7 @@ function updateWaveDefenseHud(force = false) {
         </div>`;
     } else {
       const def = WAVE_DEFENSE_TOWER_BY_ID[m.buildTowerId];
-      selection.innerHTML = `<div class="ws-line"><strong>POS ${m.selectedSlot >= 0 ? m.selectedSlot + 1 : '—'}</strong><span>${def?.name || 'PILIH MENARA'}</span><em>${def?.cost || 0} emas</em></div>
+      selection.innerHTML = `<div class="ws-line">${def ? `<img class="ws-icon" src="${waveDefenseTowerIconDataUrl(def.id)}" alt="${esc(def.name)}" />` : ''}<strong>POS ${m.selectedSlot >= 0 ? m.selectedSlot + 1 : '—'}</strong><span>${def?.name || 'PILIH MENARA'}</span><em>${def?.cost || 0} emas</em></div>
         <p>Klik pos kosong untuk membangun. Pilih menara di panel kiri, lalu klik pos di sepanjang jalan.</p>
         <div class="wd-selection-actions"><button type="button" data-wd-action="hint" disabled>MENUNGGU POS</button></div>`;
     }
@@ -10190,29 +10640,178 @@ const OVERDRIVE_CHECKLIST = [
   { item: 'Save Migration + Backup Recovery', done: true },
 ];
 
+let activeOverdriveIndex = -1;
+let overdriveChapterView = 21;
+let overdriveBadgeCache = '';
+
+function overdriveState() {
+  if (!progress.overdrive || !Array.isArray(progress.overdrive.levels)) {
+    progress.overdrive = sanitizeOverdriveLadderProgress(progress.overdrive);
+  }
+  return progress.overdrive;
+}
+
+function overdriveChapterMetaFor(number) {
+  return OVERDRIVE_CHAPTER_META.find((chapter) => chapter.number === Number(number)) || OVERDRIVE_CHAPTER_META[0];
+}
+
+function startOverdriveLevel(index) {
+  const room = overdriveRoomForIndex(index);
+  if (!room) return;
+  if (!overdriveCampaignUnlocked(progress)) {
+    showToast('Overdrive (Lv 201–300) terbuka setelah Aethron gugur di Infinite Frontiers.', 2600);
+    return;
+  }
+  const state = overdriveState();
+  if (!overdriveLevelUnlocked(state, index)) {
+    showToast('Level Overdrive itu masih tertutup. Selesaikan level sebelumnya dulu.', 2200);
+    return;
+  }
+  audio.init();
+  attempts = 1;
+  coopGuestMode = false;
+  coopGuestRoom = -1;
+  activeRunKind = 'overdrive';
+  activeOverdriveIndex = Number(index);
+  overdriveChapterView = room.overdriveChapter;
+  activeFrontierIndex = -1;
+  activeLanternStage = -1;
+  activeCisternStage = -1;
+  activeFairyStage = -1;
+  activeFairyBoss = null;
+  activeCourtRoom = null;
+  activeCourtTrial = null;
+  activePackIndex = -1;
+  activeExpansionIndex = null;
+  activeModeId = null;
+  activeTrialId = null;
+  modeRunRewarded = false;
+  packRunActive = false;
+  labRun = null;
+  labDirector = null;
+  speedrunRun = null;
+  game.labyrinth = false;
+  game.reset();
+  applyCharacterToGame();
+  applySkinToGame();
+  game.enterRoom(room.id);
+  game.player.relic = true;
+  const legendaryBonus = state.equippedLegendary ? 1.25 : 1;
+  const variantBoost = room.variant === 'cursed_expedition' ? 1.35 : 1;
+  game.player.damageMult *= overdrivePlayerScale(index) * legendaryBonus * variantBoost;
+  game.player.maxHp = Math.round(game.player.maxHp * overdriveVitalityScale(index) * (room.variant === 'cursed_expedition' ? 0.85 : 1));
+  game.player.hp = game.player.maxHp;
+  game.player.maxFlasks = room.variant === 'gauntlet_tower' ? Math.max(2, game.player.maxFlasks) : (game.player.maxFlasks + overdriveFlaskBonus(index));
+  game.player.flasks = game.player.maxFlasks;
+  game.player.overdriveMaxMana = 120;
+  game.player.overdriveMana = 120;
+  const treasureBonus = room.variant === 'treasure_vault' ? 180 : 0;
+  game.ash = Math.max(game.ash, overdriveAshStipend(index) + treasureBonus);
+  state.discovered[index] = true;
+  if (state.discovered[index + 1] !== undefined) state.discovered[index + 1] = true;
+  recordOverdriveRun(state, 0);
+  cutsceneSeen = new Set();
+  postCreditTimer = -1;
+  saveProgress();
+  game.events.length = 0;
+  started = true;
+  paused = false;
+  hunterShopOpen = false;
+  shopOpen = false;
+  mapOpen = false;
+  codexOpen = false;
+  inventoryOpen = false;
+  settingsOpen = false;
+  closeDialogue(true);
+  spectating = false;
+  spectateGame = null;
+  menuView = 'none';
+  lastGameState = 'playing';
+  accumulator = 0;
+  lastTime = performance.now();
+  clearHeldKeys();
+  beginStage(game.roomIndex, room.name);
+  showBanner(`OVD LV ${room.overdriveLevel} — ${room.name}`, room.subtitle);
+  syncScreens();
+  updateHud();
+  const spellPick = overdriveSpellFor(state.activeSchool, state.activeSpellIndex);
+  showToast(`${OVERDRIVE_LOCAL_NAME} · BAB ${room.overdriveChapter} · [Q] ${spellPick.spell.name}`, 2500);
+}
+
+function handleOverdriveLevelClear(index) {
+  const safeIndex = Number(index);
+  if (!Number.isInteger(safeIndex) || safeIndex < 0) return null;
+  const state = overdriveState();
+  const result = recordOverdriveLevel(state, safeIndex);
+  if (!result.ok) return result;
+  if (result.firstClear) {
+    recordOverdriveRun(state, game.time);
+    saveProgress();
+    const room = overdriveRoomForIndex(safeIndex);
+    if (result.unlockedLegendary) {
+      showToast(`SENJATA LEGENDARIS TERBUKA — ${result.unlockedLegendary.name}!`, 3600);
+    } else if (result.bossFirstClear) {
+      const ch = overdriveChapterMetaFor(result.chapter);
+      showToast(`${ch.bossName} GUGUR — ${ch.name} selesai.`, 3200);
+    } else if (result.complete) {
+      showToast('THE FIRST GOD PADAM — Overdrive Lv 300 tuntas!', 3800);
+    } else {
+      showToast(`OVD LV ${room?.overdriveLevel ?? '?'} TUNTAS · BAB ${result.chapter}`, 2100);
+    }
+    buildOverdriveScreen();
+    updateMenuProgress();
+  }
+  return result;
+}
+
+function overdriveLevelCard(room, state) {
+  const index = room.overdriveIndex;
+  const locked = !overdriveCampaignUnlocked(progress) || !overdriveLevelUnlocked(state, index);
+  const cleared = overdriveLevelCleared(state, index);
+  const boss = room.boss ? overdriveChapterMetaFor(room.overdriveChapter) : null;
+  const meta = boss
+    ? `BOSS · ${boss.bossPhases} FASE`
+    : `${room.enemies.length} MUSUH · ${room.variantName || 'ELITE E7'}`;
+  const badge = cleared ? 'TUNTAS' : locked ? 'TERKUNCI' : 'TERBUKA';
+  return `<article class="frontier-level${locked ? ' locked' : ''}${cleared ? ' cleared' : ''}${boss ? ' boss' : ''}" style="--accent:${room.accent}">
+    <header class="fl-head">
+      <span class="fl-num">LV ${room.overdriveLevel}</span>
+      <span class="fl-state">${badge}</span>
+    </header>
+    <h4 class="fl-name">${esc(room.name)}</h4>
+    <p class="fl-meta">${esc(meta)}</p>
+    <div class="fl-actions">
+      ${locked ? '<span class="fl-lock">SELESAIKAN LEVEL SEBELUMNYA</span>' : `<button class="btn btn-primary btn-small" type="button" data-overdrive-play="${index}">MAINKAN</button>`}
+    </div>
+  </article>`;
+}
+
 function buildOverdriveScreen() {
+  const state = overdriveState();
+  const osummary = overdriveCampaignSummary(state);
+  const activeSpell = overdriveSpellFor(state.activeSchool, state.activeSpellIndex);
   const summaryEl = $('overdrive-summary');
   if (summaryEl) {
     summaryEl.innerHTML = `
       <div class="stat-card">
-        <span class="stat-label">LEVEL BARU</span>
-        <strong class="stat-value">100</strong>
-        <em class="stat-sub">Level 201–300 · 10 Bab</em>
+        <span class="stat-label">LEVEL KAMPANYE</span>
+        <strong class="stat-value">${osummary.levelsCleared} / ${OVERDRIVE_LEVEL_COUNT}</strong>
+        <em class="stat-sub">${osummary.bossesCleared}/${OVERDRIVE_CHAPTER_META.length} BOS · ${osummary.percent}%</em>
       </div>
       <div class="stat-card">
-        <span class="stat-label">MANTRA</span>
-        <strong class="stat-value">32</strong>
-        <em class="stat-sub">8 Sekolah Sihir · 4 Mantra/sekolah</em>
+        <span class="stat-label">MANTRA [Q]</span>
+        <strong class="stat-value" style="color:${activeSpell.school.color};">${esc(activeSpell.spell.name)}</strong>
+        <em class="stat-sub">${esc(activeSpell.school.name)} · Mana ${activeSpell.spell.cost}</em>
       </div>
       <div class="stat-card">
-        <span class="stat-label">BOS MULTI-FASE</span>
-        <strong class="stat-value">8</strong>
-        <em class="stat-sub">Armor · Shield · Stagger</em>
+        <span class="stat-label">SENJATA LEGENDARIS</span>
+        <strong class="stat-value">${osummary.legendariesCount} / ${OVERDRIVE_LEGENDARY_WEAPONS.length}</strong>
+        <em class="stat-sub">${state.equippedLegendary ? esc(OVERDRIVE_LEGENDARY_WEAPONS.find((w) => w.id === state.equippedLegendary)?.name || 'Aktif') : 'Belum dipasang'}</em>
       </div>
       <div class="stat-card">
-        <span class="stat-label">CHECKLIST RILIS</span>
-        <strong class="stat-value" style="color:#52b788;">18 / 18 SIAP</strong>
-        <em class="stat-sub">Semua Modul Terverifikasi</em>
+        <span class="stat-label">STATUS OVERDRIVE</span>
+        <strong class="stat-value" style="color:${overdriveCampaignUnlocked(progress) ? '#52b788' : '#ffd166'};">${overdriveCampaignUnlocked(progress) ? 'TERBUKA' : 'TERKUNCI'}</strong>
+        <em class="stat-sub">Lv 201–300 · Ruang 774–873</em>
       </div>
     `;
   }
@@ -10224,79 +10823,115 @@ function buildOverdriveScreen() {
   if (!bodyEl) return;
 
   if (overdriveTab === 'campaign301') {
+    const meta = overdriveChapterMetaFor(overdriveChapterView);
+    const chapterState = overdriveChapterProgress(state, meta.number) || { cleared: 0, total: OVERDRIVE_ROOMS_PER_CHAPTER, bossCleared: false };
+    const chapterRooms = OVERDRIVE_ROOMS.filter((room) => room.overdriveChapter === meta.number);
+    const rail = OVERDRIVE_CHAPTER_META.map((chapter) => {
+      const cp = overdriveChapterProgress(state, chapter.number) || { cleared: 0, total: 10, bossCleared: false };
+      const active = chapter.number === meta.number;
+      return `<button class="frontier-chip${active ? ' active' : ''}${cp.bossCleared ? ' clear' : ''}" type="button" data-overdrive-chapter="${chapter.number}" style="--accent:${chapter.color}">
+        <strong>BAB ${chapter.number}</strong>
+        <span>${cp.cleared}/${cp.total}</span>
+      </button>`;
+    }).join('');
     bodyEl.innerHTML = `
-      <div class="frontier-grid frontier-grid-2">
-        ${OVERDRIVE_CHAPTERS.map((ch) => `
-          <div class="frontier-card" style="border-left: 4px solid ${ch.color};">
-            <div class="frontier-card-head">
-              <strong style="color:${ch.color};font-size:14px;">BAB ${ch.number}: ${ch.name}</strong>
-              <span class="frontier-badge frontier-badge-gold">Lv. ${ch.levelStart}–${ch.levelEnd}</span>
-            </div>
-            <div style="font-size:11.5px;color:#ced4da;margin:4px 0;">
-              <b style="color:#a7c957;">👑 Bos:</b> ${ch.boss}
-            </div>
-            <div style="font-size:11px;background:rgba(0,0,0,0.3);padding:6px 10px;border-radius:4px;">
-              <span style="color:#ffd166;">⚠ Bahaya:</span> ${ch.hazard}
-            </div>
+      ${!overdriveCampaignUnlocked(progress) ? '<p class="frontier-lock-note">Overdrive (Lv 201–300) terbuka setelah Aethron gugur di Infinite Frontiers (Lv 200).</p>' : ''}
+      <div class="frontier-ladder">
+        <div class="frontier-rail" role="tablist" aria-label="Bab Overdrive">${rail}</div>
+        <div class="frontier-chapter-head" style="--accent:${meta.color}">
+          <div>
+            <p class="eyebrow">BAB ${meta.number} · ${esc(meta.biome.toUpperCase())}</p>
+            <h3>${esc(meta.name)}</h3>
+            <p class="micro">${esc(meta.lore)} · Bahaya: ${esc((meta.hazards || []).join(', '))}</p>
           </div>
-        `).join('')}
+          <div class="frontier-chapter-side">
+            <span class="frontier-progress">${chapterState.cleared}/${chapterState.total} TAHAP</span>
+            <span class="micro">${esc(meta.bossName)} · ${meta.bossPhases} FASE${chapterState.bossCleared ? ' · PADAM' : ''}</span>
+          </div>
+        </div>
+        <div class="frontier-levels">${chapterRooms.map((room) => overdriveLevelCard(room, state)).join('')}</div>
       </div>`;
+    bodyEl.querySelectorAll('[data-overdrive-chapter]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        overdriveChapterView = Number(btn.dataset.overdriveChapter) || 21;
+        buildOverdriveScreen();
+      });
+    });
+    bodyEl.querySelectorAll('[data-overdrive-play]').forEach((btn) => {
+      btn.addEventListener('click', () => startOverdriveLevel(Number(btn.dataset.overdrivePlay)));
+    });
   } else if (overdriveTab === 'spellschools') {
     bodyEl.innerHTML = `
       <div class="frontier-grid frontier-grid-2">
-        ${OVERDRIVE_SPELL_SCHOOLS.map((school) => `
-          <div class="frontier-card" style="border-top: 3px solid ${school.color};">
+        ${OVERDRIVE_DATA_SCHOOLS.map((school) => {
+          const isActiveSchool = state.activeSchool === school.id;
+          return `<div class="frontier-card" style="border-top: 3px solid ${school.color};">
             <div class="frontier-card-head">
-              <strong style="color:${school.color};font-size:15px;">${school.icon} Sekolah ${school.name}</strong>
-              <span class="frontier-badge" style="background:${school.color}22;color:${school.color};border:1px solid ${school.color}44;">4 Mantra</span>
+              <strong style="color:${school.color};font-size:15px;">Sekolah ${esc(school.name)}</strong>
+              <span class="frontier-badge" style="background:${school.color}22;color:${school.color};border:1px solid ${school.color}44;">${isActiveSchool ? 'AKTIF [Q]' : 'PILIH'}</span>
             </div>
-            <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;">
-              ${school.spells.map((sp) => `<span class="frontier-badge frontier-badge-blue">${sp}</span>`).join('')}
+            <p style="font-size:11px;color:#b7a486;margin:4px 0 8px;">${esc(school.description)}</p>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;">
+              ${school.spells.map((sp, sIdx) => {
+                const selected = isActiveSchool && state.activeSpellIndex === sIdx;
+                return `<button type="button" class="btn btn-small ${selected ? 'btn-primary' : 'btn-ghost'}" data-overdrive-school="${school.id}" data-overdrive-spell="${sIdx}">${esc(sp.name)} (${sp.cost}M · ${sp.damage}DMG)</button>`;
+              }).join('')}
             </div>
-          </div>
-        `).join('')}
+          </div>`;
+        }).join('')}
       </div>`;
+    bodyEl.querySelectorAll('[data-overdrive-school]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        state.activeSchool = btn.dataset.overdriveSchool;
+        state.activeSpellIndex = Number(btn.dataset.overdriveSpell) || 0;
+        saveProgress();
+        buildOverdriveScreen();
+        showToast(`Mantra [Q]: ${overdriveSpellFor(state.activeSchool, state.activeSpellIndex).spell.name}`, 1600);
+      });
+    });
+  } else if (overdriveTab === 'legendaries') {
+    bodyEl.innerHTML = `
+      <div class="frontier-grid frontier-grid-2">
+        ${OVERDRIVE_LEGENDARY_WEAPONS.map((w) => {
+          const owned = state.legendaryWeaponsFound.includes(w.id);
+          const equipped = state.equippedLegendary === w.id;
+          return `<div class="frontier-card" style="border-left:4px solid ${equipped ? '#ffd166' : owned ? '#52b788' : '#4a4a55'};">
+            <div class="frontier-card-head">
+              <strong style="color:${owned ? '#ffd166' : '#8e8e9e'};font-size:14px;">${esc(w.name)}</strong>
+              <span class="frontier-badge frontier-badge-gold">${esc(w.category)} · ATK ${w.baseAtk}</span>
+            </div>
+            <p style="font-size:11px;color:#ced4da;margin:4px 0;">${esc(w.perk)}</p>
+            <p style="font-size:10px;color:#8e816b;margin:0 0 8px;">${esc(w.lore)}</p>
+            ${owned
+              ? `<button type="button" class="btn btn-small ${equipped ? 'btn-primary' : 'btn-ghost'}" data-overdrive-legendary="${w.id}">${equipped ? 'TERPASANG (+25% DMG)' : 'PASANG'}</button>`
+              : '<span class="micro">Kalahkan bos bab Overdrive untuk membuka senjata ini.</span>'}
+          </div>`;
+        }).join('')}
+      </div>`;
+    bodyEl.querySelectorAll('[data-overdrive-legendary]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.overdriveLegendary;
+        state.equippedLegendary = state.equippedLegendary === id ? null : id;
+        saveProgress();
+        buildOverdriveScreen();
+      });
+    });
   } else if (overdriveTab === 'bossfase') {
     bodyEl.innerHTML = `
       <div class="frontier-grid frontier-grid-2">
-        ${OVERDRIVE_BOSSES.map((b) => `
-          <div class="frontier-card">
+        ${OVERDRIVE_CHAPTER_META.map((ch) => {
+          const killed = state.bosses[ch.number - 21];
+          return `<div class="frontier-card" style="border-left: 4px solid ${ch.color};">
             <div class="frontier-card-head">
-              <strong style="color:#ef9a9a;font-size:14px;">${b.name}</strong>
-              <span class="frontier-badge frontier-badge-purple">${b.phases} FASE</span>
+              <strong style="color:${ch.color};font-size:14px;">${esc(ch.bossName)}</strong>
+              <span class="frontier-badge frontier-badge-purple">BAB ${ch.number} · ${ch.bossPhases} FASE</span>
             </div>
-            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;">
-              ${b.armor ? '<span class="frontier-badge" style="background:#78909c33;color:#90a4ae;border:1px solid #546e7a;">⛊ ARMOR</span>' : ''}
-              ${b.shield ? '<span class="frontier-badge" style="background:#1565c033;color:#64b5f6;border:1px solid #0d47a1;">🛡 SHIELD</span>' : ''}
-              ${b.stagger ? '<span class="frontier-badge" style="background:#e65c0033;color:#ffab91;border:1px solid #bf360c;">💥 STAGGER</span>' : ''}
+            <div style="font-size:11px;color:#ced4da;margin:4px 0;">
+              <b style="color:#a7c957;">Status:</b> ${killed ? 'PADAM' : `Menanti di Lv ${ch.lastLevel}`}
             </div>
-            <div class="boss-minibars" style="margin-top:8px;">
-              <div class="boss-minibar-row"><span class="boss-minibar-lbl">HP</span><div class="boss-minibar-track"><div class="boss-minibar-fill" style="width:100%;background:#ef5350;"></div></div></div>
-              ${b.armor ? '<div class="boss-minibar-row"><span class="boss-minibar-lbl">ARM</span><div class="boss-minibar-track"><div class="boss-minibar-fill" style="width:100%;background:#607d8b;"></div></div></div>' : ''}
-              ${b.shield ? '<div class="boss-minibar-row"><span class="boss-minibar-lbl">SHD</span><div class="boss-minibar-track"><div class="boss-minibar-fill" style="width:100%;background:#1565c0;"></div></div></div>' : ''}
-              ${b.stagger ? '<div class="boss-minibar-row"><span class="boss-minibar-lbl">STG</span><div class="boss-minibar-track"><div class="boss-minibar-fill" style="width:30%;background:#ff6d00;"></div></div></div>' : ''}
-            </div>
-          </div>
-        `).join('')}
-      </div>`;
-  } else if (overdriveTab === 'profiler') {
-    bodyEl.innerHTML = `
-      <div class="frontier-card" style="max-width:520px;margin:0 auto;">
-        <strong style="color:#ffd166;font-size:15px;">⊡ Diagnostic Profiler HUD</strong>
-        <p style="font-size:12px;color:#b7a486;margin:8px 0;">
-          Tekan <kbd>F3</kbd> atau tombol ⊡ di pojok HUD untuk toggle profiler saat bermain.
-        </p>
-        <div class="profiler-hud profiler-demo" style="position:relative;display:block;margin:12px 0;">
-          <div class="profiler-row"><span class="profiler-key">FPS</span><span class="profiler-val">60</span><span class="profiler-key">MS</span><span class="profiler-val">16.7</span></div>
-          <div class="profiler-row"><span class="profiler-key">ENT</span><span class="profiler-val">12</span><span class="profiler-key">PTL</span><span class="profiler-val">48</span></div>
-          <div class="profiler-row"><span class="profiler-key">MEM</span><span class="profiler-val">~24 MB</span></div>
-        </div>
-        <ul style="font-size:11.5px;color:#ced4da;padding-left:18px;margin:4px 0;">
-          <li>FPS rata-rata + frame time (ms)</li>
-          <li>Jumlah entitas aktif + partikel</li>
-          <li>Estimasi memori (KB/MB)</li>
-          <li>⚠ STUTTER alert jika frame > 50ms</li>
-        </ul>
+            <div style="font-size:11px;color:#817563;">Drop Legendaris: ${esc(ch.legendary?.name || '—')}</div>
+          </div>`;
+        }).join('')}
       </div>`;
   } else if (overdriveTab === 'modes') {
     bodyEl.innerHTML = `
@@ -10304,37 +10939,220 @@ function buildOverdriveScreen() {
         ${OVERDRIVE_MODES.map((m, i) => `
           <div class="frontier-card">
             <div class="frontier-card-head">
-              <strong style="color:#ffd166;font-size:13px;">${i + 1}. ${m.name}</strong>
+              <strong style="color:#ffd166;font-size:13px;">${i + 1}. ${esc(m.name)}</strong>
             </div>
-            <p style="font-size:11.5px;color:#ced4da;margin:4px 0;">${m.desc}</p>
+            <p style="font-size:11.5px;color:#ced4da;margin:4px 0;">${esc(m.desc)}</p>
           </div>
         `).join('')}
       </div>`;
-  } else if (overdriveTab === 'checklist') {
+  } else if (overdriveTab === 'profiler') {
     const done = OVERDRIVE_CHECKLIST.filter((c) => c.done).length;
     bodyEl.innerHTML = `
-      <div style="margin-bottom:12px;text-align:center;">
-        <strong style="color:#52b788;font-size:20px;">${done} / ${OVERDRIVE_CHECKLIST.length} SIAP RILIS</strong>
+      <div class="frontier-card" style="max-width:540px;margin:0 auto 12px;">
+        <strong style="color:#ffd166;font-size:15px;">⊡ Diagnostic Profiler HUD &amp; Checklist (${done}/${OVERDRIVE_CHECKLIST.length})</strong>
+        <p style="font-size:12px;color:#b7a486;margin:8px 0;">
+          Tekan <kbd>F3</kbd> saat bermain untuk toggle profiler real-time, dan <kbd>Q</kbd> di Overdrive untuk melepas mantra sekolah terpilih.
+        </p>
       </div>
       <div class="overdrive-checklist">
         ${OVERDRIVE_CHECKLIST.map((c) => `
           <div class="checklist-item ${c.done ? 'done' : ''}">
             <span class="checklist-icon">${c.done ? '✅' : '⬜'}</span>
-            <span class="checklist-text">${c.item}</span>
+            <span class="checklist-text">${esc(c.item)}</span>
           </div>
         `).join('')}
       </div>`;
   }
 }
 
+// ── Infinite Frontiers: the playable ladder (Lv 101–200) ────────────────
+// The hub keeps its data tabs; the campaign tab now runs real rooms at
+// ids 674–773 through the same engine as every other chapter.
+let activeFrontierIndex = -1;
+let frontierChapterView = 11;
+let frontierBadgeCache = '';
+
+function frontierState() {
+  if (!progress.frontiers) progress.frontiers = defaultFrontierCampaignProgress();
+  return progress.frontiers;
+}
+
+function frontierChapterMetaFor(number) {
+  return FRONTIER_CHAPTER_META.find((chapter) => chapter.number === Number(number)) || FRONTIER_CHAPTER_META[0];
+}
+
+function frontierLevelCard(room, state) {
+  const index = room.frontierIndex;
+  const locked = !frontierCampaignUnlocked(progress) || !frontierLevelUnlocked(state, index);
+  const cleared = frontierLevelCleared(state, index);
+  const boss = room.boss ? FRONTIER_CHAPTER_META.find((chapter) => chapter.bossId === room.boss) : null;
+  const elite = room.enemies.find((enemy) => enemy.elite);
+  const meta = boss
+    ? `BOSS · ${boss.bossPhases} FASE`
+    : `${room.enemies.length} MUSUH · ${elite?.eliteRank || 'E1'} ELITE`;
+  const badge = cleared ? 'TUNTAS' : locked ? 'TERKUNCI' : 'TERBUKA';
+  return `<article class="frontier-level${locked ? ' locked' : ''}${cleared ? ' cleared' : ''}${boss ? ' boss' : ''}" style="--accent:${room.accent}">
+    <header class="fl-head">
+      <span class="fl-num">LV ${room.frontierLevel}</span>
+      <span class="fl-state">${badge}</span>
+    </header>
+    <h4 class="fl-name">${esc(room.name)}</h4>
+    <p class="fl-meta">${esc(meta)}</p>
+    <div class="fl-actions">
+      ${locked ? '<span class="fl-lock">SELESAIKAN LEVEL SEBELUMNYA</span>' : `<button class="btn btn-primary btn-small" type="button" data-frontier-play="${index}">MAINKAN</button>`}
+    </div>
+  </article>`;
+}
+
+function buildFrontierCampaign(state) {
+  const meta = frontierChapterMetaFor(frontierChapterView);
+  const chapterState = frontierChapterProgress(state, meta.number) || { cleared: 0, total: FRONTIER_ROOMS_PER_CHAPTER, bossCleared: false };
+  const chapterRooms = FRONTIER_ROOMS.filter((room) => room.frontierChapter === meta.number);
+  const rail = FRONTIER_CHAPTER_META.map((chapter) => {
+    const chapterProgress = frontierChapterProgress(state, chapter.number) || { cleared: 0, total: 10, bossCleared: false };
+    const active = chapter.number === meta.number;
+    return `<button class="frontier-chip${active ? ' active' : ''}${chapterProgress.bossCleared ? ' clear' : ''}" type="button" data-frontier-chapter="${chapter.number}" style="--accent:${chapter.color}">
+      <strong>BAB ${chapter.number}</strong>
+      <span>${chapterProgress.cleared}/${chapterProgress.total}</span>
+    </button>`;
+  }).join('');
+  const body = `
+    <div class="frontier-ladder">
+      <div class="frontier-rail" role="tablist" aria-label="Bab Infinite Frontiers">${rail}</div>
+      <div class="frontier-chapter-head" style="--accent:${meta.color}">
+        <div>
+          <p class="eyebrow">BAB ${meta.number} · ${esc(meta.english.toUpperCase())}</p>
+          <h3>${esc(meta.name)}</h3>
+          <p class="micro">${esc(meta.mechanic)}</p>
+        </div>
+        <div class="frontier-chapter-side">
+          <span class="frontier-progress">${chapterState.cleared}/${chapterState.total} TAHAP</span>
+          <span class="micro">${esc(meta.bossName)} · ${meta.bossPhases} FASE${chapterState.bossCleared ? ' · PADAM' : ''}</span>
+        </div>
+      </div>
+      <div class="frontier-levels">${chapterRooms.map((room) => frontierLevelCard(room, state)).join('')}</div>
+    </div>`;
+  return body;
+}
+
+function startFrontierLevel(index) {
+  const room = frontierRoomForIndex(index);
+  if (!room) return;
+  if (!frontierCampaignUnlocked(progress)) {
+    showToast('Infinite Frontiers terbuka setelah The Oathbreaker gugur.', 2600);
+    return;
+  }
+  const state = frontierState();
+  if (!frontierLevelUnlocked(state, index)) {
+    showToast('Level itu masih tertutup. Selesaikan level sebelumnya dulu.', 2200);
+    return;
+  }
+  audio.init();
+  attempts = 1;
+  coopGuestMode = false;
+  coopGuestRoom = -1;
+  activeRunKind = 'frontiers';
+  activeFrontierIndex = Number(index);
+  frontierChapterView = room.frontierChapter;
+  activeLanternStage = -1;
+  activeCisternStage = -1;
+  activeFairyStage = -1;
+  activeFairyBoss = null;
+  activeCourtRoom = null;
+  activeCourtTrial = null;
+  activePackIndex = -1;
+  activeExpansionIndex = null;
+  activeModeId = null;
+  activeTrialId = null;
+  modeRunRewarded = false;
+  packRunActive = false;
+  labRun = null;
+  labDirector = null;
+  speedrunRun = null;
+  game.labyrinth = false;
+  game.reset();
+  applyCharacterToGame();
+  applySkinToGame();
+  game.enterRoom(room.id);
+  game.player.relic = true;
+  // The ladder has no character levels: the run carries the growth instead, so
+  // Lv 200 is not fought with Lv 101 damage. All of it is run-scoped.
+  game.player.damageMult *= frontierPlayerScale(index);
+  game.player.maxHp = Math.round(game.player.maxHp * frontierVitalityScale(index));
+  game.player.hp = game.player.maxHp;
+  game.player.maxFlasks += frontierFlaskBonus(index);
+  game.player.flasks = game.player.maxFlasks;
+  game.ash = Math.max(game.ash, frontierAshStipend(index));
+  state.discovered[index] = true;
+  if (state.discovered[index + 1] !== undefined) state.discovered[index + 1] = true;
+  recordFrontierRun(state, 0);
+  cutsceneSeen = new Set();
+  postCreditTimer = -1;
+  saveProgress();
+  game.events.length = 0;
+  started = true;
+  paused = false;
+  hunterShopOpen = false;
+  shopOpen = false;
+  mapOpen = false;
+  codexOpen = false;
+  inventoryOpen = false;
+  settingsOpen = false;
+  closeDialogue(true);
+  spectating = false;
+  spectateGame = null;
+  menuView = 'none';
+  lastGameState = 'playing';
+  accumulator = 0;
+  lastTime = performance.now();
+  clearHeldKeys();
+  beginStage(game.roomIndex, room.name);
+  showBanner(`LV ${room.frontierLevel} — ${room.name}`, room.subtitle);
+  syncScreens();
+  updateHud();
+  showToast(`${FRONTIERS_LOCAL_NAME} · BAB ${room.frontierChapter} · LV ${room.frontierLevel}${room.boss ? ' · BOSS' : ''}`, 2400);
+}
+
+function handleFrontierLevelClear(index) {
+  const safeIndex = Number(index);
+  if (!Number.isInteger(safeIndex) || safeIndex < 0) return null;
+  const state = frontierState();
+  const result = recordFrontierLevel(state, safeIndex);
+  if (!result.ok) return result;
+  if (result.firstClear) {
+    recordFrontierRun(state, game.time);
+    saveProgress();
+    const room = frontierRoomForIndex(safeIndex);
+    if (result.bossFirstClear) {
+      const chapter = frontierChapterMetaFor(result.chapter);
+      const boss = room?.boss ? FRONTIER_CHAPTER_META.find((meta) => meta.bossId === room.boss) : null;
+      showToast(`${boss?.bossName || 'PENJAGA'} PADAM — ${chapter.name} selesai.`, 3200);
+    } else if (result.complete) {
+      showToast('BATAS TERAKHIR TERLEWATI — Infinite Frontiers tuntas.', 3600);
+    } else {
+      showToast(`LV ${room?.frontierLevel ?? '?'} TUNTAS · ${chapterStateLabel(safeIndex)}`, 2000);
+    }
+    buildFrontierScreen();
+    updateMenuProgress();
+  }
+  return result;
+}
+
+function chapterStateLabel(index) {
+  const chapter = frontierChapterMetaFor(11 + Math.floor(index / FRONTIER_ROOMS_PER_CHAPTER));
+  return `BAB ${chapter.number} ${chapter.english.toUpperCase()}`;
+}
+
 function buildFrontierScreen() {
+  const fstate = frontierState();
+  const fsummary = frontierCampaignSummary(fstate);
   const summaryEl = $('frontier-summary');
   if (summaryEl) {
     summaryEl.innerHTML = `
       <div class="stat-card">
         <span class="stat-label">LEVEL KAMPANYE</span>
-        <strong class="stat-value">200 / 200</strong>
-        <em class="stat-sub">100 Asli · 100 Beyond the Veil</em>
+        <strong class="stat-value">${fsummary.levelsCleared} / ${FRONTIER_LEVEL_COUNT}</strong>
+        <em class="stat-sub">${fsummary.bossesCleared}/${FRONTIER_CHAPTER_META.length} BOS · ${fsummary.percent}%</em>
       </div>
       <div class="stat-card">
         <span class="stat-label">KELAS AKTIF</span>
@@ -10363,26 +11181,30 @@ function buildFrontierScreen() {
   if (!bodyEl) return;
 
   if (frontierTab === 'campaign200') {
+    const chapter = frontierChapterMetaFor(frontierChapterView);
     bodyEl.innerHTML = `
+      ${!frontierCampaignUnlocked(progress) ? '<p class="frontier-lock-note">Infinite Frontiers terbuka setelah The Oathbreaker gugur di Puncak Sumpah. Level terkunci tetap terlihat supaya jalannya jelas.</p>' : ''}
+      ${buildFrontierCampaign(fstate)}
       <div class="frontier-grid frontier-grid-2">
-        ${FRONTIER_CHAPTERS.map((ch) => `
-          <div class="frontier-card" style="border-left: 4px solid ${ch.color};">
-            <div class="frontier-card-head">
-              <strong style="color: ${ch.color}; font-size: 15px;">BAB ${ch.number}: ${ch.english}</strong>
-              <span class="frontier-badge frontier-badge-gold">Lv. ${ch.levelStart}–${ch.levelEnd}</span>
-            </div>
-            <div style="font-size: 12px; color: #b7a486;">${ch.name} — Kesulitan: <b style="color:#ff7043;">${ch.difficulty}</b></div>
-            <p style="font-size: 11.5px; color: #ced4da; margin: 4px 0;">${ch.lore}</p>
-            <div style="font-size: 11px; background: rgba(0,0,0,0.3); padding: 6px 10px; border-radius: 4px;">
-              <span style="color:#ffd166;">⚡ Mekanisme Wilayah:</span> ${ch.mechanic}
-            </div>
-            <div style="font-size: 11px; color:#a7c957;">
-              <b>👑 Bos Utama:</b> ${ch.bossName} (${ch.bossTitle})
-            </div>
+        <div class="frontier-card" style="border-left: 4px solid ${chapter.color};">
+          <div class="frontier-card-head">
+            <strong style="color: ${chapter.color}; font-size: 15px;">BAB ${chapter.number}: ${chapter.english}</strong>
+            <span class="frontier-badge frontier-badge-gold">Lv. ${chapter.firstLevel}–${chapter.lastLevel}</span>
           </div>
-        `).join('')}
+          <p style="font-size: 11.5px; color: #ced4da; margin: 4px 0;">${esc(chapter.mechanic)}</p>
+          <div style="font-size: 11px; color:#a7c957;"><b>👑 Bos Utama:</b> ${esc(chapter.bossName)} · ${chapter.bossPhases} fase</div>
+        </div>
       </div>
     `;
+    bodyEl.querySelectorAll('[data-frontier-chapter]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        frontierChapterView = Number(btn.dataset.frontierChapter) || 11;
+        buildFrontierScreen();
+      });
+    });
+    bodyEl.querySelectorAll('[data-frontier-play]').forEach((btn) => {
+      btn.addEventListener('click', () => startFrontierLevel(Number(btn.dataset.frontierPlay)));
+    });
   } else if (frontierTab === 'classes15') {
     bodyEl.innerHTML = `
       <div class="frontier-grid frontier-grid-3">
@@ -10583,11 +11405,18 @@ function showCredits() {
   syncScreens();
 }
 
-// ── update log ───────────────────────────────────────────────────────────
+// ── update log (lazy-loaded) ─────────────────────────────────────────────
+let updateLogCache = null;
+let updateLogError = '';
+let updateLogRequestToken = 0;
+
 function buildUpdateLog() {
+  const badge = $('updates-version');
+  if (badge) badge.textContent = `VERSI SAAT INI · v${GAME_VERSION}`;
   const wrap = $('update-log');
   if (!wrap) return;
-  wrap.innerHTML = UPDATE_LOG.map((entry, index) => `
+  if (updateLogCache) {
+    wrap.innerHTML = updateLogCache.map((entry, index) => `
     <article class="update-entry${index === 0 ? ' latest' : ''}">
       <header class="update-head">
         <div class="update-version-row">
@@ -10609,26 +11438,122 @@ function buildUpdateLog() {
         </div>` : ''}
     </article>
   `).join('');
-  const badge = $('updates-version');
-  if (badge) badge.textContent = `VERSI SAAT INI · v${GAME_VERSION}`;
+    return;
+  }
+  if (updateLogError) {
+    wrap.innerHTML = `<div class="update-entry"><p class="update-summary">Gagal memuat catatan pembaruan: ${esc(updateLogError)}</p><button class="btn btn-ghost btn-compact" type="button" data-updates-retry="1">COBA LAGI</button></div>`;
+    return;
+  }
+  wrap.innerHTML = '<p class="updates-loading" role="status">Memuat catatan pembaruan…</p>';
+}
+
+async function loadUpdateLog({ force = false } = {}) {
+  if (updateLogCache && !force) {
+    if (menuView === 'updates') buildUpdateLog();
+    return updateLogCache;
+  }
+  const token = ++updateLogRequestToken;
+  updateLogError = '';
+  if (menuView === 'updates') buildUpdateLog();
+  try {
+    const mod = await import('./updates.js');
+    if (token !== updateLogRequestToken) return null;
+    updateLogCache = mod.UPDATE_LOG;
+    if (menuView === 'updates') buildUpdateLog();
+    return updateLogCache;
+  } catch (error) {
+    if (token !== updateLogRequestToken) return null;
+    updateLogError = String(error?.message || 'galat jaringan');
+    if (menuView === 'updates') buildUpdateLog();
+    return null;
+  }
 }
 
 function showUpdates() {
-  cancelPrologue();
+  clearShellOverlays();
   started = false;
   paused = false;
-  shopOpen = false;
-  mapOpen = false;
-  codexOpen = false;
-  inventoryOpen = false;
-  settingsOpen = false;
-  closeDialogue(true);
-  spectating = false;
-  spectateGame = null;
   menuView = 'updates';
   clearHeldKeys();
   buildUpdateLog();
   syncScreens();
+  return loadUpdateLog();
+}
+
+// ── PETA KISAH — storyline map (lazy-loaded) ─────────────────────────────
+let storyMapCtrl = null;
+let storyMapPromise = null;
+let storyMapOpenToken = 0;
+
+function ensureStoryMap() {
+  if (storyMapCtrl) return Promise.resolve(storyMapCtrl);
+  if (!storyMapPromise) {
+    storyMapPromise = import('./storymap_ui.js')
+      .then((mod) => {
+        if (!storyMapCtrl) {
+          storyMapCtrl = mod.createStoryMapController({
+            $,
+            esc,
+            getMenuView: () => menuView,
+            setMenuView: (v) => { menuView = v; },
+            setStarted: (v) => { started = v; },
+            setPaused: (v) => { paused = v; },
+            clearShellOverlays,
+            clearHeldKeys,
+            syncScreens,
+            showMenu,
+          });
+          storyMapCtrl.bindDom();
+        }
+        return storyMapCtrl;
+      })
+      .catch((err) => {
+        storyMapPromise = null;
+        throw err;
+      });
+  }
+  return storyMapPromise;
+}
+
+async function showStoryMap(arcId) {
+  const token = ++storyMapOpenToken;
+  clearShellOverlays();
+  started = false;
+  paused = false;
+  menuView = 'storymap';
+  clearHeldKeys();
+  const detail = $('storymap-detail');
+  if (!storyMapCtrl && detail) {
+    detail.innerHTML = '<p class="storymap-summary-text" role="status">Memuat Peta Kisah…</p>';
+  }
+  syncScreens();
+  try {
+    const ctrl = await ensureStoryMap();
+    if (token !== storyMapOpenToken || menuView !== 'storymap') return false;
+    return ctrl.open(arcId);
+  } catch (error) {
+    if (token !== storyMapOpenToken || menuView !== 'storymap') return false;
+    if (detail) {
+      detail.innerHTML = `<p class="storymap-summary-text">Gagal memuat Peta Kisah: ${esc(error?.message || 'galat')}</p><button class="btn btn-ghost btn-small" type="button" data-story-retry="1">COBA LAGI</button>`;
+    }
+    return false;
+  }
+}
+
+function closeStoryMap() {
+  if (storyMapCtrl) {
+    storyMapCtrl.close();
+    return;
+  }
+  showMenu();
+}
+
+function selectStoryArc(id) {
+  if (storyMapCtrl) {
+    storyMapCtrl.selectStoryArc(id);
+    return true;
+  }
+  return showStoryMap(id);
 }
 
 // ── settings screen ──────────────────────────────────────────────────────
@@ -11701,8 +12626,9 @@ function applySettings({ persist = true } = {}) {
   music.setVolume(1);
   if (!scareDirector) scareDirector = new ScareDirector(settings.scary || {}, { seed: 20261119 });
   scareDirector.configure(settings.scary || {}, settings.accessibility);
-  const particleMap = { low: 0.4, medium: 0.7, high: 1, ultra: 1.3 };
+  const particleMap = { low: 0.4, medium: 0.7, high: 1, ultra: 1.4 };
   const particleScale = particleMap[settings.graphics.particleQuality] ?? 1;
+  const particleMultiplier = Math.max(0.5, Math.min(4, Number(settings.graphics.particleMultiplier ?? 1)));
   const bias = graphicsScore();
   renderer.options = {
     shakeScale: settings.accessibility.reduceShake
@@ -11716,6 +12642,7 @@ function applySettings({ persist = true } = {}) {
     renderDistance: settings.gameplay.renderDistance,
     qualityBias: bias,
     particleScale,
+    particleMultiplier,
     resolutionScale: (settings.graphics.renderScale / 100) * (settings.display.resolutionScaling / 100),
     gamma: settings.graphics.gamma / 100,
   };
@@ -12132,6 +13059,8 @@ const DIALOGUE_PHASE_LABEL = {
   intro: 'PERTEMPURAN DIMULAI',
   phase2: 'FASE II',
   phase3: 'FASE III',
+  phase4: 'FASE IV',
+  phase5: 'FASE V',
   defeat: 'AKHIR PERTEMPURAN',
 };
 
@@ -12147,14 +13076,167 @@ function queueDialogue(ev) {
   syncScreens();
 }
 
-// Boss lines are voiced through the shared voice layer: ElevenLabs when the
-// server holds a key, browser speech otherwise, silence if neither exists.
+// ── Boss voice ────────────────────────────────────────────────────────────
+// Boss lines never use plain text-to-speech. Order: a human recording listed
+// in assets/voice/manifest.json (processed by the boss's archetype chain),
+// then AI speech only if the player allowed it (always processed), then a
+// wordless cinematic vocal sting under the subtitle. See src/boss_voice.js.
+const BOSS_VOICE_KEY = 'ashen-vow-bossvoice-v1';
+let bossVoiceSettings = (() => {
+  try {
+    return sanitizeBossVoiceSettings(JSON.parse(localStorage.getItem(BOSS_VOICE_KEY) || 'null'));
+  } catch {
+    return sanitizeBossVoiceSettings(null);
+  }
+})();
+let bossVoiceRecorded = new Set();
+let bossVoicePaths = {};
+let bossVoiceFx = null;
+let bossVoiceHandle = null;
+let bossVoiceToken = 0;
+let bossVoiceLast = { source: 'none', id: null, archetype: null, error: '' };
+const bossVoiceBuffers = new Map();
+
+function saveBossVoiceSettings() {
+  try {
+    localStorage.setItem(BOSS_VOICE_KEY, JSON.stringify(bossVoiceSettings));
+  } catch {
+    /* storage unavailable */
+  }
+  updateBossVoiceButton();
+}
+
+async function loadBossVoiceManifest() {
+  try {
+    const res = await fetch('assets/voice/manifest.json', { cache: 'no-cache' });
+    if (!res.ok) throw new Error(String(res.status));
+    const manifest = sanitizeVoiceManifest(await res.json());
+    bossVoiceRecorded = new Set(manifest.files);
+    bossVoicePaths = manifest.paths;
+  } catch {
+    bossVoiceRecorded = new Set();
+  }
+  return bossVoiceRecorded.size;
+}
+
+function ensureBossVoiceFx() {
+  audio.init();
+  if (!audio.ctx) return null;
+  if (!bossVoiceFx || bossVoiceFx.ctx !== audio.ctx) bossVoiceFx = new VoiceFX(audio.ctx, audio.busFor('dialogue'));
+  return bossVoiceFx;
+}
+
+function stopBossVoice() {
+  bossVoiceToken += 1;
+  bossVoiceHandle?.stop();
+  bossVoiceHandle = null;
+}
+
+async function decodeVoice(arrayBuffer) {
+  const ctx = audio.ctx;
+  return await new Promise((resolve, reject) => {
+    const p = ctx.decodeAudioData(arrayBuffer, resolve, reject);
+    if (p && typeof p.then === 'function') p.then(resolve, reject);
+  });
+}
+
+async function playBossLine(kind, key, index, line) {
+  stopVoice();
+  stopBossVoice();
+  const token = bossVoiceToken;
+  const fx = ensureBossVoiceFx();
+  const row = bossVoiceLine(kind, key, index);
+  const isPlayer = (line?.speaker || row?.speaker) === PLAYER_SPEAKER;
+  const archetype = isPlayer ? 'hero' : row?.archetype || archetypeForBoss(kind);
+  let source = resolveBossVoiceSource({
+    settings: bossVoiceSettings,
+    recorded: bossVoiceRecorded,
+    kind,
+    key,
+    index,
+    text: line?.text ?? null,
+    aiConfigured: voiceStatus.configured,
+    online: voiceStatus.online,
+    voiceEnabled: voiceSave.enabled,
+  });
+  if (!fx) source = 'none';
+  // The player's own lines get no sting: the boss owns the music of the scene.
+  if (source === 'sting' && isPlayer) source = 'none';
+  bossVoiceLast = { source, id: row?.id || null, archetype, error: '' };
+  updateBossVoiceButton();
+  if (source === 'none') return source;
+  const volume = (voiceSave.volume / 100) * 1.1;
+  try {
+    if (source === 'recorded' || source === 'ai') {
+      let buffer = source === 'recorded' ? bossVoiceBuffers.get(row.id) : null;
+      if (!buffer) {
+        const res = source === 'recorded'
+          ? await fetch(bossVoicePaths[row.id] || row.file)
+          : await fetch('/api/voice', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(voiceRequestFor({ text: line.text, cast: VOICE_BOSS_CAST[kind] || 'narrator', save: voiceSave }).body),
+          });
+        if (!res.ok) throw new Error(`voice HTTP ${res.status}`);
+        buffer = await decodeVoice(await res.arrayBuffer());
+        if (source === 'recorded') bossVoiceBuffers.set(row.id, buffer);
+        if (bossVoiceBuffers.size > 48) bossVoiceBuffers.delete(bossVoiceBuffers.keys().next().value);
+      }
+      if (token !== bossVoiceToken) return source;
+      bossVoiceHandle = fx.play(buffer, archetype, { volume, processing: source === 'ai' ? true : bossVoiceSettings.processing });
+    } else {
+      bossVoiceHandle = fx.sting(archetype, key, { volume: volume * 0.8 });
+    }
+    voiceSave.linesPlayed += 1;
+  } catch (error) {
+    // A missing file or a failed request degrades to the sting, never to TTS.
+    bossVoiceLast = { ...bossVoiceLast, source: 'sting', error: String(error.message || error) };
+    if (token === bossVoiceToken && !isPlayer && bossVoiceSettings.stings) bossVoiceHandle = fx.sting(archetype, key, { volume: volume * 0.8 });
+    updateBossVoiceButton();
+    return 'sting';
+  }
+  return source;
+}
+
+const BOSS_VOICE_CYCLE = [
+  { mode: 'recorded-first', allowAi: false, label: 'REKAMAN + STING' },
+  { mode: 'recorded-first', allowAi: true, label: 'REKAMAN + AI (DIPROSES)' },
+  { mode: 'stings-only', allowAi: false, label: 'STING SAJA' },
+  { mode: 'off', allowAi: false, label: 'MATI' },
+];
+
+function bossVoiceModeLabel() {
+  const entry = BOSS_VOICE_CYCLE.find((c) => c.mode === bossVoiceSettings.mode && c.allowAi === bossVoiceSettings.allowAi)
+    || BOSS_VOICE_CYCLE.find((c) => c.mode === bossVoiceSettings.mode);
+  return entry?.label || 'REKAMAN + STING';
+}
+
+function updateBossVoiceButton() {
+  const btn = $('btn-dialogue-voice');
+  if (!btn) return;
+  btn.textContent = `${BOSS_VOICE_SOURCE_LABEL[bossVoiceLast.source] || 'SUARA'} · ${bossVoiceModeLabel()}`;
+  btn.setAttribute('aria-label', `Suara boss: ${bossVoiceModeLabel()}. Klik untuk ganti.`);
+}
+
+function cycleBossVoiceMode() {
+  const i = BOSS_VOICE_CYCLE.findIndex((c) => c.mode === bossVoiceSettings.mode && c.allowAi === bossVoiceSettings.allowAi);
+  const next = BOSS_VOICE_CYCLE[(i + 1) % BOSS_VOICE_CYCLE.length];
+  bossVoiceSettings = sanitizeBossVoiceSettings({ ...bossVoiceSettings, mode: next.mode, allowAi: next.allowAi });
+  saveBossVoiceSettings();
+  if (dialogueOpen) speakDialogueLine();
+  return bossVoiceSettings;
+}
+
+$('btn-dialogue-voice')?.addEventListener('click', (event) => {
+  event.stopPropagation();
+  cycleBossVoiceMode();
+});
+
 function speakDialogueLine() {
-  if (!dialogueOpen || !voiceSave.autoplayInDialogue || !voiceSave.enabled) return;
+  if (!dialogueOpen || !voiceSave.autoplayInDialogue) return;
   const line = dialogueLines[dialogueIndex];
   if (!line?.text) return;
-  const castId = VOICE_BOSS_CAST[dialogueMeta?.kind] || 'narrator';
-  void speakVoiceLine(line.text, castId);
+  void playBossLine(dialogueMeta?.kind, dialogueMeta?.phase || 'intro', dialogueIndex, line);
 }
 
 function renderDialogue() {
@@ -12466,7 +13548,7 @@ window.addEventListener('keydown', (e) => {
     return;
   }
 
-  if (menuView === 'frontier') {
+  if (menuView === 'frontier' || menuView === 'overdrive') {
     if (e.code === 'Escape' || e.code === 'Backspace') {
       showMenu();
       return;
@@ -12578,7 +13660,7 @@ window.addEventListener('keydown', (e) => {
     return;
   }
 
-  if (menuView === 'levels' || menuView === 'credits' || menuView === 'updates' || menuView === 'character' || menuView === 'expansion') {
+  if (menuView === 'levels' || menuView === 'credits' || menuView === 'updates' || menuView === 'storymap' || menuView === 'character' || menuView === 'expansion') {
     if (e.code === 'Escape' || e.code === 'Backspace') showMenu();
     return;
   }
@@ -12591,6 +13673,7 @@ window.addEventListener('keydown', (e) => {
     else if (e.code === 'KeyP') showCharacter();
     else if (e.code === 'KeyC') showCredits();
     else if (e.code === 'KeyU') showUpdates();
+    else if (e.code === 'KeyV') showStoryMap();
     else if (e.code === 'KeyX') showExpansion();
     return;
   }
@@ -12644,6 +13727,37 @@ window.addEventListener('keydown', (e) => {
 
   if (e.code === 'KeyR' && (game.state === 'dead' || game.state === 'victory')) {
     retryRun();
+    return;
+  }
+
+  if (e.code === 'KeyQ' && activeRunKind === 'overdrive' && game.state === 'playing' && !e.repeat) {
+    const st = overdriveState();
+    const { school, spell } = overdriveSpellFor(st.activeSchool, st.activeSpellIndex);
+    const castRes = game.castOverdriveSpell(spell, school.color);
+    if (castRes.ok) showToast(`${spell.name} · Mana ${Math.round(castRes.mana)}`, 900);
+    else if (castRes.reason === 'mana') showToast('Mana Overdrive tidak cukup.', 900);
+    return;
+  }
+
+  if (e.code === 'KeyF' && game.state === 'playing' && !e.repeat) {
+    if (game.phaseShift()) {
+      if (progress.rift) progress.rift.phaseShifts = (progress.rift.phaseShifts || 0) + 1;
+      updateHud();
+      showToast(`◈ PHASE-SHIFT → FASA ${game.fracturePhase === 0 ? 'A' : 'B'}`, 850);
+    }
+    return;
+  }
+
+  if (e.code === 'KeyG' && activeRunKind !== 'crusade' && game.state === 'playing' && !e.repeat) {
+    const res = game.inkSeverance();
+    if (res.ok) {
+      progress.unwritten = sanitizeUnwrittenProgress(progress.unwritten);
+      progress.unwritten.severances += 1;
+      updateHud();
+      showToast(`✒ INK SEVERANCE (${res.hits} target)`, 900);
+    } else if (res.reason === 'resonance') {
+      showToast('Butuh Oath Resonance B+ (35%) untuk Ink Severance [G].', 900);
+    }
     return;
   }
 
@@ -14346,6 +15460,19 @@ $('btn-fallen-back')?.addEventListener('click', () => showFallenMenu());
 $('btn-fallen-crusade')?.addEventListener('click', () => showCrusadeMenu());
 $('btn-crusade-menu')?.addEventListener('click', () => showCrusadeMenu());
 $('btn-crusade-back')?.addEventListener('click', () => showCrusadeMenu());
+$('btn-rift-menu')?.addEventListener('click', () => showRiftScreen());
+$('btn-rift-back')?.addEventListener('click', () => showMenu());
+$('rift-badge')?.addEventListener('click', () => {
+  if (started && menuView === 'none' && game.state === 'playing' && game.phaseShift()) updateHud();
+});
+$('btn-unwritten-menu')?.addEventListener('click', () => showUnwrittenScreen());
+$('btn-unwritten-back')?.addEventListener('click', () => showMenu());
+$('sigil-badge')?.addEventListener('click', () => {
+  if (started && menuView === 'none' && game.state === 'playing') {
+    const res = game.inkSeverance();
+    if (res.ok) updateHud();
+  }
+});
 $('crusade-hud')?.addEventListener('click', (event) => {
   if (event.target.closest('[data-crusade-action="strike"]')) crusadeStrike();
 });
@@ -14358,6 +15485,13 @@ $('fallen-hud')?.addEventListener('click', (event) => {
   else if (action === 'cleanse') fallenCleanse();
 });
 $('btn-fishing-menu')?.addEventListener('click', () => showFishing());
+$('btn-editor-menu')?.addEventListener('click', () => { void showEditor(); });
+$('btn-editor-back')?.addEventListener('click', () => showMenu());
+$('editor-form')?.addEventListener('click', (event) => {
+  if (event.target.closest('[data-editor-retry]')) {
+    void showEditor();
+  }
+});
 $('btn-fishing-back')?.addEventListener('click', () => closeFishing());
 $('fishing-cast-start')?.addEventListener('click', () => beginFishingCast());
 $('fishing-shop-open')?.addEventListener('click', () => openBaitShop());
@@ -14460,7 +15594,8 @@ $('moba-result')?.addEventListener('click', (event) => {
 });
 $('btn-wd-menu')?.addEventListener('click', showWaveDefense);
 $('btn-wd-back')?.addEventListener('click', showMenu);
-$('btn-wd-start')?.addEventListener('click', startWaveDefenseBattle);
+$('btn-wd-start')?.addEventListener('click', startWaveDefenseFromHub);
+$('btn-wd-trailer')?.addEventListener('click', playWaveDefenseTrailer);
 $('btn-wd-pause')?.addEventListener('click', () => toggleWaveDefensePause(true));
 $('btn-wd-quit')?.addEventListener('click', leaveWaveDefense);
 $('btn-wd-resume')?.addEventListener('click', () => toggleWaveDefensePause(false));
@@ -14476,8 +15611,15 @@ $('wd-screen')?.addEventListener('click', (event) => {
   if (map) { wdMapId = map.dataset.wdMap; buildWaveDefenseScreen(); return; }
   const difficulty = event.target.closest('[data-wd-difficulty]');
   if (difficulty) { wdDifficulty = difficulty.dataset.wdDifficulty; buildWaveDefenseScreen(); return; }
+  const pbtn = event.target.closest('[data-wd-particle]');
+  if (pbtn) { wdParticleId = pbtn.dataset.wdParticle; buildWaveDefenseScreen(); return; }
   const mode = event.target.closest('[data-wd-mode]');
-  if (mode) { wdEndless = mode.dataset.wdMode === 'endless'; buildWaveDefenseScreen(); return; }
+  if (mode) {
+    wdInfinitower = mode.dataset.wdMode === 'infinitower';
+    wdEndless = wdInfinitower || mode.dataset.wdMode === 'endless';
+    buildWaveDefenseScreen();
+    return;
+  }
   const tower = event.target.closest('[data-wd-tower]');
   if (tower) { wdSelectedTowerId = tower.dataset.wdTower; buildWaveDefenseScreen(); }
 });
@@ -14493,6 +15635,16 @@ $('wd-battle')?.addEventListener('click', (event) => {
   const speed = event.target.closest('[data-wd-speed]');
   if (speed && wdMatch) {
     waveDefenseSetSpeed(wdMatch, Number(speed.dataset.wdSpeed));
+    updateWaveDefenseHud(true);
+    return;
+  }
+  const pscale = event.target.closest('[data-wd-pscale]');
+  if (pscale && wdMatch) {
+    const scale = Number(pscale.dataset.wdPscale);
+    waveDefenseSetParticleScale(wdMatch, scale);
+    const matched = WAVE_DEFENSE_PARTICLE_LEVELS.find((entry) => Math.abs(entry.scale - scale) < 0.15);
+    if (matched) wdParticleId = matched.id;
+    wdRenderDirty = true;
     updateWaveDefenseHud(true);
   }
 });
@@ -14654,10 +15806,20 @@ fetch('/api/admin/session', { credentials: 'same-origin' })
   .then((response) => { if (response.ok) $('btn-admin-menu')?.classList.remove('hidden'); })
   .catch(() => {});
 $('btn-settings-menu').addEventListener('click', () => showSettings('graphics'));
+$('btn-settings-top')?.addEventListener('click', () => showSettings('graphics'));
+$('btn-hud-settings')?.addEventListener('click', () => showSettings('graphics'));
 $('btn-difficulty-menu')?.addEventListener('click', () => showSettings('difficulty'));
 $('btn-credits').addEventListener('click', showCredits);
-$('btn-updates').addEventListener('click', showUpdates);
+$('btn-updates').addEventListener('click', () => { void showUpdates(); });
+$('update-log')?.addEventListener('click', (event) => {
+  if (event.target.closest('[data-updates-retry]')) void loadUpdateLog({ force: true });
+});
 $('btn-map-menu').addEventListener('click', openMap);
+$('btn-storymap-menu')?.addEventListener('click', () => { void showStoryMap(); });
+$('btn-storymap-close')?.addEventListener('click', closeStoryMap);
+$('storymap-detail')?.addEventListener('click', (event) => {
+  if (event.target.closest('[data-story-retry]')) void showStoryMap();
+});
 $('btn-codex-menu').addEventListener('click', () => openCodex());
 $('btn-expansion-menu').addEventListener('click', () => showExpansion());
 $('btn-levels-back').addEventListener('click', showMenu);
@@ -14690,6 +15852,13 @@ $('horror3d-sites')?.addEventListener('click', (event) => {
 $('btn-frontier-menu')?.addEventListener('click', () => showFrontier('campaign200'));
 $('btn-frontier-back')?.addEventListener('click', closeFrontier);
 $('btn-overdrive-menu')?.addEventListener('click', () => showOverdrive('campaign301'));
+$('btn-overdrive-back')?.addEventListener('click', closeOverdrive);
+$('overdrive-tabs')?.addEventListener('click', (event) => {
+  const tab = event.target.closest('[data-tab]');
+  if (!tab) return;
+  overdriveTab = tab.dataset.tab;
+  buildOverdriveScreen();
+});
 $('btn-atlas-menu')?.addEventListener('click', () => showAtlas('zones'));
 $('btn-atlas-back')?.addEventListener('click', closeAtlas);
 
@@ -15139,6 +16308,7 @@ function syncScreens() {
   $('levels-screen').classList.toggle('hidden', menuView !== 'levels' || covered);
   $('credits-screen').classList.toggle('hidden', menuView !== 'credits' || covered);
   $('updates-screen').classList.toggle('hidden', menuView !== 'updates' || covered);
+  $('storymap-screen')?.classList.toggle('hidden', menuView !== 'storymap' || covered);
   $('character-screen').classList.toggle('hidden', menuView !== 'character' || covered);
   $('scary-screen')?.classList.toggle('hidden', menuView !== 'scary' || covered);
   $('dread-screen')?.classList.toggle('hidden', menuView !== 'dread' || covered);
@@ -15164,11 +16334,15 @@ function syncScreens() {
   $('crusade-menu-screen')?.classList.toggle('hidden', menuView !== 'crusadeMenu' || covered);
   $('crusade-screen')?.classList.toggle('hidden', menuView !== 'crusade' || covered);
   $('crusade-clear-screen')?.classList.toggle('hidden', !(crusadeClearOpen && started));
+  $('rift-screen')?.classList.toggle('hidden', menuView !== 'rift' || covered);
+  $('unwritten-screen')?.classList.toggle('hidden', menuView !== 'unwritten' || covered);
   $('speedrun-screen')?.classList.toggle('hidden', menuView !== 'speedrun' || covered);
+  $('editor-screen')?.classList.toggle('hidden', menuView !== 'editor' || covered);
   $('fishing-screen')?.classList.toggle('hidden', menuView !== 'fishing' || covered);
   $('bait-shop-screen')?.classList.toggle('hidden', menuView !== 'baitShop' || covered);
   $('fish-index-screen')?.classList.toggle('hidden', menuView !== 'fishIndex' || covered);
   $('speedrun-summary-screen')?.classList.toggle('hidden', !speedrunSummaryOpen);
+  $('custom-clear-screen')?.classList.toggle('hidden', !isCustomClearOpen());
   $('lab-reward-screen')?.classList.toggle('hidden', !labRewardsOpen);
   $('lab-summary-screen')?.classList.toggle('hidden', !labSummaryOpen);
   if (!inRun || activeRunKind !== 'atlas') $('atlas-quickbar')?.classList.add('hidden');
@@ -15270,6 +16444,61 @@ function updateHud() {
     }
   }
 
+  const customBadge = $('custom-badge');
+  if (customBadge) {
+    const info = activeRunKind === 'custom' && started ? mapEditorCtrl?.hudBadge() : null;
+    if (info) {
+      customBadge.classList.remove('hidden');
+      if (info.text !== customBadgeCache) {
+        customBadgeCache = info.text;
+        customBadge.textContent = info.text;
+      }
+      customBadge.classList.toggle('urgent', info.urgent);
+    } else {
+      customBadgeCache = '';
+      customBadge.classList.add('hidden');
+    }
+  }
+
+  const frontierBadge = $('frontier-badge');
+  if (frontierBadge) {
+    if (activeRunKind === 'frontiers' && started && activeFrontierIndex >= 0) {
+      const room = frontierRoomForIndex(activeFrontierIndex);
+      const text = room
+        ? `🜂 LV ${room.frontierLevel} · ${frontierChapterMetaFor(room.frontierChapter).english.toUpperCase()}`
+        : '';
+      frontierBadge.classList.remove('hidden');
+      if (text !== frontierBadgeCache) {
+        frontierBadgeCache = text;
+        frontierBadge.textContent = text;
+      }
+    } else {
+      frontierBadgeCache = '';
+      frontierBadge.classList.add('hidden');
+    }
+  }
+
+  const overdriveBadge = $('overdrive-badge');
+  if (overdriveBadge) {
+    if (activeRunKind === 'overdrive' && started && activeOverdriveIndex >= 0) {
+      const room = overdriveRoomForIndex(activeOverdriveIndex);
+      const st = overdriveState();
+      const { spell } = overdriveSpellFor(st.activeSchool, st.activeSpellIndex);
+      const mana = Math.round(game.player?.overdriveMana ?? 100);
+      const text = room
+        ? `⚡ OVD LV ${room.overdriveLevel} · BAB ${room.overdriveChapter} · MANA ${mana} · [Q] ${spell.name.toUpperCase()}`
+        : '';
+      overdriveBadge.classList.remove('hidden');
+      if (text !== overdriveBadgeCache) {
+        overdriveBadgeCache = text;
+        overdriveBadge.textContent = text;
+      }
+    } else {
+      overdriveBadgeCache = '';
+      overdriveBadge.classList.add('hidden');
+    }
+  }
+
   const p = game.player;
   $('ash-count').textContent = game.ash;
   const weapon = WEAPONS[p.weapon] || WEAPONS.sword;
@@ -15300,6 +16529,42 @@ function updateHud() {
     } else {
       abilityBadge.classList.add('hidden');
     }
+  }
+
+  const resBadge = $('resonance-badge');
+  if (resBadge) {
+    const rank = game.resonanceRank || 'D';
+    const pct = Math.round(game.resonance || 0);
+    resBadge.textContent = `✦ RESONANCE ${rank}${pct > 0 ? ` · ${pct}%` : ''}`;
+    resBadge.classList.toggle('rank-ashen', rank === 'ASHEN');
+    resBadge.classList.toggle('rank-s', rank === 'S');
+  }
+
+  const riftBadge = $('rift-badge');
+  if (riftBadge) {
+    const inRift = !!game.room?.rift;
+    riftBadge.classList.toggle('hidden', !inRift);
+    if (inRift) {
+      const cd = p.phaseShiftCooldown || 0;
+      const phaseLabel = game.fracturePhase === 0 ? 'A' : 'B';
+      riftBadge.textContent = cd > 0
+        ? `◈ FASA ${phaseLabel} (${cd.toFixed(1)}s)`
+        : `◈ FASA ${phaseLabel} [F]`;
+      riftBadge.classList.toggle('phase-a', game.fracturePhase === 0);
+      riftBadge.classList.toggle('cooldown', cd > 0);
+    }
+  }
+
+  const sigilBadge = $('sigil-badge');
+  if (sigilBadge) {
+    const sigil = UNWRITTEN_SIGIL_BY_ID[game.oathSigilId] || UNWRITTEN_SIGIL_BY_ID.blank_page;
+    const ready = (game.resonance || 0) >= INK_SEVERANCE_MIN_RESONANCE && (game.inkSeveranceCooldown || 0) <= 0;
+    const cd = game.inkSeveranceCooldown || 0;
+    sigilBadge.textContent = cd > 0
+      ? `${sigil.glyph} ${sigil.name.split(' ').pop().toUpperCase()} (${cd.toFixed(1)}s)`
+      : `${sigil.glyph} ${sigil.name.split(' ').pop().toUpperCase()} [G]`;
+    sigilBadge.classList.toggle('ready', ready);
+    sigilBadge.classList.toggle('cooldown', !ready);
   }
 
   const boss = hud.boss;
@@ -15423,7 +16688,7 @@ function toggleAiDebug() {
 function drainEvents() {
   if (!game.events.length) return;    const events = game.events.splice(0, game.events.length);
     for (const ev of events) {
-      if (ev.type === 'bossDown') maybeCreditScene(ev);
+      if (ev.type === 'bossDown' && activeRunKind !== 'custom') maybeCreditScene(ev);
       if (ev.type === 'playerHurt') handlePlayerHurt(ev);
       if (ev.type === 'spiritDown') {
         hunterReward(hunterState, ev.marks, Date.now());
@@ -15437,9 +16702,9 @@ function drainEvents() {
         showToast(`JIMAT PENJAGA · damage roh −${ev.reduction}%`, 1300);
       }
       if (ev.type === 'gatePass') recordStageTime(ev.from, activeStage?.label);
-      else if (ev.type === 'bossDown') recordStageTime(ev.room, ev.name);
+      else if (ev.type === 'bossDown' && activeRunKind !== 'custom') recordStageTime(ev.room, ev.name);
       else if (ev.type === 'roomEnter') beginStage(ev.room, ev.name);
-      if (ev.type === 'bossDown' || ev.type === 'labyrinthBossDown') awardBossSkillPoints(ev.kind, ev.name);
+      if ((ev.type === 'bossDown' || ev.type === 'labyrinthBossDown') && activeRunKind !== 'custom') awardBossSkillPoints(ev.kind, ev.name);
       const activeRun = started && !spectating && menuView === 'none';
     if (activeRun && !paused) audio.play(ev);
     if (activeRun) {
@@ -15564,6 +16829,50 @@ function drainEvents() {
             discoverLanternRoom(stage.local);
           }
         }
+      } else if (activeRunKind === 'frontiers') {
+        if (ev.type === 'gatePass') {
+          const from = frontierIndexForRoom(ev.from);
+          if (from >= 0) handleFrontierLevelClear(from);
+          const to = frontierIndexForRoom(ev.to);
+          if (to >= 0) {
+            activeFrontierIndex = to;
+            const state = frontierState();
+            state.discovered[to] = true;
+            saveProgress();
+          }
+          buildFrontierScreen();
+        } else if (ev.type === 'bossDown') {
+          const index = frontierIndexForRoom(ev.room);
+          if (index >= 0) handleFrontierLevelClear(index);
+        } else if (ev.type === 'roomEnter') {
+          const index = frontierIndexForRoom(ev.room);
+          if (index >= 0) {
+            activeFrontierIndex = index;
+            frontierState().discovered[index] = true;
+          }
+        }
+      } else if (activeRunKind === 'overdrive') {
+        if (ev.type === 'gatePass') {
+          const from = overdriveIndexForRoom(ev.from);
+          if (from >= 0) handleOverdriveLevelClear(from);
+          const to = overdriveIndexForRoom(ev.to);
+          if (to >= 0) {
+            activeOverdriveIndex = to;
+            const state = overdriveState();
+            state.discovered[to] = true;
+            saveProgress();
+          }
+          buildOverdriveScreen();
+        } else if (ev.type === 'bossDown') {
+          const index = overdriveIndexForRoom(ev.room);
+          if (index >= 0) handleOverdriveLevelClear(index);
+        } else if (ev.type === 'roomEnter') {
+          const index = overdriveIndexForRoom(ev.room);
+          if (index >= 0) {
+            activeOverdriveIndex = index;
+            overdriveState().discovered[index] = true;
+          }
+        }
       } else if (activeRunKind === 'trials') {
         if (ev.type === 'labyrinthBossDown') handleTrialBoss(ev);
       } else if (activeRunKind === 'labyrinth') {
@@ -15612,6 +16921,33 @@ function drainEvents() {
             saveProgress();
             if (result?.ok) showToast(result.final ? 'THE ARCHITECT OF ETERNITY GUGUR — The Unwritten Expanse mulai terlihat.' : 'Wilayah Astral ditaklukkan.', 3000);
           }
+        }
+      } else if (activeRunKind === 'rift') {
+        if (ev.type === 'gatePass') {
+          progress.rift = recordRiftRoom(progress.rift, ev.from);
+          saveProgress();
+        } else if (ev.type === 'bossDown') {
+          progress.rift = recordRiftBoss(progress.rift, ev.kind);
+          saveProgress();
+          if (ev.kind === 'rift_devilish_scum') {
+            showToast('THE DEVILISH SCUM TUMBANG — Arc IV: The Rift & The Unwritten Expanse terbuka!', 3200);
+          } else {
+            showToast(`◈ Bos Celah gugur: ${ev.name}`, 2400);
+          }
+        }
+      } else if (activeRunKind === 'unwritten') {
+        if (ev.type === 'gatePass') {
+          progress.unwritten = recordUnwrittenRoom(progress.unwritten, ev.from);
+          saveProgress();
+        } else if (ev.type === 'bossDown') {
+          progress.unwritten = recordUnwrittenBoss(progress.unwritten, ev.kind);
+          saveProgress();
+          showToast(
+            ev.kind === 'unwritten_blank_author'
+              ? 'THE BLANK AUTHOR MELETAKKAN PENA — The Unwritten Expanse ditaklukkan!'
+              : `✒ Bos Tepi Perkamen gugur: ${ev.name}`,
+            3000,
+          );
         }
       } else if (activeRunKind === 'eclipse') {
         if (ev.type === 'gatePass') {
@@ -15768,19 +17104,27 @@ function drainEvents() {
 function desiredTrack() {
   if (prologueActive) return null;
   if (cutsceneActive) return cutsceneScene?.music || 'faewood';
+  if (menuView === 'wavedefense' || menuView === 'wavedefenseBattle') return wdActive && wdMatch?.enemies.some((enemy) => enemy.boss) ? 'spiralBoss' : 'spiral';
   if (menuView === 'court') return 'hearth';
   if (menuView === 'fairy') return 'faewood';
   if (menuView === 'fallenMenu') return 'forgotten';
   if (menuView === 'fallen') return 'lastvigil';
   if (menuView === 'crusadeMenu') return 'hearth';
   if (menuView === 'crusade') return 'cinderworks';
+  if (menuView === 'rift') return 'rift';
+  if (menuView === 'unwritten') return 'unwritten';
   if (menuView === 'eclipse') return 'forgotten';
   if (started && !spectating && menuView === 'none') {
+    if (activeRunKind === 'rift') return game.boss && game.state === 'playing' ? 'riftBoss' : 'rift';
+    if (activeRunKind === 'unwritten') return game.boss && game.state === 'playing' ? 'unwrittenBoss' : 'unwritten';
     if ((activeRunKind === 'eclipse' || activeRunKind === 'raid') && game.room) return game.boss && game.state === 'playing' ? 'bossJudge' : (game.room.music || 'forgotten');
     if (activeRunKind === 'godfall' && game.room) return game.boss && game.state === 'playing' ? 'bossJudge' : (game.room.music || 'lastvigil');
     if (game.state === 'victory') {
       if (activeRunKind === 'fairy' && game.roomIndex >= FAIRY_ROOM_START) return 'celebration';
       return 'victory';
+    }
+    if (activeRunKind === 'custom' && mapEditorCtrl) {
+      return mapEditorCtrl.desiredTrack();
     }
     if (activeRunKind === 'labyrinth' && labRun) {
       if (game.boss) return 'boss';
@@ -15891,6 +17235,18 @@ function frame(now) {
     adaptResolution();
   }
 
+  // Battlefield modes return before the shared cutscene tick below, so their
+  // cinematics advance here instead.
+  if (cutsceneActive && cutsceneScene && (wdActive || pirateActive || mobaActive)) {
+    const dt = Math.min(raw, 0.1);
+    cutsceneTime += dt;
+    const pct = clamp(cutsceneTime / cutsceneScene.duration, 0, 1);
+    $('cutscene-progress').style.width = `${pct * 100}%`;
+    showCutsceneBeat();
+    paintCutscene();
+    if (cutsceneTime >= cutsceneScene.duration) finishCutscene(false);
+  }
+
   if (pirateActive) {
     if (pirateMatch && !piratePaused && pirateMatch.phase === 'sailing') {
       updatePirateVoyage(pirateMatch, Math.min(raw, 0.05));
@@ -15907,6 +17263,7 @@ function frame(now) {
   }
 
   if (wdActive) {
+    maybeWaveDefenseBossCutscene();
     if (wdMatch && !wdPaused && wdMatch.phase !== 'ended') {
       updateWaveDefense(wdMatch, Math.min(raw, 0.05));
     }
@@ -15982,7 +17339,7 @@ function frame(now) {
     if (peekDir !== 0) peekOffset = clamp(peekOffset + peekDir * 330 * raw, -WORLD_W, WORLD_W);
     renderer.render(spectateGame, { spectate: true, cameraX: spectateCamera() });
   } else {
-    if (started && !paused && !shopOpen && !hunterShopOpen && !mapOpen && !codexOpen && !inventoryOpen && !dialogueOpen && !settingsOpen && !prologueActive && !cutsceneActive && !labRewardsOpen && !labSummaryOpen && !labGuestMode && !coopGuestMode && menuView === 'none') {
+    if (started && !paused && !shopOpen && !hunterShopOpen && !mapOpen && !codexOpen && !inventoryOpen && !dialogueOpen && !settingsOpen && !prologueActive && !cutsceneActive && !labRewardsOpen && !labSummaryOpen && !labGuestMode && !coopGuestMode && !isCustomClearOpen() && menuView === 'none') {
       // Speedrun multiplies the clock, not the timestep: the simulation still
       // advances in 1/120 s slices, just more of them per rendered frame.
       const speedScale = activeRunKind === 'speedrun' && speedrunRun ? speedrunRun.multiplier : 1;
@@ -15996,6 +17353,7 @@ function frame(now) {
         if (activeRunKind === 'trials') tickTrials(FIXED);
         if (activeRunKind === 'fallen') tickFallen(FIXED);
         if (activeRunKind === 'crusade') tickCrusade(FIXED);
+        if (activeRunKind === 'custom') tickCustomStage(FIXED);
         accumulator -= FIXED;
         steps += 1;
         if (game.state !== 'playing') {
@@ -16822,7 +18180,7 @@ function crusadeMenuAction(id) {
   } else if (id === 'camp') {
     showCrusade('camp');
   } else if (id === 'rift') {
-    showToast('Celah itu belum bisa dibuka. Sesuatu di bawah sedang menunggu.', 2400);
+    showRiftScreen();
   } else if (id === 'heaven') {
     showFallenMenu();
   } else if (id === 'options') {
@@ -17026,9 +18384,9 @@ function crusadeTabBody(tab, state) {
     <h3 class="crusade-section-title">STATISTIK PERANG</h3>
     <div class="crusade-stat-row"><span>Turun</span><strong>${summary.runs}</strong><span>Gugur</span><strong>${summary.deaths}</strong><span>Chain</span><strong>${summary.bestChain}</strong><span>Strike</span><strong>${summary.strikes}</strong></div>
     <div class="crusade-rift">
-      <strong>THE RIFT · ${CRUSADE_RIFT.locked ? 'TERKUNCI' : 'TERBUKA'}</strong>
-      <p>${summary.arc4Hook ? 'Zirah Paladin kosong, dan sesuatu di dalamnya sudah pergi. Celah di langit masih hangat.' : 'Gerbang Penghakiman belum jatuh. Celah di langit masih tertutup.'}</p>
-      <p class="crusade-card-meta">${esc(CRUSADE_RIFT.note)} · Arc IV belum dirancang.</p>
+      <strong>THE RIFT · ${riftUnlocked(progress) ? 'TERBUKA' : 'TERKUNCI'}</strong>
+      <p>${summary.arc4Hook ? 'Zirah Paladin kosong, dan Celah di bawah langit kini terbuka untuk dijelajahi.' : 'Gerbang Penghakiman belum jatuh. Celah di langit masih tertutup.'}</p>
+      <p class="crusade-card-meta">${esc(CRUSADE_RIFT.note)}</p>
     </div>
     <p class="micro">The Radiant Crusade · ${summary.roomsCleared}/${summary.roomTotal} ruang · ${summary.percent}% arsip lengkap.</p>
   </div>`;
@@ -17294,8 +18652,230 @@ function crusadeKeydown(event) {
 }
 window.addEventListener('keydown', crusadeKeydown);
 
+function startRiftRoom(roomIndex = RIFT_ROOM_START) {
+  const target = clamp(Math.floor(Number(roomIndex) || RIFT_ROOM_START), RIFT_ROOM_START, RIFT_ROOM_START + RIFT_ROOM_COUNT - 1);
+  if (typeof trailerActive !== 'undefined' && trailerActive) closeTrailer();
+  cancelPrologue();
+  closeDialogue(true);
+  started = true;
+  paused = false;
+  shopOpen = false;
+  mapOpen = false;
+  codexOpen = false;
+  inventoryOpen = false;
+  settingsOpen = false;
+  spectating = false;
+  spectateGame = null;
+  activeRunKind = 'rift';
+  menuView = 'none';
+  progress.rift = sanitizeRiftProgress(progress.rift);
+  progress.rift.unlocked = true;
+  game.reset();
+  game.state = 'playing';
+  game.loadRoom(target);
+  clearHeldKeys();
+  syncScreens();
+  updateHud();
+}
+
+function buildRiftScreen() {
+  const summary = riftSummary(progress);
+  const sumEl = $('rift-summary');
+  if (sumEl) {
+    sumEl.innerHTML = [
+      ['RUANG', `${summary.rooms}/${summary.totalRooms}`],
+      ['BOS', `${summary.bosses}/${summary.totalBosses}`],
+      ['RAHASIA', `${summary.secrets}/${summary.totalSecrets}`],
+      ['RESONANCE', summary.bestResonance],
+      ['PHASE-SHIFT', String(summary.phaseShifts)],
+    ]
+      .map(([label, value]) => `<div class="crusade-stat"><span>${label}</span><strong>${value}</strong></div>`)
+      .join('');
+  }
+  const body = $('rift-body');
+  if (!body) return;
+  body.innerHTML = `<div class="crusade-grid">${RIFT_REGIONS.map((region) => {
+    const boss = RIFT_BOSS_INFO[region.boss];
+    const bossDown = !!progress.rift?.bosses?.[region.boss];
+    return `<article class="crusade-card ${bossDown ? 'earned' : ''}">
+      <strong>${region.glyph} ${esc(region.name)}</strong>
+      <em>${bossDown ? 'DITAKLUKKAN' : `RUANG ${region.roomStart}–${region.roomEnd}`}</em>
+      <p>${esc(region.gimmick)}</p>
+      <p class="crusade-card-meta">Bos: ${esc(boss?.name || region.boss)}</p>
+      <button type="button" class="btn btn-primary" data-rift-start="${region.roomStart}">MASUK WILAYAH ${region.order}</button>
+    </article>`;
+  }).join('')}</div>`;
+  body.querySelectorAll('[data-rift-start]').forEach((btn) => {
+    btn.addEventListener('click', () => startRiftRoom(Number(btn.dataset.riftStart)));
+  });
+}
+
+function showRiftScreen() {
+  cancelPrologue();
+  started = false;
+  paused = false;
+  shopOpen = false;
+  mapOpen = false;
+  codexOpen = false;
+  inventoryOpen = false;
+  settingsOpen = false;
+  closeDialogue(true);
+  spectating = false;
+  spectateGame = null;
+  menuView = 'rift';
+  game.reset();
+  clearHeldKeys();
+  buildRiftScreen();
+  syncScreens();
+}
+
+function startUnwrittenRoom(roomIndex = UNWRITTEN_ROOM_START) {
+  const target = clamp(Math.floor(Number(roomIndex) || UNWRITTEN_ROOM_START), UNWRITTEN_ROOM_START, UNWRITTEN_ROOM_START + UNWRITTEN_ROOM_COUNT - 1);
+  if (typeof trailerActive !== 'undefined' && trailerActive) closeTrailer();
+  cancelPrologue();
+  closeDialogue(true);
+  started = true;
+  paused = false;
+  shopOpen = false;
+  mapOpen = false;
+  codexOpen = false;
+  inventoryOpen = false;
+  settingsOpen = false;
+  spectating = false;
+  spectateGame = null;
+  activeRunKind = 'unwritten';
+  menuView = 'none';
+  progress.unwritten = sanitizeUnwrittenProgress(progress.unwritten);
+  progress.unwritten.unlocked = true;
+  game.reset();
+  game.state = 'playing';
+  game.setOathSigil(progress.unwritten.equippedSigil);
+  game.loadRoom(target);
+  clearHeldKeys();
+  syncScreens();
+  updateHud();
+}
+
+function buildUnwrittenScreen() {
+  progress.unwritten = sanitizeUnwrittenProgress(progress.unwritten);
+  const summary = unwrittenSummary(progress);
+  const sumEl = $('unwritten-summary');
+  if (sumEl) {
+    sumEl.innerHTML = [
+      ['LEMBAR', `${summary.rooms}/${summary.totalRooms}`],
+      ['BOS', `${summary.bosses}/${summary.totalBosses}`],
+      ['SEGEL', `${summary.sigils}/${summary.totalSigils}`],
+      ['SEVERANCE', String(summary.severances)],
+    ]
+      .map(([label, value]) => `<div class="crusade-stat"><span>${label}</span><strong>${value}</strong></div>`)
+      .join('');
+  }
+  const sigilWrap = $('unwritten-sigils');
+  if (sigilWrap) {
+    sigilWrap.innerHTML = UNWRITTEN_SIGILS.map((sigil) => {
+      const owned = progress.unwritten.sigils.includes(sigil.id);
+      const equipped = progress.unwritten.equippedSigil === sigil.id;
+      return `<article class="crusade-card ${owned ? 'earned' : 'unseen'}">
+        <strong>${sigil.glyph} ${esc(sigil.name)}</strong>
+        <em>${equipped ? 'TERPASANG' : owned ? `TERBUKA (${sigil.minRank}+)` : 'TERKUNCI'}</em>
+        <p>${esc(sigil.summary)}</p>
+        ${owned && !equipped ? `<button type="button" class="btn btn-ghost" data-sigil-equip="${sigil.id}">PASANG SEGEL</button>` : ''}
+      </article>`;
+    }).join('');
+    sigilWrap.querySelectorAll('[data-sigil-equip]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        progress.unwritten = equipUnwrittenSigil(progress.unwritten, btn.dataset.sigilEquip);
+        game.setOathSigil(progress.unwritten.equippedSigil);
+        saveProgress();
+        buildUnwrittenScreen();
+      });
+    });
+  }
+  const body = $('unwritten-body');
+  if (body) {
+    body.innerHTML = `<div class="crusade-grid">${UNWRITTEN_CHAPTERS.map((ch) => {
+      const boss = UNWRITTEN_BOSS_INFO[ch.boss];
+      const bossDown = !!progress.unwritten.bosses[ch.boss];
+      return `<article class="crusade-card ${bossDown ? 'earned' : ''}">
+        <strong>${ch.glyph} ${esc(ch.name)}</strong>
+        <em>${bossDown ? 'DITAKLUKKAN' : `RUANG ${ch.roomStart}–${ch.roomEnd}`}</em>
+        <p>${esc(ch.gimmick)}</p>
+        <p class="crusade-card-meta">Bos: ${esc(boss?.name || ch.boss)}</p>
+        <button type="button" class="btn btn-primary" data-unwritten-start="${ch.roomStart}">MASUK BAB ${ch.order}</button>
+      </article>`;
+    }).join('')}</div>`;
+    body.querySelectorAll('[data-unwritten-start]').forEach((btn) => {
+      btn.addEventListener('click', () => startUnwrittenRoom(Number(btn.dataset.unwrittenStart)));
+    });
+  }
+}
+
+function showUnwrittenScreen() {
+  cancelPrologue();
+  started = false;
+  paused = false;
+  shopOpen = false;
+  mapOpen = false;
+  codexOpen = false;
+  inventoryOpen = false;
+  settingsOpen = false;
+  closeDialogue(true);
+  spectating = false;
+  spectateGame = null;
+  menuView = 'unwritten';
+  game.reset();
+  clearHeldKeys();
+  buildUnwrittenScreen();
+  syncScreens();
+}
+
 // ── debug hooks (used by automated smoke tests) ─────────────────────────
 window.__ashen = {
+  get unwritten() {
+    return {
+      ...unwrittenSummary(progress),
+      roomIndex: game.roomIndex,
+      oathSigilId: game.oathSigilId,
+      inkSeveranceCooldown: Number((game.inkSeveranceCooldown || 0).toFixed(2)),
+    };
+  },
+  unwrittenStart(roomIndex = UNWRITTEN_ROOM_START) {
+    startUnwrittenRoom(roomIndex);
+    return { ok: true, room: game.roomIndex };
+  },
+  inkSeverance(force = false) {
+    return game.inkSeverance(force);
+  },
+  equipOathSigil(sigilId) {
+    progress.unwritten = equipUnwrittenSigil(progress.unwritten, sigilId);
+    game.setOathSigil(progress.unwritten.equippedSigil);
+    saveProgress();
+    return { ok: game.oathSigilId === sigilId, equipped: game.oathSigilId };
+  },
+  get rift() {
+    return {
+      ...riftSummary(progress),
+      fracturePhase: game.fracturePhase,
+      resonance: Math.round(game.resonance || 0),
+      resonanceRank: game.resonanceRank || 'D',
+      roomIndex: game.roomIndex,
+    };
+  },
+  riftStart(roomIndex = RIFT_ROOM_START) {
+    startRiftRoom(roomIndex);
+    return { ok: true, room: game.roomIndex };
+  },
+  riftPhaseShift() {
+    return { ok: game.phaseShift(true), phase: game.fracturePhase, resonance: Math.round(game.resonance || 0), rank: game.resonanceRank };
+  },
+  get resonance() {
+    return {
+      value: Math.round(game.resonance || 0),
+      rank: game.resonanceRank || 'D',
+      damageMult: Number(game.resonanceDamageMult().toFixed(3)),
+      speedMult: Number(game.resonanceSpeedMult().toFixed(3)),
+    };
+  },
   get secrets() {
     return {
       state: JSON.parse(JSON.stringify(secretsState)),
@@ -17403,6 +18983,85 @@ window.__ashen = {
   lanternwakeBossClear() {
     handleLanternwakeBoss();
     return lanternSummary(lanternState());
+  },
+  get frontiers() {
+    const state = frontierState();
+    return {
+      summary: frontierCampaignSummary(state),
+      unlocked: frontierCampaignUnlocked(progress),
+      chapterView: frontierChapterView,
+      activeIndex: activeFrontierIndex,
+      runKind: activeRunKind,
+      level: game.room?.frontierLevel ?? null,
+      chapters: FRONTIER_CHAPTER_META.map((chapter) => ({
+        ...chapter,
+        progress: frontierChapterProgress(state, chapter.number),
+      })),
+    };
+  },
+  frontierStart(index) {
+    startFrontierLevel(index);
+    return {
+      runKind: activeRunKind,
+      index: activeFrontierIndex,
+      room: game.roomIndex,
+      level: game.room?.frontierLevel ?? null,
+      enemies: game.enemies.length,
+      boss: game.boss?.kind ?? null,
+    };
+  },
+  frontierClear(index) {
+    const result = handleFrontierLevelClear(index);
+    buildFrontierScreen();
+    return result;
+  },
+  frontierChapter(number) {
+    frontierChapterView = Math.trunc(Number(number)) || 11;
+    buildFrontierScreen();
+    return frontierChapterView;
+  },
+  get overdrive() {
+    const state = overdriveState();
+    return {
+      summary: overdriveCampaignSummary(state),
+      unlocked: overdriveCampaignUnlocked(progress),
+      chapterView: overdriveChapterView,
+      activeIndex: activeOverdriveIndex,
+      runKind: activeRunKind,
+      level: game.room?.overdriveLevel ?? null,
+      chapters: OVERDRIVE_CHAPTER_META.map((chapter) => ({
+        ...chapter,
+        progress: overdriveChapterProgress(state, chapter.number),
+      })),
+    };
+  },
+  showOverdrive,
+  closeOverdrive,
+  overdriveStart(index) {
+    startOverdriveLevel(index);
+    return {
+      runKind: activeRunKind,
+      index: activeOverdriveIndex,
+      room: game.roomIndex,
+      level: game.room?.overdriveLevel ?? null,
+      enemies: game.enemies.length,
+      boss: game.boss?.kind ?? null,
+    };
+  },
+  overdriveClear(index) {
+    const result = handleOverdriveLevelClear(index);
+    buildOverdriveScreen();
+    return result;
+  },
+  overdriveChapter(number) {
+    overdriveChapterView = Math.trunc(Number(number)) || 21;
+    buildOverdriveScreen();
+    return overdriveChapterView;
+  },
+  overdriveCast() {
+    const st = overdriveState();
+    const { school, spell } = overdriveSpellFor(st.activeSchool, st.activeSpellIndex);
+    return game.castOverdriveSpell(spell, school.color);
   },
   cisternBossDown() {
     handleCisternBoss({ kind: 'tidebound' });
@@ -18112,6 +19771,10 @@ window.__ashen = {
   get menuView() {
     return menuView;
   },
+  get storyMap() {
+    if (storyMapCtrl) return storyMapCtrl.snapshot();
+    return { loaded: false, open: menuView === 'storymap', selected: 'arc11', summary: null, arcs: [], arc: null };
+  },
   get shopOpen() {
     return shopOpen;
   },
@@ -18218,6 +19881,9 @@ window.__ashen = {
   closeCodex,
   showUpdates,
   buildUpdateLog,
+  showStoryMap,
+  closeStoryMap,
+  selectStoryArc,
   openInventory,
   closeInventory,
   toggleInventory,
@@ -18331,6 +19997,58 @@ window.__ashen = {
   resetSkills,
   applySkills: applySkillsToGame,
   awardBossSkillPoints,
+  get editor() {
+    if (mapEditorCtrl) return mapEditorCtrl.snapshot();
+    return {
+      loaded: false,
+      save: null,
+      selectedId: null,
+      summary: null,
+      stage: null,
+      message: null,
+      activeStage: null,
+      chain: [],
+      chainIndex: 0,
+      activeRunKind,
+      clearOpen: false,
+      cleared: false,
+      engaged: false,
+      elapsed: 0,
+      selectedPlatform: -1,
+      shareMessage: '',
+      shareText: '',
+      gameState: game.state,
+      rating: null,
+      difficulty: null,
+      objective: null,
+      surviveLeft: 0,
+    };
+  },
+  editorRating: (stage) => editorSyncOrAsync((c) => c.editorRating(stage)),
+  autoBalanceEditor: () => editorSyncOrAsync((c) => c.autoBalanceEditor()),
+  lowerEditorDifficulty: () => editorSyncOrAsync((c) => c.lowerEditorDifficulty()),
+  toggleEditorElite: (index) => editorSyncOrAsync((c) => c.toggleEditorElite(index)),
+  newEditorFromPreset: (presetId) => editorSyncOrAsync((c) => c.newEditorFromPreset(presetId)),
+  showEditor,
+  buildEditorScreen: () => editorSyncOrAsync((c) => c.buildEditorScreen()),
+  saveEditorStage: () => editorSyncOrAsync((c) => c.saveEditorStage()),
+  newEditorStage: () => editorSyncOrAsync((c) => c.newEditorStage()),
+  duplicateEditorStage: () => editorSyncOrAsync((c) => c.duplicateEditorStage()),
+  deleteEditorStage: () => editorSyncOrAsync((c) => c.deleteEditorStage()),
+  startCustomStage,
+  finishCustomStage: () => editorSyncOrAsync((c) => c.finishCustomStage()),
+  addEditorPlatform: (kind) => editorSyncOrAsync((c) => c.addEditorPlatform(kind)),
+  deleteEditorPlatform: () => editorSyncOrAsync((c) => c.deleteEditorPlatform()),
+  resetEditorTerrain: () => editorSyncOrAsync((c) => c.resetEditorTerrain()),
+  paintEditorCanvas: () => editorSyncOrAsync((c) => c.paintEditorCanvas()),
+  copyEditorShare: () => editorSyncOrAsync((c) => c.copyEditorShare()),
+  importEditorShare: () => editorSyncOrAsync((c) => c.importEditorShare()),
+  editorChain: (id) => editorSyncOrAsync((c) => c.editorChain(id)),
+  editorShareCode: (id) => editorSyncOrAsync((c) => c.editorShareCode(id)),
+  importEditorCode: (code) => editorSyncOrAsync((c) => c.importEditorCode(code)),
+  decodeEditorCode: (code) => editorSyncOrAsync((c) => c.decodeEditorCode(code)),
+  validateEditorBlueprint: (stage) => editorSyncOrAsync((c) => c.validateEditorBlueprint(stage)),
+  editorBlueprintRoom: (stage) => editorSyncOrAsync((c) => c.editorBlueprintRoom(stage)),
   bossMusicFor(kind) {
     return bossTrackFor(kind);
   },
@@ -18412,6 +20130,7 @@ window.__ashen = {
       mapId: wdMapId,
       difficulty: wdDifficulty,
       endless: wdEndless,
+      infinitower: wdInfinitower,
       selectedTowerId: wdSelectedTowerId,
       snapshot: waveDefenseSnapshot(wdMatch),
       result: wdResult,
@@ -18495,6 +20214,11 @@ window.__ashen = {
   },
   showWaveDefense,
   buildWaveDefenseScreen,
+  waveDefenseStory: SPIRAL_STORY,
+  spiralStoryForTier,
+  playWaveDefenseIntro,
+  playWaveDefenseBossIntro: maybeWaveDefenseBossCutscene,
+  playWaveDefenseTrailer,
   startWaveDefenseBattle,
   leaveWaveDefense,
   setWaveDefenseMap(id) {
@@ -18510,20 +20234,44 @@ window.__ashen = {
     return true;
   },
   setWaveDefenseMode(mode) {
-    wdEndless = mode === 'endless';
+    wdInfinitower = mode === 'infinitower';
+    wdEndless = wdInfinitower || mode === 'endless';
     buildWaveDefenseScreen();
     return true;
   },
   setWaveDefenseEndless(on = true) {
     wdEndless = !!on;
+    wdInfinitower = false;
     buildWaveDefenseScreen();
     return wdEndless;
+  },
+  setWaveDefenseInfinitower(on = true) {
+    wdInfinitower = !!on;
+    wdEndless = wdInfinitower;
+    buildWaveDefenseScreen();
+    return wdInfinitower;
   },
   setWaveDefenseTower(id) {
     if (!WAVE_DEFENSE_TOWER_BY_ID[id]) return false;
     wdSelectedTowerId = id;
     if (wdMatch) waveDefenseSelectTower(wdMatch, id);
     buildWaveDefenseScreen();
+    updateWaveDefenseHud(true);
+    return true;
+  },
+  setWaveDefenseParticles(idOrScale) {
+    const found = WAVE_DEFENSE_PARTICLE_LEVELS.find((entry) => entry.id === idOrScale);
+    if (found) {
+      wdParticleId = found.id;
+      if (wdMatch) waveDefenseSetParticleScale(wdMatch, found.scale);
+    } else if (Number.isFinite(Number(idOrScale))) {
+      const scale = Math.max(0.25, Math.min(4, Number(idOrScale)));
+      if (wdMatch) waveDefenseSetParticleScale(wdMatch, scale);
+    } else {
+      return false;
+    }
+    buildWaveDefenseScreen();
+    wdRenderDirty = true;
     updateWaveDefenseHud(true);
     return true;
   },
@@ -18771,7 +20519,11 @@ window.__ashen = {
       if (activeRunKind === 'trials') tickTrials(FIXED);
       if (activeRunKind === 'fallen') tickFallen(FIXED);
       if (activeRunKind === 'crusade') tickCrusade(FIXED);
+      if (activeRunKind === 'custom') tickCustomStage(FIXED);
     }
+    // Drain the same events the render loop drains, so a stepped run records
+    // clears, bosses and chapter progress exactly like a played one.
+    drainEvents();
     syncScreens();
     updateHud();
   },
@@ -18892,6 +20644,8 @@ function readVoiceSave() {
 
 let voiceSave = readVoiceSave();
 let voiceStatus = { configured: false, model: VOICE_MODEL, online: true, checked: false, error: '' };
+let trailerBakedShots = new Set();
+let voiceStatusPromise = null;
 let voiceAudio = null;
 let voiceObjectUrl = null;
 let voiceSpeaking = false;
@@ -18925,21 +20679,29 @@ function saveVoiceSave() {
   updateVoiceBadge();
 }
 
-async function refreshVoiceStatus() {
-  try {
-    const response = await fetch('/api/voice', { headers: { Accept: 'application/json' } });
-    const status = await response.json();
-    voiceStatus = {
-      configured: !!status.configured,
-      model: status.model || VOICE_MODEL,
-      online: true,
-      checked: true,
-      error: '',
-    };
-  } catch {
-    voiceStatus = { configured: false, model: VOICE_MODEL, online: false, checked: true, error: 'server-unreachable' };
-  }
-  return updateVoiceBadge();
+function refreshVoiceStatus({ force = false } = {}) {
+  if (voiceStatusPromise && !force) return voiceStatusPromise;
+  voiceStatusPromise = (async () => {
+    try {
+      const response = await fetch('/api/voice', { headers: { Accept: 'application/json' } });
+      const status = await response.json();
+      trailerBakedShots = new Set(Array.isArray(status.trailerBaked) ? status.trailerBaked : []);
+      voiceStatus = {
+        configured: !!status.configured,
+        model: status.model || VOICE_MODEL,
+        online: true,
+        checked: true,
+        error: '',
+      };
+    } catch {
+      trailerBakedShots = new Set();
+      voiceStatus = { configured: false, model: VOICE_MODEL, online: false, checked: true, error: 'server-unreachable' };
+    }
+    return updateVoiceBadge();
+  })().finally(() => {
+    voiceStatusPromise = null;
+  });
+  return voiceStatusPromise;
 }
 
 function stopVoice() {
@@ -18957,19 +20719,22 @@ function stopVoice() {
   }
 }
 
-function speakBrowser(text, castId) {
+function speakBrowser(text, castId, { lang = '' } = {}) {
   if (!hasBrowserVoice()) return false;
   const member = castFor(castId);
+  const targetLang = lang || member.fallback.lang;
   try {
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = member.fallback.lang;
+    utterance.lang = targetLang;
     utterance.rate = member.fallback.rate;
     utterance.pitch = member.fallback.pitch;
     utterance.volume = voiceSave.volume / 100;
     const voices = window.speechSynthesis.getVoices ? window.speechSynthesis.getVoices() : [];
-    const indo = voices.find((v) => /^id([-_]|$)/i.test(v.lang)) || voices.find((v) => /indones/i.test(v.name));
-    if (indo) utterance.voice = indo;
+    const preferred = /^en/i.test(targetLang)
+      ? (voices.find((v) => /^en([-_]|$)/i.test(v.lang)) || voices.find((v) => /english/i.test(v.name)))
+      : (voices.find((v) => /^id([-_]|$)/i.test(v.lang)) || voices.find((v) => /indones/i.test(v.name)));
+    if (preferred) utterance.voice = preferred;
     window.speechSynthesis.speak(utterance);
     return true;
   } catch {
@@ -18977,11 +20742,32 @@ function speakBrowser(text, castId) {
   }
 }
 
+async function playAudioUrl(url) {
+  voiceAudio = new Audio(url);
+  voiceAudio.volume = voiceSave.volume / 100;
+  voiceAudio.addEventListener('ended', () => { voiceSpeaking = false; }, { once: true });
+  await voiceAudio.play();
+  voiceSpeaking = true;
+  voiceSave.linesPlayed += 1;
+  voiceSave.providerUsed = 'elevenlabs';
+  saveVoiceSave();
+  return 'elevenlabs';
+}
+
 // One entry point for every spoken line: boss dialogue, prologue and trailer.
 // Returns the provider that actually ran, which the smoke tests assert on.
-async function speakVoiceLine(text, castId = 'narrator') {
+async function speakVoiceLine(text, castId = 'narrator', { staticUrl = '', lang = '' } = {}) {
   const request = voiceRequestFor({ text, cast: castId, save: voiceSave });
   if (!request.ok) return 'none';
+  if (!voiceSave.enabled) return 'none';
+  stopVoice();
+  if (staticUrl && voiceSave.preferElevenLabs) {
+    try {
+      return await playAudioUrl(staticUrl);
+    } catch {
+      /* fall through to live API or browser voice */
+    }
+  }
   const provider = resolveVoiceProvider({
     save: voiceSave,
     configured: voiceStatus.configured,
@@ -18989,9 +20775,8 @@ async function speakVoiceLine(text, castId = 'narrator') {
     browserAvailable: hasBrowserVoice(),
   });
   if (provider === 'none') return 'none';
-  stopVoice();
   if (provider === 'browser') {
-    const played = speakBrowser(request.body.text, castId);
+    const played = speakBrowser(request.body.text, castId, { lang });
     voiceSave.linesPlayed += played ? 1 : 0;
     voiceSave.providerUsed = played ? 'browser' : 'none';
     saveVoiceSave();
@@ -19007,20 +20792,12 @@ async function speakVoiceLine(text, castId = 'narrator') {
     const blob = await response.blob();
     if (!blob.size) throw new Error('empty audio');
     voiceObjectUrl = URL.createObjectURL(blob);
-    voiceAudio = new Audio(voiceObjectUrl);
-    voiceAudio.volume = voiceSave.volume / 100;
-    voiceAudio.addEventListener('ended', () => { voiceSpeaking = false; }, { once: true });
-    await voiceAudio.play();
-    voiceSpeaking = true;
-    voiceSave.linesPlayed += 1;
-    voiceSave.providerUsed = 'elevenlabs';
-    saveVoiceSave();
-    return 'elevenlabs';
+    return await playAudioUrl(voiceObjectUrl);
   } catch (error) {
     // A missing key, a quota error or a blocked request all degrade to the
     // browser voice instead of failing the scene.
     voiceStatus = { ...voiceStatus, configured: false, error: String(error.message || error) };
-    const played = speakBrowser(request.body.text, castId);
+    const played = speakBrowser(request.body.text, castId, { lang });
     voiceSave.providerUsed = played ? 'browser' : 'none';
     voiceSave.linesPlayed += played ? 1 : 0;
     saveVoiceSave();
@@ -19057,7 +20834,17 @@ function paintTrailer() {
     if (eyebrow) eyebrow.textContent = info.shot.eyebrow;
     if (line) line.textContent = info.shot.narration;
     if (voiceSave.autoplayInTrailer && voiceSave.enabled) {
-      void speakVoiceLine(info.shot.narration, info.shot.cast);
+      const targetIndex = info.index;
+      const targetShot = info.shot;
+      const ready = voiceStatus.checked ? Promise.resolve() : refreshVoiceStatus();
+      void ready.then(() => {
+        if (!trailerActive || trailerIndex !== targetIndex) return;
+        const staticUrl = trailerBakedShots.has(targetShot.id) ? `./assets/voice/trailer/${targetShot.id}.mp3` : '';
+        void speakVoiceLine(targetShot.narration, targetShot.cast, {
+          staticUrl,
+          lang: 'en-US',
+        });
+      });
     }
   }
 }
@@ -19091,6 +20878,8 @@ function startTrailerPlayback() {
   trailerHandle = requestAnimationFrame(trailerLoop);
 }
 
+const TRAILER_SEEN_KEY = 'ashen-vow-trailer-seen-v1';
+
 function openTrailer() {
   menuView = 'trailer';
   audio.init();
@@ -19109,6 +20898,15 @@ function closeTrailer() {
   if (trailerHandle) cancelAnimationFrame(trailerHandle);
   trailerHandle = 0;
   stopVoice();
+  try { localStorage.setItem(TRAILER_SEEN_KEY, '1'); } catch { /* ignore */ }
+  // A custom stage may use the trailer as its opener: resume the run instead
+  // of dropping back to the title screen.
+  if (customIntroCallback) {
+    const resume = customIntroCallback;
+    customIntroCallback = null;
+    resume();
+    return;
+  }
   if (menuView === 'trailer') menuView = 'title';
   syncScreens();
 }
@@ -19190,7 +20988,35 @@ Object.assign(window.__ashen, {
   },
 });
 
+Object.assign(window.__ashen, {
+  playBossLine: (kind, key = 'intro', index = 0) => {
+    const row = bossVoiceLine(kind, key, index);
+    return playBossLine(kind, key, index, row ? { speaker: row.speaker, text: row.text } : { text: '' });
+  },
+  stopBossVoice,
+  cycleBossVoiceMode,
+  setBossVoice: (patch = {}) => {
+    bossVoiceSettings = sanitizeBossVoiceSettings({ ...bossVoiceSettings, ...patch });
+    saveBossVoiceSettings();
+    return { ...bossVoiceSettings };
+  },
+  loadBossVoiceManifest,
+});
+
 Object.defineProperties(window.__ashen, {
+  bossVoice: {
+    configurable: true,
+    get() {
+      return {
+        settings: { ...bossVoiceSettings },
+        recorded: bossVoiceRecorded.size,
+        last: { ...bossVoiceLast },
+        active: bossVoiceFx ? bossVoiceFx.active.size : 0,
+        summary: bossVoiceSummary(),
+        button: $('btn-dialogue-voice')?.textContent || '',
+      };
+    },
+  },
   voice: {
     configurable: true,
     get() {
@@ -19223,5 +21049,12 @@ Object.defineProperties(window.__ashen, {
 
 updateVoiceBadge();
 void refreshVoiceStatus();
+updateBossVoiceButton();
+void loadBossVoiceManifest();
 
 window.__ashenBootReady?.();
+try {
+  if (!navigator.webdriver && localStorage.getItem(TRAILER_SEEN_KEY) !== '1') {
+    openTrailer();
+  }
+} catch { /* ignore storage errors */ }
