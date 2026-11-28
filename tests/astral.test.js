@@ -25,7 +25,7 @@ test('Arc VI registers five regions and twenty rooms after Arc V', () => {
   assert.equal(ASTRAL_ROOMS[0].id, ASTRAL_ROOM_START);
   assert.equal(ASTRAL_ROOMS.at(-1).id, ASTRAL_ROOM_START + 19);
   assert.equal(ROOMS.length, 14);
-  assert.equal(ALL_ROOMS.length, 874);
+  assert.equal(ALL_ROOMS.length, 901);
   assert.deepEqual(ALL_ROOMS.slice(ASTRAL_ROOM_START, ASTRAL_ROOM_START + ASTRAL_ROOMS.length), ASTRAL_ROOMS);
   const report = validateAstralRooms();
   assert.equal(report.ok, true, report.errors.join('\n'));

@@ -61,6 +61,14 @@ export const CREDIT_ARCS = [
     line: 'Paladin Templar gugur. Celah di langit terbuka.',
   },
   {
+    id: 'rift',
+    numeral: 'ARC IV',
+    title: 'THE RIFT',
+    subtitle: 'Jahitan di antara dua kenyataan.',
+    bosses: { rift: ['rift_devilish_scum'] },
+    line: 'The Devilish Scum tumbang. Kedua kenyataan kembali bernapas.',
+  },
+  {
     id: 'astral',
     numeral: 'ARC VI',
     title: 'THE ASTRAL DOMINION',

@@ -124,6 +124,13 @@ import {
   isSpiritSource,
   spiritBounty,
 } from './hunter.js';
+import {
+  RIFT_ROOMS,
+  RIFT_ENEMY_INFO,
+  RIFT_BOSS_INFO,
+  RIFT_FRACTURE_INTERVAL,
+  RIFT_PHASE_SHIFT_COOLDOWN,
+} from './rift.js';
 
 export const WEAPON_ELEMENTS = {
   sword: 'physical', pike: 'physical', bow: 'physical', greataxe: 'physical', twinblades: 'wind',
@@ -1166,8 +1173,8 @@ SHOP_ITEMS.push(...ECLIPSE_SHOP_ITEMS);
 
 // Legacy rooms stay exactly as they were so old saves, map layout and tests keep
 // their meaning. The campaign is a second set of rooms appended at indices 14+.
-export const ALL_ROOMS = [...ROOMS, ...EXPANSION_ROOMS, ...ATLAS_ROOMS, ...COURT_ROOMS, ...FAIRY_ROOMS, ...FALLEN_ROOMS, ...CRUSADE_ROOMS, ...ASTRAL_ROOMS, ...ECLIPSE_ROOMS, ...GODFALL_ROOMS, ...CISTERN_ROOMS, ...LANTERN_ROOMS, ...FRONTIER_ROOMS, ...OVERDRIVE_ROOMS];
-export const ALL_ENEMY_INFO = { ...ENEMY_INFO, ...EXPANSION_ENEMY_INFO, ...ATLAS_ENEMY_INFO, ...COURT_ENEMY_INFO, ...FAIRY_ENEMY_INFO, ...FALLEN_ENEMY_INFO, ...CRUSADE_ENEMY_INFO, ...ASTRAL_ENEMY_INFO, ...ECLIPSE_ENEMY_INFO, ...CISTERN_ENEMY_INFO, ...LANTERN_ENEMY_INFO, ...FRONTIER_ENEMY_INFO, ...FRONTIER_ELITE_INFO, ...OVERDRIVE_ENEMY_INFO };
+export const ALL_ROOMS = [...ROOMS, ...EXPANSION_ROOMS, ...ATLAS_ROOMS, ...COURT_ROOMS, ...FAIRY_ROOMS, ...FALLEN_ROOMS, ...CRUSADE_ROOMS, ...ASTRAL_ROOMS, ...ECLIPSE_ROOMS, ...GODFALL_ROOMS, ...CISTERN_ROOMS, ...LANTERN_ROOMS, ...FRONTIER_ROOMS, ...OVERDRIVE_ROOMS, ...RIFT_ROOMS];
+export const ALL_ENEMY_INFO = { ...ENEMY_INFO, ...EXPANSION_ENEMY_INFO, ...ATLAS_ENEMY_INFO, ...COURT_ENEMY_INFO, ...FAIRY_ENEMY_INFO, ...FALLEN_ENEMY_INFO, ...CRUSADE_ENEMY_INFO, ...ASTRAL_ENEMY_INFO, ...ECLIPSE_ENEMY_INFO, ...CISTERN_ENEMY_INFO, ...LANTERN_ENEMY_INFO, ...FRONTIER_ENEMY_INFO, ...FRONTIER_ELITE_INFO, ...OVERDRIVE_ENEMY_INFO, ...RIFT_ENEMY_INFO };
 
 const BOSS_INFO = {
   warden: {
@@ -1339,7 +1346,7 @@ const BOSS_INFO = {
   },
 };
 
-export const ALL_BOSS_INFO = { ...BOSS_INFO, ...EXPANSION_BOSS_INFO, ...ATLAS_BOSS_INFO, ...COURT_BOSS_INFO, ...PACK_BOSS_INFO, ...FAIRY_BOSS_INFO, ...FALLEN_BOSS_INFO, ...CRUSADE_BOSS_INFO, ...ASTRAL_BOSS_INFO, ...ECLIPSE_BOSS_INFO, ...GODFALL_BOSS_INFO, ...CISTERN_BOSS_INFO, ...LANTERN_BOSS_INFO, ...FRONTIER_BOSS_INFO, ...OVERDRIVE_BOSS_INFO };
+export const ALL_BOSS_INFO = { ...BOSS_INFO, ...EXPANSION_BOSS_INFO, ...ATLAS_BOSS_INFO, ...COURT_BOSS_INFO, ...PACK_BOSS_INFO, ...FAIRY_BOSS_INFO, ...FALLEN_BOSS_INFO, ...CRUSADE_BOSS_INFO, ...ASTRAL_BOSS_INFO, ...ECLIPSE_BOSS_INFO, ...GODFALL_BOSS_INFO, ...CISTERN_BOSS_INFO, ...LANTERN_BOSS_INFO, ...FRONTIER_BOSS_INFO, ...OVERDRIVE_BOSS_INFO, ...RIFT_BOSS_INFO };
 export const EXPANSION_BOSS_IDS = Object.keys(EXPANSION_BOSS_INFO);
 
 export const CODEX = {
@@ -1563,6 +1570,15 @@ export class AshenGame {
     this.damageDealt = 0;
     this.damageReceived = 0;
     this.combat = createCombatState();
+    // Arc IV Dual-Reality Fracture & campaign-wide Oath Resonance Style Meter
+    this.fracturePhase = 0;
+    this.fractureTimer = 0;
+    this.fractureInterval = RIFT_FRACTURE_INTERVAL;
+    this.resonance = 0;
+    this.resonanceRank = 'D';
+    this.resonanceTimer = 0;
+    this.resonanceHits = 0;
+    this.bestResonance = 'D';
 
     this.player = {
       x: 0,
@@ -1618,6 +1634,7 @@ export class AshenGame {
       spiritWardTimer: 0,
       spiritWardReduction: 0,
       spiritWardFlash: 0,
+      phaseShiftCooldown: 0,
       quickItem: 'shuriken',
       damageBuff: 1,
       damageBuffTimer: 0,
@@ -1757,7 +1774,11 @@ export class AshenGame {
     this.rebuildNav();
     this.hazardState = {};
     this.hazardTime = 0;
+    this.fracturePhase = 0;
+    this.fractureTimer = 0;
+    this.fractureInterval = room.fractureInterval || RIFT_FRACTURE_INTERVAL;
     const p = this.player;
+    p.phaseShiftCooldown = 0;
     p.x = room.spawn.x;
     p.y = room.spawn.y;
     p.vx = 0;
@@ -1808,7 +1829,11 @@ export class AshenGame {
     this.bossIntro = 0;
     this.hazardState = {};
     this.hazardTime = 0;
+    this.fracturePhase = 0;
+    this.fractureTimer = 0;
+    this.fractureInterval = room.fractureInterval || RIFT_FRACTURE_INTERVAL;
     const p = this.player;
+    p.phaseShiftCooldown = 0;
     p.x = room.spawn.x;
     p.y = room.spawn.y;
     p.vx = 0;
@@ -2185,6 +2210,87 @@ export class AshenGame {
     return Math.abs(p.x + p.w / 2 - (g.x + g.w / 2)) < 170 && p.y + p.h > g.y;
   }
 
+  isPlatformActive(plat) {
+    if (!plat?.reality) return true;
+    return (plat.reality === 'a' && this.fracturePhase === 0) || (plat.reality === 'b' && this.fracturePhase === 1);
+  }
+
+  resonanceRankFor(value) {
+    if (value >= 92) return 'ASHEN';
+    if (value >= 75) return 'S';
+    if (value >= 55) return 'A';
+    if (value >= 35) return 'B';
+    if (value >= 15) return 'C';
+    return 'D';
+  }
+
+  resonanceDamageMult() {
+    if ((this.resonance || 0) < 15) return 1;
+    return 1 + clamp((this.resonance || 0) / 100, 0, 1) * 0.3;
+  }
+
+  resonanceSpeedMult() {
+    return 1 + clamp((this.resonance || 0) / 100, 0, 1) * 0.12;
+  }
+
+  gainResonance(points = 10, reason = 'hit') {
+    const prevRank = this.resonanceRank || 'D';
+    this.resonance = clamp((this.resonance || 0) + points, 0, 100);
+    this.resonanceTimer = 4.5;
+    this.resonanceHits = (this.resonanceHits || 0) + 1;
+    this.resonanceRank = this.resonanceRankFor(this.resonance);
+    const order = ['D', 'C', 'B', 'A', 'S', 'ASHEN'];
+    if (order.indexOf(this.resonanceRank) > order.indexOf(this.bestResonance || 'D')) {
+      this.bestResonance = this.resonanceRank;
+    }
+    if (order.indexOf(this.resonanceRank) > order.indexOf(prevRank)) {
+      this.emit({ type: 'resonanceRank', rank: this.resonanceRank, resonance: Math.round(this.resonance), reason });
+    }
+    return this.resonanceRank;
+  }
+
+  dropResonance(amount = 25) {
+    this.resonance = Math.max(0, (this.resonance || 0) - amount);
+    this.resonanceRank = this.resonanceRankFor(this.resonance);
+    return this.resonanceRank;
+  }
+
+  phaseShift(force = false) {
+    const p = this.player;
+    if (this.state !== 'playing' || !p) return false;
+    if (!force && (p.phaseShiftCooldown || 0) > 0) return false;
+    this.fracturePhase = this.fracturePhase === 0 ? 1 : 0;
+    this.fractureTimer = 0;
+    p.phaseShiftCooldown = RIFT_PHASE_SHIFT_COOLDOWN;
+    p.invuln = Math.max(p.invuln || 0, 0.24);
+    this.gainResonance(12, 'phaseShift');
+    const px = p.x + p.w / 2;
+    const py = p.y + p.h / 2;
+    for (const e of this.enemies) {
+      if (e.dead) continue;
+      const ex = e.x + e.w / 2;
+      const ey = e.y + e.h / 2;
+      if (Math.hypot(ex - px, ey - py) <= 185) {
+        if (e.veil) {
+          e.veil = false;
+          this.emit({ type: 'veilBroken', target: e.type });
+        }
+        e.hp -= Math.round(18 * this.resonanceDamageMult());
+        e.hitFlash = 0.16;
+        e.state = 'hurt';
+        e.timer = 0.28;
+        if (e.hp <= 0) {
+          e.dead = true;
+          this.kills += 1;
+        }
+      }
+    }
+    this.shake = Math.max(this.shake, 0.28);
+    this.emit({ type: 'fractureFlip', phase: this.fracturePhase, manual: true });
+    this.burst(px, py, 18, this.fracturePhase === 0 ? '#ff6b8b' : '#7de8ff', 220);
+    return true;
+  }
+
   // ── main update ──────────────────────────────────────────────────────────
   update(dt, input = {}) {
     if (!dt || dt <= 0) return;
@@ -2200,6 +2306,22 @@ export class AshenGame {
         this.player.hitFlash = Math.max(0, this.player.hitFlash - dt);
         this.wallHitFlash = Math.max(0, this.wallHitFlash - dt);
         if (this.gateLock > 0) this.gateLock = Math.max(0, this.gateLock - dt);
+        if (this.player.phaseShiftCooldown > 0) this.player.phaseShiftCooldown = Math.max(0, this.player.phaseShiftCooldown - dt);
+        if (this.room?.rift) {
+          this.fractureTimer = (this.fractureTimer || 0) + dt;
+          const interval = this.fractureInterval || RIFT_FRACTURE_INTERVAL;
+          if (this.fractureTimer >= interval) {
+            this.fractureTimer = 0;
+            this.fracturePhase = this.fracturePhase === 0 ? 1 : 0;
+            this.emit({ type: 'fractureFlip', phase: this.fracturePhase, manual: false });
+          }
+        }
+        if (this.resonanceTimer > 0) {
+          this.resonanceTimer = Math.max(0, this.resonanceTimer - dt);
+        } else if (this.resonance > 0) {
+          this.resonance = Math.max(0, this.resonance - 12 * dt);
+          this.resonanceRank = this.resonanceRankFor(this.resonance);
+        }
         this.shake = Math.max(0, this.shake - dt * 2.2);
         this.updatePlayer(dt, input, pressed);
         this.updateAllies(dt);
@@ -2335,6 +2457,9 @@ export class AshenGame {
     ) {
       this.useWeaponSkill();
     }
+    if (pressed('phaseShift')) {
+      this.phaseShift();
+    }
 
     // horizontal movement
     const moving = (input.left ? -1 : 0) + (input.right ? 1 : 0);
@@ -2343,7 +2468,7 @@ export class AshenGame {
       // rooted while drinking
     } else if (moving !== 0) {
       p.facing = moving;
-      const speedMult = p.speedMult || 1;
+      const speedMult = (p.speedMult || 1) * this.resonanceSpeedMult();
       const target = moving * 255 * speedMult * control;
       const accel = (p.onGround ? 2400 : 1500) * dt;
       p.vx += clamp(target - p.vx, -accel, accel);
@@ -2428,6 +2553,7 @@ export class AshenGame {
     }
     if (!bounced) {
       for (const plat of this.room.platforms) {
+        if (!this.isPlatformActive(plat)) continue;
         if (p.x + p.w <= plat.x || p.x >= plat.x + plat.w) continue;
         if (p.vy >= 0 && prevBottom <= plat.y + 4 && p.y + p.h >= plat.y) {
           p.y = plat.y - p.h;
@@ -3664,6 +3790,14 @@ export class AshenGame {
     let dmg = Number(def.dmg) || 0;
     if (spirit && def.spiritBane) dmg *= 1.25;
     if (marked) dmg *= HUNTER_MARK_BONUS;
+    if (e.veil) {
+      if ((this.resonance || 0) >= 55) {
+        e.veil = false;
+        this.emit({ type: 'veilBroken', target: e.type });
+      } else {
+        dmg *= 0.5;
+      }
+    }
     const crit = (p.critChance || 0) > 0 && Math.random() < p.critChance;
     const counter = (this.combat?.counterWindow || 0) > 0;
     if (counter) {
@@ -3674,11 +3808,12 @@ export class AshenGame {
     const dealt = calculateDamage({
       attackerId: 'player', targetId: e.id, baseDamage: dmg,
       damageType: def.element || WEAPON_ELEMENTS[p.weapon] || 'physical', critical: crit,
-      criticalMultiplier: counter ? 1.35 : 1.5, elementalModifier: p.damageMult * (p.damageBuff || 1) * (this._abilityScale || 1),
+      criticalMultiplier: counter ? 1.35 : 1.5, elementalModifier: p.damageMult * (p.damageBuff || 1) * (this._abilityScale || 1) * this.resonanceDamageMult(),
       defenseMultiplier: 1, targetValid: !e.dead, targetInvulnerable: false,
     });
     e.hp -= dealt;
     this.damageDealt = (this.damageDealt || 0) + dealt;
+    this.gainResonance(def.name === 'heavy' ? 12 : 8, 'hit');
     grantWeaponMastery(this.combat, p.weapon, dealt);
     if (registerBreak(this.combat, def.breakPower || (def.name === 'heavy' ? 30 : 16))) {
       e.state = 'broken';
@@ -3744,7 +3879,7 @@ export class AshenGame {
   hurtBoss(amount, knock = 0, dir = 1, crit = false, element = null) {
     const b = this.boss;
     if (!b || b.dying || b.invuln > 0) return;
-    amount = calculateDamage({ attackerId: 'player', targetId: b.kind, baseDamage: amount * (this._abilityScale || 1), damageType: element || 'physical' });
+    amount = calculateDamage({ attackerId: 'player', targetId: b.kind, baseDamage: amount * (this._abilityScale || 1) * this.resonanceDamageMult(), damageType: element || 'physical' });
     // Purity Shield: the boss loses shield equal to the incoming blow but only
     // bleeds 15% of it to HP, so breaking the shield is the real objective.
     if (b.purityShield > 0) {
@@ -3784,6 +3919,7 @@ export class AshenGame {
     b.hp = Math.max(0, b.hp - amount);
     if (!Number.isFinite(b.hp)) b.hp = 0;
     this.damageDealt = (this.damageDealt || 0) + amount;
+    this.gainResonance(crit ? 14 : 9, 'bossHit');
     b.hitFlash = 0.1;
     b.x = clamp(b.x + dir * knock * 0.03, 40, WORLD_W - b.w - 40);
     this.hitstop = Math.max(this.hitstop, crit ? 0.07 : 0.035);
@@ -3849,6 +3985,7 @@ export class AshenGame {
         p.counterWindow = 1.2;
         p.abilityCooldown = 0;
         p.invuln = Math.max(p.invuln, 0.18);
+        this.gainResonance(16, 'dodge');
         this.emit({ type: 'perfectDodge', x: p.x + p.w / 2, y: p.y + p.h / 2 });
         this.burst(p.x + p.w / 2, p.y + p.h / 2, 10, '#eaf6ff', 150);
         this.shake = Math.max(this.shake, 0.08);
@@ -3865,6 +4002,7 @@ export class AshenGame {
     const incoming = Math.max(1, Math.round(amount * (p.incomingMult || 1)));
     p.hp = Math.max(0, p.hp - incoming);
     this.damageReceived = (this.damageReceived || 0) + incoming;
+    this.dropResonance(25);
     p.invuln = 0.75;
     p.hitFlash = 0.25;
     p.attack = null;
@@ -3905,6 +4043,7 @@ export class AshenGame {
     const foot = e.y + e.h;
     const probeX = e.x + e.w / 2 + dir * (e.w / 2 + 20);
     for (const pl of this.room.platforms) {
+      if (!this.isPlatformActive(pl)) continue;
       if (probeX < pl.x || probeX > pl.x + pl.w) continue;
       if (Math.abs(pl.y - foot) < 16) return true;
     }
@@ -3919,6 +4058,7 @@ export class AshenGame {
     e.y += e.vy * dt;
     e.onGround = false;
     for (const plat of this.room.platforms) {
+      if (!this.isPlatformActive(plat)) continue;
       if (e.x + e.w <= plat.x || e.x >= plat.x + plat.w) continue;
       if (e.vy >= 0 && prevBottom <= plat.y + 4 && e.y + e.h >= plat.y) {
         e.y = plat.y - e.h;
@@ -5236,6 +5376,7 @@ export class AshenGame {
       ally.y += ally.vy * dt;
       ally.onGround = false;
       for (const plat of this.room.platforms) {
+        if (!this.isPlatformActive(plat)) continue;
         if (ally.x + ally.w <= plat.x || ally.x >= plat.x + plat.w) continue;
         if (ally.vy >= 0 && prevBottom <= plat.y + 4 && ally.y + ally.h >= plat.y) {
           ally.y = plat.y - ally.h;

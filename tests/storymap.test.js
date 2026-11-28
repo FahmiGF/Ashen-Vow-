@@ -72,23 +72,23 @@ test('the canonical credits arcs are all represented in the story map', () => {
   }
 });
 
-test('the only locked arc is the deliberately empty Rift', () => {
+test('Arc IV The Rift is now unlocked and playable alongside the other arcs', () => {
   const locked = STORY_ARCS.filter((arc) => arc.kind === 'locked');
-  assert.equal(locked.length, 1);
-  assert.equal(locked[0].id, 'rift');
-  assert.equal(locked[0].rooms ?? 0, 0);
-  assert.equal(locked[0].bosses, 0);
-  assert.equal(locked[0].chapters, 0);
-  assert.equal(storyStatusLabel(locked[0]), 'TERKUNCI');
-  assert.equal(storyKindLabel(locked[0]), 'CELAH TERKUNCI');
+  assert.equal(locked.length, 0);
+  const rift = storyArcFor('rift');
+  assert.ok(rift);
+  assert.equal(rift.kind, 'main');
+  assert.equal(rift.bosses, 6);
+  assert.equal(rift.chapters, 5);
+  assert.equal(storyStatusLabel(rift), 'RILIS');
 });
 
 test('shipped arcs claim rooms that exist in ALL_ROOMS', () => {
   const roomCount = ALL_ROOMS.length;
-  assert.equal(roomCount, 874, 'the room table is the reference count');
+  assert.equal(roomCount, 901, 'the room table is the reference count');
 
   const claims = STORY_ARCS.filter((arc) => /\d+ ruang/.test(arc.scope));
-  assert.ok(claims.length >= 8);
+  assert.ok(claims.length >= 9);
 
   let total = 0;
   for (const arc of claims) {
@@ -97,9 +97,9 @@ test('shipped arcs claim rooms that exist in ALL_ROOMS', () => {
     total += count;
   }
 
-  // 474 authored arc rooms + 100 Echoes levels (14–113) + 100 Godfall floors
-  // (562–661) + 100 Infinite Frontiers (674–773) + 100 Overdrive (774–873) = 874.
-  assert.equal(total, 474);
+  // 474 authored arc rooms + 27 Arc IV Rift rooms (874-900) + 100 Echoes levels (14–113) + 100 Godfall floors
+  // (562–661) + 100 Infinite Frontiers (674–773) + 100 Overdrive (774–873) = 901.
+  assert.equal(total, 501);
   const echoes = storyArcFor('echoes');
   assert.match(echoes.scope, /100 level/);
   assert.equal(total + 100 + 100 + 100 + 100, roomCount);
@@ -108,9 +108,9 @@ test('shipped arcs claim rooms that exist in ALL_ROOMS', () => {
 test('the summary counts the campaign without mutating it', () => {
   const summary = storyMapSummary();
   assert.equal(summary.total, STORY_ARCS.length);
-  assert.equal(summary.locked, 1);
-  assert.equal(summary.shipped, STORY_ARCS.length - 1);
-  assert.ok(summary.main >= 7);
+  assert.equal(summary.locked, 0);
+  assert.equal(summary.shipped, STORY_ARCS.length);
+  assert.ok(summary.main >= 8);
   assert.ok(summary.bosses >= 100, 'the map totals every boss in the game');
   assert.equal(summary.current, STORY_CURRENT_ID);
   assert.equal(summary.currentIndex, STORY_ARCS.length - 1);

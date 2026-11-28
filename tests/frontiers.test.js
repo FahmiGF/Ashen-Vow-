@@ -55,8 +55,8 @@ test('the ladders appends 100 rooms after the Lanternwake', () => {
     assert.ok(room.particle, `room ${room.id} has a particle mood`);
   });
   assert.equal(roomById(673).name, 'Ambang Sumbu', 'the Lanternwake still ends at 673');
-  assert.equal(ALL_ROOMS.length, 874);
-  assert.equal(ALL_ROOMS.at(-1).id, 873);
+  assert.equal(ALL_ROOMS.length, 901);
+  assert.equal(ALL_ROOMS.at(-1).id, 900);
   assert.equal(roomById(773).boss, 'aethron_origin');
   assert.ok(ZONES.frontier, 'the frontier zone exists');
   assert.ok(TRACKS.frontier && TRACKS.frontierBoss, 'both frontier tracks exist');

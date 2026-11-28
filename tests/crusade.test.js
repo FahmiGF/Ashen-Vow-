@@ -359,11 +359,11 @@ test('archive, summary and camp figure react to progress', () => {
 test('the engine registers every crusade room, enemy, and boss', () => {
   const start = ALL_ROOMS.indexOf(CRUSADE_ROOMS[0]);
   assert.deepEqual(ALL_ROOMS.slice(start, start + CRUSADE_ROOM_COUNT), CRUSADE_ROOMS);
-  assert.equal(ALL_ROOMS.length, 874);
+  assert.equal(ALL_ROOMS.length, 901);
   assert.equal(ALL_ROOMS[start + CRUSADE_ROOM_COUNT - 1].id, CRUSADE_ROOM_START + CRUSADE_ROOM_COUNT - 1);
   assert.ok(ALL_ENEMY_INFO.crusader_recruit.crusade);
   assert.equal(Object.keys(ALL_BOSS_INFO).filter((k) => k.startsWith('crusade_')).length, 5);
-  assert.equal(CRUSADE_RIFT.locked, true);
+  assert.equal(CRUSADE_RIFT.locked, false);
   assert.equal(CRUSADE_NAME, 'The Radiant Crusade');
 });
 

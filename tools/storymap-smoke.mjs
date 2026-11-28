@@ -175,8 +175,8 @@ try {
       text: detail.textContent,
     };
   })()`);
-  check(rift.badge.trim() === 'TERKUNCI' && rift.locked, 'the Rift is badged as locked');
-  check(/belum ada ruang/i.test(rift.text), 'the Rift explains that it has no rooms');
+  check(rift.badge.trim() === 'RILIS' && !rift.locked, 'the Rift is badged as released');
+  check(/27 ruang/i.test(rift.text) && /874–900/.test(rift.text), 'the Rift reports its 27 rooms (874-900)');
 
   await evaluate(`document.querySelector('[data-story-step="-1"]').click()`);
   await sleep(150);

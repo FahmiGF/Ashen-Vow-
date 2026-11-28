@@ -256,12 +256,12 @@ test('Update XV remains documented after the Unwritten Wing expansion', () => {
   }
 });
 
-test('the latest update documents Overdrive playable and Wave Defense arsenal', () => {
+test('the latest update documents Arc IV The Rift, Phase-Shift [F] & Oath Resonance', () => {
   const latest = LATEST_UPDATE;
-  assert.equal(latest.version, '0.43.0');
+  assert.equal(latest.version, '0.44.0');
   assert.equal(latest.version, GAME_VERSION);
   const text = [latest.title, latest.summary, ...latest.highlights, ...(latest.fixes || [])].join(' ');
-  for (const pattern of [/Overdrive/i, /774–873/, /201–300/, /The First God/i, /\[Q\]/, /Legendaris/i, /874/, /Wave Defense/i, /SVG/i, /4×/]) {
+  for (const pattern of [/The Rift/i, /874–900/, /The Devilish Scum/i, /\[F\]/, /Oath Resonance/i, /ASHEN/, /901/, /Phase-Shift/i]) {
     assert.match(text, pattern);
   }
 });

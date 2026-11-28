@@ -1385,8 +1385,24 @@ export class Renderer {
     }
   }
 
-  drawBiomePlatforms(ctx, room, pal, t) {
+  drawBiomePlatforms(ctx, room, pal, t, game = null) {
+    const activePhase = game?.fracturePhase ?? 0;
     for (const plat of room.platforms) {
+      const inactive =
+        (plat.reality === 'a' && activePhase !== 0) ||
+        (plat.reality === 'b' && activePhase !== 1);
+      if (inactive) {
+        ctx.save();
+        ctx.globalAlpha = 0.24;
+        ctx.strokeStyle = plat.reality === 'a' ? '#ff6b8b' : '#7de8ff';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([7, 5]);
+        ctx.strokeRect(plat.x, plat.y, plat.w, plat.h);
+        ctx.fillStyle = plat.reality === 'a' ? 'rgba(255, 107, 139, 0.14)' : 'rgba(125, 232, 255, 0.14)';
+        ctx.fillRect(plat.x, plat.y, plat.w, plat.h);
+        ctx.restore();
+        continue;
+      }
       const isFloor = plat.h > 40;
       const g = this.cachedGradient(`plat:${pal.mid}:${pal.low}:${pal.top}:${plat.y}:${plat.h}`, (c) => {
         const grad = c.createLinearGradient(0, plat.y, 0, plat.y + plat.h);
@@ -2133,7 +2149,7 @@ export class Renderer {
   // ── world objects ────────────────────────────────────────────────────────
   drawPlatforms(ctx, room, pal, t) {
     if (room.biome) {
-      this.drawBiomePlatforms(ctx, room, pal, t);
+      this.drawBiomePlatforms(ctx, room, pal, t, game);
       return;
     }
     if (room.id >= 8 && room.id < 14) {
@@ -5524,6 +5540,16 @@ export class Renderer {
     if (game.state === 'dead') {
       ctx.fillStyle = `rgba(40,4,4,${clamp(game.deathTimer * 0.5, 0, 0.55)})`;
       ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+    }
+
+    // Arc IV: Dual-Reality Fracture warning tint during final 1.5s before auto-flip
+    if (!spectate && game.room?.rift && game.state === 'playing') {
+      const remaining = Math.max(0, (game.fractureInterval || 8) - (game.fractureTimer || 0));
+      if (remaining <= 1.5 && !this.options?.reduceFlashing) {
+        const alpha = 0.06 + 0.06 * Math.sin(t * 14);
+        ctx.fillStyle = game.fracturePhase === 0 ? `rgba(125,232,255,${alpha})` : `rgba(255,92,116,${alpha})`;
+        ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+      }
     }
   }
 

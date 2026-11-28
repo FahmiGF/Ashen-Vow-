@@ -51,9 +51,9 @@ test('Overdrive appends 100 rooms (774–873) cleanly after Infinite Frontiers',
     assert.ok(room.particle);
   });
   assert.equal(roomById(773).boss, 'aethron_origin', 'Frontiers ends at room 773');
-  assert.equal(ALL_ROOMS.length, 874);
-  assert.equal(ALL_ROOMS.at(-1).id, 873);
-  assert.equal(ALL_ROOMS.at(-1).boss, 'the_first_god');
+  assert.equal(ALL_ROOMS.length, 901);
+  assert.equal(ALL_ROOMS.at(-1).id, 900);
+  assert.equal(ALL_ROOMS[873].boss, 'the_first_god');
   assert.ok(ZONES.overdrive);
   assert.ok(TRACKS.overdrive && TRACKS.overdriveBoss);
 });

@@ -711,6 +711,19 @@ import {
   valorMultiplier,
 } from './crusade.js';
 import {
+  RIFT_ROOM_START,
+  RIFT_ROOM_COUNT,
+  RIFT_REGIONS,
+  RIFT_ROOMS,
+  RIFT_BOSS_INFO,
+  defaultRiftProgress,
+  sanitizeRiftProgress,
+  riftUnlocked,
+  recordRiftRoom,
+  recordRiftBoss,
+  riftSummary,
+} from './rift.js';
+import {
   LABYRINTH_VERSION,
   LABYRINTH_NAME,
   LABYRINTH_MODES,
@@ -4607,6 +4620,10 @@ function updateMenuProgress() {
       if (link) link.classList.remove('hidden');
     }
   }
+  const riftButton = $('btn-rift-menu');
+  if (riftButton) {
+    riftButton.classList.toggle('hidden', !riftUnlocked(progress));
+  }
 }
 
 // ── expansion progression ────────────────────────────────────────────────
@@ -8178,6 +8195,10 @@ function retryRun() {
     saveProgress();
     if (activeCrusadeBoss) startCrusadeBoss(activeCrusadeBoss);
     else startCrusadeLevel(Math.max(0, activeCrusadeLevel));
+    return;
+  }
+  if (activeRunKind === 'rift') {
+    startRiftRoom(Math.max(RIFT_ROOM_START, game.roomIndex || RIFT_ROOM_START));
     return;
   }
   if (activeRunKind === 'pack' && activePackIndex >= 0) {
@@ -13694,6 +13715,15 @@ window.addEventListener('keydown', (e) => {
     return;
   }
 
+  if (e.code === 'KeyF' && game.state === 'playing' && !e.repeat) {
+    if (game.phaseShift()) {
+      if (progress.rift) progress.rift.phaseShifts = (progress.rift.phaseShifts || 0) + 1;
+      updateHud();
+      showToast(`◈ PHASE-SHIFT → FASA ${game.fracturePhase === 0 ? 'A' : 'B'}`, 850);
+    }
+    return;
+  }
+
   const action = actionForCode(settings, e.code);
   if (action && game.state === 'playing') {
     keys[action] = true;
@@ -15393,6 +15423,11 @@ $('btn-fallen-back')?.addEventListener('click', () => showFallenMenu());
 $('btn-fallen-crusade')?.addEventListener('click', () => showCrusadeMenu());
 $('btn-crusade-menu')?.addEventListener('click', () => showCrusadeMenu());
 $('btn-crusade-back')?.addEventListener('click', () => showCrusadeMenu());
+$('btn-rift-menu')?.addEventListener('click', () => showRiftScreen());
+$('btn-rift-back')?.addEventListener('click', () => showMenu());
+$('rift-badge')?.addEventListener('click', () => {
+  if (started && menuView === 'none' && game.state === 'playing' && game.phaseShift()) updateHud();
+});
 $('crusade-hud')?.addEventListener('click', (event) => {
   if (event.target.closest('[data-crusade-action="strike"]')) crusadeStrike();
 });
@@ -16254,6 +16289,7 @@ function syncScreens() {
   $('crusade-menu-screen')?.classList.toggle('hidden', menuView !== 'crusadeMenu' || covered);
   $('crusade-screen')?.classList.toggle('hidden', menuView !== 'crusade' || covered);
   $('crusade-clear-screen')?.classList.toggle('hidden', !(crusadeClearOpen && started));
+  $('rift-screen')?.classList.toggle('hidden', menuView !== 'rift' || covered);
   $('speedrun-screen')?.classList.toggle('hidden', menuView !== 'speedrun' || covered);
   $('editor-screen')?.classList.toggle('hidden', menuView !== 'editor' || covered);
   $('fishing-screen')?.classList.toggle('hidden', menuView !== 'fishing' || covered);
@@ -16446,6 +16482,30 @@ function updateHud() {
       }
     } else {
       abilityBadge.classList.add('hidden');
+    }
+  }
+
+  const resBadge = $('resonance-badge');
+  if (resBadge) {
+    const rank = game.resonanceRank || 'D';
+    const pct = Math.round(game.resonance || 0);
+    resBadge.textContent = `✦ RESONANCE ${rank}${pct > 0 ? ` · ${pct}%` : ''}`;
+    resBadge.classList.toggle('rank-ashen', rank === 'ASHEN');
+    resBadge.classList.toggle('rank-s', rank === 'S');
+  }
+
+  const riftBadge = $('rift-badge');
+  if (riftBadge) {
+    const inRift = !!game.room?.rift;
+    riftBadge.classList.toggle('hidden', !inRift);
+    if (inRift) {
+      const cd = p.phaseShiftCooldown || 0;
+      const phaseLabel = game.fracturePhase === 0 ? 'A' : 'B';
+      riftBadge.textContent = cd > 0
+        ? `◈ FASA ${phaseLabel} (${cd.toFixed(1)}s)`
+        : `◈ FASA ${phaseLabel} [F]`;
+      riftBadge.classList.toggle('phase-a', game.fracturePhase === 0);
+      riftBadge.classList.toggle('cooldown', cd > 0);
     }
   }
 
@@ -16804,6 +16864,19 @@ function drainEvents() {
             if (result?.ok) showToast(result.final ? 'THE ARCHITECT OF ETERNITY GUGUR — The Unwritten Expanse mulai terlihat.' : 'Wilayah Astral ditaklukkan.', 3000);
           }
         }
+      } else if (activeRunKind === 'rift') {
+        if (ev.type === 'gatePass') {
+          progress.rift = recordRiftRoom(progress.rift, ev.from);
+          saveProgress();
+        } else if (ev.type === 'bossDown') {
+          progress.rift = recordRiftBoss(progress.rift, ev.kind);
+          saveProgress();
+          if (ev.kind === 'rift_devilish_scum') {
+            showToast('THE DEVILISH SCUM TUMBANG — Arc IV: The Rift ditaklukkan!', 3200);
+          } else {
+            showToast(`◈ Bos Celah gugur: ${ev.name}`, 2400);
+          }
+        }
       } else if (activeRunKind === 'eclipse') {
         if (ev.type === 'gatePass') {
           const room = ECLIPSE_ROOM_BY_ID[ev.from];
@@ -16966,8 +17039,10 @@ function desiredTrack() {
   if (menuView === 'fallen') return 'lastvigil';
   if (menuView === 'crusadeMenu') return 'hearth';
   if (menuView === 'crusade') return 'cinderworks';
+  if (menuView === 'rift') return 'rift';
   if (menuView === 'eclipse') return 'forgotten';
   if (started && !spectating && menuView === 'none') {
+    if (activeRunKind === 'rift') return game.boss && game.state === 'playing' ? 'riftBoss' : 'rift';
     if ((activeRunKind === 'eclipse' || activeRunKind === 'raid') && game.room) return game.boss && game.state === 'playing' ? 'bossJudge' : (game.room.music || 'forgotten');
     if (activeRunKind === 'godfall' && game.room) return game.boss && game.state === 'playing' ? 'bossJudge' : (game.room.music || 'lastvigil');
     if (game.state === 'victory') {
@@ -18031,7 +18106,7 @@ function crusadeMenuAction(id) {
   } else if (id === 'camp') {
     showCrusade('camp');
   } else if (id === 'rift') {
-    showToast('Celah itu belum bisa dibuka. Sesuatu di bawah sedang menunggu.', 2400);
+    showRiftScreen();
   } else if (id === 'heaven') {
     showFallenMenu();
   } else if (id === 'options') {
@@ -18235,9 +18310,9 @@ function crusadeTabBody(tab, state) {
     <h3 class="crusade-section-title">STATISTIK PERANG</h3>
     <div class="crusade-stat-row"><span>Turun</span><strong>${summary.runs}</strong><span>Gugur</span><strong>${summary.deaths}</strong><span>Chain</span><strong>${summary.bestChain}</strong><span>Strike</span><strong>${summary.strikes}</strong></div>
     <div class="crusade-rift">
-      <strong>THE RIFT · ${CRUSADE_RIFT.locked ? 'TERKUNCI' : 'TERBUKA'}</strong>
-      <p>${summary.arc4Hook ? 'Zirah Paladin kosong, dan sesuatu di dalamnya sudah pergi. Celah di langit masih hangat.' : 'Gerbang Penghakiman belum jatuh. Celah di langit masih tertutup.'}</p>
-      <p class="crusade-card-meta">${esc(CRUSADE_RIFT.note)} · Arc IV belum dirancang.</p>
+      <strong>THE RIFT · ${riftUnlocked(progress) ? 'TERBUKA' : 'TERKUNCI'}</strong>
+      <p>${summary.arc4Hook ? 'Zirah Paladin kosong, dan Celah di bawah langit kini terbuka untuk dijelajahi.' : 'Gerbang Penghakiman belum jatuh. Celah di langit masih tertutup.'}</p>
+      <p class="crusade-card-meta">${esc(CRUSADE_RIFT.note)}</p>
     </div>
     <p class="micro">The Radiant Crusade · ${summary.roomsCleared}/${summary.roomTotal} ruang · ${summary.percent}% arsip lengkap.</p>
   </div>`;
@@ -18503,8 +18578,109 @@ function crusadeKeydown(event) {
 }
 window.addEventListener('keydown', crusadeKeydown);
 
+function startRiftRoom(roomIndex = RIFT_ROOM_START) {
+  const target = clamp(Math.floor(Number(roomIndex) || RIFT_ROOM_START), RIFT_ROOM_START, RIFT_ROOM_START + RIFT_ROOM_COUNT - 1);
+  if (typeof trailerActive !== 'undefined' && trailerActive) closeTrailer();
+  cancelPrologue();
+  closeDialogue(true);
+  started = true;
+  paused = false;
+  shopOpen = false;
+  mapOpen = false;
+  codexOpen = false;
+  inventoryOpen = false;
+  settingsOpen = false;
+  spectating = false;
+  spectateGame = null;
+  activeRunKind = 'rift';
+  menuView = 'none';
+  progress.rift = sanitizeRiftProgress(progress.rift);
+  progress.rift.unlocked = true;
+  game.reset();
+  game.state = 'playing';
+  game.loadRoom(target);
+  clearHeldKeys();
+  syncScreens();
+  updateHud();
+}
+
+function buildRiftScreen() {
+  const summary = riftSummary(progress);
+  const sumEl = $('rift-summary');
+  if (sumEl) {
+    sumEl.innerHTML = [
+      ['RUANG', `${summary.rooms}/${summary.totalRooms}`],
+      ['BOS', `${summary.bosses}/${summary.totalBosses}`],
+      ['RAHASIA', `${summary.secrets}/${summary.totalSecrets}`],
+      ['RESONANCE', summary.bestResonance],
+      ['PHASE-SHIFT', String(summary.phaseShifts)],
+    ]
+      .map(([label, value]) => `<div class="crusade-stat"><span>${label}</span><strong>${value}</strong></div>`)
+      .join('');
+  }
+  const body = $('rift-body');
+  if (!body) return;
+  body.innerHTML = `<div class="crusade-grid">${RIFT_REGIONS.map((region) => {
+    const boss = RIFT_BOSS_INFO[region.boss];
+    const bossDown = !!progress.rift?.bosses?.[region.boss];
+    return `<article class="crusade-card ${bossDown ? 'earned' : ''}">
+      <strong>${region.glyph} ${esc(region.name)}</strong>
+      <em>${bossDown ? 'DITAKLUKKAN' : `RUANG ${region.roomStart}–${region.roomEnd}`}</em>
+      <p>${esc(region.gimmick)}</p>
+      <p class="crusade-card-meta">Bos: ${esc(boss?.name || region.boss)}</p>
+      <button type="button" class="btn btn-primary" data-rift-start="${region.roomStart}">MASUK WILAYAH ${region.order}</button>
+    </article>`;
+  }).join('')}</div>`;
+  body.querySelectorAll('[data-rift-start]').forEach((btn) => {
+    btn.addEventListener('click', () => startRiftRoom(Number(btn.dataset.riftStart)));
+  });
+}
+
+function showRiftScreen() {
+  cancelPrologue();
+  started = false;
+  paused = false;
+  shopOpen = false;
+  mapOpen = false;
+  codexOpen = false;
+  inventoryOpen = false;
+  settingsOpen = false;
+  closeDialogue(true);
+  spectating = false;
+  spectateGame = null;
+  menuView = 'rift';
+  game.reset();
+  clearHeldKeys();
+  buildRiftScreen();
+  syncScreens();
+}
+
 // ── debug hooks (used by automated smoke tests) ─────────────────────────
 window.__ashen = {
+  get rift() {
+    return {
+      ...riftSummary(progress),
+      fracturePhase: game.fracturePhase,
+      resonance: Math.round(game.resonance || 0),
+      resonanceRank: game.resonanceRank || 'D',
+      roomIndex: game.roomIndex,
+    };
+  },
+  riftStart(roomIndex = RIFT_ROOM_START) {
+    startRiftRoom(roomIndex);
+    return { ok: true, room: game.roomIndex };
+  },
+  riftPhaseShift() {
+    return { ok: game.phaseShift(true), phase: game.fracturePhase, resonance: Math.round(game.resonance || 0), rank: game.resonanceRank };
+  },
+  get resonance() {
+    return {
+      value: Math.round(game.resonance || 0),
+      rank: game.resonanceRank || 'D',
+      damageMult: Number(game.resonanceDamageMult().toFixed(3)),
+      speedMult: Number(game.resonanceSpeedMult().toFixed(3)),
+    };
+  },
   get secrets() {
     return {
       state: JSON.parse(JSON.stringify(secretsState)),

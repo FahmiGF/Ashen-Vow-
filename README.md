@@ -1,4 +1,12 @@
-# Ashen Vow — v0.43.0
+# Ashen Vow — v0.44.0
+
+## v0.44.0 — Update XXXIV: Arc IV: The Rift, Phase-Shift [F] & Oath Resonance
+
+**Arc IV: The Rift** (`src/rift.js`) unlocks the long-teased rift beneath *The Radiant Crusade*, adding **27 playable rooms (`874–900`)** across 5 regions + 2 secret vaults (`ALL_ROOMS = 901`, `ALL_BOSS_INFO = 142`, `ALL_ENEMY_INFO = 374`), **6 multi-phase bosses** ending with **The Devilish Scum**, and two headline gameplay innovations:
+
+- **Dual-Reality Fracture & Phase-Shift (`[F]`)**: Every Rift room splits platforms into Reality `A` (`reality: 'a'`) and Reality `B` (`reality: 'b'`), alternating automatically every 8s or on-demand via **`[F]`** (`game.phaseShift()`), unleashing a Rift Shockwave that staggers nearby enemies and shatters `veil` shields.
+- **Campaign-Wide Oath Resonance (`D → C → B → A → S → ASHEN`)**: Consecutive hits, heavy finishers, perfect dodges, and Phase-Shifts build Oath Resonance (`0–100`) across all 2D campaign & arc runs, granting up to **+30% damage**, **+12% speed**, and automatic Rift Veil shattering at Rank `A+`.
+- **Story Map, Credits & PRD Status**: `STORY_ARCS` (`rift` promoted to `kind: 'main'`), `CREDIT_ARCS` (`rift`), and [`docs/prd/phase-4-through-the-rift.md`](docs/prd/phase-4-through-the-rift.md) track shipped `v0.44.0` and upcoming `v0.45.0` (*The Unwritten Expanse*) & `v0.46.0` (*Arc V: The Ashfall Accord*).
 
 ## v0.43.0 — Update XXXIII: Overdrive Playable (Lv 201–300) & Wave Defense Arsenal
 

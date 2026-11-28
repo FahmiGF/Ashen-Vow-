@@ -7,6 +7,25 @@ export { GAME_VERSION };
 
 export const UPDATE_LOG = [
   {
+    version: '0.44.0',
+    date: '28 November 2026',
+    title: 'UPDATE XXXIV — ARC IV: THE RIFT, PHASE-SHIFT [F] & OATH RESONANCE',
+    tag: '27 RUANG BARU (874–900) · 6 BOS CELAH · 8 MUSUH RIFT · DUAL-REALITY FRACTURE [F] · OATH RESONANCE (D → ASHEN)',
+    summary:
+      'Arc IV yang sejak lama terkunci di bawah Perang Salib kini terbuka penuh: The Rift menghadirkan 27 ruang playable (874–900) di 5 wilayah plus 2 ruang rahasia, 6 bos multi-fase yang berakhir pada The Devilish Scum, mekanik Dual-Reality Fracture dengan tombol aktif Phase-Shift [F], serta sistem inovasi kampanye Oath Resonance (peringkat D hingga ASHEN) yang memperkuat gerak dan serangan di seluruh kampanye.',
+    highlights: [
+      'Arc IV — The Rift (Ruang 874–900): lima wilayah lima tahap (Rift Mouth, Inverted Bastion, Sea of Glass Knives, Hollow Orchard of Echoes, The Seam) ditambah dua ruang rahasia Fasa B (Fractured Reliquary & Unseamed Vault) — membawa total game ke 901 ruang, 142 bos, dan 374 tipe musuh.',
+      'Enam Bos Celah Multi-Fase: Herald of the Maw, Inverted Castellan, Shattered Glass Seraph, Orchard Echo Matriarch, Arbiter of the Seam, hingga penguasa akhir 3-fase The Devilish Scum (reward: victory) lengkap dengan dialog dan dua track musik baru (rift & riftBoss).',
+      'Inovasi Arc IV · Dual-Reality Fracture & Phase-Shift [F]: setiap ruang Celah membelah pijakan menjadi Fasa A dan Fasa B yang bergantian tiap 8 detik (dengan peringatan visual 1,5 detik), atau langsung dibalik lewat tombol [F] / lencana HUD untuk melepas Rift Shockwave yang melukai musuh dekat dan memecah Selubung Fasa.',
+      'Inovasi Kampanye Utama · Oath Resonance (D → C → B → A → S → ASHEN): serangan beruntun, pukulan berat, perfect dodge, dan Phase-Shift mengisi meter Resonance (0–100) di seluruh mode kampanye/arc, memberi bonus +0–30% damage, +0–12% kecepatan gerak, serta otomatis menembus Selubung musuh Celah pada peringkat A+.',
+      'Peta Kisah, Kredit & PRD Fase 4: kartu Arc IV di Peta Kisah kini berstatus RILIS dengan 5 wilayah & 6 bos, adegan kredit Arc IV ditambahkan ke CREDIT_ARCS, dan status PRD Fase 4–5 diperbarui di docs/prd/phase-4-through-the-rift.md.',
+    ],
+    fixes: [
+      'Kartu The Rift di menu Perang Salib dan tombol menu utama kini membuka hub wilayah Arc IV setelah Paladin atau kampanye utama ditaklukkan.',
+      'Pelat fasa non-aktif digambar sebagai garis putus-putus transparan agar rute lompatan dan jalur rahasia Fasa B tetap terbaca.',
+    ],
+  },
+  {
     version: '0.43.0',
     date: '27 November 2026',
     title: 'UPDATE XXXIII — OVERDRIVE PLAYABLE (LV 201–300) & WAVE DEFENSE ARSENAL',

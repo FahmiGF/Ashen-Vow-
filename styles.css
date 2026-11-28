@@ -7406,3 +7406,30 @@ html[lang='ar'] .settings2-inner, html[lang='ar'] .screen-inner { font-family: v
   .storymap-head { flex-direction: column; }
   .storymap-chip { min-width: 150px; }
 }
+
+.resonance-badge {
+  border-color: rgba(224, 90, 122, 0.55);
+  color: #ffb8c8;
+  background: rgba(54, 14, 30, 0.72);
+}
+
+.resonance-badge.rank-ashen,
+.resonance-badge.rank-s {
+  border-color: rgba(255, 195, 110, 0.9);
+  color: #fff2c6;
+  background: rgba(110, 24, 48, 0.85);
+  box-shadow: 0 0 12px rgba(255, 92, 116, 0.5);
+}
+
+.rift-badge {
+  cursor: pointer;
+  border-color: rgba(125, 232, 255, 0.65);
+  color: #bcefff;
+  background: rgba(12, 34, 52, 0.78);
+}
+
+.rift-badge.phase-a {
+  border-color: rgba(255, 107, 139, 0.7);
+  color: #ffb8c8;
+  background: rgba(54, 14, 32, 0.78);
+}
